@@ -9,10 +9,11 @@ describe("review swipe semantics", () => {
         expect(reviewSwipeAction(false, 0, 90)).toBeNull();
     });
 
-    it("answer side maps horizontal swipes to the matching visible ratings", () => {
+    it("answer side maps 4-direction swipes to the matching visible ratings", () => {
         expect(reviewSwipeAction(true, 90, 0)).toBe("good");
         expect(reviewSwipeAction(true, -90, 0)).toBe("again");
-        expect(reviewSwipeAction(true, 0, -90)).toBeNull();
+        expect(reviewSwipeAction(true, 0, 90)).toBe("hard");
+        expect(reviewSwipeAction(true, 0, -90)).toBe("easy");
     });
 
     it("ignores short and diagonal gestures", () => {

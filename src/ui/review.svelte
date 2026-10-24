@@ -2015,6 +2015,8 @@
         const action = reviewSwipeAction(showAnswer, dx, dy);
         if (action === "good") { rate(3); }
         else if (action === "again") { rate(1); }
+        else if (action === "hard") { rate(2); }
+        else if (action === "easy") { rate(4); }
         else if (action === "reveal" && faceReady) { revealAnswer(); }
     }
 
@@ -2033,7 +2035,7 @@
             showMessage("已取消星标", 1500, "info");
         } else {
             next.add(cid);
-            showMessage("⭐ 已加入重点星标卡片", 1800, "info");
+            showMessage("已加入重点星标卡片", 1800, "info");
             triggerHaptic(15);
         }
         starredCardIDs = next;

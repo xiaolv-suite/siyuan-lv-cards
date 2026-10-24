@@ -1,21 +1,28 @@
 /** Review-card swipe semantics shared by the touch handler and unit tests. */
-export type ReviewSwipeAction = "good" | "again" | "reveal" | null;
+export type ReviewSwipeAction = "good" | "again" | "hard" | "easy" | "reveal" | null;
 
 const SWIPE_THRESHOLD = 60;
 
 export function reviewSwipeAction(showAnswer: boolean, dx: number, dy: number): ReviewSwipeAction {
     if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return null;
 
-    // Question-side horizontal swipes never create a formal rating. Only the
-    // answer side maps horizontal gestures to the visible rating controls.
-    if (showAnswer) {
-        if (dx > SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return "good";
-        if (dx < -SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return "again";
+    // Question-side horizontal swipes never create a formal rating.
+    // Revealing is a question-side action; vertical upward swipe reveals answer.
+    if (!showAnswer) {
+        if (dy < -SWIPE_THRESHOLD && Math.abs(dx) < SWIPE_THRESHOLD) return "reveal";
         return null;
     }
 
-    // Revealing is a question-side action; vertical scrolling remains inert.
-    if (dy < -SWIPE_THRESHOLD && Math.abs(dx) < SWIPE_THRESHOLD) return "reveal";
+    // Answer side maps gestures to the matching 4 ratings (aligned with arrow keys):
+    // Left = Again (1), Down = Hard (2), Right = Good (3), Up = Easy (4)
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dy) < SWIPE_THRESHOLD) {
+        if (dx > SWIPE_THRESHOLD) return "good";
+        if (dx < -SWIPE_THRESHOLD) return "again";
+    } else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dx) < SWIPE_THRESHOLD) {
+        if (dy > SWIPE_THRESHOLD) return "hard";
+        if (dy < -SWIPE_THRESHOLD) return "easy";
+    }
+
     return null;
 }
 

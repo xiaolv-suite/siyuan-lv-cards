@@ -29,9 +29,26 @@ import os from "node:os";
 import path from "node:path";
 import { SmokeAbort, guardScratch, makeApi, notebookIdOf, resolveTarget, sweepOrphans } from "./lib/smoke-kernel.mjs";
 
-// 宿主路径支持环境变量覆盖（与 SIYUAN_BASE_URL/SIYUAN_TOKEN 同一约定），默认值保留原参考机路径
-const KERNEL = process.env.SIYUAN_KERNEL ?? "D:/biji/SiYuan/resources/kernel/SiYuan-Kernel.exe";
-const RESOURCES = process.env.SIYUAN_RESOURCES ?? "D:/biji/SiYuan/resources";
+function pickExistingPath(candidates, envVal) {
+    if (envVal) return envVal;
+    for (const c of candidates) {
+        if (fs.existsSync(c)) return c;
+    }
+    return candidates[0];
+}
+
+// 宿主路径支持环境变量覆盖（与 SIYUAN_BASE_URL/SIYUAN_TOKEN 同一约定），自动多候选探测
+const KERNEL = pickExistingPath([
+    "D:/RJ/SiYuan/resources/kernel/SiYuan-Kernel.exe",
+    "D:/biji/SiYuan/resources/kernel/SiYuan-Kernel.exe",
+    "C:/Program Files/SiYuan/resources/kernel/SiYuan-Kernel.exe",
+], process.env.SIYUAN_KERNEL);
+
+const RESOURCES = pickExistingPath([
+    "D:/RJ/SiYuan/resources",
+    "D:/biji/SiYuan/resources",
+    "C:/Program Files/SiYuan/resources",
+], process.env.SIYUAN_RESOURCES);
 const DIST = path.resolve("dist");
 const PLUGIN_ID = "siyuan-lv-cards";
 const FRONTEND = "desktop";

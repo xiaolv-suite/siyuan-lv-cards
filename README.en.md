@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.43** (2026-10-24), delivering complete UI vectorization and micro-interaction polish across the Exam and Cram workflow. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.43) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.44** (2026-10-25), delivering 18/18 passing isolated E2E tests and 4-direction mobile touch rating gestures. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.44) for the package and publishing status.
 
-## What's New in v0.210.43
+## What's New in v0.210.44
+
+- **Isolated Kernel E2E 18/18 Tests Passing**:
+  - Auto-locates kernel across installations; validates headless boot, authentication, chunk static hosting, petal enablement, note creation, deck enrollment, FSRS review loop, and residue sweep.
+- **4-Direction Touch Swipe Rating for Mobile**:
+  - Aligned mobile touch swipes with arrow keys: Left=Again (1), Down=Hard (2), Right=Good (3), Up=Easy (4), with backward-compatible upward reveal in question state.
+- **Verification**:
+  - 1941 tests across 242 test suites 100% passing; zero TypeScript/Svelte errors and warnings; production build and smoke tests green.
+
+## Previous Update: v0.210.43
 
 - **Exam & Cram Workflow Full Vectorization**:
   - Replaced text glyphs with precision SVG components (`plus`, `cards`, `edit`, `trash`) across exam plans.
