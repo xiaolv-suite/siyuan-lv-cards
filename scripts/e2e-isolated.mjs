@@ -166,19 +166,24 @@ async function main() {
         });
         kproc.unref();
 
-        // 等内核就绪并取 token（临时工作区 conf 生成后读取）
+        // 等内核就绪并取 token（支持多插件并发/端口争用时最大自旋等待 5 分钟：200次 × 1.5s = 300s）
         let up = false;
-        for (let i = 0; i < 40; i++) {
+        const MAX_TRIES = 200; // 5 分钟
+        for (let i = 0; i < MAX_TRIES; i++) {
             await sleep(1500);
             try {
                 const r = await fetch(`${base}/api/system/version`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
                 if (r.status === 200) { up = true; break; }
-            } catch { /* 未就绪 */ }
+            } catch {
+                if (i > 0 && i % 20 === 0) {
+                    console.log(`  [e2e] 端口/进程冲突等待中 (${Math.round(i * 1.5)}s / 300s)...`);
+                }
+            }
         }
         check("内核启动（无头）", up, `port=${port} pid=${kproc.pid}`);
-        if (!up) fail("[e2e] 内核未就绪，中止（工作区保留诊断）：" + ws);
+        if (!up) fail("[e2e] 内核未就绪（已等待 5 分钟），中止（工作区保留诊断）：" + ws);
         const confPath = path.join(ws, "conf", "conf.json");
-        for (let i = 0; i < 10 && !token; i++) {
+        for (let i = 0; i < 30 && !token; i++) {
             await sleep(1000);
             try {
                 token = JSON.parse(fs.readFileSync(confPath, "utf8")).api.token ?? "";

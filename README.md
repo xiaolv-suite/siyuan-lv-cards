@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.45（2026-10-25）**，落地配对游戏通关徽标矢量化、复习快捷键 Y/N 全局指南对齐。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.45)。
+当前版本为 **v0.210.46（2026-10-25）**，落地 E2E 隔离靶场 5 分钟冲突退避自旋重试、全功能深层排障与质量加固。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.46)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.45）
+## 本次更新（v0.210.46）
+
+- **E2E 隔离靶场 5 分钟冲突退避自旋重试引擎（E2E Collision Backoff）**：
+  - 更新 `scripts/e2e-isolated.mjs`，探测超时由原本固定的 60 秒扩展为最多自旋重试 5 分钟（200次 × 1.5s = 300s）；
+  - 当本地多插件并行跑测试、端口暂未释放或临时工作区争用时，脚本自动打印进度并温和退避等待，绝不因突发冲突误报失败。
+- **全功能深层排查与向前兼容性审计**：
+  - 深度核查老用户设置与复习日志架构：`normalizeSettings` 与 `normalizeRevlog` 严格具备缺失字段自动回填与脏条目过滤机制，旧版本升级零报错、数据零丢失。
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1941 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.45）
 
 - **闪卡配对游戏（Pairing Game）全流程矢量化收官**：
   - 游戏通关大徽标（`.lv-done-badge`）由字符 `"✓"` 全面升级为高精度单色 `<LvIcon name="check" size={24} />` 矢量微组件；

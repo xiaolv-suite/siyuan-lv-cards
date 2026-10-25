@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.45** (2026-10-25), delivering pairing game badge vectorization and full alignment of Y/N shortcut documentation. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.45) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.46** (2026-10-25), delivering a 5-minute collision backoff engine for isolated E2E testing and comprehensive backward-compatibility audits. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.46) for the package and publishing status.
 
-## What's New in v0.210.45
+## What's New in v0.210.46
+
+- **5-Minute E2E Collision Backoff & Retry**:
+  - Enhanced `scripts/e2e-isolated.mjs` with up to 300s (5 min) adaptive spin-wait retries during port/instance contention.
+- **Full Backward Compatibility Audit**:
+  - Verified `normalizeSettings` and `normalizeRevlog` zero-loss migration paths for legacy configurations and records.
+- **Verification**:
+  - 1941 tests across 242 test suites 100% passing; zero TypeScript/Svelte errors and warnings; production build and smoke tests green.
+
+## Previous Update: v0.210.45
 
 - **Pairing Game Completion Badge Vectorization**:
   - Replaced text glyph `✓` in `.lv-done-badge` with SVG `<LvIcon name="check" size={24} />`.
