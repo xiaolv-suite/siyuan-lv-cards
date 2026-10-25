@@ -19,9 +19,16 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.54** (2026-10-25), delivering the choice stem option stripper engine bugfix and comprehensive feedback styling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.54) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.55** (2026-10-25), delivering the cleanChoiceHtml DOM pipeline to eliminate duplicate option rendering on flashcard faces. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.55) for the package and publishing status.
 
-## What's New in v0.210.54
+## What's New in v0.210.55
+
+- **Choice Card DOM Sanitization Pipeline (cleanChoiceHtml)**:
+  - Integrated `cleanChoiceHtml` into the question-rendering pipeline to purge native `NodeList` and paragraph options from card faces, ensuring choices only render as interactive widgets.
+- **Verification**:
+  - 1944 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.54
 
 - **Choice Stem Option Stripping Engine (Bug Fix)**:
   - Fixed a regression where options starting with Unicode bullet `•` or bare letter `A.` remained in the question stem instead of being cleanly separated into clickable cards.

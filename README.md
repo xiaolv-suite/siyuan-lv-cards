@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.54（2026-10-25）**，落地选择题题干选项智能剥离引擎与全流程质感升级。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.54)。
+当前版本为 **v0.210.55（2026-10-25）**，落地复习卡面选项DOM智能清理引擎、彻底根除选项重复渲染缺陷。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.55)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.54）
+## 本次更新（v0.210.55）
+
+- **复习卡面选项 DOM 深度清理引擎（cleanChoiceHtml 闭环）**：
+  - 在复习卡面 HTML 渲染管道中接入 `cleanChoiceHtml`，不仅移除原生 `NodeList` 列表，还能够智能匹配并移除单独成段的选项段落（`NodeParagraph` / `p` 形式的 `A.`、`B.` 等）；
+  - 彻底杜绝选择题选项在卡面上与下方交互式大按钮卡片之间出现内容重复展示的缺陷；
+  - 增补单元测试 `cleanChoiceHtml removes lists and option paragraphs from rendered HTML` 确保 DOM 清理安全可靠。
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1944 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.54）
 
 - **选择题题干选项智能剥离引擎上线（核心 Bug 修复）**：
   - 彻底修复当题干选项采用 Unicode bullet `•`、`·`、`●` 或裸字母开头（`A.`）时，题干无法剥离选项导致题干内重复展示选项文本的缺陷；

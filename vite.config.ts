@@ -211,6 +211,21 @@ function syncZhCnAlias(options: { distDir: string }): Plugin {
                     fs.copyFileSync(srcPath, destPath);
                     console.log(`Synced: ${destPath}`);
                 }
+                // 生产构建时压缩 dist/i18n JSON，严守 package.zip <= 750 KiB 门禁红线
+                if (process.env.NODE_ENV === "production") {
+                    const i18nDir = path.resolve(options.distDir, "i18n");
+                    if (fs.existsSync(i18nDir)) {
+                        for (const file of fs.readdirSync(i18nDir)) {
+                            if (file.endsWith(".json")) {
+                                const filePath = path.join(i18nDir, file);
+                                try {
+                                    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+                                    fs.writeFileSync(filePath, JSON.stringify(parsed));
+                                } catch { /* 保持原样 */ }
+                            }
+                        }
+                    }
+                }
             }
         }
     };

@@ -49,7 +49,7 @@
     import { lvLog } from "@/libs/log";
     import { trapFocus } from "@/libs/focus-trap";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { filterBurySiblings } from "@/core/sibling-cards";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
 
@@ -2832,7 +2832,7 @@
                         {#if eff().customCardCss}
                             {@html `<style>${eff().customCardCss}</style>`}
                         {/if}
-                        {@html showAnswer ? cardHtml : maskedCardHtml}
+                        {@html interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2 ? cleanChoiceHtml(showAnswer ? cardHtml : maskedCardHtml, interactiveQuiz.options) : (showAnswer ? cardHtml : maskedCardHtml)}
                     </div>
 
                     <!-- 交互式选择题选项矩阵（点击或按 A/B/C/D 作答） -->

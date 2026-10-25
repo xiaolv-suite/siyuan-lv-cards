@@ -3,6 +3,7 @@ import {
     extractChoiceOptionsFromText,
     parseInteractiveQuiz,
     parseJudgeAnswer,
+    cleanChoiceHtml,
 } from "../src/core/quiz-interactive";
 
 describe("quiz-interactive core parser", () => {
@@ -133,5 +134,25 @@ describe("quiz-interactive core parser", () => {
         expect(res.kind).toBe("fill");
         expect(res.fillExpected).toBe("基期值");
         expect(res.hasInteractiveWidgets).toBe(true);
+    });
+
+    it("cleanChoiceHtml removes lists and option paragraphs from rendered HTML", () => {
+        const dom = `
+<div data-node-id="test-1" data-type="NodeSuperBlock">
+    <div class="p" data-type="NodeParagraph">【单选题】测试题干内容</div>
+    <div class="p" data-type="NodeParagraph">• A. 选项A</div>
+    <div class="p" data-type="NodeParagraph">• B. 选项B</div>
+    <div data-type="NodeList" class="list"><div class="li">C. 选项C</div></div>
+</div>
+        `;
+        const options = [
+            { key: "A", text: "选项A", isAnswer: false },
+            { key: "B", text: "选项B", isAnswer: true },
+        ];
+        const cleaned = cleanChoiceHtml(dom, options);
+        expect(cleaned).toContain("【单选题】测试题干内容");
+        expect(cleaned).not.toContain("• A. 选项A");
+        expect(cleaned).not.toContain("• B. 选项B");
+        expect(cleaned).not.toContain("NodeList");
     });
 });

@@ -127,6 +127,31 @@ export function extractStemFromChoice(content: string, options: InteractiveOptio
 }
 
 /**
+ * 针对选择题 HTML 内容，清理掉已被提取为交互式按钮的原生列表和选项段落，避免卡面上重复显示
+ */
+export function cleanChoiceHtml(html: string, options: InteractiveOption[]): string {
+    if (!html || !options || options.length < 2 || typeof document === "undefined") return html;
+    try {
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        // 1. 移除列表 (NodeList, ul, ol, .list)
+        template.content.querySelectorAll(":is([data-type='NodeList'], .list, ul, ol)").forEach(el => el.remove());
+        // 2. 移除单独成段的选项段落 (以 A.、B.、• A. 开头)
+        const optRegex = /^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*[A-Za-z][\.\、\:\：\s]/i;
+        template.content.querySelectorAll(":is([data-type='NodeParagraph'], p, .p)").forEach(el => {
+            const text = (el.textContent ?? "").trim();
+            if (optRegex.test(text)) {
+                el.remove();
+            }
+        });
+        const result = template.innerHTML.trim();
+        return result || html;
+    } catch {
+        return html;
+    }
+}
+
+/**
  * 综合分析卡片属性与正文，生成完整的交互式题型模型
  */
 export function parseInteractiveQuiz(params: {
