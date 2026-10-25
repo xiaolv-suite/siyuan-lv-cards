@@ -3070,10 +3070,10 @@
                             {/if}
                         </div>
                         {#if invalidRescheduleDays}
-                            <span id="lv-reschedule-error" class="ft__smaller" role="alert" style="color:var(--b3-theme-error)">{t.review.rescheduleRange}</span>
+                            <span id="lv-reschedule-error" class="ft__smaller" role="alert" style="color:var(--lv-color-danger)">{t.review.rescheduleRange}</span>
                         {/if}
                         {#if rescheduleError}
-                            <div class="ft__smaller lv-reschedule-error" role="alert" style="color:var(--b3-theme-error);background:var(--lv-danger-soft);padding:var(--lv-sp-1) var(--lv-sp-2);border-radius:6px">
+                            <div class="ft__smaller lv-reschedule-error" role="alert" style="color:var(--lv-color-danger);background:var(--lv-danger-soft);padding:var(--lv-sp-1) var(--lv-sp-2);border-radius:6px">
                                 <strong>{t.review.rescheduleErrorPreserved}</strong>: {rescheduleError}
                             </div>
                         {/if}

@@ -278,7 +278,7 @@
                     title: t.settings.lvcardsConflictTitle ?? "发现卡片内容冲突",
                     content: `<div class="b3-typography">
                         <p>分享包中有 <strong>${diffSummary.modifiedContentCount + diffSummary.modifiedMetadataCount}</strong> 张卡片在本地已存在修改。</p>
-                        <p style="color: var(--b3-theme-on-surface-light); font-size: 12px;">默认执行【安全合并】：优先保留您本地的卡片正文与私有便签，仅导入 ${diffSummary.newCount} 张全新卡片。是否继续？</p>
+                        <p style="color: var(--lv-color-text-muted); font-size: 12px;">默认执行【安全合并】：优先保留您本地的卡片正文与私有便签，仅导入 ${diffSummary.newCount} 张全新卡片。是否继续？</p>
                     </div>`,
                 });
 

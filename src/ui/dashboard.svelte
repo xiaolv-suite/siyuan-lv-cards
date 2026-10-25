@@ -817,7 +817,7 @@
                         <rect x="93" y="47" width="93" height="129" rx="14" fill="var(--lv-color-surface)" stroke="currentColor" stroke-opacity=".14"/>
                         <path d="M110 69h39M110 79h24" stroke="currentColor" opacity=".2" stroke-width="5" stroke-linecap="round"/>
                         <circle cx="139" cy="125" r="25" fill="var(--lv-color-warning, #f6c779)"/>
-                        <path d="M130 124l6 6 12-14" stroke="var(--b3-theme-on-warning, #8c5818)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M130 124l6 6 12-14" stroke="#8c5818" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                     </g>
                     <g transform="rotate(-12 86 128)">
                         <rect x="40" y="73" width="91" height="125" rx="14" fill="var(--lv-color-surface)" stroke="currentColor" stroke-opacity=".18"/>

@@ -278,7 +278,7 @@ const loadQuickCardEmbedded = process.env.DEV_MODE
 function mountChunkFallback(el: HTMLElement, i18n: Record<string, any>, err: unknown): void {
     el.textContent = "";
     const box = document.createElement("div");
-    box.style.cssText = "height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;color:var(--b3-theme-on-background);";
+    box.style.cssText = "height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;color:var(--lv-color-text, currentColor);";
     const title = document.createElement("div");
     title.textContent = `⚠️ ${i18n.chunkLoadFailedTitle}`;
     const detail = document.createElement("div");

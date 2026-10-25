@@ -761,13 +761,13 @@
     .lv-maint-main { flex: 1; min-width: 0; }
     .lv-maint-excerpt { font-size: var(--lv-type-body-size); overflow-wrap: anywhere; }
     .lv-maint-preview { margin-top: var(--lv-sp-1); }
-    .lv-maint-preview summary { cursor: pointer; color: var(--b3-theme-primary); font-size: var(--lv-type-caption-size); }
-    .lv-maint-preview-face { margin-top: var(--lv-sp-1); padding: var(--lv-sp-2); border-radius: var(--b3-border-radius); background: var(--b3-theme-surface); white-space: pre-wrap; overflow-wrap: anywhere; }
-    .lv-maint-media-broken { color: var(--b3-theme-error); overflow-wrap: anywhere; }
+    .lv-maint-preview summary { cursor: pointer; color: var(--lv-color-brand); font-size: var(--lv-type-caption-size); }
+    .lv-maint-preview-face { margin-top: var(--lv-sp-1); padding: var(--lv-sp-2); border-radius: var(--lv-r-m); background: var(--lv-color-surface); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .lv-maint-media-broken { color: var(--lv-color-danger); overflow-wrap: anywhere; }
     .lv-maint-health-issues { margin: var(--lv-sp-1) 0 0; padding-left: var(--lv-sp-4); overflow-wrap: anywhere; }
     .lv-maint-health-history { margin-bottom: var(--lv-sp-4); padding: var(--lv-sp-3); }
-    .lv-maint-health-history summary { cursor: pointer; color: var(--b3-theme-primary); font-size: var(--lv-type-caption-size); }
-    .lv-maint-health-source { padding: var(--lv-sp-2) 0; border-top: 1px solid var(--b3-border-color); }
+    .lv-maint-health-history summary { cursor: pointer; color: var(--lv-color-brand); font-size: var(--lv-type-caption-size); }
+    .lv-maint-health-source { padding: var(--lv-sp-2) 0; border-top: 1px solid var(--lv-border); }
     .lv-maint-health-source summary { overflow-wrap: anywhere; }
     .lv-maint-health-source summary span + span { margin-left: var(--lv-sp-2); }
     .lv-maint-health-block { display: block; margin-top: var(--lv-sp-2); overflow-wrap: anywhere; }
@@ -775,17 +775,17 @@
     .lv-maint-health-records li { padding: var(--lv-sp-2) 0; overflow-wrap: anywhere; }
     .lv-maint-health-record-head { display: flex; flex-wrap: wrap; gap: var(--lv-sp-2); }
     .lv-maint-health-detail { margin: var(--lv-sp-1) 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .lv-maint-health-open { color: var(--b3-theme-error); }
-    .lv-maint-health-resolved { color: var(--b3-theme-success); }
+    .lv-maint-health-open { color: var(--lv-color-danger); }
+    .lv-maint-health-resolved { color: var(--lv-color-success); }
     .lv-maint-repair { margin-bottom: var(--lv-sp-4); }
     .lv-maint-repair-draft { margin-top: var(--lv-sp-2); }
     .lv-maint-repair-draft-head { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-1); }
     .lv-maint-repair-draft textarea { resize: vertical; min-height: 84px; }
     .lv-maint-repair-actions { display: flex; flex-wrap: wrap; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3); }
-    .lv-maint-repair-preview { display: flex; flex-direction: column; gap: var(--lv-sp-1); margin-top: var(--lv-sp-3); padding: var(--lv-sp-2); border: 1px solid var(--b3-border-color); border-radius: var(--b3-border-radius); }
-    .lv-maint-repair-diff summary { cursor: pointer; color: var(--b3-theme-primary); }
-    .lv-maint-repair-diff pre { max-height: 150px; margin: var(--lv-sp-1) 0 0; padding: var(--lv-sp-2); overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--b3-theme-surface); font: inherit; }
-    .lv-maint-repair-error { color: var(--b3-theme-error); margin-top: var(--lv-sp-1); overflow-wrap: anywhere; }
+    .lv-maint-repair-preview { display: flex; flex-direction: column; gap: var(--lv-sp-1); margin-top: var(--lv-sp-3); padding: var(--lv-sp-2); border: 1px solid var(--lv-border); border-radius: var(--lv-r-m); }
+    .lv-maint-repair-diff summary { cursor: pointer; color: var(--lv-color-brand); }
+    .lv-maint-repair-diff pre { max-height: 150px; margin: var(--lv-sp-1) 0 0; padding: var(--lv-sp-2); overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--lv-color-surface); font: inherit; }
+    .lv-maint-repair-error { color: var(--lv-color-danger); margin-top: var(--lv-sp-1); overflow-wrap: anywhere; }
     .lv-maint-similar-row {
         display: flex;
         align-items: center;
@@ -807,13 +807,13 @@
         }
     }
     .lv-maint-similar-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lv-sp-2); margin-top: var(--lv-sp-2); }
-    .lv-maint-similar-card { min-width: 0; padding: var(--lv-sp-2); border: 1px solid var(--b3-border-color); border-radius: var(--b3-border-radius); background: var(--b3-theme-surface); }
+    .lv-maint-similar-card { min-width: 0; padding: var(--lv-sp-2); border: 1px solid var(--lv-border); border-radius: var(--lv-r-m); background: var(--lv-color-surface); }
     .lv-maint-similar-card-head { display: flex; align-items: baseline; gap: var(--lv-sp-1); margin-bottom: var(--lv-sp-1); }
-    .lv-maint-similar-card-head code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--b3-theme-on-surface-light); font-size: var(--lv-type-caption-size); }
+    .lv-maint-similar-card-head code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); }
     .lv-maint-similar-face { max-height: 220px; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.45; }
     .lv-maint-similar-actions { display: flex; flex-direction: column; gap: var(--lv-sp-1); }
     .lv-maint-similar-action-row { display: flex; flex-wrap: wrap; gap: var(--lv-sp-1); }
-    .lv-maint-decision-active { outline: 2px solid var(--b3-theme-primary); outline-offset: 1px; }
+    .lv-maint-decision-active { outline: 2px solid var(--lv-color-brand); outline-offset: 1px; }
     @media (max-width: 740px) {
         .lv-maint-row, .lv-maint-similar-row { align-items: flex-start; flex-wrap: wrap; }
         .lv-maint-row .lv-maint-main, .lv-maint-similar-row .lv-maint-main { flex: 1 1 100%; }

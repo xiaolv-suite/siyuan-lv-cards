@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.62（2026-10-26）**，落地小驴打卡同款局部作用域思源变量重定向落地、彻底杜绝第三方主题色彩污染。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.62)。
+当前版本为 **v0.210.63（2026-10-26）**，落地全生命周期设计系统深度精细化、全面清理残留主题变量与磨砂玻璃弹窗升级。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.63)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.62）
+## 本次更新（v0.210.63）
+
+- **全生命周期设计系统深度精细化（Full Lifecycle Design System Perfection）**：
+  - 彻底清理全库所有零星残留的直接 \`--b3-theme-*\` 变量引用（包括 \`maintenance-page.svelte\` 预览、差异对比、健康记录与卡片边框，\`review.svelte\` 重排期错误提示，\`settings.svelte\` 冲突提示，以及 \`index.ts\` 错误页签），全面统一收口至小驴自洽的 \`--lv-*\` 设计系统；
+  - 全局 Dialog 弹窗遮罩升级为统一的磨砂玻璃微模糊质感（\`backdrop-filter: blur(10px)\`），标题与底部操作栏底座增加微渐变微光；
+  - 按钮体系全面注入小驴品牌红润微光与弹簧触控微反馈，卡片边缘高光（\`inset 0 1px 0\`）与阴影层次全面升级；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.62）
 
 - **小驴打卡同款局部作用域思源变量重定向落地（Scoped Variable Override）**：
   - 汲取小驴打卡 5.0 经典设计精髓，在 \`:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz)\` 核心作用域内将全部 \`--b3-theme-*\` 别名强制重定向为小驴独立双色板；

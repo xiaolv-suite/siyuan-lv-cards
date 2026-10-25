@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.62** (2026-10-26), deploying scoped `--b3-theme-*` variable overrides inspired by Lv Checkin to achieve complete immunity from host theme styling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.62) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.63** (2026-10-26), delivering full design system lifecycle refinement, complete elimination of legacy theme variable references, and frosted glass dialog aesthetics. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.63) for the package and publishing status.
 
-## What's New in v0.210.62
+## What's New in v0.210.63
+
+- **Full Lifecycle Design System Refinement**:
+  - Purged all isolated `--b3-theme-*` residual variables across maintenance previews, diff viewers, reschedule errors, and fallback boxes in favor of `--lv-*` tokens.
+  - Upgraded global dialog scrums with unified frosted glass blur (`backdrop-filter: blur(10px)`) and subtle gradient header/action bays.
+  - Enhanced button and card feedback with ambient glow reflections and spring tactile responses.
+- **Verification**:
+  - 1947 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.62
 
 - **Scoped B3 Variable Redirection (Theme Immunity)**:
   - Mirroring Lv Checkin's architecture, redirected all `--b3-theme-*` aliases within the plugin's core scope to Lv Cards' self-governed design tokens, neutralizing any host theme distortion on native buttons, inputs, and dialogs.
