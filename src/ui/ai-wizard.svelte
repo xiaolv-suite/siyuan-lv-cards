@@ -13,6 +13,7 @@
     import { planReview, type ReviewPlan } from "@/core/ai-review-strategy";
     import { appendVersion, type CardProvenance, type ProvenanceVersion } from "@/core/ai-provenance";
     import { getMotionDuration } from "./kit/motion";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     /** BU-36 分层预算报告（宿主 assembleGeneratePrompt 纯函数产出） */
     interface BudgetPreview {
@@ -782,11 +783,15 @@
                 <div class="lv-wb-side">
                     <div class="lv-eyebrow">{t.aiWizard.source}</div>
                     {#if loadCurrentDoc}
-                        <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadActiveDoc}>{t.aiWizard.loadDoc}</button>
+                        <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadActiveDoc}>
+                            <LvIcon name="book" size={13} /> <span>{t.aiWizard.loadDoc}</span>
+                        </button>
                     {/if}
                     {#if loadNotebookMaterial}
                         <div class="lv-wb-nb">
-                            <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy || nbLoading || nbOptions.length === 0 || !nbId} onclick={loadNotebookContent}>{nbLoading ? t.aiWizard.loadingNotebooks : t.aiWizard.loadNotebook}</button>
+                            <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy || nbLoading || nbOptions.length === 0 || !nbId} onclick={loadNotebookContent}>
+                                <LvIcon name="cards" size={13} /> <span>{nbLoading ? t.aiWizard.loadingNotebooks : t.aiWizard.loadNotebook}</span>
+                            </button>
                             <select class="b3-select lv-wb-nb-select" bind:value={nbId} disabled={loadDocBusy || nbLoading || nbOptions.length === 0} aria-label={t.aiWizard.loadNotebook}>
                                 {#if nbOptions.length === 0}<option value="">{nbLoading ? t.aiWizard.loadingNotebooks : t.aiWizard.noNotebookAvailable}</option>{/if}
                                 {#each nbOptions as n (n.id)}<option value={n.id}>{n.name}</option>{/each}
@@ -797,8 +802,12 @@
                             {/if}
                         </div>
                     {/if}
-                    <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadSelection}>{t.aiWizard.loadSelection}</button>
-                    <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadClipboard}>{t.aiWizard.loadClipboard}</button>
+                    <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadSelection}>
+                        <LvIcon name="edit" size={13} /> <span>{t.aiWizard.loadSelection}</span>
+                    </button>
+                    <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadClipboard}>
+                        <LvIcon name="inbox" size={13} /> <span>{t.aiWizard.loadClipboard}</span>
+                    </button>
                     {#if sources.length > 0}
                         <div class="lv-eyebrow" style="margin-top: calc(var(--lv-space-unit) * 5)">{t.aiWizard.srcLedger}</div>
                         <div class="lv-wb-chips">
@@ -842,7 +851,7 @@
                     {:else}
                         <!-- R53 §3.9 空态：图标圈 + 一句话 + 指引，不用裸 hint -->
                         <div class="lv-wb-empty">
-                            <div class="lv-wb-empty-icon" aria-hidden="true">✦</div>
+                            <div class="lv-wb-empty-icon" aria-hidden="true"><LvIcon name="zap" size={24} /></div>
                             <div class="lv-wb-empty-text">{t.aiWizard.sourceEmptyHint}</div>
                         </div>
                     {/if}

@@ -2728,8 +2728,8 @@
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" class:lv-btn-starred={starredCardIDs.has(current?.cardID ?? '')} title="星标重点卡片 (*)" aria-label="星标重点卡片" aria-pressed={starredCardIDs.has(current?.cardID ?? '')} disabled={!current || actionBusy} onclick={toggleStarCurrent}><LvIcon name="star" size={14} /><span class="lv-tool-btn-label"> {starredCardIDs.has(current?.cardID ?? '') ? "已星标" : "星标"}</span></button>
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" class:lv-btn-primary={markedIssueCardIDs.has(current?.cardID ?? '')} title={markedIssueCardIDs.has(current?.cardID ?? '') ? t.review.issueMarked : t.review.tbMarkIssue} aria-label={t.review.tbMarkIssue} aria-pressed={markedIssueCardIDs.has(current?.cardID ?? '')} disabled={!current || actionBusy || markedIssueCardIDs.has(current?.cardID ?? '')} onclick={toggleMarkIssue}><LvIcon name="flag" size={14} /><span class="lv-tool-btn-label"> {markedIssueCardIDs.has(current?.cardID ?? '') ? t.review.issueChip : t.review.tbMarkIssue}</span></button>
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.pauseTitle} aria-label={t.review.pauseTitle} disabled={actionBusy} onclick={() => (showPauseModal = true)}><LvIcon name="moon" size={14} /><span class="lv-tool-btn-label"> {t.review.tbPause}</span></button>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.undoTitle} aria-label={t.review.undoTitle} disabled={actionBusy || history.length === 0} onclick={undoHistory}>{t.review.tbUndo}</button>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" disabled={actionBusy} onclick={skip}>{t.review.skip}</button>
+                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.undoTitle} aria-label={t.review.undoTitle} disabled={actionBusy || history.length === 0} onclick={undoHistory}><LvIcon name="refresh" size={13} /><span class="lv-tool-btn-label"> {t.review.tbUndo}</span></button>
+                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" disabled={actionBusy} onclick={skip}><LvIcon name="chevron-right" size={13} /><span class="lv-tool-btn-label"> {t.review.skip}</span></button>
                 <div class="lv-toolbar-more-wrap">
                     <button
                         type="button"
@@ -3889,12 +3889,32 @@
             align-items: center;
             gap: var(--lv-sp-2);
             flex-wrap: wrap;
-            margin: 0 var(--lv-sp-5) var(--lv-sp-2);
-            padding: var(--lv-sp-2) var(--lv-sp-3);
-            background: color-mix(in srgb, var(--lv-color-warning) 8%, transparent);
-            border: 1px solid color-mix(in srgb, var(--lv-color-warning) 35%, transparent);
+            max-width: 760px;
+            margin: 0 auto var(--lv-sp-2);
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 14px;
+            background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));
+            border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
             border-radius: var(--lv-r-m);
-            font-size: var(--lv-type-body-size);
+            box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent);
+            font-size: var(--lv-type-control-size);
+        }
+        .lv-relief {
+            button {
+                border-radius: var(--lv-r-pill);
+                border: 1px solid var(--lv-border);
+                background: var(--lv-color-surface);
+                font-size: 11px;
+                padding: 2px 10px;
+                color: var(--lv-color-text);
+                transition: all var(--lv-dur-1) var(--lv-ease);
+                &:hover {
+                    border-color: var(--lv-color-brand);
+                    color: var(--lv-color-brand);
+                    background: var(--lv-primary-soft);
+                }
+            }
         }
         .lv-return-title {
             color: var(--lv-color-text-muted);
@@ -3950,9 +3970,14 @@
                 .lv-scope {
                     height: 28px;
                     min-width: 6em;
-                    max-width: 125px;
-                    padding: 2px 6px;
-                    font-size: var(--lv-type-control-size);
+                    max-width: 135px;
+                    padding: 0 8px;
+                    border-radius: var(--lv-r-pill);
+                    border: 1px solid var(--lv-border);
+                    background: var(--lv-color-surface);
+                    color: var(--lv-color-text);
+                    font-size: 11px;
+                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
                     flex-shrink: 1;
                 }
 
@@ -3966,24 +3991,60 @@
                     align-items: center;
                     gap: 4px;
                     white-space: nowrap;
+                    border-radius: var(--lv-r-pill);
+                    border: 1px solid var(--lv-border);
+                    background: var(--lv-color-surface);
+                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
                     flex-shrink: 0;
                 }
 
                 .lv-font-scale-group {
                     height: 28px;
                     box-sizing: border-box;
+                    display: inline-flex;
+                    align-items: center;
+                    border: 1px solid var(--lv-border);
+                    border-radius: var(--lv-r-pill);
+                    background: var(--lv-color-surface);
+                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+                    overflow: hidden;
                     flex-shrink: 0;
+                    .lv-font-btn {
+                        height: 26px;
+                        padding: 0 7px;
+                        font-size: 11px;
+                        border: none;
+                        border-radius: 0;
+                        color: var(--lv-color-text-muted);
+                        &:hover:not(:disabled) {
+                            color: var(--lv-color-brand);
+                            background: var(--lv-primary-soft);
+                        }
+                    }
                 }
 
                 .lv-tool-btn {
                     height: 28px;
                     box-sizing: border-box;
-                    padding: 0 7px;
+                    padding: 0 8px;
+                    border-radius: var(--lv-r-pill);
+                    background: var(--lv-color-surface);
+                    border: 1px solid var(--lv-border);
+                    color: var(--lv-color-text-muted);
                     white-space: nowrap;
                     flex-shrink: 0;
                     display: inline-flex;
                     align-items: center;
                     gap: 4px;
+                    font-size: 11px;
+                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+                    transition: all var(--lv-dur-1) var(--lv-ease);
+
+                    &:hover:not(:disabled) {
+                        border-color: var(--lv-color-brand);
+                        color: var(--lv-color-brand);
+                        background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
+                    }
                 }
 
                 .lv-toolbar-more-wrap {

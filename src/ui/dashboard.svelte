@@ -923,7 +923,7 @@
             <section class="lv-today-decks" aria-labelledby="lv-today-decks-title">
                 <div class="lv-today-decks-head">
                     <h3 id="lv-today-decks-title">{t.dashboard.decksToday ?? "我的卡组"}</h3>
-                    <button class="b3-button b3-button--text" onclick={() => ctx.openManager()}>{t.dashboard.decksViewAll ?? t.hubTabManage}</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openManager()}><LvIcon name="cards" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span></button>
                 </div>
                 <div class="lv-today-decks-list">
                     {#each [...decks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 6) as deck (deck.id)}
@@ -942,10 +942,11 @@
                                 <button
                                     type="button"
                                     class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
-                                    title={`开始复习卡组「${deck.name}」`}
+                                    disabled={(deck.size ?? 0) === 0}
+                                    title={(deck.size ?? 0) === 0 ? "卡组暂无可复习卡片" : `开始复习卡组「${deck.name}」`}
                                     onclick={() => startReviewDeck(deck.id)}
                                 >
-                                    <LvIcon name="cards" size={13} /> {t.dashboard.openReview ?? "复习"}
+                                    <LvIcon name="cards" size={13} /> {(deck.size ?? 0) === 0 ? "暂无卡片" : (t.dashboard.openReview ?? "复习")}
                                 </button>
                             </div>
                         </div>
@@ -1755,15 +1756,15 @@
     .lv-today-deck {
         display: flex;
         min-width: 0;
-        min-height: 54px;
+        min-height: 56px;
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-3);
-        padding: 10px 14px;
+        padding: 10px 16px;
         border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-m);
+        border-radius: var(--lv-r-l);
         background: var(--lv-color-surface);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent), var(--lv-inset-shine);
         text-align: left;
         cursor: default;
         transition: transform var(--lv-dur-2) var(--lv-ease),
@@ -1773,7 +1774,7 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: 0 6px 18px -4px color-mix(in srgb, black 7%, transparent), var(--lv-inset-shine);
         }
 
         .lv-today-deck-main-btn {

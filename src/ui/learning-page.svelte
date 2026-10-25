@@ -269,7 +269,26 @@
     .lv-learning-trend-list strong { min-width: 26px; text-align: right; }
     .lv-learning-entry-list li > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
     .lv-learning-entry-list strong { font-size: var(--lv-type-body-size); }
-    .lv-link-button { flex: none; border: 0; background: transparent; color: var(--lv-color-brand); cursor: pointer; font-size: var(--lv-type-meta-size); display: inline-flex; align-items: center; gap: 4px; }
+    .lv-link-button {
+        flex: none;
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-pill);
+        background: var(--lv-color-surface);
+        color: var(--lv-color-brand);
+        padding: 3px 10px;
+        font-size: var(--lv-type-meta-size);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+        transition: all var(--lv-dur-1) var(--lv-ease);
+        &:hover {
+            border-color: var(--lv-primary-border);
+            background: var(--lv-primary-soft);
+            transform: translateY(-1px);
+        }
+    }
     .lv-link-button:focus-visible { outline: 2px solid var(--lv-color-brand); outline-offset: 2px; }
     .lv-learning-empty, .lv-learning-empty-copy { color: var(--lv-color-text-muted); }
     .lv-learning-empty { display: grid; gap: var(--lv-sp-3); justify-items: start; padding: var(--lv-sp-5) 0; }

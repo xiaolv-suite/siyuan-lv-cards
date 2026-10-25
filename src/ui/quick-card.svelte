@@ -372,14 +372,25 @@
         padding: calc(var(--lv-space-unit) * 12);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-dialog);
-        background: var(--lv-color-surface);
-        box-shadow: var(--lv-shadow-review-card), var(--lv-inset-shine);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--lv-brand) 3%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 60px);
+        box-shadow: 0 4px 16px -2px color-mix(in srgb, black 6%, transparent), 0 1px 3px color-mix(in srgb, black 3%, transparent), var(--lv-inset-shine);
         display: flex;
         flex-direction: column;
         justify-content: center;
         transition: box-shadow var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease);
     }
-    .lv-qc-preview-label { color: var(--lv-color-text-muted); font-size: 10px; }
+    .lv-qc-preview-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: var(--lv-r-pill);
+        background: var(--lv-primary-soft);
+        color: var(--lv-color-brand);
+        font-size: 11px;
+        font-weight: var(--lv-fw-semibold);
+        width: fit-content;
+    }
     .lv-qc-preview-face p { margin: calc(var(--lv-space-unit) * 8) 0 0; font-size: 18px; line-height: var(--lv-lh-loose); white-space: pre-wrap; overflow-wrap: anywhere; }
     .lv-qc-preview-answer { margin-top: calc(var(--lv-space-unit) * 9); padding-top: 16px; border-top: 1px solid var(--lv-border); }
     .lv-qc-preview-answer p { margin-top: calc(var(--lv-space-unit) * 4); }
