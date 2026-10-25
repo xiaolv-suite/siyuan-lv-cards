@@ -19,9 +19,17 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.56** (2026-10-25), delivering the multi-format choice answer matcher engine to eliminate scoring failures across varied card syntax. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.56) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.57** (2026-10-25), fixing the shortcut interception bug that blocked choice A/B/C/D and judgment keys. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.57) for the package and publishing status.
 
-## What's New in v0.210.56
+## What's New in v0.210.57
+
+- **Review Keyboard Shortcut Pipeline Unblocked (Bug Fix)**:
+  - Fixed a critical event pipeline flaw where unhandled keys caused an early exit before choice (A/B/C/D), judgment (T/F/Y/N), and reverse-recall (R) handlers were reached.
+  - Reordered the event flow so interactive quiz shortcuts receive first-class key dispatch.
+- **Verification**:
+  - 1946 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.56
 
 - **Multi-Format Choice Answer Matching Engine (checkIsAnswer)**:
   - Fixed a silent answer detection failure when choice card answers were specified as full text (e.g. `B. Option`, `Answer: B`, or text content directly) rather than a single letter.

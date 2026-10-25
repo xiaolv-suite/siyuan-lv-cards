@@ -1830,18 +1830,6 @@
         if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
         // Enter/Space 保留控件自身行为（展开菜单、选择选项、点击按钮），避免触发后台评分。
         if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element && e.target.closest("button, select, a, [role='button']")) return;
-        const action = resolveReviewKeyAction(e, {
-            peekOpen: Boolean(peek),
-            helpOpen,
-            showAnswer,
-            faceReady,
-            hasCurrent: Boolean(current),
-            hasLastAnswered: Boolean(lastAnswered),
-            ratingStyle: eff().ratingStyle,
-            isTargetInsideRoot: Boolean(rootEl && e.target instanceof Node && rootEl.contains(e.target)),
-        });
-
-        if (!action) return;
 
         // 交互式选择题键盘快捷键（A/B/C/D 或 1/2/3/4 或多选提交 Enter）
         if (!showAnswer && interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2) {
@@ -1879,6 +1867,19 @@
             reversedRecall = !reversedRecall;
             return;
         }
+
+        const action = resolveReviewKeyAction(e, {
+            peekOpen: Boolean(peek),
+            helpOpen,
+            showAnswer,
+            faceReady,
+            hasCurrent: Boolean(current),
+            hasLastAnswered: Boolean(lastAnswered),
+            ratingStyle: eff().ratingStyle,
+            isTargetInsideRoot: Boolean(rootEl && e.target instanceof Node && rootEl.contains(e.target)),
+        });
+
+        if (!action) return;
 
         // 答案揭晓后连击空格或回车：极速采用推荐评分提交并切下一张
         if (showAnswer && (e.key === " " || e.key === "Enter") && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {

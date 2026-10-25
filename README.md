@@ -21,11 +21,19 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.56（2026-10-25）**，落地多形态选择题答案智能匹配引擎上线、杜绝无属性选择题判分失效Bug。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.56)。
+当前版本为 **v0.210.57（2026-10-25）**，落地修复快捷键A/B/C/D与T/F/Y/N被前置拦截提前返回Bug。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.57)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.56）
+## 本次更新（v0.210.57）
+
+- **复习交互键盘事件流重大 Bug 修复（Shortcut Pipeline Unblocked）**：
+  - 彻底修复 `resolveReviewKeyAction` 在未揭晓态对非通用按键返回 `null`，导致后续 `if (!action) return;` 阻断一切选择题（A/B/C/D）、判断题（T/F/Y/N）及翻转问答（R）按键的隐蔽 Bug；
+  - 重构键盘事件解析次序：选择题、判断题与翻转自测优先获得按键消费权，敲击 `A`/`B`/`C`/`D` 或 `1`/`2`/`3`/`4` 瞬间命中选项作答并触发震动与音效反馈；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1946 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.56）
 
 - **多形态选择题答案智能匹配引擎上线（checkIsAnswer 核心升级）**：
   - 彻底修复当选择题答案以全文本（如 `答案: 北京`、`B. 北京`、`答案：B`）而非纯单字母形式存在时，旧逻辑长度截断导致无法判定正确选项的隐蔽缺陷；
