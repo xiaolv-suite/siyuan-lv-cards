@@ -96,6 +96,18 @@ describe("quiz-interactive core parser", () => {
         expect(res.options.find(o => o.key === "B")?.isAnswer).toBe(true);
         expect(res.analysis).toBe("解析说明");
         expect(res.hasInteractiveWidgets).toBe(true);
+        expect(res.stem).toBe("【单选示例】测试题干");
+    });
+
+    it("cleanly extracts question stem by stripping options with Unicode bullet • prefix", () => {
+        const res = parseInteractiveQuiz({
+            markdown: `【单选示例】上月销量为 80 件，本月为 100 件，环比增长率是多少？\n• A. 20%\n• B. 25%\n• C. 80%`,
+            expectedText: "B",
+        });
+
+        expect(res.kind).toBe("choice");
+        expect(res.options).toHaveLength(3);
+        expect(res.stem).toBe("【单选示例】上月销量为 80 件，本月为 100 件，环比增长率是多少？");
     });
 
     it("parses full quiz data for a judgment question", () => {

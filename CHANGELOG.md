@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.210.54 2026-10-25 · 修复选择题题干选项残留Bug、题干选项智能剥离引擎与全流程质感升级
+
+- **选择题题干选项智能剥离引擎上线（核心 Bug 修复）**：
+  - 彻底修复当题干选项采用 Unicode bullet `•`、`·`、`●` 或裸字母开头（`A.`）时，题干无法剥离选项导致题干内重复展示选项文本的缺陷；
+  - 引入 `extractStemFromChoice` 智能定位与剥离引擎，准确切分题干正文与多行选项，题面仅显示纯净题目，下方呈现精致 Bento 选项大卡片；
+  - 增补单元测试 `cleanly extracts question stem by stripping options with Unicode bullet • prefix` 锁定质量。
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1943 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
 ## v0.210.53 2026-10-25 · 新手向导按钮胶囊与画像卡片悬浮升起、卡片编辑操作栏圆角微胶囊化
 
 - **新手向导（Onboarding Tour）全流程 Bento 质感升级**：

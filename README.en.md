@@ -19,9 +19,17 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.53** (2026-10-25), delivering Onboarding Tour Bento card elevations, vector action buttons, and card editor pill controls. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.53) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.54** (2026-10-25), delivering the choice stem option stripper engine bugfix and comprehensive feedback styling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.54) for the package and publishing status.
 
-## What's New in v0.210.53
+## What's New in v0.210.54
+
+- **Choice Stem Option Stripping Engine (Bug Fix)**:
+  - Fixed a regression where options starting with Unicode bullet `•` or bare letter `A.` remained in the question stem instead of being cleanly separated into clickable cards.
+  - Implemented `extractStemFromChoice` to cleanly separate question text from multiple-choice option candidates.
+- **Verification**:
+  - 1943 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.53
 
 - **Onboarding Tour Bento Enhancement**:
   - Persona selection cards now feature 14px rounded corners, smooth 2px hover elevation, and ambient glow; skip and reload buttons upgraded to Outline Bento pills.

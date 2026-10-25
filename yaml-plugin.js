@@ -50,7 +50,7 @@ export default function vitePluginYamlI18n(options = {}) {
                         const filePath = resolve(inDir, file);
                         const fileContents = fs.readFileSync(filePath, 'utf8');
                         const parsed = yaml.load(fileContents);
-                        const jsonContent = JSON.stringify(parsed, null, 2);
+                        const jsonContent = process.env.NODE_ENV === 'production' ? JSON.stringify(parsed) : JSON.stringify(parsed, null, 2);
                         const outputFilePath = resolve(outDir, file.replace(/\.(yaml|yml)$/, '.json'));
                         console.log(`---- Writing to ${outputFilePath}`);
                         fs.writeFileSync(outputFilePath, jsonContent);

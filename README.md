@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.53（2026-10-25）**，落地新手向导按钮胶囊与画像卡片悬浮升起、卡片编辑操作栏圆角微胶囊化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.53)。
+当前版本为 **v0.210.54（2026-10-25）**，落地选择题题干选项智能剥离引擎与全流程质感升级。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.54)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.53）
+## 本次更新（v0.210.54）
+
+- **选择题题干选项智能剥离引擎上线（核心 Bug 修复）**：
+  - 彻底修复当题干选项采用 Unicode bullet `•`、`·`、`●` 或裸字母开头（`A.`）时，题干无法剥离选项导致题干内重复展示选项文本的缺陷；
+  - 引入 `extractStemFromChoice` 智能定位与剥离引擎，准确切分题干正文与多行选项，题面仅显示纯净题目，下方呈现精致 Bento 选项大卡片；
+  - 增补单元测试 `cleanly extracts question stem by stripping options with Unicode bullet • prefix` 锁定质量。
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1943 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.53）
 
 - **新手向导（Onboarding Tour）全流程 Bento 质感升级**：
   - 页头跳过按钮升级为 Outline Bento 胶囊，笔记本错误刷新按钮嵌入 `<LvIcon name="refresh" />` 矢量微标；

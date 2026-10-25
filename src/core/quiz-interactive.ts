@@ -102,6 +102,31 @@ export function parseJudgeAnswer(answerText: string): boolean | null {
 }
 
 /**
+ * 从可能混杂选项的内容中干净提取纯题干（剥离 A/B/C/D 选项部分）
+ */
+export function extractStemFromChoice(content: string, options: InteractiveOption[]): string {
+    if (!content || !options || options.length < 2) return cleanText(content);
+    const lines = content.split(/\r?\n|<br\s*\/?>|<\/p>|<\/li>|<\/div>/i);
+    const stemLines: string[] = [];
+    let matchedOption = false;
+    for (const line of lines) {
+        const cleaned = cleanText(line);
+        if (/^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*[A-Za-z][\.\、\:\：\s]/i.test(cleaned)) {
+            matchedOption = true;
+            break;
+        }
+        stemLines.push(line);
+    }
+    if (matchedOption && stemLines.length > 0) {
+        const res = cleanText(stemLines.join(" ")).trim();
+        if (res.length > 0) return res;
+    }
+    return cleanText(content)
+        .replace(/(?:^|\s+)(?:[•·●\-\*\+]\s*)?[A-Za-z][\.\、\:\：\s].*$/i, "")
+        .trim();
+}
+
+/**
  * 综合分析卡片属性与正文，生成完整的交互式题型模型
  */
 export function parseInteractiveQuiz(params: {
@@ -127,7 +152,7 @@ export function parseInteractiveQuiz(params: {
         const isMultiple = examType === "multiple" || (knownAnswer.length > 1 && /^[A-F]+$/i.test(knownAnswer));
         return {
             kind: "choice",
-            stem: cleanText(markdown || domHtml).replace(/[-*+]\s+[A-Fa-f][\.\、\:\：\s].*$/gm, "").trim(),
+            stem: extractStemFromChoice(markdown || domHtml, extractedOptions),
             options: extractedOptions,
             isMultiple,
             judgeAnswer: null,
