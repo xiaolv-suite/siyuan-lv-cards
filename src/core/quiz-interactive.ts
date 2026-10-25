@@ -45,9 +45,9 @@ export function extractChoiceOptionsFromText(content: string, knownAnswer = ""):
     const text = String(content ?? "");
     const options: InteractiveOption[] = [];
 
-    // 1. 按行或列表项逐项扫描：支持 "A. 选项"、"A、选项"、"A: 选项"、"- A. 选项"、"* A. 选项"
-    const lines = text.split(/\r?\n|<br\s*\/?>/i);
-    const optRegex = /^\s*(?:[-*+]\s+)?(?:<[^>]*>)*([A-Fa-f])[\.\、\:\：\s]\s*(.+)$/;
+    // 1. 按行或列表项逐项扫描：支持 "A. 选项"、"A、选项"、"A: 选项"、"- A. 选项"、"* A. 选项"、"• A. 选项"
+    const lines = text.split(/\r?\n|<br\s*\/?>|<\/li>|<\/div>|<\/p>/i);
+    const optRegex = /^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*([A-Fa-f])[\.\、\:\：\s]\s*(.+)$/;
 
     for (const line of lines) {
         const cleaned = cleanText(line);

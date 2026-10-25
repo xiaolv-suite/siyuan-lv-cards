@@ -2312,7 +2312,7 @@
             {/each}
         </div>
     {/if}
-    {#if returnItems && !returnDismissed}
+    {#if returnItems && !returnDismissed && !sessionDone && !!current && !emptyQueue}
         <!-- BI-10：长期返场检查（只读预览；不写内核，重建归 BI-28 可撤销批次） -->
         <div class="lv-return" role="status" aria-live="polite">
             <span class="lv-return-title">{t.returnCheck.bannerTitle}</span>
@@ -2512,7 +2512,7 @@
             <!-- T07 结果面（R52 results）：单面板 + check 徽 + 大数字统计 + 行式补充 + NEXT 软面板 -->
             <div class="lv-done-panel">
                 <div class="lv-done-head">
-                    <span class="check lv-done-check" aria-hidden="true">✓</span>
+                    <span class="check lv-done-check" aria-hidden="true"><LvIcon name="check" size={24} /></span>
                     <div class="lv-done-headtext">
                         <div class="lv-done-title">{t.review.done}</div>
                         <div class="lv-done-sub">
@@ -2566,13 +2566,22 @@
                     <div class="lv-done-tip">{dailyTip()}</div>
                 {/if}
                 <!-- BI-8：收工原因收集（可跳过；写当日现场，返场时恢复横幅/分流可读） -->
-                <div class="lv-done-end" role="group" aria-label={t.endReason.title}>
-                    <span class="ft__smaller ft__on-surface">{t.endReason.title}</span>
-                    {#each END_REASONS as r (r)}
-                        <button class="b3-button b3-button--small lv-btn-ghost" class:lv-btn-primary={endPicked === r}
-                            aria-pressed={endPicked === r}
-                            onclick={() => pickEnd(r)}>{t.endReason[r]}</button>
-                    {/each}
+                <div class="lv-done-end-box" role="group" aria-label={t.endReason.title}>
+                    <span class="lv-done-end-title">{t.endReason.title}</span>
+                    <div class="lv-done-end-chips">
+                        {#each END_REASONS as r (r)}
+                            <button
+                                type="button"
+                                class="lv-chipbtn"
+                                class:lv-chipbtn-active={endPicked === r}
+                                aria-pressed={endPicked === r}
+                                onclick={() => pickEnd(r)}
+                            >
+                                {#if endPicked === r}<LvIcon name="check" size={12} />{/if}
+                                <span>{t.endReason[r]}</span>
+                            </button>
+                        {/each}
+                    </div>
                 </div>
                 {#if sessionSkip > 0 || sessionForget > 0}
                     <!-- T07 下一步建议（docs/40）：本场数据推导，本地口径、可忽略——"把疑问留下，也把下一步留下" -->
@@ -2603,9 +2612,9 @@
                     </div>
                 {/if}
                 <div class="fn__flex lv-done-actions" style="justify-content: center; gap: var(--lv-sp-2)">
-                    <button class="b3-button lv-btn-primary" onclick={() => ctx.openDashboard()}><LvIcon name="home" size={16} /> {t.review.returnHome ?? "返回闪卡主页"}</button>
-                    <button class="b3-button b3-button--outline" onclick={() => ctx.openDashboard("manage")}>{t.menuManager}</button>
-                    <button class="b3-button b3-button--text" onclick={loadQueue}>{t.review.again}</button>
+                    <button class="b3-button lv-btn-primary" onclick={() => ctx.openDashboard()}><LvIcon name="home" size={16} /> <span>{t.review.returnHome ?? "返回闪卡主页"}</span></button>
+                    <button class="b3-button b3-button--outline" onclick={() => ctx.openDashboard("manage")}><LvIcon name="cards" size={14} /> <span>{t.menuManager}</span></button>
+                    <button class="b3-button b3-button--outline" onclick={loadQueue}><LvIcon name="refresh" size={14} /> <span>{t.review.again}</span></button>
                 </div>
             </div>
         </div>
@@ -3850,13 +3859,14 @@
             opacity: 0.85;
             line-height: var(--lv-lh-reading);
         }
-        /* BI-8：收工原因 chips（可跳过，不占完成屏视觉重心；中性 ghost，选中才亮主色） */
-        .lv-done-end {
-            display: flex; flex-wrap: wrap; gap: var(--lv-sp-1); align-items: center;
+        /* BI-8：收工原因 chips 容器 */
+        .lv-done-end-box {
+            display: flex; flex-direction: column; gap: var(--lv-sp-2); align-items: center;
             margin-top: var(--lv-sp-3);
-            padding-top: var(--lv-sp-3);
-            border-top: 1px solid var(--lv-border);
-            font-size: var(--lv-type-control-size);
+            padding: var(--lv-sp-3);
+            border: 1px solid var(--lv-border);
+            border-radius: var(--lv-r-m);
+            background: color-mix(in srgb, var(--lv-color-text) 3%, transparent);
         }
         .lv-done-actions { gap: var(--lv-sp-2); justify-content: flex-end; margin-top: var(--lv-sp-4); padding-top: var(--lv-sp-4); border-top: 1px solid var(--lv-border); }
 

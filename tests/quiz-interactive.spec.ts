@@ -22,6 +22,20 @@ describe("quiz-interactive core parser", () => {
         expect(opts[3]).toEqual({ key: "D", text: "125%", isAnswer: false });
     });
 
+    it("extracts choice options with Unicode bullet • prefix", () => {
+        const text = `
+【单选示例】上月销量为 80 件，本月为 100 件，环比增长率是多少？
+• A. 20%
+• B. 25%
+• C. 80%
+        `;
+        const opts = extractChoiceOptionsFromText(text, "B");
+        expect(opts).toHaveLength(3);
+        expect(opts[0]).toEqual({ key: "A", text: "20%", isAnswer: false });
+        expect(opts[1]).toEqual({ key: "B", text: "25%", isAnswer: true });
+        expect(opts[2]).toEqual({ key: "C", text: "80%", isAnswer: false });
+    });
+
     it("extracts choice options from SiYuan native HTML block DOM", () => {
         const dom = `
 <div data-node-id="20261022-test" data-type="NodeSuperBlock">

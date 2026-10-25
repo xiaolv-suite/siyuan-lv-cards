@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
     type StudioSource = { label: string; content: string; docId?: string; nbId?: string; inboxId?: string };
     type InboxRequest = { id: number; sources: StudioSource[]; onImportComplete: (ids: string[]) => void };
     type ViewMount = (component: any, target: HTMLElement, props: Record<string, any>) => { destroy(): void };
@@ -268,16 +269,26 @@
     </div>
     <div class="lv-studio-toolbar">
         <div class="lv-studio-modes" role="group" aria-label={i18n.hubStudioModeLabel ?? "制卡方式"}>
-            <button class="b3-button" class:lv-studio-mode-active={mode === "manual"} aria-pressed={mode === "manual"} disabled={loading} onclick={startManual}>
-                {i18n.hubStudioManualKicker ?? "手工制卡"}
+            <button class="b3-button lv-studio-mode-btn" class:lv-studio-mode-active={mode === "manual"} aria-pressed={mode === "manual"} disabled={loading} onclick={startManual}>
+                <LvIcon name="edit" size={13} />
+                <span>{i18n.hubStudioManualKicker ?? "手工制卡"}</span>
             </button>
-            <button class="b3-button" class:lv-studio-mode-active={mode === "ai"} aria-pressed={mode === "ai"} disabled={loading} onclick={() => startAI()}>
-                {i18n.hubStudioAICicker ?? "AI 辅助"}
+            <button class="b3-button lv-studio-mode-btn" class:lv-studio-mode-active={mode === "ai"} aria-pressed={mode === "ai"} disabled={loading} onclick={() => startAI()}>
+                <LvIcon name="zap" size={13} />
+                <span>{i18n.hubStudioAICicker ?? "AI 辅助"}</span>
             </button>
         </div>
         <div class="lv-studio-tools">
-            {#if openDrill}<button class="b3-button b3-button--text" onclick={() => openDrill?.()}>{i18n.authoringDrillOpen ?? "修卡演练"}</button>{/if}
-            <button class="b3-button b3-button--text lv-studio-onboarding" onclick={openOnboarding}>{i18n.hubStudioOnboarding ?? "上手与示例"}</button>
+            {#if openDrill}
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => openDrill?.()}>
+                    <LvIcon name="graduation" size={13} />
+                    <span>{i18n.authoringDrillOpen ?? "修卡演练"}</span>
+                </button>
+            {/if}
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={openOnboarding}>
+                <LvIcon name="lightbulb" size={13} />
+                <span>{i18n.hubStudioOnboarding ?? "上手与示例"}</span>
+            </button>
         </div>
     </div>
 
@@ -314,10 +325,6 @@
 
     {#if AIWizard}
         <section hidden={mode !== "ai"} class="lv-studio-tool">
-            <div class="lv-studio-tool-head">
-                <div><div class="lv-eyebrow">{i18n.hubStudioAICicker ?? "AI 辅助"}</div><h2>{i18n.aiWizardTitle}</h2></div>
-                <button class="b3-button b3-button--text" onclick={() => (mode = "manual")}>{i18n.hubStudioReturnManual ?? "返回手工制卡"}</button>
-            </div>
             {#if pendingRequest}
                 <div class="lv-studio-replace" role="status">
                     <div class="lv-studio-replace-copy">
@@ -384,7 +391,6 @@
     }
     .lv-studio-tools { display: flex; align-items: center; gap: var(--lv-sp-2); }
     .lv-studio-tools .b3-button { min-height: 34px; border-radius: var(--lv-r-pill); padding: 4px 12px; }
-    .lv-studio-onboarding { min-height: 34px; }
     .lv-studio-replace {
         display: flex;
         align-items: center;

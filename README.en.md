@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.46** (2026-10-25), delivering a 5-minute collision backoff engine for isolated E2E testing and comprehensive backward-compatibility audits. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.46) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.47** (2026-10-25), delivering deep UI hierarchy restructuring, interactive choice card conversion, done panel chip refactoring, and Bento button groups. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.47) for the package and publishing status.
 
-## What's New in v0.210.46
+## What's New in v0.210.47
+
+- **Dashboard UI & Alignment Restructuring**:
+  - Replaced text actions with outline Bento icon buttons; resolved select overlap in the budget pill; aligned 4 stat cards with equal bottom bounds.
+- **Reviewer & Done Panel Hierarchy Overhaul**:
+  - Upgraded choice question parser to support bullet `•` lists, auto-hiding raw lists and rendering interactive `[A]`-`[D]` Bento option cards.
+  - Hid return/relief banners on the done screen; converted end reasons to clickable chips; established clear button hierarchy.
+- **Verification**:
+  - 1942 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.46
 
 - **5-Minute E2E Collision Backoff & Retry**:
   - Enhanced `scripts/e2e-isolated.mjs` with up to 300s (5 min) adaptive spin-wait retries during port/instance contention.

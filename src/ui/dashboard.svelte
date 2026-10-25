@@ -660,12 +660,25 @@
 
 <LvPage eyebrow={`TODAY / ${heroDateText()}`} title={t.dashboard.title} subtitle={revlogNote ? `${t.dashboard.since} ${revlogNote}` : ""}>
     {#snippet actions()}
-        <!-- R53 动作组：次级动作全部 ghost（主动作唯一——hero CTA）；报告/写入/管理器/刷新 -->
-        <button class="b3-button b3-button--small lv-btn-ghost" disabled={loading && !hasLoadedSnapshot} onclick={downloadReport}>{t.dashboard.report}</button>
-        <!-- AR-5：写入中禁点；失败原因就近展示（报告可重试，草稿不丢） -->
-        <button class="b3-button b3-button--small lv-btn-ghost" disabled={writeBusy || (loading && !hasLoadedSnapshot)} title={writeError || undefined} onclick={writeDocReport}>{writeBusy ? "…" : t.dashboard.writeDoc}</button>
-        <button class="b3-button b3-button--small lv-btn-ghost" onclick={() => ctx.openManager()}>{t.menuManager}</button>
-        <button class="b3-button b3-button--small lv-btn-ghost" data-testid="dashboard-refresh-btn" disabled={loading} onclick={refresh}>{loading ? t.dashboard.loading : t.dashboard.refresh}</button>
+        <!-- 现代化操作区：清晰轮廓微底色 + 矢量图标 + 规范间距 -->
+        <div class="lv-dashboard-action-group">
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" disabled={loading && !hasLoadedSnapshot} onclick={downloadReport}>
+                <LvIcon name="book" size={13} />
+                <span>{t.dashboard.report}</span>
+            </button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" disabled={writeBusy || (loading && !hasLoadedSnapshot)} title={writeError || undefined} onclick={writeDocReport}>
+                <LvIcon name="edit" size={13} />
+                <span>{writeBusy ? "…" : t.dashboard.writeDoc}</span>
+            </button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" onclick={() => ctx.openManager()}>
+                <LvIcon name="cards" size={13} />
+                <span>{t.menuManager}</span>
+            </button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" data-testid="dashboard-refresh-btn" disabled={loading} onclick={refresh}>
+                <LvIcon name="refresh" size={13} />
+                <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span>
+            </button>
+        </div>
     {/snippet}
 
     {#if writeError}
@@ -1666,31 +1679,62 @@
         gap: var(--lv-sp-2);
         flex-wrap: wrap;
     }
-    .lv-hero-budget-pill {
+    .lv-dashboard-action-group {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 2px 8px;
+        flex-wrap: wrap;
+    }
+    .lv-btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
         border-radius: var(--lv-r-pill);
-        background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+        padding: 4px 10px;
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        color: var(--lv-color-text-muted);
+        transition: all var(--lv-dur-1) var(--lv-ease);
+
+        &:hover:not(:disabled) {
+            color: var(--lv-color-brand);
+            border-color: var(--lv-color-brand);
+            background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
+        }
+    }
+    .lv-hero-budget-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: var(--lv-r-pill);
+        background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
         border: 1px solid var(--lv-border);
         font-size: 11px;
         color: var(--lv-color-text-muted);
+        box-sizing: border-box;
 
         .lv-hero-budget-label {
             display: inline-flex;
             align-items: center;
             gap: 3px;
+            white-space: nowrap;
         }
         .lv-hero-budget-select {
-            border: none;
-            background: transparent;
-            font-size: 11px;
-            font-weight: var(--lv-fw-semibold);
-            color: var(--lv-color-brand);
-            padding: 1px 2px;
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
+            font-size: 11px !important;
+            font-weight: var(--lv-fw-semibold) !important;
+            color: var(--lv-color-brand) !important;
+            padding: 0 2px !important;
+            height: auto !important;
+            min-height: unset !important;
+            line-height: normal !important;
+            box-shadow: none !important;
             cursor: pointer;
-            &:focus { outline: none; }
         }
     }
     .lv-first-use-steps p {

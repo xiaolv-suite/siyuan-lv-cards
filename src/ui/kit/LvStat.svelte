@@ -73,16 +73,20 @@
     const isZero = $derived(display === 0 || display === "0");
 </script>
 
-<div class="lv-card2 lv-stat">
-    <div class="lv-stat-label">
-        <span class="lv-stat-dot" style={`background: ${toneColor[tone]}`}></span>{label}
-    </div>
-    {#if detail}<div class="lv-stat-detail">{detail}</div>{/if}
-    <div class="lv-hero-num" class:lv-num-zero={isZero}>
-        {display}{#if denom && denom !== "0"}<span class="lv-stat-denom">/ {denom}</span>{/if}{#if badgeIcon}<span class="lv-stat-badge" aria-hidden="true"><LvIcon name={badgeIcon} size={16} /></span>{:else if badge}<span class="lv-stat-badge" aria-label={badge}>{badge}</span>{/if}
+<div class="lv-card2 lv-stat" class:lv-stat--has-progress={progress >= 0}>
+    <div class="lv-stat-top">
+        <div class="lv-stat-label">
+            <span class="lv-stat-dot" style={`background: ${toneColor[tone]}`}></span>{label}
+        </div>
+        {#if detail}<div class="lv-stat-detail">{detail}</div>{/if}
+        <div class="lv-hero-num" class:lv-num-zero={isZero}>
+            {display}{#if denom && denom !== "0"}<span class="lv-stat-denom">/ {denom}</span>{/if}{#if badgeIcon}<span class="lv-stat-badge" aria-hidden="true"><LvIcon name={badgeIcon} size={16} /></span>{:else if badge}<span class="lv-stat-badge" aria-label={badge}>{badge}</span>{/if}
+        </div>
     </div>
     {#if progress >= 0}
         <div class="lv-stat-progress"><LvProgress value={progress} /></div>
+    {:else}
+        <div class="lv-stat-progress-placeholder" aria-hidden="true"></div>
     {/if}
     {#if sparkPts}
         <svg class="lv-stat-spark" width={sparkPts.w} height={sparkPts.h} viewBox={`0 0 ${sparkPts.w} ${sparkPts.h}`} aria-hidden="true">
@@ -95,9 +99,24 @@
 
 <style>
     :global(.lv-stat) {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-sizing: border-box;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease);
+    }
+    .lv-stat-top {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+    .lv-stat-progress-placeholder {
+        height: 6px;
+        margin-top: var(--lv-sp-2);
+        visibility: hidden;
     }
     :global(.lv-stat:hover) {
         transform: translateY(-2px);

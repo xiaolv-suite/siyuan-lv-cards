@@ -1002,7 +1002,7 @@ import { confirmDialog } from "@/libs/dialog";
                             <LvIcon name="star" size={13} />
                         </button>
                     {/if}
-                    <button class="b3-button b3-button--small" onclick={(e: Event) => { e.stopPropagation(); openDoc(b); }}>{t.manager.openDoc}</button>
+                    <button class="b3-button b3-button--small" onclick={(e: Event) => { e.stopPropagation(); openDoc(b); }}><LvIcon name="target" size={12} /> {t.manager.openDoc}</button>
                 </div>
             {/each}
         </div>
@@ -1307,14 +1307,14 @@ import { confirmDialog } from "@/libs/dialog";
     .lv-list {
         display: flex;
         flex-direction: column;
-        gap: var(--lv-sp-2);
+        gap: var(--lv-sp-3);
 
         .lv-row {
             display: flex; align-items: center; gap: var(--lv-sp-3);
             padding: var(--lv-sp-3) var(--lv-sp-4);
             background: var(--lv-color-surface);
             border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-m);
+            border-radius: var(--lv-r-l);
             box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
             transition: transform var(--lv-dur-2) var(--lv-ease),
                 border-color var(--lv-dur-2) var(--lv-ease),
