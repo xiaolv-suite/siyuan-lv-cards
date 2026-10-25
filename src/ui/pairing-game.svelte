@@ -206,7 +206,7 @@
         </div>
     {:else}
         <div class="lv-pair-center">
-            <div class="lv-done-badge" aria-hidden="true">✓</div>
+            <div class="lv-done-badge" aria-hidden="true"><LvIcon name="check" size={24} /></div>
             <div class="lv-pair-result">{t.pairing.doneTitle}</div>
             <div class="ft__smaller ft__on-surface">
                 {t.pairing.doneTime.replace("${s}", String(seconds))} · {t.pairing.mistakes}: {mistakes}

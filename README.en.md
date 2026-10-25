@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.44** (2026-10-25), delivering 18/18 passing isolated E2E tests and 4-direction mobile touch rating gestures. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.44) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.45** (2026-10-25), delivering pairing game badge vectorization and full alignment of Y/N shortcut documentation. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.45) for the package and publishing status.
 
-## What's New in v0.210.44
+## What's New in v0.210.45
+
+- **Pairing Game Completion Badge Vectorization**:
+  - Replaced text glyph `✓` in `.lv-done-badge` with SVG `<LvIcon name="check" size={24} />`.
+- **Reviewer Shortcut Overlay Y/N Alignment**:
+  - Documented `T / F / Y / N (1 / 2)` keys in the shortcut help modal for seamless keyboard and gesture discoverability.
+- **Verification**:
+  - 1941 tests across 242 test suites 100% passing; zero TypeScript/Svelte errors and warnings; production build and smoke tests green.
+
+## Previous Update: v0.210.44
 
 - **Isolated Kernel E2E 18/18 Tests Passing**:
   - Auto-locates kernel across installations; validates headless boot, authentication, chunk static hosting, petal enablement, note creation, deck enrollment, FSRS review loop, and residue sweep.
