@@ -186,7 +186,7 @@
             <span class="b3-chip">{t.pairing.pairs}: {matched.size} / {pairs.length}</span>
             <span class="b3-chip b3-chip--error">{t.pairing.mistakes}: {mistakes}</span>
             <div class="fn__flex-1"></div>
-            <button class="b3-button b3-button--small" onclick={exit}>{t.pairing.exit}</button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={exit}><LvIcon name="moon" size={12} /> <span>{t.pairing.exit}</span></button>
         </div>
         <div class="lv-pair-grid">
             <div class="lv-pair-col">
@@ -212,8 +212,8 @@
                 {t.pairing.doneTime.replace("${s}", String(seconds))} · {t.pairing.mistakes}: {mistakes}
             </div>
             <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); margin-top: 12px; justify-content: center">
-                <button class="b3-button lv-btn-primary" disabled={loadBusy} aria-busy={loadBusy} onclick={load}>{loadBusy ? (t.pairing.loading ?? t.dashboard.loading) : t.pairing.again}</button>
-                <button class="b3-button b3-button--outline" onclick={exit}>{t.pairing.exit}</button>
+                <button class="b3-button lv-btn-primary" disabled={loadBusy} aria-busy={loadBusy} onclick={load}><LvIcon name="refresh" size={13} /> <span>{loadBusy ? (t.pairing.loading ?? t.dashboard.loading) : t.pairing.again}</span></button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={exit}><span>{t.pairing.exit}</span></button>
             </div>
         </div>
     {/if}

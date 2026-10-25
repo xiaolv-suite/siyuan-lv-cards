@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.51（2026-10-25）**，落地目标操作全胶囊矢量化、设置保存按钮Primary升级、维护与恢复中心全操作规范化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.51)。
+当前版本为 **v0.210.52（2026-10-25）**，落地全局空态与错误态微组件矢量化、挑战与配对游戏按钮层级升阶。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.52)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.51）
+## 本次更新（v0.210.52）
+
+- **全局基础反馈组件（LvEmpty & LvError）质感跃迁**：
+  - 空态组件（LvEmpty）告别文本字符 `✦`，升级为高阶单色矢量微标（默认 `<LvIcon name="inbox" size={24} />`，支持按需注入）；行动按钮升级为 Outline Bento 胶囊并嵌入加号图标；
+  - 错误重试卡片（LvError）增设醒目危险警告图标（`<LvIcon name="warning" size={18} />`），重试按钮全员配备圆角微胶囊与刷新图标，消灭生硬框线；
+- **限时挑战与配对挑战（Games & Challenges）视觉规范化**：
+  - 限时挑战空态去除裸数学字符 `∅`，升级为精密 `<LvIcon name="cards" size={38} />` 矢量微标，重试按钮升级为 Bento 微胶囊；
+  - 配对游戏顶栏与结算屏退出按钮全面对齐 Outline Bento 胶囊规范，再来一局按钮嵌入矢量微标；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1942 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.51）
 
 - **目标与计划（Goals Page）操作栏全方位矢量微胶囊化**：
   - 目标卡片操作栏（编辑、删除）全员升级为 `.lv-btn-plan-action` 圆角微胶囊，分别嵌入 `<LvIcon name="edit" />` 与 `<LvIcon name="trash" />`；

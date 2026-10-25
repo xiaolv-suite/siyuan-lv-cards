@@ -180,10 +180,10 @@
         </div>
     {:else if phase === "empty"}
         <div class="lv-chal-center">
-            <div class="lv-chal-icon">∅</div>
+            <div class="lv-chal-icon"><LvIcon name="cards" size={38} /></div>
             <div class="lv-chal-title">{t.challenge.empty}</div>
             <div class="fn__flex" style="gap: var(--lv-sp-2)">
-                <button class="b3-button b3-button--outline" onclick={start}>{t.challenge.retry}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={start}><LvIcon name="refresh" size={13} /> <span>{t.challenge.retry}</span></button>
             <button class="b3-button b3-button--cancel" onclick={exit}>{window.siyuan.languages.cancel}</button>
             </div>
         </div>

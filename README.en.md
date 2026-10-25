@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.51** (2026-10-25), delivering vectorized Goal action pills, Settings Primary Save button upgrade, and maintenance/recovery Bento consistency. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.51) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.52** (2026-10-25), delivering vectorized LvEmpty/LvError feedback components and interactive challenge/pairing UI polish. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.52) for the package and publishing status.
 
-## What's New in v0.210.51
+## What's New in v0.210.52
+
+- **Global Feedback Components Modernization (LvEmpty & LvError)**:
+  - Replaced text glyph `✦` in LvEmpty with SVG icons; upgraded empty actions to Outline Bento pill buttons.
+  - Added warning vector icon and rounded pill retry buttons to LvError cards.
+- **Challenge & Pairing Modes Polish**:
+  - Upgraded empty state in Challenge mode to SVG cards icon; aligned pairing game exit and retry buttons with Bento design system.
+- **Verification**:
+  - 1942 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.51
 
 - **Learning Goals Action Bar Vectorization**:
   - Upgraded goal card actions (edit, delete) to uniform `.lv-btn-plan-action` pills with SVG icons; added plus icon to the create button.
