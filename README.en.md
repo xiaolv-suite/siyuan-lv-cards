@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.60** (2026-10-26), eliminating raw close characters across all modals/drawers and adding vector swap icons for bidirectional cards. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.60) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.61** (2026-10-26), delivering full design palette independence from external host themes and self-governed dual-mode surface hierarchy. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.61) for the package and publishing status.
 
-## What's New in v0.210.60
+## What's New in v0.210.61
+
+- **Design System Autonomy & Theme Decoupling**:
+  - Completely detached core colors from unpredictable external SiYuan themes (`--b3-theme-primary`, `--b3-theme-background`), establishing Lv Cards' own signature Burgundy Red (`#E11D48`) and Starlight Gold (`#FACC15`).
+- **Self-Governed Dual-Mode Surface Hierarchy**:
+  - Light mode: Gentle natural slate canvas (`#F8FAFC`) with crisp white card surfaces (`#FFFFFF`) and deep Slate 900 typography (`#0F172A`).
+  - Dark mode: Midnight blue-black canvas (`#090D16`) with layered slate blue surfaces (`#141C2E`) and vibrant ruby accents (`#F43F5E`).
+- **Verification**:
+  - 1947 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.60
 
 - **Full Vectorization of Modal & Drawer Controls**:
   - Replaced all raw `✕` glyphs across 8 review modals, `LvDrawer`, `DeckPicker`, and `Manager` with standardized `<LvIcon name="close" />` components.

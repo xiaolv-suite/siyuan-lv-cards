@@ -5,22 +5,23 @@
 // =============================================================
 
 :root {
-    // 颜色语义层：基础色由思源主题提供，派生色在本文件统一维护。
+    // 颜色语义层：小驴专属独立美学体系（Palette Independence，绝不受外部主题干扰）
     --lv-brand: #E11D48; /* 勃艮第心智红 */
+    --lv-brand-hover: #BE123C;
     --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 12%, transparent);
     --lv-accent-gold: #FACC15; /* 星光金 */
-    --lv-color-brand: var(--b3-theme-primary);
-    --lv-color-on-brand: var(--b3-theme-on-primary);
-    --lv-color-text: var(--b3-theme-on-background);
-    --lv-color-text-muted: var(--b3-theme-on-surface);
-    --lv-color-canvas: var(--b3-theme-background);
-    --lv-color-canvas-subtle: var(--b3-theme-background-light, var(--b3-theme-background));
-    --lv-color-surface: var(--b3-theme-surface);
-    --lv-color-danger: var(--b3-theme-error);
-    --lv-color-warning: var(--b3-theme-warning);
-    --lv-color-success: var(--b3-theme-success, var(--b3-theme-primary));
-    --lv-color-on-danger: var(--lv-color-canvas);
-    --lv-surface-hover: color-mix(in srgb, var(--lv-color-text) 4%, transparent);
+    --lv-color-brand: #E11D48;
+    --lv-color-on-brand: #FFFFFF;
+    --lv-color-text: #0F172A;
+    --lv-color-text-muted: #475569;
+    --lv-color-canvas: #F8FAFC;
+    --lv-color-canvas-subtle: #F1F5F9;
+    --lv-color-surface: #FFFFFF;
+    --lv-color-danger: #EF4444;
+    --lv-color-warning: #F59E0B;
+    --lv-color-success: #10B981;
+    --lv-color-on-danger: #FFFFFF;
+    --lv-surface-hover: rgba(15, 23, 42, 0.04);
 
     // 类型档位：组件默认组合与字号清单见 docs/47。
     --lv-type-caption-size: 10px;
@@ -185,6 +186,30 @@
     --lv-z-host-overlay: 40;
     --lv-z-drawer: 300;
     --lv-z-drawer-content: 301;
+}
+
+:root[data-theme-mode="dark"],
+body[data-theme-mode="dark"],
+.theme--dark {
+    --lv-brand: #F43F5E;
+    --lv-brand-hover: #E11D48;
+    --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 15%, transparent);
+    --lv-accent-gold: #FDE047;
+    --lv-color-brand: #F43F5E;
+    --lv-color-on-brand: #FFFFFF;
+    --lv-color-text: #F8FAFC;
+    --lv-color-text-muted: #94A3B8;
+    --lv-color-canvas: #090D16;
+    --lv-color-canvas-subtle: #0F1626;
+    --lv-color-surface: #141C2E;
+    --lv-color-danger: #F87171;
+    --lv-color-warning: #FBBF24;
+    --lv-color-success: #34D399;
+    --lv-color-on-danger: #090D16;
+    --lv-surface-hover: rgba(255, 255, 255, 0.06);
+    --lv-border: rgba(255, 255, 255, 0.08);
+    --lv-border-strong: rgba(255, 255, 255, 0.18);
+    --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 @media (prefers-reduced-motion: reduce) {
