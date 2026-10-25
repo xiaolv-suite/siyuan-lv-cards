@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.50** (2026-10-25), delivering vectorized Manager header controls, exam action pill buttons, and inbox Bento alignment. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.50) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.51** (2026-10-25), delivering vectorized Goal action pills, Settings Primary Save button upgrade, and maintenance/recovery Bento consistency. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.51) for the package and publishing status.
 
-## What's New in v0.210.50
+## What's New in v0.210.51
+
+- **Learning Goals Action Bar Vectorization**:
+  - Upgraded goal card actions (edit, delete) to uniform `.lv-btn-plan-action` pills with SVG icons; added plus icon to the create button.
+- **Settings Primary Save Button Upgrade**:
+  - Replaced ambiguous plain-text button with elevated `.lv-btn-primary` Crimson velvet CTA.
+- **Maintenance & Recovery Center Consistency**:
+  - Added SVG icons to scan, legacy format normalization, and recovery continue actions; vectorized card-detail drawer headers.
+- **Verification**:
+  - 1942 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.50
 
 - **Flashcard Manager Header Alignment**:
   - Replaced naked refresh text with 30px outline Bento pill button and SVG icon; rounded filter dropdowns to match select-all pills.

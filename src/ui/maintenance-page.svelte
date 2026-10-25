@@ -434,10 +434,12 @@
 
 <LvPage eyebrow="WORKSPACE / RECOVER" title={t.title} subtitle={t.queueCount.replace("${n}", String(total()))}>
     {#snippet actions()}
-        <button class="b3-button b3-button--small b3-button--outline" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={upgradeLegacyCards}>
-            <LvIcon name="zap" size={14} /> 存量格式规范化 (可选)
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={upgradeLegacyCards}>
+            <LvIcon name="zap" size={13} /> <span>存量格式规范化 (可选)</span>
         </button>
-        <button class="b3-button b3-button--small lv-btn-primary" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={runScan}>{scanning ? t.scanning : t.scan}</button>
+        <button class="b3-button b3-button--small lv-btn-primary" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={runScan}>
+            <LvIcon name="refresh" size={13} /> <span>{scanning ? t.scanning : t.scan}</span>
+        </button>
     {/snippet}
 
     {#if legacyUpgradeStatus}

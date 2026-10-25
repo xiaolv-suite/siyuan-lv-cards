@@ -21,11 +21,25 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.50（2026-10-25）**，落地闪卡管理器页头刷新与筛选全胶囊化、考试卡片操作组矢量对齐、收件箱全选与刷新Bento化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.50)。
+当前版本为 **v0.210.51（2026-10-25）**，落地目标操作全胶囊矢量化、设置保存按钮Primary升级、维护与恢复中心全操作规范化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.51)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.50）
+## 本次更新（v0.210.51）
+
+- **目标与计划（Goals Page）操作栏全方位矢量微胶囊化**：
+  - 目标卡片操作栏（编辑、删除）全员升级为 `.lv-btn-plan-action` 圆角微胶囊，分别嵌入 `<LvIcon name="edit" />` 与 `<LvIcon name="trash" />`；
+  - 页头新建目标按钮嵌入 `<LvIcon name="plus" />` 矢量微标，操作引导清晰；
+- **设置中心（Settings Modal）确认保存按钮 Primary 质感升级**：
+  - 彻底淘汰单薄裸文字链接类名 `.b3-button--text`，升级为显眼发光的 `.lv-btn-primary` 核心行动主按钮，保存反馈明确无遗漏；
+- **维护中心与恢复中心（Maintenance & Recovery）一致性治理**：
+  - 维护中心「扫描存量闪卡」与「存量格式规范化」按钮全员嵌入矢量图标，统筹对齐生态操作规范；
+  - 恢复中心页头「刷新」按钮与卡片「继续本场复习」全员嵌入对应单色矢量图标，交互层级明确；
+  - 卡片详情抽屉（Card Detail Drawer）顶部「编辑」与「打开文档」按钮升级为 Outline Bento 胶囊并嵌入矢量图标；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1942 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.50）
 
 - **闪卡管理器（Flashcard Manager）全方位层级规范化**：
   - 页头右侧 `刷新` 按钮告别单薄裸文字，升级为与搜索输入框同高的带图标 Outline Bento 胶囊按钮（`<LvIcon name="refresh" size={13} />`）；

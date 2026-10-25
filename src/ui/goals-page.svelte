@@ -201,7 +201,9 @@
     {#snippet actions()}
         {#if !embedded && !editing}
             <!-- 主动作：每屏唯一 primary（底部重复入口已收敛） -->
-            <button class="b3-button b3-button--small lv-btn-primary" onclick={startAdd}>{t.add}</button>
+            <button class="b3-button b3-button--small lv-btn-primary" onclick={startAdd}>
+                <LvIcon name="plus" size={13} /> <span>{t.add}</span>
+            </button>
         {/if}
     {/snippet}
 
@@ -295,9 +297,13 @@
                         {/if}
                     </div>
                     <div class="lv-goal-side">
-                        <button class="b3-button b3-button--small b3-button--outline" disabled={actionBusy} title={t.edit ?? "编辑"} onclick={() => startEdit(g)}>{t.edit ?? "编辑"}</button>
+                        <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action" disabled={actionBusy} title={t.edit ?? "编辑"} onclick={() => startEdit(g)}>
+                            <LvIcon name="edit" size={12} /> <span>{t.edit ?? "编辑"}</span>
+                        </button>
                         <button class="lv-chipbtn" disabled={actionBusy} title={t.priorityTitle} onclick={() => cyclePriority(g)}>{priorityText(g)}</button>
-                        <button class="b3-button b3-button--small lv-btn-danger" disabled={actionBusy} title={t.delete} onclick={() => remove(g.id)}>{t.delete}</button>
+                        <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action lv-menu-danger" disabled={actionBusy} title={t.delete} onclick={() => remove(g.id)}>
+                            <LvIcon name="trash" size={12} /> <span>{t.delete}</span>
+                        </button>
                     </div>
                 </div>
             {/each}

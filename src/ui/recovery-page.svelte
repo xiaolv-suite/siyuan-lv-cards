@@ -5,6 +5,7 @@
     import LvChip from "./kit/LvChip.svelte";
     import LvError from "./kit/LvError.svelte";
     import LvSkeleton from "./kit/LvSkeleton.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     type RecoverySnapshot = {
         aiJobs: {
@@ -87,8 +88,9 @@
 
 <LvPage eyebrow="WORKSPACE / RECOVERY" title={t.title} subtitle={t.subtitle}>
     {#snippet actions()}
-        <button class="b3-button b3-button--small b3-button--outline" disabled={loading} aria-busy={loading} onclick={refresh}>
-            {loading ? t.refreshing : t.refresh}
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={loading} aria-busy={loading} onclick={refresh}>
+            <LvIcon name="refresh" size={13} />
+            <span>{loading ? t.refreshing : t.refresh}</span>
         </button>
     {/snippet}
 
@@ -110,7 +112,10 @@
                     <LvChip tone="primary">{t.sessionProgress.replace("${reviewed}", String(snapshot.session.reviewed)).replace("${skipped}", String(snapshot.session.skipped))}</LvChip>
                 </div>
                 <p class="lv-recovery-copy">{t.sessionDescription}</p>
-                <button class="b3-button lv-btn-primary" onclick={openReview}>{t.continueReview}</button>
+                <button class="b3-button lv-btn-primary" onclick={openReview}>
+                    <LvIcon name="cards" size={14} />
+                    <span>{t.continueReview}</span>
+                </button>
             </section>
         {/if}
 

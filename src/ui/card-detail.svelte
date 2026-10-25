@@ -243,9 +243,9 @@
 <LvDrawer open title={t.manager.detailTitle} closeLabel={t.manager.close} width="min(560px, 92vw)" onclose={onClose}>
     {#snippet actions()}
         {#if editorCtx && !editing}
-            <button class="b3-button b3-button--small" disabled={editorLoadBusy} aria-busy={editorLoadBusy} onclick={startEdit}>{editorLoadBusy ? "…" : t.editor.edit}</button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={editorLoadBusy} aria-busy={editorLoadBusy} onclick={startEdit}><LvIcon name="edit" size={12} /> <span>{editorLoadBusy ? "…" : t.editor.edit}</span></button>
         {/if}
-        <button class="b3-button b3-button--small" onclick={onOpenDoc}>{t.manager.openDoc}</button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenDoc}><LvIcon name="target" size={12} /> <span>{t.manager.openDoc}</span></button>
     {/snippet}
     <!-- T05 分面导航（docs/40）：内容 / 来源 / 学习记录 / 问题 -->
     <div class="lv-facets" role="tablist" aria-orientation="horizontal" tabindex="-1" onkeydown={onFacetKeydown}>

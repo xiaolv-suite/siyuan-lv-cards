@@ -1493,7 +1493,7 @@
     <div class="b3-dialog__action">
         <button class="b3-button b3-button--cancel" disabled={saveBusy} onclick={requestClose}>{window.siyuan.languages.cancel}</button>
         <div class="fn__space"></div>
-        <button class="b3-button b3-button--text" disabled={saveBusy} onclick={save}>{saveBusy ? "…" : window.siyuan.languages.confirm}</button>
+        <button class="b3-button lv-btn-primary" disabled={saveBusy} onclick={save}>{saveBusy ? "…" : window.siyuan.languages.confirm}</button>
     </div>
 </div>
 
