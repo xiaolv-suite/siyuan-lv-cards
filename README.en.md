@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.52** (2026-10-25), delivering vectorized LvEmpty/LvError feedback components and interactive challenge/pairing UI polish. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.52) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.53** (2026-10-25), delivering Onboarding Tour Bento card elevations, vector action buttons, and card editor pill controls. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.53) for the package and publishing status.
 
-## What's New in v0.210.52
+## What's New in v0.210.53
+
+- **Onboarding Tour Bento Enhancement**:
+  - Persona selection cards now feature 14px rounded corners, smooth 2px hover elevation, and ambient glow; skip and reload buttons upgraded to Outline Bento pills.
+- **Card Editor Actions Alignment**:
+  - Bottom action buttons (save, cancel) standardized to pill styling with 14px inline padding.
+- **Verification**:
+  - 1942 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.52
 
 - **Global Feedback Components Modernization (LvEmpty & LvError)**:
   - Replaced text glyph `✦` in LvEmpty with SVG icons; upgraded empty actions to Outline Bento pill buttons.

@@ -100,7 +100,7 @@
     <div class="lv-ob-head">
         <span class="lv-ob-step">{t.onboardingStep} {step} / 3</span>
         <div class="fn__flex-1"></div>
-        <button class="b3-button b3-button--small" onclick={onClose}>{t.onboardingSkip}</button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onClose}><span>{t.onboardingSkip}</span></button>
     </div>
 
     {#if step === 1}
@@ -146,7 +146,7 @@
             {:else if notebookError}
                 <div class="lv-notice lv-notice--warn" role="alert" style="margin-top: var(--lv-sp-2)">{notebookError}</div>
                 <div class="fn__flex" style="justify-content: flex-end; margin-top: var(--lv-sp-1)">
-                    <button class="b3-button b3-button--small" disabled={busy} onclick={loadNotebooks}>{t.dashboard.refresh}</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={busy} onclick={loadNotebooks}><LvIcon name="refresh" size={13} /> <span>{t.dashboard.refresh}</span></button>
                 </div>
             {/if}
             {#if errorMsg}
