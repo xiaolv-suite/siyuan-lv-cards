@@ -788,7 +788,7 @@ import { confirmDialog } from "@/libs/dialog";
                     class="lv-filter-clear"
                     aria-label={t.manager.clearSearch ?? "清空搜索"}
                     onclick={() => { filterText = ""; selected = []; filterDirty = true; }}
-                >✕</button>
+                ><LvIcon name="close" size={12} /></button>
             {/if}
         </div>
         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={loading || batchBusy !== null} onclick={load}><LvIcon name="refresh" size={13} /> <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span></button>
@@ -887,7 +887,7 @@ import { confirmDialog } from "@/libs/dialog";
                 <span id="lv-deck-modal-title" style="font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size)">
                     {modalMode === "move" ? (t.manager.batchMoveDeck ?? "移动卡片至目标卡组") : (t.manager.batchAddDeck ?? "添加卡片至目标卡组")}
                 </span>
-                <button type="button" class="b3-button b3-button--small" onclick={() => (showDeckModal = false)}>✕</button>
+                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (showDeckModal = false)}><LvIcon name="close" size={13} /></button>
             </div>
             <p class="ft__smaller ft__on-surface" style="margin: var(--lv-sp-2) 0">
                 {modalMode === "move"

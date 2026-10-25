@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     let { newNamePlaceholder = "", firstDeckNamePlaceholder = newNamePlaceholder, emptyDeckText = "", retryLabel = "Retry", confirmLabel = "OK", loadingLabel = "Loading…", busyLabel = "Saving…", decks: initialDecks = null, onBeforeConfirm = () => undefined, onConfirm, onClose }: {
         newNamePlaceholder?: string;
@@ -130,7 +131,7 @@
             <div class="ft__smaller" style="color: var(--lv-color-danger)" role="alert">{errorMsg}</div>
         {/if}
         <div class="b3-dialog__action">
-            <button class="b3-button b3-button--cancel" aria-label={window.siyuan.languages.cancel} disabled={busy} onclick={onClose}>✕</button>
+            <button class="b3-button b3-button--cancel" aria-label={window.siyuan.languages.cancel} disabled={busy} onclick={onClose}><LvIcon name="close" size={14} /></button>
             <div class="fn__space"></div>
             <button class="b3-button lv-btn-primary" disabled={busy || !!loadError || (!selected && !newName.trim())} aria-busy={busy} onclick={confirm}>{busy ? busyLabel : `${confirmLabel} ↵`}</button>
         </div>

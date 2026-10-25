@@ -3310,7 +3310,7 @@
                     {t.review.ko.errReasons[rid] ?? rid}
                 </button>
             {/each}
-            <button class="b3-button b3-button--small" onclick={() => (showErrTags = false)} aria-label={t.review.skip}>✕</button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (showErrTags = false)} aria-label={t.review.skip}><LvIcon name="close" size={13} /></button>
         </div>
     {/if}
 
@@ -3320,7 +3320,7 @@
             <div class="lv-help-head">
                 <span>{t.review.helpTitle}</span>
                 <div class="fn__flex-1"></div>
-                <button class="b3-button b3-button--small" aria-label={window.siyuan.languages.cancel} onclick={() => (helpOpen = false)}>✕</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (helpOpen = false)}><LvIcon name="close" size={13} /></button>
             </div>
             <div class="lv-help-body">
                 {#each [
@@ -3357,7 +3357,7 @@
             <div class="lv-peek-head">
                 <span>{t.review.peekTitle}</span>
                 <div class="fn__flex-1"></div>
-                <button class="b3-button b3-button--small" aria-label={window.siyuan.languages.cancel} onclick={togglePeek}>✕</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={togglePeek}><LvIcon name="close" size={13} /></button>
             </div>
             <div class="lv-peek-body b3-typography lv-card-content" class:lv-masked={!peek.revealed}>{@html peek.revealed ? peek.html : maskMarkedAnswersForQuestion(peek.html)}</div>
         </div>
@@ -3371,7 +3371,7 @@
                 <div class="lv-help-head">
                     <span style="font-weight:600;font-size:16px">{t.review.pauseTitle}</span>
                     <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small" aria-label={window.siyuan.languages.cancel} onclick={() => (showPauseModal = false)}>✕</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (showPauseModal = false)}><LvIcon name="close" size={13} /></button>
                 </div>
                 <div style="padding:var(--lv-sp-3) 0">
                     <p class="ft__smaller ft__on-surface" style="line-height:1.6">{t.review.pauseDesc}</p>
@@ -3395,7 +3395,7 @@
                 <div class="lv-help-head">
                     <span style="font-weight:600;font-size:16px">{t.review.sessionOptionsTitle}</span>
                     <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small" aria-label={window.siyuan.languages.cancel} onclick={() => (showSessionOptionsModal = false)}>✕</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (showSessionOptionsModal = false)}><LvIcon name="close" size={13} /></button>
                 </div>
                 <div style="padding:var(--lv-sp-3) 0;display:flex;flex-direction:column;gap:var(--lv-sp-2)">
                     <p class="ft__smaller ft__on-surface">{t.review.sessionOptionsHint}</p>
@@ -3424,7 +3424,7 @@
                 <div class="lv-help-head">
                     <span style="font-weight:600;font-size:16px"><LvIcon name="lightbulb" size={17} /> {t.review.memoModalTitle ?? "给未来的自己留助记线索"}</span>
                     <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small" disabled={memoSaving} aria-label={window.siyuan.languages.cancel} onclick={closeMemoEditor}>✕</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={memoSaving} aria-label={window.siyuan.languages.cancel} onclick={closeMemoEditor}><LvIcon name="close" size={13} /></button>
                 </div>
                 <div style="padding:var(--lv-sp-3) 0">
                     <p class="ft__smaller ft__on-surface" style="line-height:1.6">{t.review.memoModalDesc ?? "写下一句巧记口诀、易错陷阱或关键关联。下次复习此卡时将直接呈现。"}</p>
@@ -3456,7 +3456,7 @@
                 <div class="lv-help-head">
                     <span style="font-weight:600;font-size:16px"><LvIcon name="ban" size={17} /> {t.review.retireCardTitle ?? "移出复习卡组"}</span>
                     <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small" disabled={retireBusy} aria-label={window.siyuan.languages.cancel} onclick={closeRetireModal}>✕</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy} aria-label={window.siyuan.languages.cancel} onclick={closeRetireModal}><LvIcon name="close" size={13} /></button>
                 </div>
                 <div style="padding:var(--lv-sp-3) 0">
                     <p class="ft__smaller ft__on-surface" style="line-height:1.6">{t.review.retireCardDesc ?? "将此卡移出当前复习卡组，不再参与复习调度。思源笔记正文内容不会受到任何修改。确认移出？"}</p>
@@ -3488,7 +3488,7 @@
                 <span class="lv-lightbox-scale-num" title="双击图片还原">{Math.round(imgScale * 100)}%</span>
                 <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="放大" onclick={() => (imgScale = Math.min(4, Math.round((imgScale + 0.2) * 100) / 100))}>+</button>
                 <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--outline lv-lightbox-reset" onclick={() => { imgScale = 1; imgPanX = 0; imgPanY = 0; }}>1:1</button>
-                <button type="button" class="b3-button b3-button--small lv-img-lightbox-close" aria-label={window.siyuan.languages.cancel ?? "关闭"} onclick={closeZoomedImage}>✕</button>
+                <button type="button" class="b3-button b3-button--small lv-img-lightbox-close" aria-label={window.siyuan.languages.cancel ?? "关闭"} onclick={closeZoomedImage}><LvIcon name="close" size={14} /></button>
             </div>
 
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->

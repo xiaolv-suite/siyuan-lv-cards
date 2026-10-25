@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.59** (2026-10-26), adding the SVG `close` icon and completing full vectorization of quiz feedback badges. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.59) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.60** (2026-10-26), eliminating raw close characters across all modals/drawers and adding vector swap icons for bidirectional cards. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.60) for the package and publishing status.
 
-## What's New in v0.210.59
+## What's New in v0.210.60
+
+- **Full Vectorization of Modal & Drawer Controls**:
+  - Replaced all raw `✕` glyphs across 8 review modals, `LvDrawer`, `DeckPicker`, and `Manager` with standardized `<LvIcon name="close" />` components.
+- **Quick Card Studio Visual Upgrade**:
+  - Bidirectional card badges upgraded from text `⇄` to precision `<LvIcon name="swap" />` vector marks; retry button aligned with Outline Bento specifications.
+- **Verification**:
+  - 1947 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.59
 
 - **Expanded LvIcon Suite with SVG Close**:
   - Added native `close` icon path adhering to Feather / Lucide specifications.

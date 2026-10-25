@@ -8,6 +8,7 @@
     import { fade } from "svelte/transition";
     import { getMotionDuration } from "./kit/motion";
     import LvSteps from "./kit/LvSteps.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     let { i18n, onClose }: { i18n: any; onClose: () => void } = $props();
     const t = $derived(i18n);
@@ -85,7 +86,7 @@
         <LvSteps steps={stepLabels} current={step - 1} />
         <div class="fn__flex-1"></div>
         <span class="lv-tag lv-tag--brand">{t.drillBadge}</span>
-        <button class="b3-button b3-button--small" aria-label={window.siyuan.languages.cancel} onclick={onClose}>✕</button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={onClose}><LvIcon name="close" size={13} /></button>
     </div>
 
     <!-- 样例选择器（T10 扩容） -->

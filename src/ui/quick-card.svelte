@@ -168,7 +168,7 @@
             {:else if deckLoadError}
                 <div class="lv-qc-deck-error" role="alert">
                     <span>{(t.quickCardDeckLoadFail ?? "读取卡组失败：${error}").replace("${error}", deckLoadError)}</span>
-                    <button type="button" class="b3-button b3-button--small" disabled={deckLoadBusy} onclick={() => void loadDecks()}>{t.quickCardDeckRetry ?? "重试"}</button>
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={deckLoadBusy} onclick={() => void loadDecks()}><LvIcon name="refresh" size={13} /> <span>{t.quickCardDeckRetry ?? "重试"}</span></button>
                 </div>
             {/if}
             {#if decks.length === 0}
@@ -214,7 +214,7 @@
                 <div class="lv-qc-preview-tags">
                     <span>{t.quickCardPreviewTitle}</span>
                     <span class="lv-chip2 lv-chip2--default">
-                        {#if template === "qa" && isBidirectional}⇄ {t.cardTypeBadgeBidi ?? "双向"}
+                        {#if template === "qa" && isBidirectional}<LvIcon name="swap" size={14} /> {t.cardTypeBadgeBidi ?? "双向"}
                         {:else if template === "cloze"}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
                         {:else}<LvIcon name="message" size={14} /> {t.cardTypeBadgeQA ?? "问答"}
                         {/if}

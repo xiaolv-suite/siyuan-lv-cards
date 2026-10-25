@@ -3,6 +3,7 @@
     import { fade } from "svelte/transition";
     import { trapFocus, type FocusTrap } from "@/libs/focus-trap";
     import { getMotionDuration } from "./motion";
+    import LvIcon from "./LvIcon.svelte";
 
     /** 抽屉（Kit）：右侧滑出面板，焦点限制在面板内，遮罩点击关闭 */
     let { open = false, title = "", width = "min(480px, 92vw)", closeLabel = "close", children, actions, onclose }: {
@@ -47,7 +48,7 @@
             <span id={titleId} class="lv-drawer-title">{title}</span>
             <span class="lv-drawer-actions">
                 {#if actions}{@render actions()}{/if}
-                <button class="b3-button b3-button--small" onclick={onclose} aria-label={closeLabel}>✕</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onclose} aria-label={closeLabel}><LvIcon name="close" size={13} /></button>
             </span>
         </div>
         <div class="lv-drawer-body">

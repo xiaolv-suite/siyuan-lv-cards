@@ -84,5 +84,10 @@ describe("LvIcon", () => {
         expect(svg?.getAttribute("width")).toBe("20");
         expect(svg?.getAttribute("height")).toBe("20");
         expect(svg?.querySelector("path")?.getAttribute("d")).toBe("M18 6 6 18M6 6l12 12");
+
+        const swap = render(LvIcon, { name: "swap", size: 16 });
+        const swapSvg = swap.container.querySelector("svg");
+        expect(swapSvg).toBeTruthy();
+        expect(swapSvg?.querySelector("path")?.getAttribute("d")).toContain("M8 7h12");
     });
 });
