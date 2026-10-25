@@ -448,26 +448,27 @@
     background: var(--lv-color-brand);
 }
 
-// 主操作按钮：实底主色 + 悬浮抬升（R52：光泽扫过默认不启用，docs/15 §6）
+// 主操作按钮：星轨勃艮第红专属质感 + 悬浮抬升 + 漫反射微发光
 .lv-btn-primary {
     position: relative;
     overflow: hidden;
-    background: var(--lv-color-brand);
-    color: var(--lv-color-on-brand);
-    font-weight: var(--lv-fw-emphasis);
+    background: linear-gradient(135deg, var(--lv-brand, #E11D48) 0%, color-mix(in srgb, var(--lv-brand, #E11D48) 86%, black) 100%);
+    color: #FFFFFF !important;
+    font-weight: var(--lv-fw-semibold);
+    border: none !important;
     border-radius: var(--lv-r-control);
-    box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 28%, transparent);
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--lv-brand) 32%, transparent);
     transition: transform var(--lv-dur-1) var(--lv-ease),
         box-shadow var(--lv-dur-2) var(--lv-ease), filter var(--lv-dur-1) var(--lv-ease);
 
     &:hover:not(:disabled) {
         transform: translateY(-1.5px);
-        box-shadow: 0 4px 14px color-mix(in srgb, var(--lv-color-brand) 36%, transparent);
-        filter: brightness(1.06);
+        box-shadow: 0 6px 20px color-mix(in srgb, var(--lv-brand) 44%, transparent);
+        filter: brightness(1.08);
     }
     &:active:not(:disabled) {
         transform: translateY(0.5px) scale(0.985);
-        box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-brand) 22%, transparent);
     }
 }
 
@@ -975,7 +976,7 @@
     }
 }
 
-// T01 今日行动 hero（R53 .hero）：brand-soft 洗色面、左文右目标环、徽章行 + 24px 题 + muted 描述 + CTA 行
+// T01 今日行动 hero（R53 .hero）：Bento 高阶便当盒质感、左侧品牌色重点竖线、微渐变底座
 .lv-hero {
     position: relative;
     overflow: hidden;
@@ -987,10 +988,10 @@
     padding: calc(var(--lv-space-unit) * 15);
     margin-bottom: var(--lv-sp-5);
     border: 1px solid var(--lv-border);
+    border-left: 4px solid var(--lv-brand);
     border-radius: var(--lv-r-l);
-    // R54 hero uses a flat semantic wash with composite ambient shadow and top shine
-    background: var(--lv-primary-softer);
-    box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--lv-brand) 5%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 100%);
+    box-shadow: 0 2px 8px color-mix(in srgb, black 3%, transparent), 0 12px 28px -6px color-mix(in srgb, black 6%, transparent), var(--lv-inset-shine);
     max-width: 100%;
 
     .lv-hero-text {

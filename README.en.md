@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.47** (2026-10-25), delivering deep UI hierarchy restructuring, interactive choice card conversion, done panel chip refactoring, and Bento button groups. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.47) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.48** (2026-10-25), aligning with Little Donkey Ecosystem four-tier surface hierarchy, Crimson Velvet ambient glow, and high-fidelity Bento styling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.48) for the package and publishing status.
 
-## What's New in v0.210.47
+## What's New in v0.210.48
+
+- **Ecosystem Four-tier Surface Hierarchy Alignment**:
+  - Implemented monotonic 4-layer depth model (canvas < surface < elevated < primary CTA) aligned with Little Donkey Check-in and Contacts.
+  - Reinforced Today Hero console with 4px brand-left accent border, dual-layer ambient shadows, and rich gradient surfaces.
+  - Re-engineered primary CTAs with Starline Crimson velvet gradients (`#E11D48` to `#BE123C`) and soft diffusion glow rings.
+- **Verification**:
+  - 1942 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.47
 
 - **Dashboard UI & Alignment Restructuring**:
   - Replaced text actions with outline Bento icon buttons; resolved select overlap in the budget pill; aligned 4 stat cards with equal bottom bounds.

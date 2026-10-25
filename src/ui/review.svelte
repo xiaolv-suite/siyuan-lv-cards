@@ -4639,16 +4639,17 @@
                 flex: 1;
                 min-height: 46px;
                 border-radius: var(--lv-r-pill);
-                background: linear-gradient(135deg, var(--lv-color-brand), color-mix(in srgb, var(--lv-color-brand) 85%, #6366f1));
+                background: linear-gradient(135deg, var(--lv-brand, #E11D48) 0%, color-mix(in srgb, var(--lv-brand, #E11D48) 86%, black) 100%);
+                color: #FFFFFF !important;
                 font-weight: var(--lv-fw-semibold);
-                box-shadow: 0 4px 16px color-mix(in srgb, var(--lv-color-brand) 28%, transparent), var(--lv-inset-shine);
+                box-shadow: 0 4px 18px color-mix(in srgb, var(--lv-brand) 36%, transparent), var(--lv-inset-shine);
                 transition: transform var(--lv-dur-1) var(--lv-ease),
                     box-shadow var(--lv-dur-2) var(--lv-ease),
                     filter var(--lv-dur-1) var(--lv-ease);
 
                 &:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 20px color-mix(in srgb, var(--lv-color-brand) 38%, transparent);
+                    box-shadow: 0 6px 24px color-mix(in srgb, var(--lv-brand) 48%, transparent);
                 }
                 &:active {
                     transform: translateY(0.5px);
