@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/svelte";
 import LvProgress from "../src/ui/kit/LvProgress.svelte";
 import LvKbd from "../src/ui/kit/LvKbd.svelte";
+import LvIcon from "../src/ui/kit/LvIcon.svelte";
 import LvEmpty from "../src/ui/kit/LvEmpty.svelte";
 import LvError from "../src/ui/kit/LvError.svelte";
 
@@ -72,5 +73,16 @@ describe("LvError", () => {
         expect(btn.textContent).toContain("重试");
         await fireEvent.click(btn);
         expect(onretry).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("LvIcon", () => {
+    it("renders close and check svg icons properly with given size", () => {
+        const { container } = render(LvIcon, { name: "close", size: 20 });
+        const svg = container.querySelector("svg");
+        expect(svg).toBeTruthy();
+        expect(svg?.getAttribute("width")).toBe("20");
+        expect(svg?.getAttribute("height")).toBe("20");
+        expect(svg?.querySelector("path")?.getAttribute("d")).toBe("M18 6 6 18M6 6l12 12");
     });
 });

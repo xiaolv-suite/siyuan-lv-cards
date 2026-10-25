@@ -1619,6 +1619,9 @@
     }
 
     .lv-choice-result-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         padding: 3px 8px;
         border-radius: var(--lv-r-pill);
         font-size: 11px;
@@ -1763,6 +1766,9 @@
     }
 
     .lv-judge-result-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         padding: 4px 10px;
         border-radius: var(--lv-r-pill);
         font-size: 11px;

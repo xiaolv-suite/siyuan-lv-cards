@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.58（2026-10-26）**，落地打字题留空回车无响应Bug修复、卡片编辑后状态即时重置保护。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.58)。
+当前版本为 **v0.210.59（2026-10-26）**，落地扩充close矢量图标、判断题与选择题作答徽标全矢量化改造。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.59)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.58）
+## 本次更新（v0.210.59）
+
+- **全局图标库（LvIcon）扩充支持 \`close\` 矢量图标**：
+  - 新增标准 Feather / Lucide 规范的精密叉号微标，全生命周期替代粗糙文本字符；
+- **判断题与选择题作答反馈全面去字符化与矢量化**：
+  - 判断题正误大徽标彻底告别文本字符 \`✓\` 和 \`✗\`，升级为 \`<LvIcon name="check" size={18} />\` 与 \`<LvIcon name="close" size={18} />\`；
+  - 正误结论药丸胶囊与选择题「正确答案」「你的选择」徽标全员配备矢量图标与弹性垂直居中；
+  - 增补 \`LvIcon\` 针对 \`close\` 与 \`check\` 的专项测试，锁定渲染一致性；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.58）
 
 - **普通打字题留空按回车无响应 Bug 根治（Empty Typing Enter Reveal）**：
   - 修复 `submitTyping` 在打字框内容留空时直接 `return` 且事件被 `stopPropagation`，导致用户放弃作答按回车翻面时界面无任何响应的逻辑缺陷；

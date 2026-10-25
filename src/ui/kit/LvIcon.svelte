@@ -3,7 +3,7 @@
         | "home" | "cards" | "plus" | "learn" | "settings" | "inbox" | "search" | "question" | "bell"
         | "book" | "target" | "lightbulb" | "calendar" | "graduation" | "flag" | "zap" | "eye" | "edit" | "refresh"
         | "moon" | "ban" | "timer" | "image" | "code" | "message" | "warning" | "dice" | "flame" | "star" | "check"
-        | "trash" | "chevron-up" | "chevron-down" | "chevron-right";
+        | "trash" | "close" | "chevron-up" | "chevron-down" | "chevron-right";
 
     let { name, size = 18 }: { name: LvIconName; size?: number } = $props();
 
@@ -39,6 +39,7 @@
         star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z",
         check: "M20 6 9 17l-5-5",
         trash: "M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3",
+        close: "M18 6 6 18M6 6l12 12",
         "chevron-up": "m18 15-6-6-6 6",
         "chevron-down": "m6 9 6 6 6-6",
         "chevron-right": "m9 18 6-6-6-6",
