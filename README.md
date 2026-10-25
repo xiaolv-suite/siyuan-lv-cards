@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.55（2026-10-25）**，落地复习卡面选项DOM智能清理引擎、彻底根除选项重复渲染缺陷。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.55)。
+当前版本为 **v0.210.56（2026-10-25）**，落地多形态选择题答案智能匹配引擎上线、杜绝无属性选择题判分失效Bug。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.56)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.55）
+## 本次更新（v0.210.56）
+
+- **多形态选择题答案智能匹配引擎上线（checkIsAnswer 核心升级）**：
+  - 彻底修复当选择题答案以全文本（如 `答案: 北京`、`B. 北京`、`答案：B`）而非纯单字母形式存在时，旧逻辑长度截断导致无法判定正确选项的隐蔽缺陷；
+  - 引入 `checkIsAnswer` 多维度启发式对齐引擎：支持纯字母（`B`、`AC`）、首字符分割（`B. 北京`）、前缀判定（`答案：B`）以及选项文本等价匹配（`北京` 匹配选项 `B. 北京`）；
+  - 无论用户通过块属性、挖空、块备注还是自由文本书写答案，系统均能精准点亮正确选项并提供智能自评打分引导；
+  - 增补单元测试 `checkIsAnswer matches answer keys in various realistic formats` 锁定质量。
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1946 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.55）
 
 - **复习卡面选项 DOM 深度清理引擎（cleanChoiceHtml 闭环）**：
   - 在复习卡面 HTML 渲染管道中接入 `cleanChoiceHtml`，不仅移除原生 `NodeList` 列表，还能够智能匹配并移除单独成段的选项段落（`NodeParagraph` / `p` 形式的 `A.`、`B.` 等）；

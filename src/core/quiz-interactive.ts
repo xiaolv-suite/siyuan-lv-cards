@@ -39,6 +39,37 @@ function cleanText(raw: string): string {
 }
 
 /**
+ * 校验某个选项是否匹配已知答案（支持字母代号、"答案：B"、全称文本等多重形态）
+ */
+export function checkIsAnswer(key: string, optionText: string, knownAnswer: string): boolean {
+    if (!knownAnswer) return false;
+    const cleanKnown = cleanText(knownAnswer).trim();
+    if (!cleanKnown) return false;
+
+    // 1. 若 knownAnswer 直接是纯字母（如 "B"、"BC"、"A,B"、"A / C"）
+    const upperKnown = cleanKnown.toUpperCase();
+    if (/^[A-Za-z\s,\/、·]+$/.test(cleanKnown)) {
+        if (upperKnown.includes(key.toUpperCase())) return true;
+    }
+
+    // 2. 若 knownAnswer 开头是字母加分隔符（如 "B. 25%"、"B、北京"）
+    const leadMatch = cleanKnown.match(/^([A-Za-z])[\.\、\:\：\s]/i);
+    if (leadMatch && leadMatch[1].toUpperCase() === key.toUpperCase()) return true;
+
+    // 3. 若包含前缀（如 "答案：B"、"正确选项：B"）
+    const ansMatch = cleanKnown.match(/(?:答案|选择|选项|正确)[：:\s]*([A-Za-z])/i);
+    if (ansMatch && ansMatch[1].toUpperCase() === key.toUpperCase()) return true;
+
+    // 4. 若选项内容文本直接匹配答案（如 optionText="北京"，knownAnswer="北京"）
+    const cleanOpt = cleanText(optionText).trim();
+    if (cleanOpt && (cleanOpt === cleanKnown || cleanKnown.includes(cleanOpt) || (cleanOpt.length >= 2 && cleanOpt.includes(cleanKnown)))) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * 解析并提取题干中的选项列表（如 A. 20%  B. 25% 等）
  */
 export function extractChoiceOptionsFromText(content: string, knownAnswer = ""): InteractiveOption[] {
@@ -60,7 +91,7 @@ export function extractChoiceOptionsFromText(content: string, knownAnswer = ""):
                 options.push({
                     key,
                     text: optionText,
-                    isAnswer: knownAnswer ? knownAnswer.toUpperCase().includes(key) : false,
+                    isAnswer: checkIsAnswer(key, optionText, knownAnswer),
                 });
             }
         }
@@ -78,7 +109,7 @@ export function extractChoiceOptionsFromText(content: string, knownAnswer = ""):
                 inlineOpts.push({
                     key,
                     text: optionText,
-                    isAnswer: knownAnswer ? knownAnswer.toUpperCase().includes(key) : false,
+                    isAnswer: checkIsAnswer(key, optionText, knownAnswer),
                 });
             }
         }
@@ -170,11 +201,11 @@ export function parseInteractiveQuiz(params: {
     const examAnalysis = String(attrs["custom-exam-analysis"] || attrs["exam-analysis"] || attrs.memo || attrs["custom-memo"] || "").trim();
 
     // 2. 检查是否为选择题（单选或多选）
-    const knownAnswer = examAnswer || (cleanText(expectedText).length <= 4 ? cleanText(expectedText) : "");
+    const knownAnswer = examAnswer || expectedText || cardMemo || "";
     const extractedOptions = extractChoiceOptionsFromText(fullContent, knownAnswer);
 
     if (examType === "single" || examType === "multiple" || extractedOptions.length >= 2) {
-        const isMultiple = examType === "multiple" || (knownAnswer.length > 1 && /^[A-F]+$/i.test(knownAnswer));
+        const isMultiple = examType === "multiple" || (/^[A-Za-z\s,\/、]+$/.test(cleanText(knownAnswer)) && cleanText(knownAnswer).replace(/[^A-Za-z]/g, "").length > 1);
         return {
             kind: "choice",
             stem: extractStemFromChoice(markdown || domHtml, extractedOptions),

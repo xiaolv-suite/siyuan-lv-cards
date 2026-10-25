@@ -4,6 +4,7 @@ import {
     parseInteractiveQuiz,
     parseJudgeAnswer,
     cleanChoiceHtml,
+    checkIsAnswer,
 } from "../src/core/quiz-interactive";
 
 describe("quiz-interactive core parser", () => {
@@ -154,5 +155,27 @@ describe("quiz-interactive core parser", () => {
         expect(cleaned).not.toContain("• A. 选项A");
         expect(cleaned).not.toContain("• B. 选项B");
         expect(cleaned).not.toContain("NodeList");
+    });
+
+    it("checkIsAnswer matches answer keys in various realistic formats", () => {
+        expect(checkIsAnswer("B", "北京", "B")).toBe(true);
+        expect(checkIsAnswer("B", "北京", "B. 北京")).toBe(true);
+        expect(checkIsAnswer("B", "北京", "答案：B")).toBe(true);
+        expect(checkIsAnswer("B", "北京", "北京")).toBe(true);
+        expect(checkIsAnswer("A", "上海", "北京")).toBe(false);
+        expect(checkIsAnswer("C", "广州", "AC")).toBe(true);
+    });
+
+    it("accurately detects choice option answers even when expectedText is full option text", () => {
+        const text = `
+中国的首都是哪里？
+A. 上海
+B. 北京
+C. 广州
+        `;
+        const opts = extractChoiceOptionsFromText(text, "B. 北京");
+        expect(opts[1].isAnswer).toBe(true);
+        expect(opts[0].isAnswer).toBe(false);
+        expect(opts[2].isAnswer).toBe(false);
     });
 });
