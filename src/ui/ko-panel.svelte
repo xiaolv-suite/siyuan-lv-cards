@@ -2,6 +2,7 @@
     /** BK-1 知识对象面板（Kit 级，props 注入可测）：核心事实 + 实例清单（停用/移除/派生）+ 事实修订（改事实→受影响实例清单在上方可见→确认保存）。
      *  数据与持久化由宿主注入；派生为异步（宿主查 riff 卡 ID），deriving=true 期间禁用按钮。 */
     import { CARD_CATALOG } from "@/core/card-catalog";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     let { fact, instances, deriving = false, t, ontoggle, onremove, onderive, onrevise }: {
         fact: string;
@@ -140,7 +141,9 @@
                     disabled={actionBusy !== null}
                     aria-busy={actionBusy === inst.cardID}
                     onclick={() => void removeInstance(inst.cardID)}
-                >{actionBusy === inst.cardID ? "…" : "✕"}</button>
+                >
+                    {#if actionBusy === inst.cardID}…{:else}<LvIcon name="close" size={12} />{/if}
+                </button>
             </div>
         {/each}
     {/if}

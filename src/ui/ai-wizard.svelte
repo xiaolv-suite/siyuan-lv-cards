@@ -820,9 +820,9 @@
                                     {/if}
                                     {#if (src.docId || src.nbId) && onDenySource}
                                         <!-- BW-9：一键登记禁止外发（落盘规则 + 移除该来源） -->
-                                        <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.denySource} aria-label={t.aiWizard.denySource} onclick={() => denySource(src)}>⊘</button>
+                                        <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.denySource} aria-label={t.aiWizard.denySource} onclick={() => denySource(src)}><LvIcon name="ban" size={13} /></button>
                                     {/if}
-                                    <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.srcRemove} aria-label={t.aiWizard.srcRemove} onclick={() => removeSource(src.id)}>✕</button>
+                                    <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.srcRemove} aria-label={t.aiWizard.srcRemove} onclick={() => removeSource(src.id)}><LvIcon name="close" size={13} /></button>
                                 </div>
                                 {#if viewSrc === src.id}
                                     <div class="ft__smaller lv-wb-srcview">{src.content}</div>
@@ -1011,8 +1011,8 @@
                             {/if}
                             {#if gateIssues[i].length > 0}<LvChip tone="error">{t.aiWizard.qualityBlockStatus}</LvChip>{:else if c.review === "accepted"}<LvChip tone="primary">{t.aiWizard.reviewAccepted}</LvChip>{:else if c.review === "verified"}<LvChip tone="primary">{t.aiWizard.reviewVerified}</LvChip>{:else if c.review === "needsCheck"}<LvChip tone="warn">{t.aiWizard.reviewNeedsCheck}</LvChip>{:else if c.edited}<LvChip tone="warn">{t.aiWizard.editedReaccept}</LvChip>{/if}
                             <button class="b3-button b3-button--small" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}>{t.aiWizard.cardPreview}</button>
-                            <button class="b3-button b3-button--small" title={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} aria-label={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} disabled={creating || regenBusy !== null || restoredCandidates} onclick={() => regenerateCard(i)}>↻</button>
-                            <button class="b3-button b3-button--small" title={t.aiWizard.removeCandidate} aria-label={t.aiWizard.removeCandidate} disabled={creating || regenBusy !== null} onclick={() => removeCandidate(i)}>✕</button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} aria-label={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} disabled={creating || regenBusy !== null || restoredCandidates} onclick={() => regenerateCard(i)}><LvIcon name="refresh" size={13} /></button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.removeCandidate} aria-label={t.aiWizard.removeCandidate} disabled={creating || regenBusy !== null} onclick={() => removeCandidate(i)}><LvIcon name="close" size={13} /></button>
                         </label>
                         <textarea class="b3-text-field fn__block" rows="2" bind:value={c.q} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardQ} aria-label={t.quickCardQ}></textarea>
                         <textarea class="b3-text-field fn__block" rows="2" bind:value={c.a} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardA} aria-label={t.quickCardA}></textarea>

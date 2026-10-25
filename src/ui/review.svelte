@@ -2601,7 +2601,7 @@
                         {#if sessionSkip > 0}
                             <div class="lv-next-row">
                                 <span>{t.review.nextSkipped.replace("${n}", String(sessionSkip))}</span>
-                                <button class="b3-button b3-button--small" onclick={() => ctx.openDashboard()}>{t.review.nextAct}</button>
+                                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openDashboard()}><LvIcon name="home" size={12} /> <span>{t.review.nextAct}</span></button>
                             </div>
                         {/if}
                         {#if sessionForget > 0}
@@ -2624,8 +2624,8 @@
                 {/if}
                 <div class="fn__flex lv-done-actions" style="justify-content: center; gap: var(--lv-sp-2)">
                     <button class="b3-button lv-btn-primary" onclick={() => ctx.openDashboard()}><LvIcon name="home" size={16} /> <span>{t.review.returnHome ?? "返回闪卡主页"}</span></button>
-                    <button class="b3-button b3-button--outline" onclick={() => ctx.openDashboard("manage")}><LvIcon name="cards" size={14} /> <span>{t.menuManager}</span></button>
-                    <button class="b3-button b3-button--outline" onclick={loadQueue}><LvIcon name="refresh" size={14} /> <span>{t.review.again}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={() => ctx.openDashboard("manage")}><LvIcon name="cards" size={14} /> <span>{t.menuManager}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={loadQueue}><LvIcon name="refresh" size={14} /> <span>{t.review.again}</span></button>
                 </div>
             </div>
         </div>
@@ -2652,7 +2652,7 @@
                             <button class="b3-button b3-button--text b3-button--small" onclick={() => ctx.returnToEntry!(entryCtx!.returnPoint)}>{t.entry.return}</button>
                         {/if}
                         {#if ctx.dismissEntry}
-                            <button class="b3-button b3-button--text b3-button--small" aria-label={t.entry.dismiss} title={t.entry.dismiss} onclick={() => { ctx.dismissEntry!(entryCtx!.entryKind, entryCtx!.sourceID); entryCtx = null; }}>×</button>
+                            <button class="b3-button b3-button--text b3-button--small lv-btn-tool" aria-label={t.entry.dismiss} title={t.entry.dismiss} onclick={() => { ctx.dismissEntry!(entryCtx!.entryKind, entryCtx!.sourceID); entryCtx = null; }}><LvIcon name="close" size={12} /></button>
                         {/if}
                     </span>
                 {/if}

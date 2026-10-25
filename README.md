@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.63（2026-10-26）**，落地全生命周期设计系统深度精细化、全面清理残留主题变量与磨砂玻璃弹窗升级。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.63)。
+当前版本为 **v0.210.64（2026-10-26）**，落地全链路交互逻辑与操作合理性深度升级、完成屏与AI向导全矢量胶囊化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.64)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.63）
+## 本次更新（v0.210.64）
+
+- **全流程连贯性与按钮摆放合理性优化（Flow Ergonomics & Button Hierarchy）**：
+  - 复习完成屏行动区（Next Actions）全面对齐 Outline Bento 胶囊按钮规范（返回主页、查看管理器、再来一组），消除生硬单调框线与突兀跳跃；
+  - 知识对象与关系面板（\`ko-panel\`、\`relations-panel\`）删除与操作按钮彻底升级为标准矢量微标；
+  - 入口上下文提示条关闭按钮矢量化，各次级操作与主要 Primary CTA 层次清晰分明；
+- **AI 制卡向导候选卡片操作行去裸字符化**：
+  - 重新生成与移除候选卡片按钮全面告别裸字符 \`↻\` 和 \`✕\`，升级为 Outline Bento 胶囊微按钮嵌入 \`<LvIcon name=\"refresh\" size={13} />\` 与 \`<LvIcon name=\"close\" size={13} />\`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.63）
 
 - **全生命周期设计系统深度精细化（Full Lifecycle Design System Perfection）**：
   - 彻底清理全库所有零星残留的直接 \`--b3-theme-*\` 变量引用（包括 \`maintenance-page.svelte\` 预览、差异对比、健康记录与卡片边框，\`review.svelte\` 重排期错误提示，\`settings.svelte\` 冲突提示，以及 \`index.ts\` 错误页签），全面统一收口至小驴自洽的 \`--lv-*\` 设计系统；

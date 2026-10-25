@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.210.64 2026-10-26 · 全链路交互逻辑与操作合理性深度升级、完成屏与AI向导全矢量胶囊化
+
+- **全流程连贯性与按钮摆放合理性优化（Flow Ergonomics & Button Hierarchy）**：
+  - 复习完成屏行动区（Next Actions）全面对齐 Outline Bento 胶囊按钮规范（返回主页、查看管理器、再来一组），消除生硬单调框线与突兀跳跃；
+  - 知识对象与关系面板（\`ko-panel\`、\`relations-panel\`）删除与操作按钮彻底升级为标准矢量微标；
+  - 入口上下文提示条关闭按钮矢量化，各次级操作与主要 Primary CTA 层次清晰分明；
+- **AI 制卡向导候选卡片操作行去裸字符化**：
+  - 重新生成与移除候选卡片按钮全面告别裸字符 \`↻\` 和 \`✕\`，升级为 Outline Bento 胶囊微按钮嵌入 \`<LvIcon name=\"refresh\" size={13} />\` 与 \`<LvIcon name=\"close\" size={13} />\`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
 ## v0.210.63 2026-10-26 · 全生命周期设计系统深度精细化、全面清理残留主题变量与磨砂玻璃弹窗升级
 
 - **全生命周期设计系统深度精细化（Full Lifecycle Design System Perfection）**：

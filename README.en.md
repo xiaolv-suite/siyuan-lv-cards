@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.63** (2026-10-26), delivering full design system lifecycle refinement, complete elimination of legacy theme variable references, and frosted glass dialog aesthetics. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.63) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.64** (2026-10-26), delivering full-lifecycle flow continuity, ergonomic action placements, and complete vectorization of review done-screen and AI wizard actions. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.64) for the package and publishing status.
 
-## What's New in v0.210.63
+## What's New in v0.210.64
+
+- **Flow Ergonomics & Button Hierarchy Polish**:
+  - Aligned Done screen action buttons with Bento pill styling, establishing crisp primary/secondary visual hierarchy across review finish flows.
+  - Upgraded entity action buttons in `ko-panel` and `relations-panel` to vector components.
+  - Replaced text glyphs `↻` and `✕` in AI Wizard candidate action bars with standardized `<LvIcon name="refresh" />` and `<LvIcon name="close" />` micro-buttons.
+- **Verification**:
+  - 1947 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.63
 
 - **Full Lifecycle Design System Refinement**:
   - Purged all isolated `--b3-theme-*` residual variables across maintenance previews, diff viewers, reschedule errors, and fallback boxes in favor of `--lv-*` tokens.

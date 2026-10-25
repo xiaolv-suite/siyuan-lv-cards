@@ -2,6 +2,7 @@
     /** BK-2 关系面板（Kit 级，props 注入可测）：查看/新建/删除某实体的语义关联。
      *  数据与持久化全部由宿主注入（onadd/onremove 回调），本组件零 siyuan 依赖。 */
     import LvError from "./kit/LvError.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     let { entityId, relations, t, onadd, onremove }: {
         /** 当前实体 id（块 ID） */
@@ -108,7 +109,9 @@
                     disabled={busy}
                     aria-busy={busy}
                     onclick={() => remove(relation)}
-                >{busy ? "…" : "✕"}</button>
+                >
+                    {#if busy}…{:else}<LvIcon name="close" size={12} />{/if}
+                </button>
             </div>
         {/each}
     {/if}
