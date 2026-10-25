@@ -791,7 +791,7 @@ import { confirmDialog } from "@/libs/dialog";
                 >✕</button>
             {/if}
         </div>
-        <button class="b3-button b3-button--small lv-btn-ghost" disabled={loading || batchBusy !== null} onclick={load}>{t.dashboard.refresh}</button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={loading || batchBusy !== null} onclick={load}><LvIcon name="refresh" size={13} /> <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span></button>
     {/snippet}
 
     <!-- T-管理器 R53 工具行：排序/筛选/保存独立于页头搜索 -->
@@ -1274,7 +1274,16 @@ import { confirmDialog } from "@/libs/dialog";
         flex-wrap: wrap;
         margin-bottom: var(--lv-sp-3);
 
-        .lv-sort { max-width: 140px; font-size: 12px; padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 4); }
+        .lv-sort {
+            height: 30px;
+            max-width: 140px;
+            font-size: 12px;
+            border-radius: var(--lv-r-pill);
+            border: 1px solid var(--lv-border);
+            background: var(--lv-color-surface);
+            padding: 0 10px;
+            box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+        }
         .lv-toolbar-caption { margin-left: auto; font-size: 12px; color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
     }
     .lv-mgr-deck-scope {

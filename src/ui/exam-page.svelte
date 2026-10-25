@@ -341,20 +341,28 @@
                     </div>
                 {/if}
                 <div class="fn__flex lv-plan-actions">
-                    <button class="b3-button b3-button--small lv-btn-ghost" disabled={actionBusy || savingPlan} onclick={() => { editing = { ...plan }; formError = ""; fieldErrors = {}; }}>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action" disabled={actionBusy || savingPlan} onclick={() => { editing = { ...plan }; formError = ""; fieldErrors = {}; }}>
                         <LvIcon name="edit" size={12} />
                         <span>{t.exam.edit}</span>
                     </button>
-                    <button class="b3-button b3-button--small lv-btn-ghost" onclick={() => onReport(plan)}>{t.exam.report}</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action" onclick={() => onReport(plan)}>
+                        <LvIcon name="book" size={12} />
+                        <span>{t.exam.report}</span>
+                    </button>
                     <!-- AR-5：写入中禁点，失败 toast 给原因（文档写入失败可重试） -->
-                    <button class="b3-button b3-button--small lv-btn-ghost" disabled={reportBusyId === plan.id} onclick={() => writeDoc(plan)}>
-                        {reportBusyId === plan.id ? "…" : t.exam.writeDoc}
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action" disabled={reportBusyId === plan.id} onclick={() => writeDoc(plan)}>
+                        <LvIcon name="edit" size={12} />
+                        <span>{reportBusyId === plan.id ? "…" : t.exam.writeDoc}</span>
                     </button>
-                    <button class="b3-button b3-button--small lv-btn-ghost" disabled={actionBusy || savingPlan} onclick={() => void runPlanAction(() => onSavePlan({ ...plan, archived: true, enabled: false }))}>{t.exam.archive}</button>
-                    <button class="b3-button b3-button--small lv-btn-ghost" disabled={actionBusy || savingPlan} onclick={() => void runPlanAction(() => onSavePlan({ ...plan, enabled: !plan.enabled, archived: false }))}>
-                        {plan.enabled ? t.exam.pause : t.exam.enable}
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action" disabled={actionBusy || savingPlan} onclick={() => void runPlanAction(() => onSavePlan({ ...plan, archived: true, enabled: false }))}>
+                        <LvIcon name="inbox" size={12} />
+                        <span>{t.exam.archive}</span>
                     </button>
-                    <button class="b3-button b3-button--small lv-btn-ghost lv-menu-danger" disabled={actionBusy || savingPlan} onclick={() => deletePlan(plan)}>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action" disabled={actionBusy || savingPlan} onclick={() => void runPlanAction(() => onSavePlan({ ...plan, enabled: !plan.enabled, archived: false }))}>
+                        <LvIcon name="moon" size={12} />
+                        <span>{plan.enabled ? t.exam.pause : t.exam.enable}</span>
+                    </button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-plan-action lv-menu-danger" disabled={actionBusy || savingPlan} onclick={() => deletePlan(plan)}>
                         <LvIcon name="trash" size={12} />
                         <span>{t.exam.delete}</span>
                     </button>

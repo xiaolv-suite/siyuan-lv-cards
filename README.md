@@ -21,11 +21,24 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.49（2026-10-25）**，落地复习工具栏全矢量Bento胶囊化、侧栏激活指示竖线与AI材料载入矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.49)。
+当前版本为 **v0.210.50（2026-10-25）**，落地闪卡管理器页头刷新与筛选全胶囊化、考试卡片操作组矢量对齐、收件箱全选与刷新Bento化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.50)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.49）
+## 本次更新（v0.210.50）
+
+- **闪卡管理器（Flashcard Manager）全方位层级规范化**：
+  - 页头右侧 `刷新` 按钮告别单薄裸文字，升级为与搜索输入框同高的带图标 Outline Bento 胶囊按钮（`<LvIcon name="refresh" size={13} />`）；
+  - 排序与状态筛选下拉框统一升级为 30px 高度圆角微胶囊，阴影与边框和全选按钮绝对平齐；
+- **考试计划（Exam Plans）操作栏全方位矢量微标化**：
+  - 计划卡片底部操作栏（编辑、报告、写入文档、归档、暂停/恢复、删除）全员升级为 `.lv-btn-plan-action` 圆角微胶囊；
+  - 报告、写入、归档、暂停全部补齐高精度单色矢量图标（`<LvIcon name="book" />`、`<LvIcon name="edit" />`、`<LvIcon name="inbox" />`、`<LvIcon name="moon" />`），消灭纯文字参差；
+- **材料收件箱（Capture Inbox）操作区精致对齐**：
+  - 页头「全选/取消全选」与「刷新」按钮全面对齐 Outline Bento 胶囊规范，操作反馈一致；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1942 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.49）
 
 - **复习工具栏（Review Toolbar）与返场横幅深度对齐规范化**：
   - 工具栏（撤销、跳过、星标、疑问、暂停、更多）全员配备 28px 精密 Bento 药丸胶囊（含纯白微表面底色、1px 细微边界与漫反射微投影），彻底消除浮空杂乱文字；

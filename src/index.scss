@@ -1953,6 +1953,26 @@
     justify-content: center;
 }
 
+.lv-btn-plan-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: var(--lv-r-pill);
+    font-size: 11px;
+    padding: 3px 10px;
+    white-space: nowrap;
+    background: var(--lv-color-surface);
+    border: 1px solid var(--lv-border);
+    color: var(--lv-color-text-muted);
+    transition: all var(--lv-dur-1) var(--lv-ease);
+
+    &:hover:not(:disabled) {
+        border-color: var(--lv-color-brand);
+        color: var(--lv-color-brand);
+        background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
+    }
+}
+
 .lv-btn-mgr-doc {
     display: inline-flex;
     align-items: center;

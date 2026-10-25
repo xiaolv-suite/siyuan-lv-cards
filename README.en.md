@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.49** (2026-10-25), delivering vectorized Bento toolbar pills, sidebar active accent rails, and tactile card creation previews. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.49) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.50** (2026-10-25), delivering vectorized Manager header controls, exam action pill buttons, and inbox Bento alignment. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.50) for the package and publishing status.
 
-## What's New in v0.210.49
+## What's New in v0.210.50
+
+- **Flashcard Manager Header Alignment**:
+  - Replaced naked refresh text with 30px outline Bento pill button and SVG icon; rounded filter dropdowns to match select-all pills.
+- **Exam Plans Action Bar Vectorization**:
+  - Embedded vector icons for report, doc-writing, archiving, and pausing across plan cards; standardized as `.lv-btn-plan-action` pills.
+- **Capture Inbox Action Modernization**:
+  - Upgraded select-all and refresh actions to outline Bento capsules.
+- **Verification**:
+  - 1942 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.49
 
 - **Review Toolbar & Banners Alignment**:
   - Transformed all action buttons into uniform 28px Bento pill capsules with icons and subtle shadows.
