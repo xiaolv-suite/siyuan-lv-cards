@@ -703,6 +703,11 @@
                 choiceFallbackMode = "none";
                 typingGrade = null;
                 answerCache.delete(blockID);
+                interactiveQuiz = null;
+                selectedChoiceKeys = [];
+                userJudgeChoice = null;
+                isAnswerCorrect = null;
+                suggestedRating = null;
             }
             cardHtml = dom;
             faceError = "";
@@ -1358,7 +1363,12 @@
 
     /** 打字题提交：判分并亮出答案（评分仍由用户按键确认，建议值显示为 chip） */
     function submitTyping() {
-        if (!current || typingGrade || !typingInput.trim() || !expectedText) {
+        if (!current || typingGrade) {
+            return;
+        }
+        if (!typingInput.trim() || !expectedText) {
+            // 输入为空敲 Enter 直接翻面查看答案（放弃思考/不输入直接揭晓）
+            revealAnswer();
             return;
         }
         const s = eff();

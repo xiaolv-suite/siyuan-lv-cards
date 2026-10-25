@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.57（2026-10-25）**，落地修复快捷键A/B/C/D与T/F/Y/N被前置拦截提前返回Bug。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.57)。
+当前版本为 **v0.210.58（2026-10-26）**，落地打字题留空回车无响应Bug修复、卡片编辑后状态即时重置保护。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.58)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.57）
+## 本次更新（v0.210.58）
+
+- **普通打字题留空按回车无响应 Bug 根治（Empty Typing Enter Reveal）**：
+  - 修复 `submitTyping` 在打字框内容留空时直接 `return` 且事件被 `stopPropagation`，导致用户放弃作答按回车翻面时界面无任何响应的逻辑缺陷；
+  - 彻底对齐填空题标准行为：输入框留空敲 `Enter` 立即识别为“直接翻面查看答案”，顺畅揭晓卡面；
+- **卡片人工编辑后题型状态完整重置（Edit Invalidation Protection）**：
+  - 当在复习抽屉中完成卡片人工编辑并保存回读到新 DOM 后，自动将旧的单选选项、判断题状态与自评建议标记彻底复位，杜绝编辑前旧题状态污染新题面；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1946 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.57）
 
 - **复习交互键盘事件流重大 Bug 修复（Shortcut Pipeline Unblocked）**：
   - 彻底修复 `resolveReviewKeyAction` 在未揭晓态对非通用按键返回 `null`，导致后续 `if (!action) return;` 阻断一切选择题（A/B/C/D）、判断题（T/F/Y/N）及翻转问答（R）按键的隐蔽 Bug；
