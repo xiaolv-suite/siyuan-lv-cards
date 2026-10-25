@@ -510,6 +510,29 @@ body[data-theme-mode="dark"],
     }
 }
 
+// ============================================================
+// 小驴闪卡 · 局部思源变量重定向别名（彻底脱离思源外部主题干扰，实现完全自治）
+// 在小驴闪卡核心作用域内覆盖 --b3-* 别名，使底层 legacy 组件与思源类名自然继承小驴设计系统
+// ============================================================
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) {
+    --b3-theme-background: var(--lv-color-canvas);
+    --b3-theme-background-light: var(--lv-color-canvas-subtle);
+    --b3-theme-surface: var(--lv-color-surface);
+    --b3-theme-surface-light: color-mix(in srgb, var(--lv-color-text) 5%, var(--lv-color-surface));
+    --b3-border-color: var(--lv-border);
+    --b3-theme-on-background: var(--lv-color-text);
+    --b3-theme-on-surface: var(--lv-color-text-muted);
+    --b3-theme-on-surface-light: var(--lv-color-text-muted);
+    --b3-theme-primary: var(--lv-color-brand);
+    --b3-theme-primary-light: var(--lv-primary-soft);
+    --b3-theme-success: var(--lv-color-success);
+    --b3-theme-warning: var(--lv-color-warning);
+    --b3-theme-error: var(--lv-color-danger);
+
+    color: var(--lv-color-text);
+    background: var(--lv-color-canvas);
+}
+
 // 插件全部作用域表单控件质感系统（R54 原型规范）：
 // 统一白面底色、1px 细微边界、10px 现代圆角、平滑光晕聚焦与按压反馈
 :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) {

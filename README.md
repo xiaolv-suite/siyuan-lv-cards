@@ -21,11 +21,19 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.61（2026-10-26）**，落地脱离外部主题依赖、小驴专属自洽美学体系与双模式四级表面层级落地。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.61)。
+当前版本为 **v0.210.62（2026-10-26）**，落地小驴打卡同款局部作用域思源变量重定向落地、彻底杜绝第三方主题色彩污染。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.62)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.61）
+## 本次更新（v0.210.62）
+
+- **小驴打卡同款局部作用域思源变量重定向落地（Scoped Variable Override）**：
+  - 汲取小驴打卡 5.0 经典设计精髓，在 \`:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz)\` 核心作用域内将全部 \`--b3-theme-*\` 别名强制重定向为小驴独立双色板；
+  - 使思源自带的各种底层组件（按钮、输入框、下拉框、标签、对话框等）在小驴闪卡中彻底脱离外部第三方主题的色彩污染与对比度缺陷；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.61）
 
 - **脱离外部主题脆弱依赖（Palette Independence 自治美学体系）**：
   - 响应用户核心意向，彻底废弃对思源外部各种怪异第三方主题变量（\`--b3-theme-primary\`、\`--b3-theme-background\` 等）的直接继承；
