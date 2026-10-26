@@ -266,8 +266,8 @@
                         {/if}
                     </span>
                 </div>
-                <button type="button" class="b3-button b3-button--small b3-button--outline lv-qc-reveal" aria-expanded={previewAnswer} aria-controls="lv-qc-preview-face" onclick={() => (previewAnswer = !previewAnswer)}>
-                    <LvIcon name="eye" size={13} /> {previewAnswer ? t.quickCardHideAnswer : t.quickCardShowAnswer}
+                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-qc-reveal" aria-expanded={previewAnswer} aria-controls="lv-qc-preview-face" onclick={() => (previewAnswer = !previewAnswer)}>
+                    <LvIcon name="eye" size={13} /> <span>{previewAnswer ? t.quickCardHideAnswer : t.quickCardShowAnswer}</span>
                 </button>
             </div>
             <div class="ft__smaller ft__on-surface lv-qc-preview-sub">{t.quickCardPreviewNote}</div>

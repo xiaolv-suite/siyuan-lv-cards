@@ -19,9 +19,16 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.81** (2026-10-26), delivering Deck Scope banner Bento styling and select-all vector button enhancements in the Card Manager. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.81) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.82** (2026-10-26), delivering vector button enhancements for card previewing in the Card Studio. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.82) for the package and publishing status.
 
-## What's New in v0.210.81
+## What's New in v0.210.82
+
+- **Card Studio Preview Action Vectorization**:
+  - Upgraded the card preview toggle button ("Show Answer" / "Back to Front") in `quick-card.svelte` to a `.lv-btn-tool` Bento capsule with `<LvIcon name="eye" size={13} />`.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.81
 
 - **Deck Scope Banner Bento Styling**:
   - Upgraded the deck filter status bar at the top of the Card Manager to a frosted Bento surface (`--lv-primary-soft`) with inner bevel shine.

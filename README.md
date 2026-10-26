@@ -21,11 +21,19 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.81（2026-10-26）**，落地闪卡管理器卡组限定横幅 Bento 质感重塑与全选操作微标化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.81)。
+当前版本为 **v0.210.82（2026-10-26）**，落地制卡工作台预览操作微标化与全局交互链路深化闭环。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.82)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.81）
+## 本次更新（v0.210.82）
+
+- **制卡工作台卡面答案预览操作微标化（Quick Card Preview Action）**：
+  - 手工制卡实时预览区右上角「查看答案 / 返回题面」按钮升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色精密矢量微标 `<LvIcon name="eye" size={13} />`；
+  - 交互触控体验与卡片详情抽屉和闪卡管理器完全齐平；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.81）
 
 - **闪卡管理器当前卡组限定提示栏（Deck Scope Banner）Bento 化**：
   - 管理器顶部卡组筛选提示条由单薄单侧竖线升级为精致磨砂 Bento 软表面（`--lv-primary-soft`），并配以 `--lv-inset-shine` 内凹高光；
