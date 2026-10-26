@@ -6,6 +6,7 @@
     import { nextActions, type NextAction } from "@/core/next-action";
     import { explainState } from "@/core/state-explain";
     import LvChip from "./kit/LvChip.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     export interface LcSnapshot {
         state: ContentState;
@@ -71,24 +72,29 @@
 <section class="lv-lc">
     <h4>{t.lc.title}</h4>
     {#if !snapshot}
-        <!-- R53 §3.9：未开档说明进软面板（soft 底 + outline 动作），不再是裸文字行 -->
         <div class="lv-lc-soft">
             <p class="lv-lc-hint ft__smaller ft__on-surface">{t.lc.hint}</p>
-            <button class="b3-button lv-btn-primary b3-button--small" disabled={busy} aria-busy={busy} onclick={openLifecycle}>{busy ? (t.lc.saving ?? "保存中…") : t.lc.open}</button>
+            <button class="b3-button lv-btn-primary b3-button--small lv-btn-tool" disabled={busy} aria-busy={busy} onclick={openLifecycle}>
+                <LvIcon name="plus" size={12} />
+                <span>{busy ? (t.lc.saving ?? "保存中…") : t.lc.open}</span>
+            </button>
         </div>
     {:else}
         <div class="lv-lc-now">
             <LvChip tone="primary">{t.lc.state[currentState!]}</LvChip>
             {#if explain}
                 <span class="lv-lc-why ft__smaller ft__on-surface">{tv(explain.whyKey)}</span>
-                <button class="b3-button b3-button--outline b3-button--small" disabled={busy} onclick={onRepair}>{tv(explain.repairLabelKey!)}</button>
+                <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" disabled={busy} onclick={onRepair}>
+                    <LvIcon name="refresh" size={12} />
+                    <span>{tv(explain.repairLabelKey!)}</span>
+                </button>
             {/if}
         </div>
         <div class="lv-lc-next">
             <div class="ft__smaller ft__on-surface">{t.lc.next}</div>
             <div class="lv-lc-actions">
                 {#each suggestions as s (s.action)}
-                    <button class="b3-button b3-button--small" disabled={busy} onclick={() => onaction(s.action)}>{tv(s.labelKey)}</button>
+                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={busy} onclick={() => onaction(s.action)}>{tv(s.labelKey)}</button>
                 {/each}
             </div>
         </div>
@@ -97,7 +103,7 @@
                 <div class="ft__smaller ft__on-surface">{t.lc.flow}</div>
                 <div class="lv-lc-actions">
                     {#each targets as to (to)}
-                        <button class="b3-button b3-button--small" disabled={busy} onclick={() => transitionTo(to, t.lc.reason[to])}>
+                        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={busy} onclick={() => transitionTo(to, t.lc.reason[to])}>
                             {t.lc.state[to]}
                         </button>
                     {/each}

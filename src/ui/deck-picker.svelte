@@ -119,7 +119,10 @@
             {/each}
             {#if loadError}
                 <div class="ft__smaller" style="color: var(--lv-color-danger)" role="alert">{loadError}</div>
-                <button class="b3-button b3-button--small" disabled={loading || busy} onclick={loadDecks}>{retryLabel}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={retryLabel} disabled={loading || busy} onclick={loadDecks}>
+                    <LvIcon name="refresh" size={12} />
+                    <span>{retryLabel}</span>
+                </button>
             {:else if decks.length === 0}
                 <div class="ft__smaller ft__on-surface">{emptyDeckText}</div>
             {/if}

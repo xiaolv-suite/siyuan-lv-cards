@@ -21,11 +21,23 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.89（2026-10-27）**，落地知识网络与知识对象面板操作 Bento 胶囊化与矢量微标矩阵。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.89)。
+当前版本为 **v0.210.90（2026-10-27）**，落地知识生命周期与卡组选择器操作 Bento 胶囊化与矢量微标化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.90)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.89）
+## 本次更新（v0.210.90）
+
+- **内容生命周期面板（Lifecycle Panel）全流程操作 Bento 胶囊化**：
+  - 未建档时的「开档建卡」主按钮升级为带 `<LvIcon name="plus" size={12} />` 的 Bento 工具胶囊；
+  - 核心状态修复动作（`onRepair`）升级为带 `<LvIcon name="refresh" size={12} />` 的标准工具胶囊；
+  - 下一步建议动作与流转目标按钮全面对齐 `.lv-btn-tool` 规范，触控弹性与视觉层级高度统一；
+  - 严密补齐 `LvIcon` 组件导入，消除组件运行期隐患；
+- **卡组快速选择器（Deck Picker）操作人机工效升级**：
+  - 读取失败重试按钮升级为嵌入精密单色矢量微标 `<LvIcon name="refresh" size={12} />` 的标准工具胶囊；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.89）
 
 - **语义关联面板（Relations Panel）全流程操作 Bento 胶囊化**：
   - 关系添加主按钮升级为 `.lv-btn-tool` 规范并嵌入单色精密矢量微标 `<LvIcon name="plus" size={12} />`；
