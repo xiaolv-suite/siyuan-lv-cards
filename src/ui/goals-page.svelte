@@ -199,8 +199,8 @@
 
 <LvPage eyebrow={embedded ? "" : "GOAL / PLAN"} title={embedded ? "" : t.title} subtitle={embedded ? "" : t.subtitle}>
     {#snippet actions()}
-        {#if !embedded && !editing}
-            <!-- 主动作：每屏唯一 primary（底部重复入口已收敛） -->
+        {#if !editing}
+            <!-- 主动作：每屏唯一 primary -->
             <button class="b3-button b3-button--small lv-btn-primary" onclick={startAdd}>
                 <LvIcon name="plus" size={13} /> <span>{t.add}</span>
             </button>
@@ -243,8 +243,14 @@
             <div class="lv-form-hint"><LvIcon name="lightbulb" size={15} /> {t.suggested.replace("${n}", String(suggestedMinutes(form.purpose, form.level)))}</div>
             <div class="lv-form-actions">
                 {#if formError}<div class="lv-form-error" role="alert">{formError}</div>{/if}
-                <button class="b3-button lv-btn-primary b3-button--small" disabled={saving || actionBusy} onclick={() => void save()}>{saving ? "保存中…" : t.save}</button>
-                <button class="b3-button b3-button--small" disabled={saving || actionBusy} onclick={cancelEdit}>{t.cancel}</button>
+                <button class="b3-button lv-btn-primary b3-button--small lv-btn-tool" disabled={saving || actionBusy} onclick={() => void save()}>
+                    <LvIcon name="check" size={12} />
+                    <span>{saving ? "保存中…" : t.save}</span>
+                </button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={saving || actionBusy} onclick={cancelEdit}>
+                    <LvIcon name="close" size={12} />
+                    <span>{t.cancel}</span>
+                </button>
             </div>
         </div>
     {:else if sorted.length === 0}

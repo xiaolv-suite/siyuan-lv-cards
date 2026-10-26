@@ -296,8 +296,9 @@
                             <span>{t.exam.startToday}</span>
                         </button>
                     {:else}
-                        <button class="b3-button b3-button--outline" disabled={actionBusy || savingPlan} onclick={() => void runPlanAction(() => onSavePlan({ ...plan, enabled: true }))}>
-                            {t.exam.resume}
+                        <button class="b3-button b3-button--outline lv-btn-tool" disabled={actionBusy || savingPlan} onclick={() => void runPlanAction(() => onSavePlan({ ...plan, enabled: true }))}>
+                            <LvIcon name="refresh" size={12} />
+                            <span>{t.exam.resume}</span>
                         </button>
                     {/if}
                 </div>
@@ -446,7 +447,7 @@
             <div class="b3-dialog__action">
                 <button class="b3-button b3-button--cancel" type="button" disabled={savingPlan} onclick={() => (editing = null)}>{window.siyuan.languages.cancel}</button>
                 <div class="fn__space"></div>
-                <button class="b3-button b3-button--text lv-btn-primary" type="submit" disabled={savingPlan}>{savingPlan ? (isChinese ? "保存中…" : "Saving…") : saveFailed ? (isChinese ? "重试保存" : "Retry save") : window.siyuan.languages.confirm}</button>
+                <button class="b3-button lv-btn-primary" type="submit" disabled={savingPlan}>{savingPlan ? (isChinese ? "保存中…" : "Saving…") : saveFailed ? (isChinese ? "重试保存" : "Retry save") : window.siyuan.languages.confirm}</button>
             </div>
             </form>
         </div>

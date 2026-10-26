@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.83** (2026-10-26), delivering full Bento vector standardization across the Card Detail Drawer. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.83) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.84** (2026-10-27), delivering Bento vector standardization across the Learning, Goals, and Exam pages. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.84) for the package and publishing status.
 
-## What's New in v0.210.83
+## What's New in v0.210.84
+
+- **Bento Vector Standardization across Learning & Goals**:
+  - Upgraded action buttons across the Learning page (Return Today, View Plans, Open Exam, Refresh Calendar) with `.lv-btn-tool` rounded Bento pills and vector icons.
+  - Enabled direct "New Goal" button in embedded Learning plan views.
+  - Standardized resume actions in the Exam page and form buttons in the Goals page.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.83
 
 - **Card Detail Drawer Bento Action Polish**:
   - Upgraded version comparison, diff generation, and retry buttons in `card-detail.svelte` to `.lv-btn-tool` capsules with monochromatic vector icons (`swap`, `refresh`, `chevron-up/down`).

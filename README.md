@@ -21,11 +21,25 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.83（2026-10-26）**，落地卡片详情抽屉全流程操作 Bento 胶囊与精密矢量微标化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.83)。
+当前版本为 **v0.210.84（2026-10-27）**，落地学习页与目标备考全场景 Bento 胶囊化与矢量微标矩阵。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.84)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.83）
+## 本次更新（v0.210.84）
+
+- **学习总览与回顾（Learning Page）操作全员 Bento 胶囊化**：
+  - 「回到今日」、「查看目标与计划」、「查看考试计划」及日历刷新按钮全员升级为 `.lv-btn-tool` 规范；
+  - 嵌入单色精密矢量微标（`home`、`target`、`graduation`、`refresh`），彻底告别粗糙纯文字框线；
+- **目标与计划工作台（Goals Page）心流打通与表单操作升级**：
+  - 解除嵌入模式下隐藏新建按钮的限制，在学习页目标分面也支持右上角直接一键「+ 新建目标」；
+  - 目标保存与取消操作分别嵌入 `<LvIcon name="check" size={12} />` 与 `<LvIcon name="close" size={12} />` 矢量微标；
+- **考试冲刺页面（Exam Page）操作层级深度规整**：
+  - 暂停计划的「恢复」按钮升级为带 `<LvIcon name="refresh" size={12} />` 的 Bento 工具胶囊；
+  - 表单提交按钮清理旧有文字按钮类名污染，锁定标准实心发光 `.lv-btn-primary`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.83）
 
 - **卡片详情抽屉（Card Detail Drawer）操作全员 Bento 化**：
   - 详情抽屉顶部历史版本对比、差异生成与卡面预览重试按钮全面对齐 `.lv-btn-tool` Bento 规范；
