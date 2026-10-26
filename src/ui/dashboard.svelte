@@ -1125,13 +1125,13 @@
                                 <td style="text-align:right;font-variant-numeric:tabular-nums" class:lv-dd-leech-warn={row.leeches > 0}>{#if row.leeches > 0}<LvIcon name="warning" size={14} /> {row.leeches}{:else}0{/if}</td>
                                 <td style="text-align:right">
                                     <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px">
-                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost" title={t.dashboard.renameDeck ?? "重命名卡组"} onclick={() => renameDeckPrompt(row.deckID, deckName)}>
+                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={t.dashboard.renameDeck ?? "重命名卡组"} onclick={() => renameDeckPrompt(row.deckID, deckName)}>
                                             <LvIcon name="edit" size={13} />
                                         </button>
-                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} onclick={() => exportDeckShare(row.deckID, deckName)}>
+                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={t.dashboard.ddShareBtn} onclick={() => exportDeckShare(row.deckID, deckName)}>
                                             <LvIcon name="cards" size={13} />
                                         </button>
-                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger" title={t.dashboard.deleteDeck ?? "删除卡组"} onclick={() => removeDeckConfirm(row.deckID, deckName)}>
+                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={t.dashboard.deleteDeck ?? "删除卡组"} onclick={() => removeDeckConfirm(row.deckID, deckName)}>
                                             <LvIcon name="trash" size={13} />
                                         </button>
                                     </div>

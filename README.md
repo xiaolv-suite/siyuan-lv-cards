@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.65（2026-10-26）**，落地AI向导与修卡演练微交互全矢量化、chevron-left四向微标闭环。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.65)。
+当前版本为 **v0.210.66（2026-10-26）**，落地卡组列表与批量操作栏全Bento微胶囊化、全生命周期交互逻辑系统性重构。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.66)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.65）
+## 本次更新（v0.210.66）
+
+- **系统性交互与操作合理性全景升级（Full Lifecycle Flow Continuity & Consistency）**：
+  - 首页卡组卡片列表（\`Deck Dashboard\`）操作区（重命名、分享包导出、删除）全面挂载 \`.lv-btn-tool\` 微胶囊与无障碍 \`aria-label\`；
+  - 闪卡管理器批量操作栏（加入卡组、移动卡组、重置、导出 CSV、导出 Obsidian、移除、取消）全员升级为带精密矢量微标的 Bento 胶囊按钮，分页器内置 \`chevron-left\` 与 \`chevron-right\` 矢量微标；
+  - 核心实体关系与知识对象面板完全消除对外部主题的混用，操作层级与触控反馈全线统合；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.65）
 
 - **AI 制卡向导与修卡演练微交互全矢量化升级（Micro-interactions & Glyph Cleanup）**：
   - AI 制卡向导返回按钮与材料折叠箭头告别粗糙文本字符 \`▴\` / \`▾\`，全面升级为精密 \`<LvIcon name="chevron-up" />\` 与 \`<LvIcon name="chevron-down" />\` 胶囊按钮；

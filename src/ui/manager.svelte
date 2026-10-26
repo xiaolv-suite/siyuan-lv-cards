@@ -861,21 +861,21 @@ import { confirmDialog } from "@/libs/dialog";
             {#if batchError}<span class="lv-batch-error" role="alert">{batchError}</span>{/if}
             <div class="fn__flex-1"></div>
             {#if ctx.uiMode !== "simple"}
-                <button class="b3-button b3-button--outline" disabled={batchBusy !== null} onclick={() => openBatchDeckModal("add")}>
-                    <LvIcon name="plus" size={14} /> {t.manager.batchAddDeck ?? "加入卡组"}
+                <button class="b3-button b3-button--outline lv-btn-tool" disabled={batchBusy !== null} onclick={() => openBatchDeckModal("add")}>
+                    <LvIcon name="plus" size={14} /> <span>{t.manager.batchAddDeck ?? "加入卡组"}</span>
                 </button>
                 {#if deckScope}
-                    <button class="b3-button b3-button--outline" disabled={batchBusy !== null} onclick={() => openBatchDeckModal("move")}>
-                        <LvIcon name="book" size={14} /> {t.manager.batchMoveDeck ?? "移动到卡组"}
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={batchBusy !== null} onclick={() => openBatchDeckModal("move")}>
+                        <LvIcon name="book" size={14} /> <span>{t.manager.batchMoveDeck ?? "移动到卡组"}</span>
                     </button>
                 {/if}
-                <button class="b3-button b3-button--outline" disabled={batchBusy !== null} onclick={exportSelected}>{t.manager.exportCsv}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" disabled={batchBusy !== null} onclick={exportSelected}><LvIcon name="book" size={14} /> <span>{t.manager.exportCsv}</span></button>
                 <!-- W3：导出 Obsidian SR markdown（qa/挖空自动分型；可用我们的导入器回导） -->
-                <button class="b3-button b3-button--outline" disabled={batchBusy !== null} title={t.manager.obExportHint} onclick={exportObsidianSr}>{t.manager.obExport}</button>
-                <button class="b3-button b3-button--outline" disabled={batchBusy !== null} onclick={batchReset}>{batchBusy === "reset" ? t.dashboard.loading : t.manager.batchReset}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" disabled={batchBusy !== null} title={t.manager.obExportHint} onclick={exportObsidianSr}><LvIcon name="cards" size={14} /> <span>{t.manager.obExport}</span></button>
+                <button class="b3-button b3-button--outline lv-btn-tool" disabled={batchBusy !== null} onclick={batchReset}><LvIcon name="refresh" size={14} /> <span>{batchBusy === "reset" ? t.dashboard.loading : t.manager.batchReset}</span></button>
             {/if}
-            <button class="b3-button b3-button--outline" disabled={batchBusy !== null} onclick={batchRemove}>{batchBusy === "remove" ? t.dashboard.loading : t.manager.batchRemove}</button>
-            <button class="b3-button b3-button--small" disabled={batchBusy !== null} onclick={() => (selected = [])}>{t.manager.batchCancel}</button>
+            <button class="b3-button b3-button--outline lv-btn-tool lv-menu-danger" disabled={batchBusy !== null} onclick={batchRemove}><LvIcon name="trash" size={14} /> <span>{batchBusy === "remove" ? t.dashboard.loading : t.manager.batchRemove}</span></button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={batchBusy !== null} onclick={() => (selected = [])}><span>{t.manager.batchCancel}</span></button>
         </div>
     {/if}
 
@@ -1009,9 +1009,9 @@ import { confirmDialog } from "@/libs/dialog";
         <!-- T-管理器 R53：分页在列表底部 -->
         {#if pageCount > 1}
             <div class="lv-mgr-pager">
-                <button class="b3-button b3-button--outline b3-button--small" disabled={page <= 1} onclick={() => goto(page - 1)}>{t.manager.prev}</button>
+                <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" disabled={page <= 1} onclick={() => goto(page - 1)}><LvIcon name="chevron-left" size={12} /> <span>{t.manager.prev}</span></button>
                 <span class="lv-pager">{page} / {pageCount}</span>
-                <button class="b3-button b3-button--outline b3-button--small" disabled={page >= pageCount} onclick={() => goto(page + 1)}>{t.manager.next}</button>
+                <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" disabled={page >= pageCount} onclick={() => goto(page + 1)}><span>{t.manager.next}</span> <LvIcon name="chevron-right" size={12} /></button>
             </div>
         {/if}
     {/if}
