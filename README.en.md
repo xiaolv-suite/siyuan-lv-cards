@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.77** (2026-10-26), delivering a complete Dashboard overhaul with a 4-pillar Feature Matrix Bento Grid, dual-pathway action flow, and smart empty deck collapsing. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.77) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.78** (2026-10-26), integrating industry-standard ergonomics from Anki and RemNote, including zero-due badge hiding, anti-theme button styles, and card creation flow polish. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.78) for the package and publishing status.
 
-## What's New in v0.210.77
+## What's New in v0.210.78
+
+- **Zero Due Badge Graceful Hiding**:
+  - Hides the distracting "0" badge in the sidebar when all reviews are complete, displaying badge counts only when actionable cards exist.
+- **Universal New Card Flow**:
+  - Upgraded sidebar CTA label to "New Flashcard", reflecting support for cloze, Q&A, and AI synthesis.
+- **Strict Theme Style Isolation for Primary Buttons**:
+  - Enforced `!important` color and gradient locks on `.lv-btn-primary` to block external dark-green theme overrides.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.77
 
 - **Feature Matrix Bento Grid for Dashboard**:
   - Direct 2x2 Bento workspace navigation on the home page: Card Library, Card Studio (Ctrl+H / AI), Practice & Challenges (Pairing / Speed), and Exam Plans.

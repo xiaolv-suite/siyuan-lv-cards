@@ -21,11 +21,23 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.77（2026-10-26）**，落地首页布局重构：四大核心功能 Bento 全景工作台、双通道行动引导与空卡组智能收拢。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.77)。
+当前版本为 **v0.210.78（2026-10-26）**，汲取同类产品精髓：侧栏零到期优雅隐藏、全局主按钮抗主题污染与新建闪卡心流升级。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.78)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.77）
+## 本次更新（v0.210.78）
+
+- **侧边栏到期徽标零值优雅隐藏（Zero Due Graceful Handling）**：
+  - 汲取 Anki、RemNote 与 Linear 体验精髓，当今日无到期卡片（`dueCount === 0`）时，自动隐去侧边栏刺眼的灰色 `0` 徽标；
+  - 消除用户关于“0 是不是出错/未加载”的疑虑与挫败感，有待复习卡片时才精准高亮呈现；
+- **侧边栏新建闪卡操作心流升级（General Authoring Access）**：
+  - 侧栏主操作由局限生硬的「开始手工制卡」升级为通用的「新建闪卡」，兼顾挖空、问答与智能制卡，心智更加开放包容；
+- **核心主按钮（`.lv-btn-primary`）色彩抗污染绝对防护**：
+  - 为长春花紫立体渐变高光挂载 `!important` 级层级锁，彻底根除部分思源第三方主题强制注入深墨绿背景色的样式覆盖；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.77）
 
 - **首页四大核心功能全景工作台（Feature Matrix Bento Grid）上线**：
   - 针对“进来看不见功能、不知所措”的痛点，在首页核心视域新增 2x2 Bento 功能直达矩阵；

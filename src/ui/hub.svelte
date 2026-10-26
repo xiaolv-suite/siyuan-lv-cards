@@ -126,9 +126,9 @@
             id: "today",
             label: i18n.hubPrimaryToday ?? "今日",
             icon: "home",
-            badge: dueCount === null ? "—" : dueCount,
-            badgeLabel: dueCount === null
-                ? (i18n.hubDueUnknown ?? "待复习数量未知")
+            badge: dueCount === null || dueCount <= 0 ? undefined : dueCount,
+            badgeLabel: dueCount === null || dueCount <= 0
+                ? undefined
                 : (i18n.hubDueCount ?? "待复习 ${count} 张").replace("${count}", String(dueCount)),
         },
         { id: "library", label: i18n.hubPrimaryLibrary ?? "卡库", icon: "cards" },
@@ -410,7 +410,8 @@
                 <span>小驴闪卡</span>
             </div>
             <button class="b3-button lv-btn-primary lv-r54-new-card" disabled={!loadQuickCardView} aria-describedby={!loadQuickCardView ? "lv-r54-new-card-hint" : undefined} onclick={openStudioManual}>
-                <LvIcon name="plus" size={18} />{i18n.hubStudioManualAction ?? "新建闪卡"}
+                <LvIcon name="plus" size={17} />
+                <span>{i18n.hubStudioManualAction?.includes("手工") ? "新建闪卡" : (i18n.hubStudioManualAction ?? "新建闪卡")}</span>
             </button>
             <LvTabs tabs={primaryTabs} active={primaryFor(active)} onchange={switchTab} panelId={active === "authoring" ? "lv-hub-studio-panel" : "lv-hub-panel"} orientation="vertical" />
             {#if inbox}
