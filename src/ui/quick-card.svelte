@@ -28,8 +28,33 @@
     let previewAnswer = $state(false);
     let createdNotice = $state("");
     let editorRoot: HTMLDivElement;
+    let qTextareaEl: HTMLTextAreaElement | undefined = $state();
     let disposed = false;
     onDestroy(() => { disposed = true; });
+
+    function insertCloze() {
+        if (!qTextareaEl) return;
+        const start = qTextareaEl.selectionStart ?? 0;
+        const end = qTextareaEl.selectionEnd ?? 0;
+        const selectedText = q.slice(start, end);
+        const marker = "____";
+
+        if (selectedText) {
+            q = q.slice(0, start) + marker + q.slice(end);
+            if (!a.trim()) {
+                a = selectedText;
+            }
+        } else {
+            q = q.slice(0, start) + marker + q.slice(start);
+        }
+        const nextPos = start + marker.length;
+        setTimeout(() => {
+            if (qTextareaEl) {
+                qTextareaEl.focus();
+                qTextareaEl.setSelectionRange(nextPos, nextPos);
+            }
+        }, 0);
+    }
 
     const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || navigator.platform || "");
 
@@ -179,14 +204,35 @@
     <div class="lv-qc-content">
         <section class="lv-qc-editor" aria-label={t.quickCardEditorLabel}>
             <label class="lv-qc-field">
-                <div class="lv-qc-label">{t.quickCardQ}</div>
+                <div class="lv-qc-label-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                    <span class="lv-qc-label">{t.quickCardQ}</span>
+                    {#if template === "cloze"}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-cloze-shortcut-btn"
+                            title={t.quickCardClozeInsertHint ?? "选中文字设为挖空，或光标处插入空位 (Ctrl+H)"}
+                            aria-label={t.quickCardClozeInsert ?? "插入挖空 (Ctrl+H)"}
+                            onclick={(e) => { e.stopPropagation(); insertCloze(); }}
+                        >
+                            <LvIcon name="edit" size={12} />
+                            <span>{t.quickCardClozeInsert ?? "一键挖空 (Ctrl+H)"}</span>
+                        </button>
+                    {/if}
+                </div>
                 <textarea
+                    bind:this={qTextareaEl}
                     class="b3-text-field fn__block"
                     aria-label={t.quickCardQ}
                     rows="4"
                     bind:value={q}
                     placeholder={template === "cloze" ? t.quickCardClozeHint : t.quickCardQ}
                     disabled={busy}
+                    onkeydown={(e) => {
+                        if (template === "cloze" && (e.ctrlKey || e.metaKey) && (e.key === "h" || e.key === "H")) {
+                            e.preventDefault();
+                            insertCloze();
+                        }
+                    }}
                 ></textarea>
                 {#if template === "cloze"}<div class="ft__smaller ft__on-surface lv-qc-help">{t.quickCardClozeHint}</div>{/if}
             </label>

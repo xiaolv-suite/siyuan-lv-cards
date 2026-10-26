@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.66** (2026-10-26), delivering full Bento pill standardization across Deck Dashboard lists and Manager batch bars for seamless flow ergonomics. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.66) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.67** (2026-10-26), delivering dark mode micro-shine edge enhancements, unified button spring tactile response, and one-click cloze creation shortcuts. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.67) for the package and publishing status.
 
-## What's New in v0.210.66
+## What's New in v0.210.67
+
+- **Frictionless Cloze Authoring (One-Click Cloze & Ctrl+H)**:
+  - Added an "Insert Cloze (Ctrl+H)" Bento button and dedicated `Ctrl+H / ⌘H` shortcut to Quick Card.
+  - Automatically wraps highlighted text into blanks (`____`) and populates the answer field.
+- **Design System Polish (Spring Tactile & Dark Mode Micro-Shine)**:
+  - Sharpened dark mode micro-borders and inset-shines (`rgba(255, 255, 255, 0.12)`) to eliminate blur against the deep canvas.
+  - Unified button click mechanics to `transform: translateY(0.5px) scale(0.985)`.
+- **Verification**:
+  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.66
 
 - **Comprehensive Flow Continuity & Ergonomics Polish**:
   - Aligned deck card actions (rename, export, delete) in Deck Dashboard with `.lv-btn-tool` Bento pills and accessible `aria-label` tags.

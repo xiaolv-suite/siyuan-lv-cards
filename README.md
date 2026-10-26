@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.66（2026-10-26）**，落地卡组列表与批量操作栏全Bento微胶囊化、全生命周期交互逻辑系统性重构。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.66)。
+当前版本为 **v0.210.67（2026-10-26）**，落地全局暗黑微高光倒角增强、按键物理弹簧动效与手工制卡一键挖空落地。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.67)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.66）
+## 本次更新（v0.210.67）
+
+- **手工制卡工作台一键挖空与快捷键增强（Cloze Authoring Frictionless Flow）**：
+  - 手工制卡工作台挖空卡型新增「一键挖空 (Ctrl+H)」Bento 工具按钮与 `Ctrl+H / ⌘H` 专属快捷键；
+  - 选中文本即可一键包裹为 `____` 并自动将选中文本填充为答案，未选中文本时于光标处自动插入空位，大幅提升知识加工制卡效率；
+- **全局设计系统暗黑微高光与物理弹簧动效调优**：
+  - 暗黑模式卡片与面板边缘高光（`--lv-inset-shine`）与边框基准微调至更锋利层次，杜绝深色底座下的边缘发虚；
+  - 全局按钮按压反馈统一绑定 `transform: translateY(0.5px) scale(0.985)`，单选选项卡片悬浮及按压动画平滑顺畅；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1948 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.66）
 
 - **系统性交互与操作合理性全景升级（Full Lifecycle Flow Continuity & Consistency）**：
   - 首页卡组卡片列表（\`Deck Dashboard\`）操作区（重命名、分享包导出、删除）全面挂载 \`.lv-btn-tool\` 微胶囊与无障碍 \`aria-label\`；

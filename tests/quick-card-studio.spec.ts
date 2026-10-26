@@ -281,4 +281,24 @@ describe("R54 manual card workspace", () => {
             "苹果 ==Apple==", "deck-1", "默认卡组", "苹果", "Apple"
         );
     });
+
+    it("inserts cloze blank via cloze shortcut button or Ctrl+H keydown", async () => {
+        render(QuickCard, { i18n, onCreate: vi.fn(), onClose: vi.fn(), embedded: true });
+        await fireEvent.click(await screen.findByRole("button", { name: /挖空表达/ }));
+
+        const qInput = screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement;
+        await fireEvent.input(qInput, { target: { value: "光合作用产生氧气。" } });
+
+        // 模拟选中文本 "氧气"
+        qInput.selectionStart = 6;
+        qInput.selectionEnd = 8;
+
+        const clozeBtn = screen.getByRole("button", { name: /插入挖空/ });
+        expect(clozeBtn).toBeTruthy();
+        await fireEvent.click(clozeBtn);
+
+        expect(qInput.value).toBe("光合作用产生____。");
+        const aInput = screen.getByRole("textbox", { name: "答案" }) as HTMLTextAreaElement;
+        expect(aInput.value).toBe("氧气");
+    });
 });
