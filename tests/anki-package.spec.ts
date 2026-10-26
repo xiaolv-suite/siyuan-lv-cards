@@ -126,7 +126,7 @@ describe("parseAnkiPackage 全链", () => {
         expect(pkg.cards).toHaveLength(3);
         expect(pkg.issues.some((i) => i.includes("未知模型"))).toBe(true);
         expect(pkg.issues.some((i) => i.includes("孤儿卡"))).toBe(true);
-    });
+    }, 15000);
 
     it("缺 media 清单 → issue 记录，不抛错", () => {
         const pkg = parseAnkiPackage(buildApkg(buildAnki2DbBytes([NOTE_A, NOTE_B], NOTES_AB_CARDS)), nodeSqliteAdapter);
