@@ -1583,9 +1583,9 @@
         margin-top: auto;
         padding: 14px;
         border-radius: var(--lv-r-m);
-        background: var(--lv-warn-soft);
+        background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
         color: var(--lv-color-text);
-        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 24%, transparent);
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 16%, var(--lv-border));
         box-shadow: var(--lv-shadow-card);
     }
     .lv-today-week-note strong { font-size: var(--lv-type-body-size); }
@@ -1815,20 +1815,31 @@
             color: var(--lv-color-brand);
             border-color: var(--lv-primary-border);
             white-space: nowrap;
-            &:hover {
+            transition: all var(--lv-dur-1) var(--lv-ease);
+
+            &:hover:not(:disabled) {
                 background: var(--lv-primary-soft);
+                border-color: var(--lv-color-brand);
+            }
+
+            &:disabled {
+                color: var(--lv-color-text-muted) !important;
+                border-color: var(--lv-border) !important;
+                background: transparent !important;
+                opacity: 0.65;
             }
         }
         .lv-deck-icon-badge {
             width: 32px;
             height: 32px;
             border-radius: 9px;
-            background: var(--lv-primary-soft);
+            background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
             color: var(--lv-color-brand);
+            border: 1px solid color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
             display: grid;
             place-items: center;
             flex-shrink: 0;
-            box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand) 16%, transparent);
+            box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand) 12%, transparent);
         }
         .lv-today-deck-count {
             font-size: var(--lv-type-caption-size);

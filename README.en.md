@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.67** (2026-10-26), delivering dark mode micro-shine edge enhancements, unified button spring tactile response, and one-click cloze creation shortcuts. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.67) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.68** (2026-10-26), deploying Scheme A Modern Periwinkle / Warm Gold palette to eliminate complementary red-green clashes and deck alert fatigue. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.68) for the package and publishing status.
 
-## What's New in v0.210.67
+## What's New in v0.210.68
+
+- **Full Scheme A Indigo / Amber Palette Deployment**:
+  - Replaced legacy red branding with modern Periwinkle Indigo (`#6366F1`, dark `#818CF8`) and warm amber gold (`#F59E0B`), harmonizing with the Lv ecosystem aesthetic.
+  - Aligned primary CTA buttons (`+ Manual Card`, `Start Review`) to unified glowing purple gradients, eliminating external teal/green clashes.
+  - Restructured deck lists: empty deck buttons now use calm neutral slate borders instead of misleading red alert outlines.
+- **Verification**:
+  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.67
 
 - **Frictionless Cloze Authoring (One-Click Cloze & Ctrl+H)**:
   - Added an "Insert Cloze (Ctrl+H)" Bento button and dedicated `Ctrl+H / ⌘H` shortcut to Quick Card.

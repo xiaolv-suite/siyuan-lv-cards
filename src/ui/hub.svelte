@@ -785,11 +785,11 @@
         margin: 0 calc(var(--lv-space-unit) * 2);
         padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 6);
         border-radius: var(--lv-r-m);
-        background: var(--lv-warn-soft);
+        background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
         color: var(--lv-color-text);
         font-size: var(--lv-type-meta-size);
         line-height: 1.5;
-        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 24%, transparent);
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 16%, var(--lv-border));
         box-shadow: var(--lv-shadow-card), inset 0 1px 0 color-mix(in srgb, white 40%, transparent);
         strong { font-weight: var(--lv-fw-emphasis); display: block; }
     }

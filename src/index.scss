@@ -5,12 +5,12 @@
 // =============================================================
 
 :root {
-    // 颜色语义层：小驴专属独立美学体系（Palette Independence，绝不受外部主题干扰）
-    --lv-brand: #E11D48; /* 勃艮第心智红 */
-    --lv-brand-hover: #BE123C;
+    // 颜色语义层：方案 A 经典长春花紫/暖金生态调色板（Palette Independence 自洽美学）
+    --lv-brand: #6366F1; /* 经典长春花紫 */
+    --lv-brand-hover: #4F46E5;
     --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 12%, transparent);
-    --lv-accent-gold: #FACC15; /* 星光金 */
-    --lv-color-brand: #E11D48;
+    --lv-accent-gold: #F59E0B; /* 温暖星光金 */
+    --lv-color-brand: #6366F1;
     --lv-color-on-brand: #FFFFFF;
     --lv-color-text: #0F172A;
     --lv-color-text-muted: #475569;
@@ -191,11 +191,11 @@
 :root[data-theme-mode="dark"],
 body[data-theme-mode="dark"],
 .theme--dark {
-    --lv-brand: #F43F5E;
-    --lv-brand-hover: #E11D48;
-    --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 15%, transparent);
-    --lv-accent-gold: #FDE047;
-    --lv-color-brand: #F43F5E;
+    --lv-brand: #818CF8; /* 柔和长春花紫 */
+    --lv-brand-hover: #6366F1;
+    --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 18%, transparent);
+    --lv-accent-gold: #FBBF24;
+    --lv-color-brand: #818CF8;
     --lv-color-on-brand: #FFFFFF;
     --lv-color-text: #F8FAFC;
     --lv-color-text-muted: #94A3B8;
@@ -473,22 +473,22 @@ body[data-theme-mode="dark"],
     background: var(--lv-color-brand);
 }
 
-// 主操作按钮：星轨勃艮第红专属质感 + 悬浮抬升 + 漫反射微发光
+// 主操作按钮：长春花紫专属质感 + 悬浮抬升 + 漫反射微发光
 .lv-btn-primary {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, var(--lv-brand, #E11D48) 0%, color-mix(in srgb, var(--lv-brand, #E11D48) 86%, black) 100%);
+    background: linear-gradient(135deg, var(--lv-brand, #6366F1) 0%, var(--lv-brand-hover, #4F46E5) 100%);
     color: #FFFFFF !important;
     font-weight: var(--lv-fw-semibold);
     border: none !important;
     border-radius: var(--lv-r-control);
-    box-shadow: 0 3px 12px color-mix(in srgb, var(--lv-brand) 32%, transparent);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--lv-brand) 30%, transparent);
     transition: transform var(--lv-dur-1) var(--lv-ease),
         box-shadow var(--lv-dur-2) var(--lv-ease), filter var(--lv-dur-1) var(--lv-ease);
 
     &:hover:not(:disabled) {
         transform: translateY(-1.5px);
-        box-shadow: 0 6px 20px color-mix(in srgb, var(--lv-brand) 44%, transparent);
+        box-shadow: 0 6px 20px color-mix(in srgb, var(--lv-brand) 42%, transparent);
         filter: brightness(1.08);
     }
     &:active:not(:disabled) {
