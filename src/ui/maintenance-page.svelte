@@ -486,8 +486,16 @@
                 </div>
             {/if}
             <div class="lv-maint-repair-actions">
-                <button class="b3-button b3-button--outline" disabled={repairBusy || rollbackBusy || scanning || !!sourceHealthPendingId} aria-busy={repairBusy} onclick={previewRepairs}>{repairBusy ? t.saving : repairText("repairPreviewBtn", "生成预览")}</button>
-                {#if repairPreview?.ok}<button class="b3-button lv-btn-primary" disabled={repairBusy || rollbackBusy || scanning || !!sourceHealthPendingId} onclick={applyRepairs}>{repairText("repairApply", "确认写入")}</button>{/if}
+                <button class="b3-button b3-button--outline lv-btn-tool" disabled={repairBusy || rollbackBusy || scanning || !!sourceHealthPendingId} aria-busy={repairBusy} onclick={previewRepairs}>
+                    <LvIcon name="eye" size={13} />
+                    <span>{repairBusy ? t.saving : repairText("repairPreviewBtn", "生成预览")}</span>
+                </button>
+                {#if repairPreview?.ok}
+                    <button class="b3-button lv-btn-primary lv-btn-tool" disabled={repairBusy || rollbackBusy || scanning || !!sourceHealthPendingId} onclick={applyRepairs}>
+                        <LvIcon name="check" size={13} />
+                        <span>{repairText("repairApply", "确认写入")}</span>
+                    </button>
+                {/if}
             </div>
         </section>
     {/if}
@@ -502,11 +510,13 @@
                     </span>
                 </div>
                 <div style="display: flex; gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap;">
-                    <button class="b3-button b3-button--small lv-btn-ghost" onclick={() => (lastRepairDiffOpen = !lastRepairDiffOpen)}>
-                        {lastRepairDiffOpen ? repairText("lastRepairHideDiff", "收起差异") : repairText("lastRepairViewDiff", "查看修改差异")}
+                    <button class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => (lastRepairDiffOpen = !lastRepairDiffOpen)}>
+                        <LvIcon name="eye" size={12} />
+                        <span>{lastRepairDiffOpen ? repairText("lastRepairHideDiff", "收起差异") : repairText("lastRepairViewDiff", "查看修改差异")}</span>
                     </button>
-                    <button class="b3-button b3-button--small lv-btn-primary" disabled={rollbackBusy || repairBusy || scanning || !!sourceHealthPendingId} aria-busy={rollbackBusy} onclick={rollbackRepair}>
-                        {rollbackBusy ? repairText("rollbackRepairBusy", "正在撤销…") : repairText("rollbackRepairBtn", "撤销此次修复")}
+                    <button class="b3-button b3-button--small lv-btn-primary lv-btn-tool" disabled={rollbackBusy || repairBusy || scanning || !!sourceHealthPendingId} aria-busy={rollbackBusy} onclick={rollbackRepair}>
+                        <LvIcon name="refresh" size={12} />
+                        <span>{rollbackBusy ? repairText("rollbackRepairBusy", "正在撤销…") : repairText("rollbackRepairBtn", "撤销此次修复")}</span>
                     </button>
                 </div>
             </div>
@@ -548,9 +558,15 @@
                         <LvChip tone={kind === "needsReview" ? "warn" : "error"}>{(t.kinds as Record<string, string>)[kind]} {groups[kind].length}</LvChip>
                         <div class="fn__flex-1"></div>
                         {#if groups[kind].length > 0 && groups[kind].every(d => suspended.has(d.blockID))}
-                            <button class="b3-button b3-button--small" disabled={!!pendingAction} aria-busy={groupIsPending("resume", kind)} onclick={() => resumeGroup(kind)}>{groupIsPending("resume", kind) ? t.saving : t.resumeGroup}</button>
+                            <button class="b3-button b3-button--small lv-btn-tool" disabled={!!pendingAction} aria-busy={groupIsPending("resume", kind)} onclick={() => resumeGroup(kind)}>
+                                <LvIcon name="refresh" size={12} />
+                                <span>{groupIsPending("resume", kind) ? t.saving : t.resumeGroup}</span>
+                            </button>
                         {:else}
-                            <button class="b3-button b3-button--small" disabled={!!pendingAction} aria-busy={groupIsPending("suspend", kind)} onclick={() => suspendGroup(kind)}>{groupIsPending("suspend", kind) ? t.saving : t.suspendGroup}</button>
+                            <button class="b3-button b3-button--small lv-btn-tool" disabled={!!pendingAction} aria-busy={groupIsPending("suspend", kind)} onclick={() => suspendGroup(kind)}>
+                                <LvIcon name="moon" size={12} />
+                                <span>{groupIsPending("suspend", kind) ? t.saving : t.suspendGroup}</span>
+                            </button>
                         {/if}
                     </div>
                     {#each groups[kind] as d (d.blockID + d.kind)}
@@ -585,19 +601,37 @@
                                 {/if}
                             </div>
                             {#if suspended.has(d.blockID)}
-                                <button class="b3-button b3-button--small" disabled={!!pendingAction} aria-busy={actionIsPending("resume", d.blockID)} onclick={() => resumeOne(d.blockID)}>{actionIsPending("resume", d.blockID) ? t.saving : t.resumeTodayBtn}</button>
+                                <button class="b3-button b3-button--small lv-btn-tool" disabled={!!pendingAction} aria-busy={actionIsPending("resume", d.blockID)} onclick={() => resumeOne(d.blockID)}>
+                                    <LvIcon name="refresh" size={12} />
+                                    <span>{actionIsPending("resume", d.blockID) ? t.saving : t.resumeTodayBtn}</span>
+                                </button>
                                 <LvChip>{t.suspendedToday}</LvChip>
                             {:else}
-                                <button class="b3-button b3-button--small" disabled={!!pendingAction} aria-busy={actionIsPending("suspend", d.blockID)} onclick={() => suspendOne(d.blockID)}>{actionIsPending("suspend", d.blockID) ? t.saving : t.suspendTodayBtn}</button>
+                                <button class="b3-button b3-button--small lv-btn-tool" disabled={!!pendingAction} aria-busy={actionIsPending("suspend", d.blockID)} onclick={() => suspendOne(d.blockID)}>
+                                    <LvIcon name="moon" size={12} />
+                                    <span>{actionIsPending("suspend", d.blockID) ? t.saving : t.suspendTodayBtn}</span>
+                                </button>
                             {/if}
                             {#if repairableKinds.has(kind)}
-                                <button class="b3-button b3-button--small" disabled={repairBusy || Object.prototype.hasOwnProperty.call(repairDrafts, d.blockID)} onclick={() => addRepairDraft(d.blockID)}>{repairText("repairAdd", "加入修复")}</button>
+                                <button class="b3-button b3-button--small lv-btn-tool" disabled={repairBusy || Object.prototype.hasOwnProperty.call(repairDrafts, d.blockID)} onclick={() => addRepairDraft(d.blockID)}>
+                                    <LvIcon name="zap" size={12} />
+                                    <span>{repairText("repairAdd", "加入修复")}</span>
+                                </button>
                             {/if}
                             {#if kind === "sourceHealth" && maintenance.acknowledgeSourceHealth && cardMap.get(d.blockID)?.sourceHealthIssues?.some(issue => issue.kind === "moved" || issue.kind === "changed" || issue.kind === "license-changed")}
-                                <button class="b3-button b3-button--small" disabled={!!sourceHealthPendingId || repairBusy || rollbackBusy} aria-busy={sourceHealthPendingId === d.blockID} onclick={() => acknowledgeSource(d.blockID)}>{sourceHealthPendingId === d.blockID ? repairText("sourceHealthUpdating", "更新中…") : repairText("sourceHealthAcknowledge", "确认当前来源")}</button>
+                                <button class="b3-button b3-button--small lv-btn-tool" disabled={!!sourceHealthPendingId || repairBusy || rollbackBusy} aria-busy={sourceHealthPendingId === d.blockID} onclick={() => acknowledgeSource(d.blockID)}>
+                                    <LvIcon name="check" size={12} />
+                                    <span>{sourceHealthPendingId === d.blockID ? repairText("sourceHealthUpdating", "更新中…") : repairText("sourceHealthAcknowledge", "确认当前来源")}</span>
+                                </button>
                             {/if}
-                            <button class="b3-button b3-button--small" disabled={!!sourcePendingId} aria-busy={sourcePendingId === d.blockID} onclick={() => openSource(d.blockID)}>{sourcePendingId === d.blockID ? t.opening : t.open}</button>
-                            <button class="b3-button b3-button--small lv-btn-primary" onclick={() => maintenance.openCard(d.blockID)}>{t.editCard}</button>
+                            <button class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={!!sourcePendingId} aria-busy={sourcePendingId === d.blockID} onclick={() => openSource(d.blockID)}>
+                                <LvIcon name="eye" size={12} />
+                                <span>{sourcePendingId === d.blockID ? t.opening : t.open}</span>
+                            </button>
+                            <button class="b3-button b3-button--small lv-btn-primary lv-btn-tool" onclick={() => maintenance.openCard(d.blockID)}>
+                                <LvIcon name="edit" size={12} />
+                                <span>{t.editCard}</span>
+                            </button>
                         </div>
                     {/each}
                 </div>

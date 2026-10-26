@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.75** (2026-10-26), delivering responsive dual-column shortcut help overlays and Bento vector styling for the Recovery Center. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.75) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.76** (2026-10-26), delivering full Bento vector badge standardization and responsive layout protection across the Maintenance Page. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.76) for the package and publishing status.
 
-## What's New in v0.210.75
+## What's New in v0.210.76
+
+- **Bento Vector Badge Standardization for Maintenance Page**:
+  - Upgraded debt row action buttons (Suspend/Resume, Add to Repair, Acknowledge Source Health, Open Source, Edit Card) with `.lv-btn-tool` rounded Bento pills and monochromatic vector icons.
+  - Added vector icons to the Batch Repair Preview and Last Repair Rollback bars.
+- **Responsive Layout Protection**:
+  - Enhanced flex-wrap and responsive spacing in `.lv-maint-row` to prevent button overflowing or clipping on mobile viewports.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.75
 
 - **Responsive Dual-Column Shortcut Help Overlay**:
   - Upgraded the shortcut help overlay (`?`) with a 2-column responsive grid, eliminating vertical scrolling across 16+ shortcut guides.
