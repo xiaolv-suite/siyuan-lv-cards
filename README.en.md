@@ -19,9 +19,17 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.84** (2026-10-27), delivering Bento vector standardization across the Learning, Goals, and Exam pages. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.84) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.85** (2026-10-27), delivering Bento vector standardization for preview and import workflows in the AI Wizard. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.85) for the package and publishing status.
 
-## What's New in v0.210.84
+## What's New in v0.210.85
+
+- **AI Wizard Preview & Import Bento Standardization**:
+  - Upgraded candidate card preview toggles in the AI Wizard to `.lv-btn-tool` capsules with `<LvIcon name="eye" size={12} />`.
+  - Added vector glyphs to candidate navigation and the commit button.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.84
 
 - **Bento Vector Standardization across Learning & Goals**:
   - Upgraded action buttons across the Learning page (Return Today, View Plans, Open Exam, Refresh Calendar) with `.lv-btn-tool` rounded Bento pills and vector icons.

@@ -1010,7 +1010,7 @@
                                 <LvChip tone="warn">{t.aiWizard.assertionUnsupportedCount.replace("${n}", String(scorecards[i].assertionReport.unsupportedCount))}</LvChip>
                             {/if}
                             {#if gateIssues[i].length > 0}<LvChip tone="error">{t.aiWizard.qualityBlockStatus}</LvChip>{:else if c.review === "accepted"}<LvChip tone="primary">{t.aiWizard.reviewAccepted}</LvChip>{:else if c.review === "verified"}<LvChip tone="primary">{t.aiWizard.reviewVerified}</LvChip>{:else if c.review === "needsCheck"}<LvChip tone="warn">{t.aiWizard.reviewNeedsCheck}</LvChip>{:else if c.edited}<LvChip tone="warn">{t.aiWizard.editedReaccept}</LvChip>{/if}
-                            <button class="b3-button b3-button--small" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}>{t.aiWizard.cardPreview}</button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
                             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} aria-label={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} disabled={creating || regenBusy !== null || restoredCandidates} onclick={() => regenerateCard(i)}><LvIcon name="refresh" size={13} /></button>
                             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.removeCandidate} aria-label={t.aiWizard.removeCandidate} disabled={creating || regenBusy !== null} onclick={() => removeCandidate(i)}><LvIcon name="close" size={13} /></button>
                         </label>
@@ -1021,7 +1021,7 @@
                             <button class="b3-button b3-button--small {c.review === 'verified' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "verified")}>{t.aiWizard.markVerified}</button>
                             <button class="b3-button b3-button--small {c.review === 'needsCheck' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "needsCheck")}>{t.aiWizard.markNeedsCheck}</button>
                             <div class="fn__flex-1"></div>
-                            <button class="b3-button b3-button--small" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}>{t.aiWizard.cardPreview}</button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
                         </div>
                         {#if previewIdx === i}
                             {@const rendered = renderUnifiedCardFace({ question: c.q, answer: c.a, template: cardType, answerLabel: t.cardDetail?.answer ?? t.quickCardPreviewBack ?? "参考答案" })}
@@ -1111,7 +1111,7 @@
                 <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2)" role="alert">{errorMsg}</div>
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
-                <button class="b3-button b3-button--outline" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}>{t.aiWizard.back}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}><LvIcon name="chevron-left" size={12} /> <span>{t.aiWizard.back}</span></button>
                 <input class="b3-text-field" style="width: 180px" placeholder={t.deckNewName} aria-label={t.deckNewName} bind:value={newName} disabled={creating} />
                 <select class="b3-select" style="max-width: 180px" bind:value={selected} disabled={creating || decks.length === 0} aria-label={t.deckPickerTitle}>
                     {#each decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
@@ -1120,7 +1120,8 @@
                     <span class="ft__smaller ft__on-surface">{t.quickCardNeedDeck}</span>
                 {/if}
                 <button class="b3-button lv-btn-primary" disabled={creating || regenBusy !== null || !canImport} onclick={importCards} title={t.aiWizard.importReviewed}>
-                    {creating ? "…" : t.aiWizard.createAcceptedN.replace("${n}", String(acceptedCount))}
+                    <LvIcon name="check" size={13} />
+                    <span>{creating ? "…" : t.aiWizard.createAcceptedN.replace("${n}", String(acceptedCount))}</span>
                 </button>
             </div>
         </div>
