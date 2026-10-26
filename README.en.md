@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.69** (2026-10-26), deploying strict focus-visible scoping to eliminate editor outline leaks. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.69) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.70** (2026-10-26), deploying Phase S2 flow optimizations including single-choice answer feedback cadence, sprint review quick launch, and done screen starred card actions. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.70) for the package and publishing status.
 
-## What's New in v0.210.69
+## What's New in v0.210.70
+
+- **Phase S2 Core Interaction Delivery**:
+  - Single-choice and judgment quiz options now feature a 100ms answer feedback cadence, providing immediate tactile response before smoothly revealing the explanation.
+  - Added a dedicated "Sprint Review" launch button on the Dashboard exam banner.
+  - Enhanced Done screen next actions to allow immediate starred card drill even when no cards were skipped or forgotten.
+- **Verification**:
+  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.69
 
 - **Editor Style Isolation & Focus-Visible Containment**:
   - Identified and fixed an unscoped `:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); }` global rule from legacy stylesheets.

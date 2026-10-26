@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.69（2026-10-26）**，落地根除全局焦点环样式泄漏、严格收敛:focus-visible至小驴闪卡核心作用域。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.69)。
+当前版本为 **v0.210.70（2026-10-26）**，落地阶段二核心交互：单选作答智能微缓冲、冲刺复习直通车与星标卡专项行动强化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.70)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.69）
+## 本次更新（v0.210.70）
+
+- **单选题作答智能微缓冲动效落地（Answer Feedback Cadence）**：
+  - 单选题作答与判断题点击增加 100ms 黄金微滞后动效，选项卡片获得焦点与轻触微反馈后再平滑揭晓解析，为大脑建立清晰明确的因果因果记忆回路；
+- **首页考试计划「立即冲刺复习」直通车闭环**：
+  - 首页在考前倒计时横幅（`examChip`）右侧增设「立即冲刺复习」Primary CTA 按钮，一键直达当前考试冲刺计划；
+- **复习完成屏星标卡专项强化全闭环**：
+  - 优化复习结算屏（Done Screen）下一步建议条件：即使本场未跳过、无遗忘，只要星标了卡片也能一键直发「立即专项练习星标卡」；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1948 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.69）
 
 - **根除正文编辑器全局焦点环污染（Strict Focus-Visible Scoping）**：
   - 排查并根治旧版本中未加前缀的 `:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); }` 全局选择器；

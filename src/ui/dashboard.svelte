@@ -695,9 +695,15 @@
         </div>
     {/if}
     {#if examChip}
-        <div class="lv-glass lv-v2banner">
-            <LvChip tone={examChip.days <= 7 ? "error" : "warn"}><LvIcon name="graduation" size={14} /> {examChip.name} · {t.exam.daysLeft.replace("${n}", String(examChip.days))}</LvChip>
-            <span class="ft__smaller ft__on-surface">{t.exam.examChipHint}</span>
+        <div class="lv-glass lv-v2banner" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+                <LvChip tone={examChip.days <= 7 ? "error" : "warn"}><LvIcon name="graduation" size={14} /> {examChip.name} · {t.exam.daysLeft.replace("${n}", String(examChip.days))}</LvChip>
+                <span class="ft__smaller ft__on-surface">{t.exam.examChipHint}</span>
+            </div>
+            <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => ctx.openHubTab?.("learning")}>
+                <LvIcon name="zap" size={12} />
+                <span>{t.exam?.startToday ?? "冲刺复习"}</span>
+            </button>
         </div>
     {/if}
 

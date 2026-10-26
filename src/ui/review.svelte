@@ -2072,7 +2072,12 @@
             triggerHaptic(5);
         } else {
             selectedChoiceKeys = [key];
-            submitChoiceAnswer();
+            triggerHaptic(10);
+            setTimeout(() => {
+                if (!showAnswer) {
+                    submitChoiceAnswer();
+                }
+            }, 100);
         }
     }
 
@@ -2111,16 +2116,21 @@
     function handleJudgePick(val: boolean) {
         if (!faceReady || showAnswer || !interactiveQuiz) return;
         userJudgeChoice = val;
-        sessionQuizTotal++;
-        if (interactiveQuiz.judgeAnswer !== null) {
-            isAnswerCorrect = val === interactiveQuiz.judgeAnswer;
-            suggestedRating = isAnswerCorrect ? 3 : 1;
-            if (isAnswerCorrect) sessionQuizCorrect++;
-            playSfx(isAnswerCorrect ? 3 : 1);
-            triggerHaptic(isAnswerCorrect ? 15 : 25);
-            showMessage(isAnswerCorrect ? "判断正确！" : "判断错误，已标出正确答案", 1800, isAnswerCorrect ? "info" : "error");
-        }
-        revealAnswer();
+        triggerHaptic(10);
+        setTimeout(() => {
+            if (!showAnswer) {
+                sessionQuizTotal++;
+                if (interactiveQuiz.judgeAnswer !== null) {
+                    isAnswerCorrect = val === interactiveQuiz.judgeAnswer;
+                    suggestedRating = isAnswerCorrect ? 3 : 1;
+                    if (isAnswerCorrect) sessionQuizCorrect++;
+                    playSfx(isAnswerCorrect ? 3 : 1);
+                    triggerHaptic(isAnswerCorrect ? 15 : 25);
+                    showMessage(isAnswerCorrect ? "判断正确！" : "判断错误，已标出正确答案", 1800, isAnswerCorrect ? "info" : "error");
+                }
+                revealAnswer();
+            }
+        }, 100);
     }
 
     function handleFillCheck() {
@@ -2594,7 +2604,7 @@
                         {/each}
                     </div>
                 </div>
-                {#if sessionSkip > 0 || sessionForget > 0}
+                {#if sessionSkip > 0 || sessionForget > 0 || starredCardIDs.size > 0}
                     <!-- T07 下一步建议（docs/40）：本场数据推导，本地口径、可忽略——"把疑问留下，也把下一步留下" -->
                     <div class="lv-done-next">
                         <div class="lv-eyebrow">{t.review.nextTitle}</div>
