@@ -89,6 +89,12 @@
 
     let loading = $state(true);
     let decks: RiffDeck[] = $state([]);
+    let showAllEmptyDecks = $state(false);
+    const activeDecks = $derived(decks.filter(d => (d.size ?? 0) > 0));
+    const emptyDecks = $derived(decks.filter(d => (d.size ?? 0) === 0));
+    const displayedDecks = $derived(
+        (activeDecks.length > 0 && !showAllEmptyDecks) ? activeDecks : decks
+    );
     let dueCount = $state(0);
     let newCount = $state(0);
     // T01（docs/39 批 2）：今日行动 hero——当日未收场会话可「继续本场」；深度统计默认折叠
@@ -807,6 +813,24 @@
                     <button class="b3-button lv-btn-primary" disabled={todayDecision.actionDisabled || (loading && !hasLoadedSnapshot)} onclick={heroAction}>
                         {heroActionLabel()}
                     </button>
+                    {#if todayDecision.primaryAction !== "start-review" && todayDecision.primaryAction !== "continue-review"}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--outline lv-btn-tool"
+                            onclick={() => ctx.openReview()}
+                        >
+                            <LvIcon name="cards" size={13} />
+                            <span>自由复习</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="b3-button b3-button--outline lv-btn-tool"
+                            onclick={() => ctx.openQuickCard ? ctx.openQuickCard() : ctx.openHubTab?.("authoring")}
+                        >
+                            <LvIcon name="plus" size={13} />
+                            <span>制作新卡</span>
+                        </button>
+                    {/if}
                     <!-- R53 .hero .cta 右侧说明：有到期或目标才展示（不堆 0 值） -->
                     {#if dueCount > 0 || targets.review > 0}
                 <span class="lv-hero-remaining">{t.dashboard.todayDue} {dueCount}{#if targets.review > 0} · {targetPct()}%{/if}</span>
@@ -874,6 +898,77 @@
                 />
             </div>
         </div>
+
+        <!-- 核心功能全景工作台（Feature Matrix Bento Grid） -->
+        <div class="lv-feature-grid" role="region" aria-label="核心功能导航">
+            <button
+                type="button"
+                class="lv-feature-card"
+                onclick={() => ctx.openManager()}
+            >
+                <div class="lv-feature-icon-badge lv-feature-badge--manage">
+                    <LvIcon name="cards" size={17} />
+                </div>
+                <div class="lv-feature-content">
+                    <div class="lv-feature-title-row">
+                        <span class="lv-feature-title">{t.menuManager ?? "闪卡管理器"}</span>
+                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
+                    </div>
+                    <span class="lv-feature-sub">检索全库卡片、按卡组标签批量流转与导出</span>
+                </div>
+            </button>
+
+            <button
+                type="button"
+                class="lv-feature-card"
+                onclick={() => ctx.openQuickCard ? ctx.openQuickCard() : ctx.openHubTab?.("authoring")}
+            >
+                <div class="lv-feature-icon-badge lv-feature-badge--studio">
+                    <LvIcon name="plus" size={17} />
+                </div>
+                <div class="lv-feature-content">
+                    <div class="lv-feature-title-row">
+                        <span class="lv-feature-title">{t.hubTabStudio ?? "闪卡制作工坊"}</span>
+                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
+                    </div>
+                    <span class="lv-feature-sub">选中文本一键挖空 (Ctrl+H)、问答卡与 AI 制卡</span>
+                </div>
+            </button>
+
+            <button
+                type="button"
+                class="lv-feature-card"
+                onclick={() => ctx.openHubTab?.("learning")}
+            >
+                <div class="lv-feature-icon-badge lv-feature-badge--practice">
+                    <LvIcon name="timer" size={17} />
+                </div>
+                <div class="lv-feature-content">
+                    <div class="lv-feature-title-row">
+                        <span class="lv-feature-title">趣味练习与挑战</span>
+                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
+                    </div>
+                    <span class="lv-feature-sub">挖空配对消除、限时挑战冲刺与盲打记忆</span>
+                </div>
+            </button>
+
+            <button
+                type="button"
+                class="lv-feature-card"
+                onclick={() => ctx.openHubTab?.("learning")}
+            >
+                <div class="lv-feature-icon-badge lv-feature-badge--exam">
+                    <LvIcon name="graduation" size={17} />
+                </div>
+                <div class="lv-feature-content">
+                    <div class="lv-feature-title-row">
+                        <span class="lv-feature-title">考试冲刺与计划</span>
+                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
+                    </div>
+                    <span class="lv-feature-sub">倒计时管理、每日学习步调、考前高压复习</span>
+                </div>
+            </button>
+        </div>
         </div>
         <section class="lv-today-week lv-card2" aria-labelledby="lv-today-week-title">
             <div class="lv-today-week-head">
@@ -919,8 +1014,8 @@
                 <strong>{currentWeek.reviews} <small>{t.dashboard.weekReviews}</small></strong>
             </div>
             <div class="lv-today-week-note">
-                <strong>{t.dashboard.weekPaceTitle}</strong>
-                <p>{t.dashboard.weekPaceDesc}</p>
+                <LvIcon name="lightbulb" size={14} />
+                <span><strong>{t.dashboard.weekPaceTitle}</strong> · {t.dashboard.weekPaceDesc}</span>
             </div>
         </section>
         </div>
@@ -932,7 +1027,7 @@
                     <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openManager()}><LvIcon name="cards" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span></button>
                 </div>
                 <div class="lv-today-decks-list">
-                    {#each [...decks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 6) as deck (deck.id)}
+                    {#each [...displayedDecks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 6) as deck (deck.id)}
                         <div class="lv-today-deck">
                             <button
                                 type="button"
@@ -958,6 +1053,18 @@
                         </div>
                     {/each}
                 </div>
+                {#if activeDecks.length > 0 && emptyDecks.length > 0}
+                    <div class="lv-empty-decks-bar">
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            onclick={() => (showAllEmptyDecks = !showAllEmptyDecks)}
+                        >
+                            <LvIcon name={showAllEmptyDecks ? "chevron-up" : "chevron-down"} size={12} />
+                            <span>{showAllEmptyDecks ? "收起无卡片的空卡组" : `其余 ${emptyDecks.length} 个空卡组已折叠，点击展开`}</span>
+                        </button>
+                    </div>
+                {/if}
             </section>
         {/if}
 
@@ -1410,6 +1517,88 @@
     .lv-today-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--lv-sp-3); }
     .lv-today-stats .lv-stat-cell { min-width: 0; max-width: none; }
     :global(.lv-today-stats .lv-stat-cell .lv-card2) { min-width: 0; padding: 15px 14px; }
+
+    .lv-feature-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--lv-sp-3);
+        margin-top: var(--lv-sp-3);
+    }
+    .lv-feature-card {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-3);
+        padding: 12px 14px;
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-m);
+        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        text-align: left;
+        cursor: pointer;
+        color: inherit;
+        transition: transform var(--lv-dur-2) var(--lv-ease),
+            border-color var(--lv-dur-1) var(--lv-ease),
+            box-shadow var(--lv-dur-2) var(--lv-ease);
+
+        &:hover {
+            transform: translateY(-2px);
+            border-color: var(--lv-primary-border);
+            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+
+            .lv-feature-title { color: var(--lv-color-brand); }
+            .lv-feature-action-link { transform: translateX(2px); color: var(--lv-color-brand); }
+        }
+
+        .lv-feature-icon-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--lv-r-circle);
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
+            color: var(--lv-color-brand);
+            border: 1px solid color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
+            box-shadow: 0 1px 3px color-mix(in srgb, black 4%, transparent);
+        }
+        .lv-feature-badge--manage { background: color-mix(in srgb, #6366F1 10%, var(--lv-color-surface)); color: #6366F1; border-color: rgba(99, 102, 241, 0.22); }
+        .lv-feature-badge--studio { background: color-mix(in srgb, #EC4899 10%, var(--lv-color-surface)); color: #EC4899; border-color: rgba(236, 72, 153, 0.22); }
+        .lv-feature-badge--practice { background: color-mix(in srgb, #10B981 10%, var(--lv-color-surface)); color: #10B981; border-color: rgba(16, 185, 129, 0.22); }
+        .lv-feature-badge--exam { background: color-mix(in srgb, #F59E0B 10%, var(--lv-color-surface)); color: #F59E0B; border-color: rgba(245, 158, 11, 0.22); }
+
+        .lv-feature-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .lv-feature-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+        }
+        .lv-feature-title {
+            font-size: 13px;
+            font-weight: var(--lv-fw-semibold);
+            color: var(--lv-color-text);
+            transition: color var(--lv-dur-1) var(--lv-ease);
+        }
+        .lv-feature-sub {
+            font-size: 11px;
+            color: var(--lv-color-text-muted);
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .lv-feature-action-link {
+            color: var(--lv-color-text-muted);
+            opacity: 0.7;
+            transition: all var(--lv-dur-1) var(--lv-ease);
+        }
+    }
     .lv-today-week {
         display: flex;
         min-width: 0;
@@ -1587,15 +1776,23 @@
     .lv-today-week-summary small { color: var(--lv-color-text-muted); font-size: 10px; font-weight: var(--lv-fw-normal); }
     .lv-today-week-note {
         margin-top: auto;
-        padding: 14px;
+        padding: 8px 12px;
         border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
-        color: var(--lv-color-text);
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 16%, var(--lv-border));
-        box-shadow: var(--lv-shadow-card);
+        color: var(--lv-color-text-muted);
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-border));
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        line-height: 1.4;
+        strong { color: var(--lv-color-text); font-weight: 600; white-space: nowrap; }
     }
-    .lv-today-week-note strong { font-size: var(--lv-type-body-size); }
-    .lv-today-week-note p { margin: calc(var(--lv-space-unit) * 2) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); line-height: 1.6; }
+    .lv-empty-decks-bar {
+        display: flex;
+        justify-content: center;
+        margin-top: var(--lv-sp-2);
+    }
     .lv-cards { gap: var(--lv-sp-3); margin-bottom: var(--lv-sp-4); }
     .lv-first-use {
         max-width: 860px;
@@ -1871,6 +2068,7 @@
     }
     @container lv-hub (max-width: 560px) {
         .lv-today-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .lv-feature-grid { grid-template-columns: 1fr; }
         .lv-first-use-steps { grid-template-columns: 1fr; }
     }
 

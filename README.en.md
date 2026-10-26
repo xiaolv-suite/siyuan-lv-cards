@@ -19,9 +19,21 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.76** (2026-10-26), delivering full Bento vector badge standardization and responsive layout protection across the Maintenance Page. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.76) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.77** (2026-10-26), delivering a complete Dashboard overhaul with a 4-pillar Feature Matrix Bento Grid, dual-pathway action flow, and smart empty deck collapsing. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.77) for the package and publishing status.
 
-## What's New in v0.210.76
+## What's New in v0.210.77
+
+- **Feature Matrix Bento Grid for Dashboard**:
+  - Direct 2x2 Bento workspace navigation on the home page: Card Library, Card Studio (Ctrl+H / AI), Practice & Challenges (Pairing / Speed), and Exam Plans.
+  - Eliminates the cognitive fatigue of wondering "what can this plugin do and where do I start?".
+- **Dual Action Pathways in Hero**:
+  - In addition to standard recommendations, provides dedicated "Free Review" and "Create Cards" launch capsules when there are no scheduled due cards.
+- **Smart Empty Deck Collapsing**:
+  - Automatically groups 0-card empty decks into a collapsible bar, highlighting active decks with due cards.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.76
 
 - **Bento Vector Badge Standardization for Maintenance Page**:
   - Upgraded debt row action buttons (Suspend/Resume, Add to Repair, Acknowledge Source Health, Open Source, Edit Card) with `.lv-btn-tool` rounded Bento pills and monochromatic vector icons.
