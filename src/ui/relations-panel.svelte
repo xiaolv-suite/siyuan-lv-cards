@@ -103,7 +103,7 @@
                     {direction === "outgoing" ? relation.to : relation.from}
                 </span>
                 <button
-                    class="b3-button b3-button--small lv-btn-ghost lv-relations-del"
+                    class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-relations-del"
                     title={t.relations.remove}
                     aria-label={t.relations.remove}
                     disabled={busy}
@@ -143,7 +143,10 @@
                     <option value={type}>{typeName(type)}</option>
                 {/each}
             </select>
-            <button class="b3-button lv-btn-primary" disabled={busy} aria-busy={busy} onclick={submit}>{busy ? (t.relations.saving ?? "保存中…") : t.relations.add}</button>
+            <button class="b3-button lv-btn-primary lv-btn-tool" disabled={busy} aria-busy={busy} onclick={submit}>
+                <LvIcon name="plus" size={12} />
+                <span>{busy ? (t.relations.saving ?? "保存中…") : t.relations.add}</span>
+            </button>
         </div>
     </div>
 </div>

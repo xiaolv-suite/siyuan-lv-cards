@@ -111,7 +111,7 @@
         <div class="lv-ko-fact">
             {fact}
             {#if onrevise}
-                <button class="b3-button b3-button--small lv-ko-revise-btn" onclick={startRevise}>{t.review.ko.revise}</button>
+                <button class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-ko-revise-btn" onclick={startRevise}><LvIcon name="edit" size={12} /> <span>{t.review.ko.revise}</span></button>
             {/if}
         </div>
     {/if}
@@ -135,7 +135,7 @@
                 {#if inst.capability}<span class="ft__smaller ft__on-surface">{inst.capability}</span>{/if}
                 <span class="fn__flex-1 lv-ko-id ft__smaller ft__on-surface">{inst.cardID}</span>
                 <button
-                    class="b3-button b3-button--small"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                     title={t.review.ko.remove}
                     aria-label={t.review.ko.remove}
                     disabled={actionBusy !== null}
@@ -160,7 +160,7 @@
                 <option value={c.id}>{typeName(c.id)}</option>
             {/each}
         </select>
-        <button class="b3-button lv-btn-primary" disabled={deriving} aria-busy={deriving} onclick={deriveSelected}>
+        <button class="b3-button lv-btn-primary lv-btn-tool" disabled={deriving} aria-busy={deriving} onclick={deriveSelected}>
             {deriving ? t.review.ko.deriving : deriveError ? (t.review.ko.retryDerive ?? "重试派生") : t.review.ko.derive}
         </button>
     </div>

@@ -19,9 +19,16 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.88** (2026-10-27), delivering Bento vector standardization across Marker Cards, Capture Inbox, and E2E isolated test harness hardening. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.88) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.89** (2026-10-27), delivering Bento vector standardization across the Relations and Knowledge Object Panels. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.89) for the package and publishing status.
 
-## What's New in v0.210.88
+## What's New in v0.210.89
+
+- **Relations & Knowledge Object Panels Bento Polish**:
+  - Upgraded Add Relation, Revise Fact, and Remove Instance actions in `relations-panel.svelte` and `ko-panel.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs (`plus`, `edit`, `close`).
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.88
 
 - **Marker Cards & Capture Inbox Bento Polish**:
   - Upgraded Select All / Deselect All and Cancel actions in `marker-cards.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.
