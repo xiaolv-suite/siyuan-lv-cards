@@ -3,7 +3,6 @@
     import { getNotebooks, type Notebook } from "@/api/siyuan";
     import LvSection from "./kit/LvSection.svelte";
     import LvRow from "./kit/LvRow.svelte";
-    import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
     import { formatRiffCardEntryError } from "@/api/due-shared";
 
@@ -153,9 +152,10 @@
                 <div class="lv-notice lv-notice--warn" role="alert" style="margin-top: var(--lv-sp-2); border-color: var(--lv-danger-border); background: var(--lv-danger-soft); color: var(--lv-color-danger)">{errorMsg}</div>
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
-                <button class="b3-button b3-button--outline" onclick={() => (step = 1)}>{t.onboardingBack}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={() => (step = 1)}><LvIcon name="chevron-left" size={12} /> <span>{t.onboardingBack}</span></button>
                 <button class="b3-button lv-btn-primary" disabled={busy || notebookLoading || !nbId} onclick={createSamples}>
-                    {busy ? "…" : t.onboardingCreate}
+                    <LvIcon name="plus" size={13} />
+                    <span>{busy ? "…" : t.onboardingCreate}</span>
                 </button>
             </div>
         </LvSection>
@@ -163,12 +163,12 @@
         <LvSection title={t.onboardingDoneTitle}>
             <div class="ft__on-surface">{t.onboardingDoneDesc}</div>
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3)">
-                <button class="b3-button b3-button--outline" onclick={openHelpAndClose}>{t.onboardingHelp}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={openHelpAndClose}><LvIcon name="question" size={12} /> <span>{t.onboardingHelp}</span></button>
                 {#if sampleDocId}
-                    <button class="b3-button b3-button--outline" onclick={openSamples}>{t.onboardingOpenSamples}</button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={openSamples}><LvIcon name="book" size={12} /> <span>{t.onboardingOpenSamples}</span></button>
                 {/if}
                 <button class="b3-button lv-btn-primary" onclick={finish}>
-                    {t.onboardingFinish} <LvKbd k="→" />
+                    <span>{t.onboardingFinish}</span> <LvIcon name="chevron-right" size={13} />
                 </button>
             </div>
         </LvSection>

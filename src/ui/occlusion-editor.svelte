@@ -242,8 +242,8 @@
         <span class="lv-ob-step">{t.occlusion.title}</span>
         <span class="ft__smaller ft__on-surface">{t.occlusion.drawHint}</span>
         <div class="fn__flex-1"></div>
-        <button class="b3-button b3-button--small" onclick={() => (rects = rects.slice(0, -1))} disabled={rects.length === 0}>{t.occlusion.undo}</button>
-        <button class="b3-button b3-button--small" onclick={clearRects} disabled={rects.length === 0 || busy}>{t.occlusion.clear}</button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (rects = rects.slice(0, -1))} disabled={rects.length === 0}><LvIcon name="chevron-left" size={12} /> <span>{t.occlusion.undo}</span></button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearRects} disabled={rects.length === 0 || busy}><LvIcon name="trash" size={12} /> <span>{t.occlusion.clear}</span></button>
     </div>
     {#if loading}
         <div class="lv-occed-state" aria-busy="true" role="status">
@@ -254,7 +254,7 @@
         <div class="lv-occed-state" role="alert">
             <div class="lv-occed-state-icon"><LvIcon name="warning" size={28} /></div>
             <div>{errorMsg}</div>
-            <button class="b3-button b3-button--outline" disabled={loading} onclick={loadPreview}>{t.occlusion.retry ?? "重试"}</button>
+            <button class="b3-button b3-button--outline lv-btn-tool" disabled={loading} onclick={loadPreview}><LvIcon name="refresh" size={13} /> <span>{t.occlusion.retry ?? "重试"}</span></button>
         </div>
     {/if}
     <div class="lv-occed-stage lv-card2" class:lv-occed-hidden={loading || !!errorMsg} bind:this={preview}>

@@ -21,11 +21,23 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.86（2026-10-27）**，落地设置中心全流程数据迁移与限时挑战操作全员 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.86)。
+当前版本为 **v0.210.87（2026-10-27）**，落地新手上手引导与图片遮挡编辑器操作全员 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.87)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.86）
+## 本次更新（v0.210.87）
+
+- **新手上手引导（Onboarding Wizard）操作全员微标与 Bento 胶囊化**：
+  - 「返回上一步」、「生成示例卡片」、「查看帮助指南」及「打开示例笔记」全员升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色精密矢量微标（`chevron-left`、`plus`、`question`、`book`）；
+  - 「开始复习体验」嵌入单色向右导航微标 `<LvIcon name="chevron-right" size={13} />`，心流更直观；
+  - 清理模板中无用的 `LvKbd` 导入，保持严格的编译纯净性；
+- **图片遮挡编辑器（Occlusion Editor）操作微标化**：
+  - 顶部撤销（`chevron-left`）与清空画布（`trash`）操作升级为 Bento 工具胶囊；
+  - 图片读取失败重试升级为标准带 `refresh` 图标的 Bento 胶囊；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.86）
 
 - **设置中心数据迁移与生态导入导出全员 Bento 化（Settings Migration Actions）**：
   - Anki 连接测试、Anki 本地 `.apkg` 导入、原生 `.lvcards` 分享包导入、Obsidian SR 导入全面升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色矢量微标；

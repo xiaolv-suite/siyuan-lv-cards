@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.86** (2026-10-27), delivering Bento vector standardization for data migration actions in Settings and ergonomic polish in Challenge Mode. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.86) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.87** (2026-10-27), delivering Bento vector standardization across the Onboarding Wizard and Occlusion Editor. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.87) for the package and publishing status.
 
-## What's New in v0.210.86
+## What's New in v0.210.87
+
+- **Onboarding Wizard & Occlusion Editor Bento Polish**:
+  - Upgraded Back, Sample Creation, Help Guide, and Finish actions in `onboarding.svelte` to `.lv-btn-tool` capsules with vector glyphs.
+  - Upgraded Undo, Clear, and Image Retry buttons in `occlusion-editor.svelte` to Bento tools with vector icons (`chevron-left`, `trash`, `refresh`).
+  - Removed unused `LvKbd` imports in `onboarding.svelte` for 0-warning compilation hygiene.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.86
 
 - **Settings Data Migration & Backup Bento Actions**:
   - Upgraded Anki connection test, Anki `.apkg` import, `.lvcards` package import, and Obsidian SR import buttons to `.lv-btn-tool` Bento capsules with vector glyphs.
