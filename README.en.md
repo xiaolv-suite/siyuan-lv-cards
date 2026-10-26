@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.70** (2026-10-26), deploying Phase S2 flow optimizations including single-choice answer feedback cadence, sprint review quick launch, and done screen starred card actions. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.70) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.71** (2026-10-26), delivering Zen Mode floating action island and pairing game tactile spring match animations. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.71) for the package and publishing status.
 
-## What's New in v0.210.70
+## What's New in v0.210.71
+
+- **Zen Mode Floating Action Island**:
+  - Upgraded the Zen exit button into a sleek, frosted glass floating pill bar (`.lv-zen-island`).
+  - Allows in-place font scale adjustments (`A- / A+`), card starring (`⭐`), and quick memo editing (`💡`) without breaking focus or leaving Zen Mode.
+- **Pairing Game Match Pop & Fade Animation**:
+  - Matching cards now exhibit an elegant `scale(1.04)` spring pop and smooth fade-out upon successful connection.
+- **Verification**:
+  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.70
 
 - **Phase S2 Core Interaction Delivery**:
   - Single-choice and judgment quiz options now feature a 100ms answer feedback cadence, providing immediate tactile response before smoothly revealing the explanation.

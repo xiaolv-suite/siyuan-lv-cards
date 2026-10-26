@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
+    import { scale } from "svelte/transition";
     import { dueCache } from "@/api/due-shared";
     import { getBlockDOM } from "@/api/siyuan";
     import { extractMarkTexts, MARK_SELECTOR } from "@/core/card-face";
@@ -192,14 +193,14 @@
             <div class="lv-pair-col">
                 {#each left as p (p.cardID)}
                     {#if !matched.has(p.cardID)}
-                        <button class="lv-pair-cell" class:lv-pair-on={pickedLeft === p.cardID} onclick={() => pickLeft(p)}>{p.prompt}</button>
+                        <button class="lv-pair-cell" class:lv-pair-on={pickedLeft === p.cardID} onclick={() => pickLeft(p)} out:scale={{ duration: 160, start: 1.04 }}>{p.prompt}</button>
                     {/if}
                 {/each}
             </div>
             <div class="lv-pair-col">
                 {#each right as p (`r-${p.cardID}`)}
                     {#if !matched.has(p.cardID)}
-                        <button class="lv-pair-cell lv-pair-ans" class:lv-pair-on={pickedRight === p.cardID} onclick={() => pickRight(p)}>{p.answer}</button>
+                        <button class="lv-pair-cell lv-pair-ans" class:lv-pair-on={pickedRight === p.cardID} onclick={() => pickRight(p)} out:scale={{ duration: 160, start: 1.04 }}>{p.answer}</button>
                     {/if}
                 {/each}
             </div>

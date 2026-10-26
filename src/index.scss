@@ -2106,24 +2106,80 @@ body[data-theme-mode="dark"],
     }
 }
 
-.lv-zen-exit-pill {
+.lv-zen-island {
     position: fixed;
     top: 14px;
     right: 20px;
     z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
     border-radius: var(--lv-r-pill);
-    background: color-mix(in srgb, var(--lv-color-surface) 80%, transparent);
-    backdrop-filter: blur(8px);
+    background: color-mix(in srgb, var(--lv-color-surface) 85%, transparent);
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
     border: 1px solid var(--lv-border);
-    font-size: 11px;
-    padding: 3px 10px;
-    color: var(--lv-color-text-muted);
-    opacity: 0.75;
-    transition: opacity var(--lv-dur-1) var(--lv-ease);
+    box-shadow: 0 4px 16px -2px color-mix(in srgb, black 12%, transparent), var(--lv-inset-shine);
+    opacity: 0.72;
+    transition: opacity var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease);
+
     &:hover {
         opacity: 1;
-        color: var(--lv-color-brand);
-        border-color: var(--lv-primary-border);
+        transform: translateY(-1px);
+    }
+
+    .lv-zen-tool-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 5px;
+        border-radius: var(--lv-r-pill);
+        background: transparent;
+        border: none;
+        color: var(--lv-color-text-muted);
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--lv-dur-1) var(--lv-ease);
+
+        &:hover:not(:disabled) {
+            color: var(--lv-color-brand);
+            background: color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
+        }
+        &.lv-zen-starred {
+            color: var(--lv-color-warning, #f59e0b) !important;
+            svg { fill: currentColor; }
+        }
+    }
+
+    .lv-zen-island-sep {
+        width: 1px;
+        height: 14px;
+        background: var(--lv-border);
+        margin: 0 2px;
+    }
+
+    .lv-zen-exit-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: var(--lv-r-pill);
+        background: transparent;
+        border: none;
+        color: var(--lv-color-text-muted);
+        font-size: 11px;
+        cursor: pointer;
+        transition: all var(--lv-dur-1) var(--lv-ease);
+
+        &:hover {
+            color: var(--lv-color-brand);
+            background: color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
+        }
     }
 }
 

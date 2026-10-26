@@ -2289,9 +2289,55 @@
     tabindex="-1"
 >
     {#if zenMode}
-        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-zen-exit-pill" onclick={() => (zenMode = false)}>
-            ⤢ 退出专注 (z)
-        </button>
+        <div class="lv-zen-island" role="toolbar" aria-label="专注模式工具栏">
+            <button
+                type="button"
+                class="lv-zen-tool-btn"
+                title="缩小卡面字号"
+                onclick={(e) => { e.stopPropagation(); adjustFontScale(-0.1); }}
+            >
+                A−
+            </button>
+            <button
+                type="button"
+                class="lv-zen-tool-btn"
+                title="放大卡面字号"
+                onclick={(e) => { e.stopPropagation(); adjustFontScale(0.1); }}
+            >
+                A+
+            </button>
+            <div class="lv-zen-island-sep" aria-hidden="true"></div>
+            <button
+                type="button"
+                class="lv-zen-tool-btn"
+                class:lv-zen-starred={starredCardIDs.has(current?.cardID ?? '')}
+                title={starredCardIDs.has(current?.cardID ?? '') ? "已星标重点 (*)" : "星标重点 (*)"}
+                aria-label="星标重点"
+                disabled={!current || actionBusy}
+                onclick={(e) => { e.stopPropagation(); toggleStarCurrent(); }}
+            >
+                <LvIcon name="star" size={13} />
+            </button>
+            <button
+                type="button"
+                class="lv-zen-tool-btn"
+                title={t.review.tbMemo ?? "助记便签"}
+                aria-label="助记便签"
+                disabled={!current || actionBusy}
+                onclick={(e) => { e.stopPropagation(); showMemoEditor = true; }}
+            >
+                <LvIcon name="lightbulb" size={13} />
+            </button>
+            <div class="lv-zen-island-sep" aria-hidden="true"></div>
+            <button
+                type="button"
+                class="lv-zen-exit-btn"
+                title="退出专注模式 (z)"
+                onclick={(e) => { e.stopPropagation(); zenMode = false; }}
+            >
+                <span>退出专注 (z)</span>
+            </button>
+        </div>
     {/if}
     <!-- AS-4：读屏播报区域（视觉隐藏） -->
     <LvLive message={liveMsg} tone={liveTone} />
