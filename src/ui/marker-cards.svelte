@@ -1,6 +1,7 @@
 <script lang="ts">
     /** 标记符制卡预览（M2·FR4）：勾选扫描结果 → 确认制卡（:: 问答新建块，？整块直加） */
     import LvKbd from "./kit/LvKbd.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     export interface MarkerItem {
         blockID: string;
@@ -81,8 +82,9 @@
     <div class="lv-marker-header">
         <div class="lv-marker-hint">{t.markerHint.replace("${n}", String(items.length))}</div>
         {#if items.length > 0}
-            <button type="button" class="b3-button b3-button--small lv-btn-ghost" onclick={toggleAll}>
-                {allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")}
+            <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={toggleAll}>
+                <LvIcon name="check" size={12} />
+                <span>{allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")}</span>
             </button>
         {/if}
     </div>
@@ -92,7 +94,7 @@
             <div class="lv-marker-empty-icon" aria-hidden="true">✦</div>
             <div>{t.markerEmpty ?? "当前文档没有找到可制卡的标记内容"}</div>
             <div class="ft__smaller ft__on-surface">{t.markerEmptyHint ?? "请先添加 :: 问答或？整块标记，再重新扫描。"}</div>
-            <button class="b3-button b3-button--outline" onclick={onClose}>{t.markerCancel}</button>
+            <button class="b3-button b3-button--outline lv-btn-tool" onclick={onClose}><LvIcon name="close" size={12} /> <span>{t.markerCancel}</span></button>
         </div>
     {:else}
     <div class="lv-marker-list">

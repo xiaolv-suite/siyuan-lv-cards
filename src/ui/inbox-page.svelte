@@ -240,7 +240,7 @@
             onchange={(id: string) => { filter = id as InboxStatus; checked = []; }}
             ariaLabel={t.filterGroupLabel}
         />
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.selectAll} disabled={visible.length === 0} onclick={toggleAll}><span>{allChecked ? t.unselectAll : t.selectAll}</span></button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.selectAll} disabled={visible.length === 0} onclick={toggleAll}><LvIcon name="check" size={12} /> <span>{allChecked ? t.unselectAll : t.selectAll}</span></button>
         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.refresh} onclick={refresh}><LvIcon name="refresh" size={13} /> <span>{t.refresh}</span></button>
     {/snippet}
 
@@ -249,7 +249,7 @@
         <div class="lv-inbox-error" role="alert">
             <span>{sourceError}</span>
             {#if sourceErrorId && !sourcePendingId}
-                <button class="b3-button b3-button--small" onclick={() => openSource(sourceErrorId)}>{t.retry ?? "重试"}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => openSource(sourceErrorId)}><LvIcon name="refresh" size={12} /> <span>{t.retry ?? "重试"}</span></button>
             {/if}
         </div>
     {/if}

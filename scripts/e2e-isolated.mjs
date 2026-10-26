@@ -246,11 +246,12 @@ async function main() {
     check("建临时笔记本（前缀注册表内）", nb.code === 0, nb.msg || SCRATCH_NB);
     if (nb.code === 0) {
         scratchNbId = notebookIdOf(nb.data);
-        // 抗抖动：冷启动内核索引未就绪时 createDocWithMd 偶发 "block not found"，重试一次
-        let doc = await api("/api/filetree/createDocWithMd", { notebook: scratchNbId, path: "smoke/riff", markdown: "e2e smoke block" });
-        if (doc.code !== 0) {
-            await sleep(1500);
-            doc = await api("/api/filetree/createDocWithMd", { notebook: scratchNbId, path: "smoke/riff", markdown: "e2e smoke block" });
+        // 抗抖动：冷启动内核索引未就绪时 createDocWithMd 偶发 "block not found" 或 "metadata not ready"，多阶重试
+        let doc = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            if (attempt > 0) await sleep(800);
+            doc = await api("/api/filetree/createDocWithMd", { notebook: scratchNbId, path: "/riff", markdown: "e2e smoke block" });
+            if (doc.code === 0) break;
         }
         check("建文档", doc.code === 0, doc.msg || "");
         if (doc.code === 0) {

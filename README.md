@@ -21,11 +21,24 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.87（2026-10-27）**，落地新手上手引导与图片遮挡编辑器操作全员 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.87)。
+当前版本为 **v0.210.88（2026-10-27）**，落地标记符制卡预览与收件箱操作全员 Bento 矢量化与 E2E 隔离靶场加固。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.88)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.87）
+## 本次更新（v0.210.88）
+
+- **标记符扫描制卡预览（Marker Cards）全流程操作 Bento 胶囊化**：
+  - 「全选/取消全选」按钮全面升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色精密矢量微标 `<LvIcon name="check" size={12} />`；
+  - 空态下返回按钮升级为带有 `close` 图标的标准 Bento 胶囊；
+  - 严密补齐 `LvIcon` 组件导入，彻底根治潜在的 ReferenceError 隐患；
+- **材料收件箱（Capture Inbox）全选与重试操作矢量微标化**：
+  - 全选/取消全选与打开来源失败后的重试按钮全面嵌入精密单色矢量微标；
+- **E2E 隔离靶场无头内核冷启动稳健性加固**：
+  - 根治无头内核冷启动期间因子路径未建立父文档导致的 `document metadata is not ready` 异常，升级为根路径 `/riff` 并挂载 5 阶渐进重试机制，实现 18/18 项 E2E 100% 稳定直通；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.87）
 
 - **新手上手引导（Onboarding Wizard）操作全员微标与 Bento 胶囊化**：
   - 「返回上一步」、「生成示例卡片」、「查看帮助指南」及「打开示例笔记」全员升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色精密矢量微标（`chevron-left`、`plus`、`question`、`book`）；

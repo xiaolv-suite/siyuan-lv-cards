@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.87** (2026-10-27), delivering Bento vector standardization across the Onboarding Wizard and Occlusion Editor. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.87) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.88** (2026-10-27), delivering Bento vector standardization across Marker Cards, Capture Inbox, and E2E isolated test harness hardening. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.88) for the package and publishing status.
 
-## What's New in v0.210.87
+## What's New in v0.210.88
+
+- **Marker Cards & Capture Inbox Bento Polish**:
+  - Upgraded Select All / Deselect All and Cancel actions in `marker-cards.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.
+  - Fixed missing `LvIcon` component import in `marker-cards.svelte`.
+  - Added vector icons to Select All and Retry actions in `inbox-page.svelte`.
+- **E2E Isolated Harness Hardening**:
+  - Fixed cold-kernel path level initialization race by standardizing on root doc `/riff` with a 5-step progressive retry, ensuring 18/18 E2E tests pass reliably.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.87
 
 - **Onboarding Wizard & Occlusion Editor Bento Polish**:
   - Upgraded Back, Sample Creation, Help Guide, and Finish actions in `onboarding.svelte` to `.lv-btn-tool` capsules with vector glyphs.
