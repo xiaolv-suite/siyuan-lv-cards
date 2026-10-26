@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.72** (2026-10-26), delivering responsive split diff editor layout for side-by-side editing and real-time diff previews. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.72) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.73** (2026-10-26), delivering settings category navigation rail for effortless long-form configuration. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.73) for the package and publishing status.
 
-## What's New in v0.210.72
+## What's New in v0.210.73
+
+- **Settings Category Anchor Rail (Sticky Settings Rail)**:
+  - Added a horizontal Bento chip rail under the settings search box (Rhythm, Answer, Voice, AI Providers, Import/Export, Backup).
+  - Enables smooth scrolling to any target section, eliminating cognitive fatigue across complex configurations.
+- **Component Capability**:
+  - `LvSection.svelte` now accepts an optional `id` prop for precise layout anchoring.
+- **Verification**:
+  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.72
 
 - **Split Diff Layout for Card Editor**:
   - Upgraded `card-editor.svelte` with a responsive two-column grid in wide viewports (left for live editing, right for instant diff inspection).

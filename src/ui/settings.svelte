@@ -13,6 +13,7 @@
     import LvSwitch from "./kit/LvSwitch.svelte";
     import LvSelect from "./kit/LvSelect.svelte";
     import LvInput from "./kit/LvInput.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
     import { PROMPT_TEMPLATES } from "@/core/prompt-templates";
     // BU-18 模型能力注册表：快选列表 + 登记状态提示 + 端点预设
     import { lookupModel, selectableModelOptions, formatModelContext, ENDPOINT_PRESETS } from "@/core/ai-model-registry";
@@ -457,7 +458,10 @@
     function showAllSettings() {
         sectionScope = undefined;
         searchQuery = "";
-        searchInput?.focus();
+        if (searchInput) {
+            searchInput.value = "";
+            searchInput.focus();
+        }
     }
     const SECTION_KEYWORDS: Record<string, string[]> = {
         persona: ["personaSection", "personaManage", "personaActive", "personaImport"],
@@ -479,6 +483,13 @@
         const dict = t.settings as Record<string, unknown>;
         const hay = (SECTION_KEYWORDS[id] ?? []).map((k) => String(dict[k] ?? "")).join(" ").toLowerCase();
         return hay.includes(q);
+    }
+
+    function scrollToSection(id: string) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
     }
 
     /** BU-18：模型登记状态提示（登记→窗口规模；失效→建议更换；未登记→保守默认口径） */
@@ -831,6 +842,28 @@
     <div class="lv-searchbar">
         <input bind:this={searchInput} class="b3-text-field" style="width: 100%" placeholder={t.settings.searchPlaceholder} aria-label={t.settings.searchPlaceholder} bind:value={searchQuery} />
     </div>
+    {#if !searchQuery.trim() && sectionScope !== "imports"}
+        <nav class="lv-settings-nav-rail" aria-label="设置快速导航">
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyRhythm")}>
+                <LvIcon name="timer" size={13} /> <span>{t.settings.studyRhythm ?? "学习节奏"}</span>
+            </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyAnswer")}>
+                <LvIcon name="zap" size={13} /> <span>{t.settings.studyAnswer ?? "作答偏好"}</span>
+            </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyVoice")}>
+                <LvIcon name="bell" size={13} /> <span>{t.settings.studyVoice ?? "语音朗读"}</span>
+            </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-aiSection")}>
+                <LvIcon name="cards" size={13} /> <span>{t.settings.aiSection ?? "AI服务商"}</span>
+            </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-ankiSection")}>
+                <LvIcon name="book" size={13} /> <span>{t.settings.ankiSection ?? "导入导出"}</span>
+            </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-dataSection")}>
+                <LvIcon name="moon" size={13} /> <span>{t.settings.dataSection ?? "数据备份"}</span>
+            </button>
+        </nav>
+    {/if}
     {#if sectionScope === "imports"}
         <div class="lv-notice lv-import-scope">
             <strong>{t.settings.importsTitle}</strong>
@@ -925,7 +958,7 @@
 
     <!-- 学习偏好四区（13-W10）：节奏与目标 / 评分与作答 / 朗读与音效 / 提醒与免打扰 -->
     {#if sectionMatches("studyRhythm")}
-    <LvSection title={t.settings.studyRhythm}>
+    <LvSection id="sec-studyRhythm" title={t.settings.studyRhythm}>
         <LvRow label={t.settings.dailyNewTarget}>
             <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.dailyNewTarget} />
         </LvRow>
@@ -978,7 +1011,7 @@
     {/if}
 
     {#if sectionMatches("studyAnswer")}
-    <LvSection title={t.settings.studyAnswer}>
+    <LvSection id="sec-studyAnswer" title={t.settings.studyAnswer}>
         <LvRow label={t.settings.ratingStyle}>
             <LvSegmented
                 options={[
@@ -1032,7 +1065,7 @@
     {/if}
 
     {#if sectionMatches("studyVoice")}
-    <LvSection title={t.settings.studyVoice}>
+    <LvSection id="sec-studyVoice" title={t.settings.studyVoice}>
         <LvRow label={t.settings.ttsEnabled}>
             <LvSwitch bind:checked={draft.ttsEnabled} />
         </LvRow>
@@ -1097,7 +1130,7 @@
     {/if}
 
     {#if sectionMatches("aiSection")}
-    <LvSection title={t.settings.aiSection} sub={t.settings.aiSectionHint}>
+    <LvSection id="sec-aiSection" title={t.settings.aiSection} sub={t.settings.aiSectionHint}>
         <LvRow label={t.settings.targetNotebook} hint={t.settings.targetNotebookHint}>
             <div style="display:flex;flex-direction:column;align-items:flex-start;gap:var(--lv-sp-1);max-width:320px">
                 <LvSelect
@@ -1277,7 +1310,7 @@
     {/if}
 
     {#if sectionMatches("ankiSection")}
-    <LvSection title={t.settings.ankiSection} sub={t.settings.ankiSectionHint}>
+    <LvSection id="sec-ankiSection" title={t.settings.ankiSection} sub={t.settings.ankiSectionHint}>
         <LvRow label={t.settings.ankiUrl}>
             <input class="b3-text-field fn__size-200" aria-label={t.settings.ankiUrl} bind:value={draft.ankiClientUrl} />
         </LvRow>
@@ -1395,7 +1428,7 @@
     {/if}
 
     {#if sectionMatches("dataSection")}
-    <LvSection title={t.settings.dataSection}>
+    <LvSection id="sec-dataSection" title={t.settings.dataSection}>
         <LvRow label="Flashcard V2" hint={t.dashboard.v2Active}>
             {#snippet children()}
                 <LvChip tone={v2Label.startsWith("Active") ? "primary" : v2Label === "N/A (<3.9.0)" ? "default" : "warn"}>{v2Label}</LvChip>
@@ -1512,6 +1545,36 @@
         margin: 0 auto;
 
         .b3-dialog__action { justify-content: flex-end; }
+        .lv-settings-nav-rail {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: var(--lv-sp-3);
+            padding-bottom: var(--lv-sp-2);
+            border-bottom: 1px solid var(--lv-border);
+        }
+        .lv-settings-nav-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            height: 28px;
+            padding: 0 10px;
+            border-radius: var(--lv-r-pill);
+            background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
+            border: 1px solid var(--lv-border);
+            color: var(--lv-color-text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--lv-dur-1) var(--lv-ease);
+
+            &:hover {
+                color: var(--lv-color-brand);
+                border-color: var(--lv-primary-border);
+                background: var(--lv-primary-soft);
+                transform: translateY(-1px);
+            }
+        }
         .lv-searchbar {
             margin-bottom: var(--lv-sp-4);
             .b3-text-field {

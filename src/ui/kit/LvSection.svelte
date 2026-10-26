@@ -1,16 +1,17 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
 
-    let { title = "", sub = "", children, actions }: {
+    let { title = "", sub = "", id, children, actions }: {
         title?: string;
         sub?: string;
+        id?: string;
         children?: Snippet;
         /** 头部右侧操作区（导出/开关等） */
         actions?: Snippet;
     } = $props();
 </script>
 
-<div class="lv-card2 lv-section2">
+<div {id} class="lv-card2 lv-section2">
     {#if title}
         <div class="lv-secthead">
             <span>{title}
