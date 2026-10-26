@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.210.69 2026-10-26 · 根除全局焦点环样式泄漏、严格收敛:focus-visible至小驴闪卡核心作用域
+
+- **根除正文编辑器全局焦点环污染（Strict Focus-Visible Scoping）**：
+  - 排查并根治旧版本中未加前缀的 `:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); }` 全局选择器；
+  - 彻底将焦点环及高对比度边框严格收敛至 `:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :focus-visible` 插件局部作用域内；
+  - 100% 杜绝样式外溢，彻底消除思源正文编辑器中标题与块在聚焦时被套上粉红外框的问题；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1948 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
 ## v0.210.68 2026-10-26 · 全局重构方案A落地：长春花紫与暖金生态调色板、根治红绿撞色与卡组红斑疲劳
 
 - **方案 A 经典长春花紫/暖金生态调色板全面落地（Scheme A Modern Indigo Palette）**：

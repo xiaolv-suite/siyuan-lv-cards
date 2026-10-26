@@ -970,8 +970,8 @@ body[data-theme-mode="dark"],
     }
 }
 
-// 焦点环
-:focus-visible {
+// 焦点环（必须严格作用于小驴闪卡核心作用域内，绝不外溢至思源正文编辑器与标题区）
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :focus-visible {
     outline: none;
     box-shadow: var(--lv-focus-ring);
 }
@@ -1491,9 +1491,7 @@ body[data-theme-mode="dark"],
     .lv-palette-panel,
     .lv-drawer-panel,
     .lv-review-box,
-    .b3-button,
-    .b3-text-field,
-    .b3-select,
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card,
     .lv-badge,
     .lv-chip,
@@ -2137,9 +2135,7 @@ body[data-theme-mode="dark"],
     .lv-card2,
     .lv-modal-content,
     .lv-palette-panel,
-    .b3-button,
-    .b3-text-field,
-    .b3-select,
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card {
         border: 1px solid var(--b3-theme-on-background);
     }
@@ -2152,7 +2148,7 @@ body[data-theme-mode="dark"],
         font-weight: 700;
     }
 
-    :where(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :where(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
         outline: 3px solid var(--b3-theme-primary);
         outline-offset: 2px;
     }

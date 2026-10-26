@@ -19,9 +19,17 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.68** (2026-10-26), deploying Scheme A Modern Periwinkle / Warm Gold palette to eliminate complementary red-green clashes and deck alert fatigue. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.68) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.69** (2026-10-26), deploying strict focus-visible scoping to eliminate editor outline leaks. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.69) for the package and publishing status.
 
-## What's New in v0.210.68
+## What's New in v0.210.69
+
+- **Editor Style Isolation & Focus-Visible Containment**:
+  - Identified and fixed an unscoped `:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); }` global rule from legacy stylesheets.
+  - Confined all focus-ring and high-contrast border styles strictly within `:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :focus-visible`, eliminating any outline leakage onto native document titles or paragraphs.
+- **Verification**:
+  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.68
 
 - **Full Scheme A Indigo / Amber Palette Deployment**:
   - Replaced legacy red branding with modern Periwinkle Indigo (`#6366F1`, dark `#818CF8`) and warm amber gold (`#F59E0B`), harmonizing with the Lv ecosystem aesthetic.
