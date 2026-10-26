@@ -915,6 +915,10 @@
                         <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
                     </div>
                     <span class="lv-feature-sub">检索全库卡片、按卡组标签批量流转与导出</span>
+                    <div class="lv-feature-tags">
+                        <span class="lv-feature-tag">全库检索</span>
+                        <span class="lv-feature-tag">批量流转</span>
+                    </div>
                 </div>
             </button>
 
@@ -932,6 +936,10 @@
                         <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
                     </div>
                     <span class="lv-feature-sub">选中文本一键挖空 (Ctrl+H)、问答卡与 AI 制卡</span>
+                    <div class="lv-feature-tags">
+                        <span class="lv-feature-tag">一键挖空 Ctrl+H</span>
+                        <span class="lv-feature-tag">智能 AI 制卡</span>
+                    </div>
                 </div>
             </button>
 
@@ -949,6 +957,10 @@
                         <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
                     </div>
                     <span class="lv-feature-sub">挖空配对消除、限时挑战冲刺与盲打记忆</span>
+                    <div class="lv-feature-tags">
+                        <span class="lv-feature-tag">配对消除</span>
+                        <span class="lv-feature-tag">限时挑战</span>
+                    </div>
                 </div>
             </button>
 
@@ -966,6 +978,10 @@
                         <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
                     </div>
                     <span class="lv-feature-sub">倒计时管理、每日学习步调、考前高压复习</span>
+                    <div class="lv-feature-tags">
+                        <span class="lv-feature-tag">倒计时管理</span>
+                        <span class="lv-feature-tag">Cram 突击</span>
+                    </div>
                 </div>
             </button>
         </div>
@@ -1514,9 +1530,9 @@
     .lv-today-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 274px); align-items: stretch; gap: var(--lv-sp-5); }
     .lv-today-primary { min-width: 0; }
     .lv-today-primary .lv-hero { margin-bottom: var(--lv-sp-4); }
-    .lv-today-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--lv-sp-3); }
+    .lv-today-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--lv-sp-2); }
     .lv-today-stats .lv-stat-cell { min-width: 0; max-width: none; }
-    :global(.lv-today-stats .lv-stat-cell .lv-card2) { min-width: 0; padding: 15px 14px; }
+    :global(.lv-today-stats .lv-stat-cell .lv-card2) { min-width: 0; padding: 10px 14px; border-radius: var(--lv-r-m); }
 
     .lv-feature-grid {
         display: grid;
@@ -1597,6 +1613,20 @@
             color: var(--lv-color-text-muted);
             opacity: 0.7;
             transition: all var(--lv-dur-1) var(--lv-ease);
+        }
+        .lv-feature-tags {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .lv-feature-tag {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--lv-color-text-muted);
+            background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
+            padding: 1px 6px;
+            border-radius: var(--lv-r-pill);
+            line-height: 1.3;
         }
     }
     .lv-today-week {

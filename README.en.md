@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.78** (2026-10-26), integrating industry-standard ergonomics from Anki and RemNote, including zero-due badge hiding, anti-theme button styles, and card creation flow polish. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.78) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.79** (2026-10-26), delivering deepened Feature Matrix pill tags and compact insights row ergonomics. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.79) for the package and publishing status.
 
-## What's New in v0.210.78
+## What's New in v0.210.79
+
+- **Feature Matrix Bento Tags**:
+  - Added quick capability tags to the 4 core workspace cards (Search/Batch, Cloze Ctrl+H/AI, Match/Speed, Exam Countdown/Cram), making workflow capabilities obvious at a glance.
+- **Compact Metric Strip**:
+  - Streamlined the daily metrics row to reduce vertical footprint by 40%, letting primary workspaces take center stage.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.78
 
 - **Zero Due Badge Graceful Hiding**:
   - Hides the distracting "0" badge in the sidebar when all reviews are complete, displaying badge counts only when actionable cards exist.
