@@ -1044,7 +1044,7 @@
                 </div>
                 <div class="lv-today-decks-list">
                     {#each [...displayedDecks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 6) as deck (deck.id)}
-                        <div class="lv-today-deck">
+                        <div class="lv-today-deck" class:lv-today-deck--has-cards={(deck.size ?? 0) > 0}>
                             <button
                                 type="button"
                                 class="lv-today-deck-main-btn"
@@ -2008,6 +2008,14 @@
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
             box-shadow: 0 6px 18px -4px color-mix(in srgb, black 7%, transparent), var(--lv-inset-shine);
+        }
+
+        &.lv-today-deck--has-cards {
+            border-color: color-mix(in srgb, var(--lv-color-brand) 18%, var(--lv-border));
+            &:hover {
+                border-color: var(--lv-primary-border);
+                box-shadow: 0 8px 24px -4px color-mix(in srgb, var(--lv-color-brand) 14%, transparent), var(--lv-inset-shine);
+            }
         }
 
         .lv-today-deck-main-btn {

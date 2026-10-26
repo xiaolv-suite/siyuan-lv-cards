@@ -984,7 +984,7 @@ import { confirmDialog } from "@/libs/dialog";
                                 <span>{b.hPath ?? ""} {b.name ? "· " + b.name : ""}</span>
                             </span>
                         </span>
-                        <span class="lv-arrow" aria-hidden="true">›</span>
+                        <span class="lv-arrow" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
                     </button>
                     {#if ctx.toggleStarCard}
                         <button

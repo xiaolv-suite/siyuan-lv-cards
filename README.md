@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.79（2026-10-26）**，首页布局持续深化：特性微标胶囊矩阵、数据行轻量收敛与零感呼吸排版。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.79)。
+当前版本为 **v0.210.80（2026-10-26）**，落地卡组活跃度视觉微光与闪卡管理器箭头全矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.80)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.79）
+## 本次更新（v0.210.80）
+
+- **首页卡组列表活跃度微光与交互进阶（Active Deck Luminescence）**：
+  - 针对含有卡片的活跃卡组（`size > 0`）注入 `.lv-today-deck--has-cards` 专属品牌微描边与悬浮漫反射发光光晕；
+  - 快速复习按钮悬浮时高亮显示长春花紫质感（`--lv-primary-soft`），主次卡组层次分明；
+- **闪卡管理器单卡导航箭头全矢量化（Manager Glyph Elimination）**：
+  - 彻底淘汰卡片列表行内右侧粗糙文本字符 `›`，升级为单色精密矢量微标 `<LvIcon name="chevron-right" size={12} />`，实现全库文本箭头零残留；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.79）
 
 - **核心功能 Bento 全景矩阵深化（Feature Tags Matrix）**：
   - 四大核心工作台卡片全部增设高频特性标签行（`全库检索` · `批量流转`、`一键挖空 Ctrl+H` · `智能 AI 制卡`、`配对消除` · `限时挑战`、`倒计时管理` · `Cram 突击`）；
