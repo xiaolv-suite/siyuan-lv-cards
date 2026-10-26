@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.90（2026-10-27）**，落地知识生命周期与卡组选择器操作 Bento 胶囊化与矢量微标化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.90)。
+当前版本为 **v0.210.91（2026-10-27）**，落地复习工作台排队恢复、回源导航与填空判定全员 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.91)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.90）
+## 本次更新（v0.210.91）
+
+- **复习面板（Review Workbench）中断恢复与辅助操作 Bento 胶囊化**：
+  - 队列等待与会话暂停状态下的恢复刷新与撤销操作全面升级为 `.lv-btn-tool` Bento 胶囊并嵌入矢量微标；
+  - 异常卡片提示条中的复检与前往维护中心操作全员胶囊化；
+  - 入口回源导航按钮升级为带 `<LvIcon name="chevron-left" size={12} />` 的微胶囊；
+  - 交互式填空判定提交按钮嵌入单色精密 `<LvIcon name="check" size={13} />` 矢量微标；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.90）
 
 - **内容生命周期面板（Lifecycle Panel）全流程操作 Bento 胶囊化**：
   - 未建档时的「开档建卡」主按钮升级为带 `<LvIcon name="plus" size={12} />` 的 Bento 工具胶囊；

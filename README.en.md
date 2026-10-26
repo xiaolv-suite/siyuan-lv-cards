@@ -19,9 +19,17 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.90** (2026-10-27), delivering Bento vector standardization across the Content Lifecycle Panel and Deck Picker. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.90) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.91** (2026-10-27), delivering Bento vector standardization across the Review Workbench recovery and navigation controls. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.91) for the package and publishing status.
 
-## What's New in v0.210.90
+## What's New in v0.210.91
+
+- **Review Workbench Bento Polish**:
+  - Upgraded queue recovery, pause resume, and return breadcrumb buttons in `review.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.
+  - Added vector glyph to interactive fill submit action.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.90
 
 - **Content Lifecycle & Deck Picker Bento Polish**:
   - Upgraded Open Lifecycle, Repair, Next Action, and Transition buttons in `lifecycle-panel.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.

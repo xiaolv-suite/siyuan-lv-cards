@@ -2344,7 +2344,7 @@
     {#if sessionPaused}
         <div class="lv-recover" role="status">
             <span>{t.review.pauseTitle}</span>
-            <button class="b3-button b3-button--small" onclick={resumePausedSession}>{t.review.pauseContinue}</button>
+            <button class="b3-button b3-button--small lv-btn-tool" onclick={resumePausedSession}><LvIcon name="refresh" size={12} /> <span>{t.review.pauseContinue}</span></button>
         </div>
     {/if}
     <!-- BI-27 返场分流（docs/13 §4 BI-27 UI 接线）：方案展示可忽略，不自动改预算/队列 -->
@@ -2406,8 +2406,8 @@
         <div class="lv-notice lv-notice--warn" role="status" aria-live="polite" style="display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); flex-wrap: wrap;">
             <span>{t.review.qualityExcluded.replace("${n}", String(qualityExcludedCardIDs.length))}</span>
             <div style="display: flex; gap: var(--lv-sp-2); align-items: center;">
-                <button class="b3-button b3-button--small b3-button--outline" onclick={recheckQualityExcluded}>{t.review.qualityRecheck}</button>
-                <button class="b3-button b3-button--small lv-btn-primary" onclick={() => ctx.openDashboard("maintenance")}>{t.review.openMaintenance ?? "前往维护中心修复"}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={recheckQualityExcluded}><LvIcon name="refresh" size={12} /> <span>{t.review.qualityRecheck}</span></button>
+                <button class="b3-button b3-button--small lv-btn-primary lv-btn-tool" onclick={() => ctx.openDashboard("maintenance")}><LvIcon name="settings" size={12} /> <span>{t.review.openMaintenance ?? "前往维护中心修复"}</span></button>
             </div>
         </div>
     {/if}
@@ -2426,8 +2426,8 @@
                     {t.review.requeueWaitingSub.replace("${n}", String(requeueWaitSeconds))}
                 </p>
                 <div class="fn__flex lv-done-actions" style="justify-content: center; margin-top: var(--lv-sp-4)">
-                    <button class="b3-button b3-button--outline" onclick={loadQueue}>{t.dashboard.refresh}</button>
-                    <button class="b3-button b3-button--outline" disabled={history.length === 0 || actionBusy} onclick={undoHistory}>{t.review.undoLast}</button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={loadQueue}><LvIcon name="refresh" size={13} /> <span>{t.dashboard.refresh}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={history.length === 0 || actionBusy} onclick={undoHistory}><LvIcon name="chevron-left" size={13} /> <span>{t.review.undoLast}</span></button>
                 </div>
             </div>
         </div>
@@ -2705,7 +2705,10 @@
                     <span class="lv-entry" title={t.entry.title}>
                         <span class="lv-entry-from ft__smaller">{t.entry.title}·{t.entry.kind[entryCtx.entryKind] || entryCtx.entryKind}</span>
                         {#if ctx.returnToEntry && entryCtx.returnPoint}
-                            <button class="b3-button b3-button--text b3-button--small" onclick={() => ctx.returnToEntry!(entryCtx!.returnPoint)}>{t.entry.return}</button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.returnToEntry!(entryCtx!.returnPoint)}>
+                                <LvIcon name="chevron-left" size={12} />
+                                <span>{t.entry.return}</span>
+                            </button>
                         {/if}
                         {#if ctx.dismissEntry}
                             <button class="b3-button b3-button--text b3-button--small lv-btn-tool" aria-label={t.entry.dismiss} title={t.entry.dismiss} onclick={() => { ctx.dismissEntry!(entryCtx!.entryKind, entryCtx!.sourceID); entryCtx = null; }}><LvIcon name="close" size={12} /></button>
@@ -2886,7 +2889,7 @@
                 <div class="lv-center" style="display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 5); align-items: center; justify-content: center; min-height: 220px" role="status">
                     <span style="font-size: var(--lv-type-hero-size)"><LvIcon name="warning" size={30} /></span>
                     <span class="ft__smaller ft__on-surface" style="text-align: center">{faceError}</span>
-                    <button class="b3-button b3-button--outline b3-button--small" onclick={retryFace}>{t.dashboard.refresh}</button>
+                    <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" onclick={retryFace}><LvIcon name="refresh" size={12} /> <span>{t.dashboard.refresh}</span></button>
                 </div>
             {:else if !cardHtml}
                 <div class="lv-center" style="min-height: 220px" aria-busy="true">
@@ -3017,8 +3020,8 @@
                                     placeholder="在此输入你的填空答案，按 Enter 智能判定..."
                                     onkeydown={(e) => { if (e.key === "Enter") handleFillCheck(); }}
                                 />
-                                <button type="button" class="b3-button lv-btn-primary lv-fill-submit-btn" onclick={handleFillCheck}>
-                                    判定 Enter
+                                <button type="button" class="b3-button lv-btn-primary lv-btn-tool lv-fill-submit-btn" onclick={handleFillCheck}>
+                                    <LvIcon name="check" size={13} /> <span>判定 Enter</span>
                                 </button>
                             </div>
                         </div>
