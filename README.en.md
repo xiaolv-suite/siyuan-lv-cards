@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.74** (2026-10-26), delivering live keyword filtering and Bento vector icons for the Capture Inbox. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.74) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.75** (2026-10-26), delivering responsive dual-column shortcut help overlays and Bento vector styling for the Recovery Center. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.75) for the package and publishing status.
 
-## What's New in v0.210.74
+## What's New in v0.210.75
+
+- **Responsive Dual-Column Shortcut Help Overlay**:
+  - Upgraded the shortcut help overlay (`?`) with a 2-column responsive grid, eliminating vertical scrolling across 16+ shortcut guides.
+  - Added self-referencing `?` toggle documentation and refined tactile keyboard badge styles.
+- **Bento Vector Styling for Recovery Center**:
+  - Standardized action buttons (AI Job Resume, Open Inbox, Open Maintenance) with monochromatic vector icons and rounded Bento pills.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.74
 
 - **Capture Inbox Live Search & Filter**:
   - Added a search filter bar to the inbox actions header, supporting instant fuzzy filtering of extracted card material by text content and block IDs.

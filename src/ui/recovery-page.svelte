@@ -139,7 +139,7 @@
                                         : t.aiMaterialUnavailable}
                             </p>
                             <button
-                                class="b3-button b3-button--small b3-button--outline"
+                                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                                 aria-label={job.canReview
                                     ? `${t.resumeReview}：${job.source || t.unknownSource}`
                                     : job.needsWriteCheck && job.deckID
@@ -150,7 +150,10 @@
                                     : job.needsWriteCheck && job.deckID
                                         ? openDeck(job.deckID)
                                         : openAI()}
-                            >{job.canReview ? t.resumeReview : job.needsWriteCheck && job.deckID ? t.openTargetDeck : t.openAI}</button>
+                            >
+                                <LvIcon name={job.canReview ? "cards" : job.needsWriteCheck && job.deckID ? "book" : "zap"} size={12} />
+                                <span>{job.canReview ? t.resumeReview : job.needsWriteCheck && job.deckID ? t.openTargetDeck : t.openAI}</span>
+                            </button>
                         </li>
                     {/each}
                 </ul>
@@ -162,7 +165,10 @@
             <section class="lv-card2 lv-recovery-section" aria-labelledby="lv-recovery-inbox-title">
                 <div class="lv-recovery-head"><div><h3 id="lv-recovery-inbox-title">{t.inboxTitle}</h3><p>{t.inboxCount.replace("${count}", String(snapshot.inboxCount))}</p></div><LvChip>{t.waiting}</LvChip></div>
                 <p class="lv-recovery-copy">{t.inboxDescription}</p>
-                <button class="b3-button b3-button--outline" onclick={openInbox}>{t.openInbox}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={openInbox}>
+                    <LvIcon name="inbox" size={13} />
+                    <span>{t.openInbox}</span>
+                </button>
             </section>
         {/if}
 
@@ -170,7 +176,10 @@
             <section class="lv-card2 lv-recovery-section" aria-labelledby="lv-recovery-suspended-title">
                 <div class="lv-recovery-head"><div><h3 id="lv-recovery-suspended-title">{t.suspendedTitle}</h3><p>{t.suspendedCount.replace("${count}", String(snapshot.suspendedCount))}</p></div><LvChip tone="warn">{t.todayOnly}</LvChip></div>
                 <p class="lv-recovery-copy">{t.suspendedDescription}</p>
-                <button class="b3-button b3-button--outline" onclick={openMaintenance}>{t.openMaintenance}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={openMaintenance}>
+                    <LvIcon name="settings" size={13} />
+                    <span>{t.openMaintenance}</span>
+                </button>
             </section>
         {/if}
 

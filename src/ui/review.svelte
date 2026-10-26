@@ -3396,6 +3396,7 @@
                     { k: "f", d: t.review.helpReschedule },
                     { k: "e", d: t.review.helpEdit },
                     { k: "h", d: t.review.helpHint },
+                    { k: "?", d: "打开 / 关闭快捷键帮助" },
                 ] as row (row.k)}
                     <div class="lv-help-row"><span class="lv-kbd2">{row.k}</span><span class="fn__flex-1">{row.d}</span></div>
                 {/each}
@@ -4999,7 +5000,18 @@
                 border-bottom: 1px solid var(--lv-border);
                 font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted);
             }
-            .lv-help-body { flex: 1; overflow: auto; padding: var(--lv-sp-4); }
+            .lv-help-body {
+                flex: 1;
+                overflow: auto;
+                padding: var(--lv-sp-4);
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0 var(--lv-sp-4);
+
+                @media (min-width: 580px) {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
             .lv-help-row {
                 display: flex; gap: var(--lv-sp-3); align-items: center;
                 padding: var(--lv-sp-2) 0;

@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.74（2026-10-26）**，落地材料收件箱实时搜索过滤与批量操作栏 Bento 矢量微标化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.74)。
+当前版本为 **v0.210.75（2026-10-26）**，落地复习快捷键浮层响应式双栏重塑与恢复中心 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.75)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.74）
+## 本次更新（v0.210.75）
+
+- **复习快捷键帮助浮层（Help Overlay）双栏排布与自举提示**：
+  - 快捷键帮助浮层（`?` 键唤出）在宽屏及桌面视口下升级为双列网格响应式排布（`Grid 2-column`），彻底消灭 16 项快捷键纵向拖动滚轮的交互割裂；
+  - 增补快捷键自身 `{ k: "?", d: "打开 / 关闭快捷键帮助" }` 闭环引导，键盘 Badge 赋予内凹立体实体感；
+- **恢复中心（Recovery Page）全员 Bento 胶囊矢量化**：
+  - 恢复中心（`recovery-page.svelte`）操作按钮（AI 任务恢复、打开收件箱、打开维护页）全面对齐 Outline Bento 胶囊规范并嵌入专属单色精密矢量微标（`zap` / `cards` / `book` / `inbox` / `settings`）；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.74）
 
 - **材料收件箱（Capture Inbox）实时关键词过滤落地**：
   - 页头操作栏新增动态自适应关键词搜索框，输入关键字实时模糊匹配已提取的卡片材料正文与块 ID；
