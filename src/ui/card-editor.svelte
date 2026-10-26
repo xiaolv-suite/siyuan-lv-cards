@@ -82,37 +82,39 @@
             == 挖空 ==
         </button>
     </div>
-    <textarea
-        bind:this={textareaEl}
-        class="b3-text-field lv-editor-input"
-        bind:value={text}
-        aria-label={t.editor.inputLabel}
-        rows={4}
-        disabled={saving}
-        onkeydown={(e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") {
-                e.preventDefault();
-                wrapSelectionWithCloze();
-            } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && changed && !saving) {
-                e.preventDefault();
-                save();
-            } else if (e.key === "Escape" && !saving) {
-                e.preventDefault();
-                oncancel();
-            }
-        }}
-    ></textarea>
-    <div class="lv-editor-diff" aria-label={t.editor.diffLabel}>
-        {#if !changed}
-            <span class="ft__smaller ft__on-surface">{t.editor.noChange}</span>
-        {:else}
-            {#each segments as seg, i (i)}
-                {#if seg.kind === "same"}<span>{seg.text}</span>
-                {:else if seg.kind === "del"}<del class="lv-editor-del">{seg.text}</del>
-                {:else}<ins class="lv-editor-add">{seg.text}</ins>
-                {/if}
-            {/each}
-        {/if}
+    <div class="lv-editor-body">
+        <textarea
+            bind:this={textareaEl}
+            class="b3-text-field lv-editor-input"
+            bind:value={text}
+            aria-label={t.editor.inputLabel}
+            rows={4}
+            disabled={saving}
+            onkeydown={(e: KeyboardEvent) => {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") {
+                    e.preventDefault();
+                    wrapSelectionWithCloze();
+                } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && changed && !saving) {
+                    e.preventDefault();
+                    save();
+                } else if (e.key === "Escape" && !saving) {
+                    e.preventDefault();
+                    oncancel();
+                }
+            }}
+        ></textarea>
+        <div class="lv-editor-diff" aria-label={t.editor.diffLabel}>
+            {#if !changed}
+                <span class="ft__smaller ft__on-surface">{t.editor.noChange}</span>
+            {:else}
+                {#each segments as seg, i (i)}
+                    {#if seg.kind === "same"}<span>{seg.text}</span>
+                    {:else if seg.kind === "del"}<del class="lv-editor-del">{seg.text}</del>
+                    {:else}<ins class="lv-editor-add">{seg.text}</ins>
+                    {/if}
+                {/each}
+            {/if}
+        </div>
     </div>
     {#if errMsg}<div class="lv-editor-err ft__smaller">{errMsg}</div>{/if}
     <div class="lv-editor-actions">
@@ -141,6 +143,26 @@
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-2);
+    }
+    .lv-editor-body {
+        display: flex;
+        flex-direction: column;
+        gap: var(--lv-sp-2);
+
+        @media (min-width: 520px) {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--lv-sp-3);
+            align-items: stretch;
+
+            .lv-editor-input,
+            .lv-editor-diff {
+                height: 100%;
+                min-height: 130px;
+                max-height: 220px;
+                box-sizing: border-box;
+            }
+        }
     }
     .lv-editor-cloze-btn {
         border-radius: var(--lv-r-pill);
