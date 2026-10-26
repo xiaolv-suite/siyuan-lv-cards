@@ -53,6 +53,7 @@
     // svelte-ignore state_referenced_locally -- 初值快照刻意的：后续变更经 inbox 订阅/操作回调整体替换 snapshot（BX-10）
     let snapshot = $state<InboxData>(inbox.get());
     let filter = $state<InboxStatus>("inbox");
+    let searchQuery = $state("");
     let checked = $state<string[]>([]);
     let titles = $state<Map<string, string>>(new Map());
     let making = $state(false);
@@ -66,6 +67,12 @@
     const visible = $derived(
         snapshot.items
             .filter(i => i.status === filter)
+            .filter(i => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.trim().toLowerCase();
+                const title = (titles.get(i.blockID) ?? "").toLowerCase();
+                return title.includes(q) || i.blockID.toLowerCase().includes(q);
+            })
             .sort((a, b) => a.addedAt - b.addedAt),
     );
     const checkedSet = $derived(new Set(checked));
@@ -220,6 +227,13 @@
 
 <LvPage eyebrow="CAPTURE / INBOX" title={t.title} subtitle={`${t.tabInbox} ${counts.inbox} · ${t.tabStaged} ${counts.staged} · ${t.tabSelected} ${counts.selected} · ${t.tabDismissed} ${counts.dismissed}`}>
     {#snippet actions()}
+        <input
+            class="b3-text-field lv-inbox-search-input"
+            type="search"
+            placeholder={i18n.settings?.searchPlaceholder ?? "搜索材料…"}
+            aria-label="搜索材料"
+            bind:value={searchQuery}
+        />
         <LvSegmented
             options={FILTERS.map(f => ({ value: f.id, label: `${t[f.labelKey]} (${counts[f.id]})` }))}
             value={filter}
@@ -247,21 +261,21 @@
                 <LvChip tone="primary">{t.selectedCount.replace("${n}", String(checked.length))}</LvChip>
                 <div class="fn__flex-1"></div>
                 {#if filter === "inbox"}
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("staged")}>{t.stage}</button>
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("selected")}>{t.select}</button>
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("dismissed")}>{t.dismiss}</button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("staged")}><LvIcon name="inbox" size={12} /> <span>{t.stage}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("selected")}><LvIcon name="check" size={12} /> <span>{t.select}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("dismissed")}><LvIcon name="close" size={12} /> <span>{t.dismiss}</span></button>
                 {:else if filter === "staged"}
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("selected")}>{t.select}</button>
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("dismissed")}>{t.dismiss}</button>
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("inbox")}>{t.back}</button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("selected")}><LvIcon name="check" size={12} /> <span>{t.select}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("dismissed")}><LvIcon name="close" size={12} /> <span>{t.dismiss}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("inbox")}><LvIcon name="chevron-left" size={12} /> <span>{t.back}</span></button>
                 {:else if filter === "selected"}
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={sendToCards}>{t.sendToCards}</button>
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={undoSel}>{t.undoSelection}</button>
+                    <button class="b3-button lv-btn-primary lv-btn-tool" disabled={making} onclick={sendToCards}><LvIcon name="cards" size={12} /> <span>{t.sendToCards}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={undoSel}><LvIcon name="refresh" size={12} /> <span>{t.undoSelection}</span></button>
                 {:else}
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={() => applyStatus("inbox")}>{t.restore}</button>
-                    <button class="b3-button b3-button--outline" disabled={making} onclick={removeChecked}>{t.remove}</button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={making} onclick={() => applyStatus("inbox")}><LvIcon name="refresh" size={12} /> <span>{t.restore}</span></button>
+                    <button class="b3-button b3-button--outline lv-btn-tool" style="color: var(--lv-color-danger)" disabled={making} onclick={removeChecked}><LvIcon name="trash" size={12} /> <span>{t.remove}</span></button>
                 {/if}
-                <button class="b3-button b3-button--small" disabled={making} onclick={() => (checked = [])}>{t.batchCancel}</button>
+                <button class="b3-button b3-button--small lv-btn-tool" disabled={making} onclick={() => (checked = [])}><span>{t.batchCancel}</span></button>
             </div>
         {/if}
         <div class="lv-list">
@@ -283,12 +297,15 @@
                         <div class="lv-meta ft__smaller ft__on-surface">{new Date(item.addedAt).toLocaleString()}</div>
                     </button>
                     <button
-                        class="b3-button b3-button--small lv-btn-ghost"
+                        class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
                         title={t.openSource}
                         disabled={Boolean(sourcePendingId)}
                         aria-busy={sourcePendingId === item.blockID}
                         onclick={(e: Event) => { e.stopPropagation(); void openSource(item.blockID); }}
-                    >{sourcePendingId === item.blockID ? (t.opening ?? "打开中…") : t.openSource}</button>
+                    >
+                        <LvIcon name="eye" size={12} />
+                        <span>{sourcePendingId === item.blockID ? (t.opening ?? "打开中…") : t.openSource}</span>
+                    </button>
                 </div>
             {/each}
         </div>
@@ -298,6 +315,18 @@
 <LvLive message={live} />
 
 <style>
+    .lv-inbox-search-input {
+        width: 130px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: var(--lv-r-pill);
+        font-size: var(--lv-type-control-size);
+        transition: width var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
+        &:focus {
+            width: 180px;
+            border-color: var(--lv-color-brand);
+        }
+    }
     .lv-inbox-error {
         color: var(--lv-color-danger);
         background: var(--lv-danger-soft);

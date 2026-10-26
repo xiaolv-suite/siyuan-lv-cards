@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.73** (2026-10-26), delivering settings category navigation rail for effortless long-form configuration. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.73) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.74** (2026-10-26), delivering live keyword filtering and Bento vector icons for the Capture Inbox. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.74) for the package and publishing status.
 
-## What's New in v0.210.73
+## What's New in v0.210.74
+
+- **Capture Inbox Live Search & Filter**:
+  - Added a search filter bar to the inbox actions header, supporting instant fuzzy filtering of extracted card material by text content and block IDs.
+- **Bento Vector Action Bar for Inbox**:
+  - Upgraded batch actions (Stage, Select, Dismiss, Make Cards, Undo, Restore, Remove) with monochromatic vector icons and rounded Bento pills (`.lv-btn-tool`).
+  - Upgraded row "Open Source" buttons with `<LvIcon name="eye" size={12} />`.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.73
 
 - **Settings Category Anchor Rail (Sticky Settings Rail)**:
   - Added a horizontal Bento chip rail under the settings search box (Rhythm, Answer, Voice, AI Providers, Import/Export, Backup).
