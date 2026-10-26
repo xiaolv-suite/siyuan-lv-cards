@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.85（2026-10-27）**，落地 AI 制卡向导卡面预览与入库全流程 Bento 矢量胶囊化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.85)。
+当前版本为 **v0.210.86（2026-10-27）**，落地设置中心全流程数据迁移与限时挑战操作全员 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.86)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.85）
+## 本次更新（v0.210.86）
+
+- **设置中心数据迁移与生态导入导出全员 Bento 化（Settings Migration Actions）**：
+  - Anki 连接测试、Anki 本地 `.apkg` 导入、原生 `.lvcards` 分享包导入、Obsidian SR 导入全面升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色矢量微标；
+  - 学习画像（Persona）导出与导入、数据备份快照 JSON 导出、Flashcard V2 探测、暂停卡片一键恢复、复习日志清空等操作全员微标化，操作体验高度自洽；
+- **限时挑战冲刺操作人机工效升级（Challenge Mode Polish）**：
+  - 错误重试、中途退出、作答认识/不认识以及完成屏关闭按钮全员升级为 Bento 矢量微标规范；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.85）
 
 - **AI 制卡向导（AI Wizard）卡面预览与入库操作全员 Bento 化**：
   - 候选卡片列表顶栏与单卡行「卡面预览」按钮全员升级为 `.lv-btn-tool` 规范并嵌入精密单色 `<LvIcon name="eye" size={12} />` 矢量微标；

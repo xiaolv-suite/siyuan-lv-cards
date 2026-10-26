@@ -193,7 +193,7 @@
             <div class="lv-chal-title">{t.challenge.loadError}</div>
             <div class="lv-chal-desc" role="alert">{errorMsg}</div>
             <div class="fn__flex" style="gap: var(--lv-sp-2)">
-                <button class="b3-button b3-button--outline" onclick={start}>{t.challenge.retry}</button>
+                <button class="b3-button b3-button--outline lv-btn-tool" onclick={start}><LvIcon name="refresh" size={13} /> <span>{t.challenge.retry}</span></button>
                 <button class="b3-button b3-button--cancel" onclick={exit}>{window.siyuan.languages.cancel}</button>
             </div>
         </div>
@@ -203,7 +203,7 @@
                 <LvIcon name="timer" size={16} /> {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
             </span>
             <span class="lv-chal-score">✓ {known} · ✗ {unknown}</span>
-            <button class="b3-button b3-button--small" onclick={requestFinish}>{t.challenge.stop}</button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={requestFinish}><LvIcon name="close" size={12} /> <span>{t.challenge.stop}</span></button>
         </div>
         {#if readFailures > 0}
             <div class="lv-notice lv-notice--warn" role="status">
@@ -215,8 +215,8 @@
                 {@html cards[idx].dom}
             </div>
             <div class="lv-chal-actions">
-                <button class="b3-button lv-chal-btn lv-chal-unknown" onclick={() => mark(false)}>✗ {t.challenge.unknown} <LvKbd k="1" /></button>
-                <button class="b3-button lv-chal-btn lv-chal-known" onclick={() => mark(true)}>✓ {t.challenge.known} <LvKbd k="2" /></button>
+                <button class="b3-button lv-chal-btn lv-chal-unknown" onclick={() => mark(false)}><LvIcon name="close" size={13} /> <span>{t.challenge.unknown}</span> <LvKbd k="1" /></button>
+                <button class="b3-button lv-chal-btn lv-chal-known" onclick={() => mark(true)}><LvIcon name="check" size={13} /> <span>{t.challenge.known}</span> <LvKbd k="2" /></button>
             </div>
         {:else}
             <div class="lv-chal-center">{t.challenge.loading}</div>
@@ -228,7 +228,7 @@
             <div class="lv-chal-desc">
                 ✓ {known} · ✗ {unknown} · {t.review?.doneSkip ?? "跳过"} {t.challenge.skipped}
             </div>
-            <button class="b3-button lv-btn-primary" onclick={exit}>{t.challenge.closeBtn}</button>
+            <button class="b3-button lv-btn-primary" onclick={exit}><LvIcon name="check" size={13} /> <span>{t.challenge.closeBtn}</span></button>
         </div>
     {/if}
 </div>

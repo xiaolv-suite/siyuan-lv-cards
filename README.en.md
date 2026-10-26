@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.85** (2026-10-27), delivering Bento vector standardization for preview and import workflows in the AI Wizard. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.85) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.86** (2026-10-27), delivering Bento vector standardization for data migration actions in Settings and ergonomic polish in Challenge Mode. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.86) for the package and publishing status.
 
-## What's New in v0.210.85
+## What's New in v0.210.86
+
+- **Settings Data Migration & Backup Bento Actions**:
+  - Upgraded Anki connection test, Anki `.apkg` import, `.lvcards` package import, and Obsidian SR import buttons to `.lv-btn-tool` Bento capsules with vector glyphs.
+  - Standardized Persona import/export, data snapshot export, Flashcard V2 check, and log clearance actions.
+- **Challenge Mode Ergonomic Polish**:
+  - Upgraded retry, stop, rating, and finish actions in `challenge-mode.svelte` with Bento vector icons.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.85
 
 - **AI Wizard Preview & Import Bento Standardization**:
   - Upgraded candidate card preview toggles in the AI Wizard to `.lv-btn-tool` capsules with `<LvIcon name="eye" size={12} />`.
