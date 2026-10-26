@@ -839,11 +839,12 @@ import { confirmDialog } from "@/libs/dialog";
             {#if filteredBlocks.length > 0}
                 <button
                     type="button"
-                    class="b3-button b3-button--small b3-button--outline lv-select-all-btn"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-select-all-btn"
                     onclick={toggleSelectAll}
                     title={isAllSelected ? (t.manager.unselectAll ?? "取消全选") : (t.manager.selectAll ?? "全选本页")}
                 >
-                    {isAllSelected ? (t.manager.unselectAll ?? "取消全选") : (t.manager.selectAll ?? "全选本页")}
+                    <LvIcon name="check" size={12} />
+                    <span>{isAllSelected ? (t.manager.unselectAll ?? "取消全选") : (t.manager.selectAll ?? "全选本页")}</span>
                 </button>
             {/if}
         </div>
@@ -851,7 +852,10 @@ import { confirmDialog } from "@/libs/dialog";
     {#if deckScope}
         <div class="lv-mgr-deck-scope" role="status">
             <span>{t.manager.deckScopeLabel ?? "当前卡组"}：<strong>{deckScope.name}</strong></span>
-            <button class="b3-button b3-button--text" onclick={clearDeckScope}>{t.manager.deckScopeClear ?? "查看全部卡组"}</button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearDeckScope}>
+                <LvIcon name="close" size={12} />
+                <span>{t.manager.deckScopeClear ?? "查看全部卡组"}</span>
+            </button>
         </div>
     {/if}
 
@@ -1291,13 +1295,15 @@ import { confirmDialog } from "@/libs/dialog";
         min-width: 0;
         align-items: center;
         justify-content: space-between;
-        gap: calc(var(--lv-space-unit) * 6);
-        margin: 0 0 calc(var(--lv-space-unit) * 6);
-        padding: calc(var(--lv-space-unit) * 4 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
-        border-left: 3px solid var(--lv-color-brand);
-        background: var(--lv-color-surface);
+        gap: var(--lv-sp-3);
+        margin: 0 0 var(--lv-sp-3);
+        padding: 8px 14px;
+        border-radius: var(--lv-r-m);
+        border: 1px solid var(--lv-primary-border);
+        background: var(--lv-primary-soft);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
+        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
     }
     .lv-mgr-deck-scope strong { color: var(--lv-color-text); overflow-wrap: anywhere; }
 

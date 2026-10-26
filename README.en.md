@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.80** (2026-10-26), delivering active deck luminescent states and manager arrow vectorization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.80) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.81** (2026-10-26), delivering Deck Scope banner Bento styling and select-all vector button enhancements in the Card Manager. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.81) for the package and publishing status.
 
-## What's New in v0.210.80
+## What's New in v0.210.81
+
+- **Deck Scope Banner Bento Styling**:
+  - Upgraded the deck filter status bar at the top of the Card Manager to a frosted Bento surface (`--lv-primary-soft`) with inner bevel shine.
+  - Upgraded the clear-filter action to a `.lv-btn-tool` capsule with a monochromatic `<LvIcon name="close" size={12} />`.
+- **Select-All Vector Action Enhancement**:
+  - Standardized the Select All / Deselect All button with a clean checkmark icon and Bento pill layout.
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.80
 
 - **Active Deck Luminescence & Card Count Polish**:
   - Injected `.lv-today-deck--has-cards` visual highlights and soft glow states for decks containing active cards.
