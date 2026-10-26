@@ -276,7 +276,7 @@
             <div style="margin-bottom: var(--lv-sp-2); display: flex; align-items: center; gap: 6px">
                 <LvChip tone="primary">{t.detail.version} {versions.length}</LvChip>
                 <button
-                    class="b3-button b3-button--small"
+                    class="b3-button b3-button--small lv-btn-tool"
                     aria-label={`${t.detail.versionHistory} ${versionsOpen ? "▴" : "▾"}`}
                     onclick={() => (versionsOpen = !versionsOpen)}
                 >
@@ -303,11 +303,14 @@
                                     <LvIcon name="check" size={12} />
                                 </button>
                                 <button
-                                    class="b3-button b3-button--small"
+                                    class="b3-button b3-button--small lv-btn-tool"
                                     disabled={diffBusy || !editorCtx}
                                     title={!editorCtx ? t.detail.diffUnavailable : undefined}
                                     onclick={() => compareWithCurrent(v.at, v.md)}
-                                >{t.detail.diffCompare}</button>
+                                >
+                                    <LvIcon name="swap" size={12} />
+                                    <span>{t.detail.diffCompare}</span>
+                                </button>
                             </div>
                             {#if verOpenAt === v.at}
                                 <div class="ft__smaller" style="white-space: pre-wrap; max-height: 160px; overflow: auto; margin-top: 4px; padding: calc(var(--lv-space-unit) * 4); border: 1px solid var(--lv-border); border-radius: var(--lv-r-compact)">{v.md}</div>
@@ -331,7 +334,10 @@
         {:else if previewError}
             <div class="lv-detail-preview-error" role="alert">
                 <span>{t.detail.diffLoadFail}</span>
-                <button class="b3-button b3-button--small" onclick={() => loadPreview(block.id)}>{t.dashboard.refresh}</button>
+                <button class="b3-button b3-button--small lv-btn-tool" onclick={() => loadPreview(block.id)}>
+                    <LvIcon name="refresh" size={12} />
+                    <span>{t.dashboard.refresh}</span>
+                </button>
             </div>
         {/if}
         <div class="lv-detail-preview lv-unified-face b3-typography">{@html html || (block.content ?? "")}</div>

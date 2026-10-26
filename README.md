@@ -21,11 +21,19 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.82（2026-10-26）**，落地制卡工作台预览操作微标化与全局交互链路深化闭环。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.82)。
+当前版本为 **v0.210.83（2026-10-26）**，落地卡片详情抽屉全流程操作 Bento 胶囊与精密矢量微标化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.83)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.82）
+## 本次更新（v0.210.83）
+
+- **卡片详情抽屉（Card Detail Drawer）操作全员 Bento 化**：
+  - 详情抽屉顶部历史版本对比、差异生成与卡面预览重试按钮全面对齐 `.lv-btn-tool` Bento 规范；
+  - 嵌入精密单色矢量微标（`swap` 对比、`refresh` 重试、`chevron-up/down` 折叠），操作手感与全生命周期设计系统严密统合；
+- **全量门禁与质量验证**：
+  - 全库扩展至 243 个测试文件、1949 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.82）
 
 - **制卡工作台卡面答案预览操作微标化（Quick Card Preview Action）**：
   - 手工制卡实时预览区右上角「查看答案 / 返回题面」按钮升级为 `.lv-btn-tool` Bento 胶囊并嵌入单色精密矢量微标 `<LvIcon name="eye" size={13} />`；

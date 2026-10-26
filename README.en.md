@@ -19,9 +19,16 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.82** (2026-10-26), delivering vector button enhancements for card previewing in the Card Studio. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.82) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.83** (2026-10-26), delivering full Bento vector standardization across the Card Detail Drawer. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.83) for the package and publishing status.
 
-## What's New in v0.210.82
+## What's New in v0.210.83
+
+- **Card Detail Drawer Bento Action Polish**:
+  - Upgraded version comparison, diff generation, and retry buttons in `card-detail.svelte` to `.lv-btn-tool` capsules with monochromatic vector icons (`swap`, `refresh`, `chevron-up/down`).
+- **Verification**:
+  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.82
 
 - **Card Studio Preview Action Vectorization**:
   - Upgraded the card preview toggle button ("Show Answer" / "Back to Front") in `quick-card.svelte` to a `.lv-btn-tool` Bento capsule with `<LvIcon name="eye" size={13} />`.
