@@ -954,14 +954,14 @@
                 </div>
             {/if}
             <div class="fn__flex" style="align-items: center; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-2)">
-                <button class="b3-button b3-button--small" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}>← {t.aiWizard.back}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}>← {t.aiWizard.back}</button>
                 <!-- T03：已选≠已审——选中决定集合，接受决定入库资格 -->
                 <LvChip tone="default">{t.aiWizard.selCount.replace("${n}", String(candidates.filter(c => c.keep).length))}</LvChip>
                 <LvChip tone="primary">{t.aiWizard.accCount.replace("${n}", String(acceptedCount))}</LvChip>
                 <div class="fn__flex-1"></div>
-                <button class="b3-button b3-button--small" disabled={creating || regenBusy !== null} onclick={acceptAll}>{t.aiWizard.acceptAll}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating || regenBusy !== null} onclick={acceptAll}><LvIcon name="check" size={12} /> <span>{t.aiWizard.acceptAll}</span></button>
                 <!-- T03：来源依据折叠（审核时可对照，不离开本屏） -->
-                <button class="b3-button b3-button--small" onclick={() => (sourceOpen = !sourceOpen)}>{t.aiWizard.sourceFold} {sourceOpen ? "▴" : "▾"}</button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (sourceOpen = !sourceOpen)}><span>{t.aiWizard.sourceFold}</span> <LvIcon name={sourceOpen ? "chevron-up" : "chevron-down"} size={13} /></button>
             </div>
             {#if reviewPlan}
                 <!-- BU-14 审阅计划：按因子就高不就低；建议性横幅，不代审不阻断（block 档在制卡任务不会出现） -->

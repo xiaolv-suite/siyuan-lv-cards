@@ -3,7 +3,7 @@
         | "home" | "cards" | "plus" | "learn" | "settings" | "inbox" | "search" | "question" | "bell"
         | "book" | "target" | "lightbulb" | "calendar" | "graduation" | "flag" | "zap" | "eye" | "edit" | "refresh"
         | "moon" | "ban" | "timer" | "image" | "code" | "message" | "warning" | "dice" | "flame" | "star" | "check"
-        | "trash" | "close" | "swap" | "chevron-up" | "chevron-down" | "chevron-right";
+        | "trash" | "close" | "swap" | "chevron-up" | "chevron-down" | "chevron-right" | "chevron-left";
 
     let { name, size = 18 }: { name: LvIconName; size?: number } = $props();
 
@@ -44,6 +44,7 @@
         "chevron-up": "m18 15-6-6-6 6",
         "chevron-down": "m6 9 6 6 6-6",
         "chevron-right": "m9 18 6-6-6-6",
+        "chevron-left": "m15 18-6-6 6-6",
     };
 </script>
 

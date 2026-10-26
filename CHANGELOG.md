@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.210.65 2026-10-26 · AI向导与修卡演练微交互全矢量化、chevron-left四向微标闭环
+
+- **AI 制卡向导与修卡演练微交互全矢量化升级（Micro-interactions & Glyph Cleanup）**：
+  - AI 制卡向导返回按钮与材料折叠箭头告别粗糙文本字符 \`▴\` / \`▾\`，全面升级为精密 \`<LvIcon name="chevron-up" />\` 与 \`<LvIcon name="chevron-down" />\` 胶囊按钮；
+  - 修卡演练（\`repair-drill.svelte\`）步进导航按钮升级为圆角微胶囊并内置精密 \`<LvIcon name="chevron-left" />\` 与 \`<LvIcon name="chevron-right" />\`；
+  - 全局图标库补齐 \`chevron-left\` 四向矢量微标，建立严密视觉闭环；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
 ## v0.210.64 2026-10-26 · 全链路交互逻辑与操作合理性深度升级、完成屏与AI向导全矢量胶囊化
 
 - **全流程连贯性与按钮摆放合理性优化（Flow Ergonomics & Button Hierarchy）**：

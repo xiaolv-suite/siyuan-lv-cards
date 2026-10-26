@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.64** (2026-10-26), delivering full-lifecycle flow continuity, ergonomic action placements, and complete vectorization of review done-screen and AI wizard actions. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.64) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.65** (2026-10-26), delivering full micro-interaction vectorization across AI Wizard and Repair Drill workflows alongside four-directional chevron icons. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.65) for the package and publishing status.
 
-## What's New in v0.210.64
+## What's New in v0.210.65
+
+- **Micro-Interaction Vectorization (AI Wizard & Repair Drill)**:
+  - Upgraded source evidence fold buttons in AI Wizard to `<LvIcon name="chevron-up" />` and `<LvIcon name="chevron-down" />`.
+  - Upgraded Repair Drill step navigation to Bento pill buttons with `<LvIcon name="chevron-left" />` and `<LvIcon name="chevron-right" />`.
+  - Completed four-way directional chevron icon coverage across the global design system.
+- **Verification**:
+  - 1947 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.64
 
 - **Flow Ergonomics & Button Hierarchy Polish**:
   - Aligned Done screen action buttons with Bento pill styling, establishing crisp primary/secondary visual hierarchy across review finish flows.

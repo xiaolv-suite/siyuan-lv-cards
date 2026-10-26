@@ -60,23 +60,23 @@ describe("repair drill component flow", () => {
         expect(screen.getByText("1 / 5")).toBeTruthy();
 
         // 步进到步骤 2
-        await fireEvent.click(screen.getByRole("button", { name: "下一步 →" }));
+        await fireEvent.click(screen.getByRole("button", { name: /下一步/ }));
         expect(screen.getByText("待修的卡")).toBeTruthy();
         expect(screen.getByText("TCP 到底是什么？")).toBeTruthy();
         expect(screen.getByText("2 / 5")).toBeTruthy();
 
         // 步进到步骤 3
-        await fireEvent.click(screen.getByRole("button", { name: "下一步 →" }));
+        await fireEvent.click(screen.getByRole("button", { name: /下一步/ }));
         expect(screen.getByLabelText("把题面改得更明确")).toBeTruthy();
         expect(screen.getByText("3 / 5")).toBeTruthy();
 
         // 步进到步骤 4
-        await fireEvent.click(screen.getByRole("button", { name: "下一步 →" }));
+        await fireEvent.click(screen.getByRole("button", { name: /下一步/ }));
         expect(screen.getByText("固定改法")).toBeTruthy();
         expect(screen.getByText("4 / 5")).toBeTruthy();
 
         // 步进到步骤 5
-        await fireEvent.click(screen.getByRole("button", { name: "下一步 →" }));
+        await fireEvent.click(screen.getByRole("button", { name: /下一步/ }));
         expect(screen.getAllByText("旁路试练").length).toBeGreaterThan(0);
         expect(screen.getByText("5 / 5")).toBeTruthy();
 

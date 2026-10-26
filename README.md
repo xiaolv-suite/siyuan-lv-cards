@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.64（2026-10-26）**，落地全链路交互逻辑与操作合理性深度升级、完成屏与AI向导全矢量胶囊化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.64)。
+当前版本为 **v0.210.65（2026-10-26）**，落地AI向导与修卡演练微交互全矢量化、chevron-left四向微标闭环。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.65)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.64）
+## 本次更新（v0.210.65）
+
+- **AI 制卡向导与修卡演练微交互全矢量化升级（Micro-interactions & Glyph Cleanup）**：
+  - AI 制卡向导返回按钮与材料折叠箭头告别粗糙文本字符 \`▴\` / \`▾\`，全面升级为精密 \`<LvIcon name="chevron-up" />\` 与 \`<LvIcon name="chevron-down" />\` 胶囊按钮；
+  - 修卡演练（\`repair-drill.svelte\`）步进导航按钮升级为圆角微胶囊并内置精密 \`<LvIcon name="chevron-left" />\` 与 \`<LvIcon name="chevron-right" />\`；
+  - 全局图标库补齐 \`chevron-left\` 四向矢量微标，建立严密视觉闭环；
+- **全量门禁与质量验证**：
+  - 全库扩展至 242 个测试文件、1947 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.64）
 
 - **全流程连贯性与按钮摆放合理性优化（Flow Ergonomics & Button Hierarchy）**：
   - 复习完成屏行动区（Next Actions）全面对齐 Outline Bento 胶囊按钮规范（返回主页、查看管理器、再来一组），消除生硬单调框线与突兀跳跃；
