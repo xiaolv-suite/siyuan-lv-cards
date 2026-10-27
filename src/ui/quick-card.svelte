@@ -24,7 +24,7 @@
     let deckLoadBusy = $state(false);
     let deckLoadError = $state("");
     let errorMsg = $state("");
-    let template = $state<"qa" | "cloze">("qa");
+    let template = $state<"qa" | "cloze" | "superblock">("qa");
     let isBidirectional = $state(false);
     let previewAnswer = $state(false);
     let createdNotice = $state("");
@@ -66,7 +66,7 @@
     const overloadNotice = $derived(checkMinimumInformationPrinciple(`${q} ${a}`));
     const canSubmit = $derived(!busy && draftIssues.length === 0 && canCreateDeck && (template !== "cloze" || hasClozeMarker));
 
-    function setTemplate(value: "qa" | "cloze") {
+    function setTemplate(value: "qa" | "cloze" | "superblock") {
         template = value;
         previewAnswer = false;
     }
@@ -139,6 +139,8 @@
             } else {
                 const markdown = template === "cloze"
                     ? question.split("____").join(`==${answer}==`)
+                    : template === "superblock"
+                    ? `{{{col\n${question}\n\n${answer}\n}}}`
                     : serializeQaCard(question, answer);
                 await onCreate(markdown, deckID, deckName, question, answer);
                 if (disposed) return;
@@ -178,6 +180,9 @@
             </button>
             <button type="button" class="lv-qc-tpl-btn" class:lv-qc-template-active={template === "cloze"} aria-pressed={template === "cloze"} disabled={busy} onclick={() => setTemplate("cloze")}>
                 <LvIcon name="edit" size={15} /> <strong>{t.quickCardTemplateCloze}</strong>
+            </button>
+            <button type="button" class="lv-qc-tpl-btn" class:lv-qc-template-active={template === "superblock"} aria-pressed={template === "superblock"} disabled={busy} onclick={() => setTemplate("superblock")} title={t.quickCardTemplateSuperBlockDesc}>
+                <LvIcon name="cards" size={15} /> <strong>{t.quickCardTemplateSuperBlock}</strong>
             </button>
         </div>
         <div class="lv-qc-deck">
@@ -245,7 +250,7 @@
                     aria-label={t.quickCardA}
                     rows="4"
                     bind:value={a}
-                    placeholder={t.quickCardA}
+                    placeholder={template === "superblock" ? (t.quickCardSuperBlockHint ?? "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块") : t.quickCardA}
                     disabled={busy}
                 ></textarea>
             </label>
@@ -263,6 +268,7 @@
                     <span>{t.quickCardPreviewTitle}</span>
                     <span class="lv-chip2 lv-chip2--default">
                         {#if template === "qa" && isBidirectional}<LvIcon name="swap" size={14} /> {t.cardTypeBadgeBidi ?? "双向"}
+                        {:else if template === "superblock"}<LvIcon name="cards" size={14} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}
                         {:else if template === "cloze"}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
                         {:else}<LvIcon name="message" size={14} /> {t.cardTypeBadgeQA ?? "问答"}
                         {/if}
@@ -278,6 +284,14 @@
                 {#if q.trim()}
                     {#if template === "cloze" && hasClozeMarker}
                         <p>{#each clozeParts as part, i (i)}{part}{#if i < clozeParts.length - 1}<span class="lv-qc-mask">{t.quickCardHiddenAnswer}</span>{/if}{/each}</p>
+                    {:else if template === "superblock"}
+                        <div class="lv-sb-question-section">
+                            <p>{q}</p>
+                        </div>
+                        <div class="lv-card-answer-divider"></div>
+                        <div class="lv-sb-answer-placeholder" aria-hidden="true">
+                            <span class="lv-mask-slot">［ 超级块答案（{a.trim().split(/\n{2,}/).filter(Boolean).length || 1} 块内容）· 点击查看答案揭晓 ］</span>
+                        </div>
                     {:else}
                         <p>{q}{#if template === "qa" && a.trim()}<span class="lv-qc-mask">{t.quickCardHiddenAnswer}</span>{/if}</p>
                     {/if}

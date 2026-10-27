@@ -24,8 +24,12 @@ const i18n = {
     quickCardTemplateLabel: "卡面表达",
     quickCardTemplateQA: "问答表达",
     quickCardTemplateCloze: "挖空表达",
+    quickCardTemplateSuperBlock: "超级块表达",
     quickCardTemplateQADesc: "先想出答案，再翻开核对",
     quickCardTemplateClozeDesc: "回忆句子里被遮住的关键内容",
+    quickCardTemplateSuperBlockDesc: "第 1 块为题面，后续所有块为答案（支持多段）",
+    quickCardSuperBlockHint: "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块",
+    cardTypeBadgeSuperBlock: "超级块",
     quickCardClozeHint: "在题面中用 ____ 标记要隐藏的答案位置",
     quickCardPreviewTitle: "卡面预览",
     quickCardPreviewNote: "保存后由思源正式渲染",
@@ -300,5 +304,31 @@ describe("R54 manual card workspace", () => {
         expect(qInput.value).toBe("光合作用产生____。");
         const aInput = screen.getByRole("textbox", { name: "答案" }) as HTMLTextAreaElement;
         expect(aInput.value).toBe("氧气");
+    });
+
+    it("supports creating a SuperBlock flashcard with multi-paragraph answer", async () => {
+        const onCreate = vi.fn(async () => undefined);
+        render(QuickCard, { i18n, onCreate, onClose: vi.fn(), embedded: true });
+
+        // 点击切换到超级块模板
+        await fireEvent.click(await screen.findByRole("button", { name: /超级块表达/ }));
+
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "简述牛顿三大运动定律？" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "第一定律：惯性定律。\n\n第二定律：F=ma 加速度定律。\n\n第三定律：作用力与反作用力定律。" } });
+
+        // 验证卡面预览与徽标
+        expect(screen.getByText("超级块")).toBeTruthy();
+        expect(screen.getByText("简述牛顿三大运动定律？")).toBeTruthy();
+        expect(screen.getByText(/超级块答案（3 块内容）/)).toBeTruthy();
+
+        // 提交制卡
+        await fireEvent.click(screen.getByRole("button", { name: /制卡/ }));
+        await waitFor(() => expect(onCreate).toHaveBeenCalledWith(
+            "{{{col\n简述牛顿三大运动定律？\n\n第一定律：惯性定律。\n\n第二定律：F=ma 加速度定律。\n\n第三定律：作用力与反作用力定律。\n}}}",
+            "deck-1",
+            "默认卡组",
+            "简述牛顿三大运动定律？",
+            "第一定律：惯性定律。\n\n第二定律：F=ma 加速度定律。\n\n第三定律：作用力与反作用力定律。"
+        ));
     });
 });

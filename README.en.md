@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.97** (2026-10-27), delivering ReviewInteractiveQuiz component modularization and 97.4% design tokens coverage. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.97) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.98** (2026-10-27), delivering SuperBlock authoring template in QuickCard studio and structured preview in CardDetail drawer. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.98) for the package and publishing status.
 
-## What's New in v0.210.97
+## What's New in v0.210.98
+
+- **QuickCard Studio SuperBlock Template**:
+  - Added "SuperBlock format" template option in `quick-card.svelte`, generating standard `{{{col ... }}}` multi-block flashcards.
+  - Live card preview renders question and answer sections accordingly.
+- **CardDetail Drawer SuperBlock Polish**:
+  - Added SuperBlock badge and two-tier structured preview in `card-detail.svelte`.
+- **Verification**:
+  - 1987 tests across 251 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.97
 
 - **ReviewInteractiveQuiz Component Modularization (TSK-08)**:
   - Extracted multiple-choice, true/false judge, instant fill typing, and answer analysis cards into `ReviewInteractiveQuiz.svelte`.

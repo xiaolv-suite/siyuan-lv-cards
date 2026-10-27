@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getBlockDOM } from "@/api/siyuan";
     import { diffLines, type DiffRow } from "@/core/line-diff";
+    import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
     import type { SearchBlock } from "@/api/riff";
     import LvDrawer from "./kit/LvDrawer.svelte";
     import LvChip from "./kit/LvChip.svelte";
@@ -340,7 +341,12 @@
                 </button>
             </div>
         {/if}
-        <div class="lv-detail-preview lv-unified-face b3-typography">{@html html || (block.content ?? "")}</div>
+        {#if html && isSuperBlockHtml(html)}
+            <div style="margin-bottom: var(--lv-sp-2)">
+                <span class="lv-chip2 lv-chip2--default"><LvIcon name="cards" size={13} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}</span>
+            </div>
+        {/if}
+        <div class="lv-detail-preview lv-unified-face b3-typography">{@html (html && isSuperBlockHtml(html)) ? renderSuperBlockAnswerFace(html) : (html || (block.content ?? ""))}</div>
         {#if editing}
             <CardEditor t={t} original={editorMd} onsave={saveEdit} oncancel={() => (editing = false)} />
         {:else if editorLoadFail}
