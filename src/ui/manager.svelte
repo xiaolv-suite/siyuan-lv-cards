@@ -899,7 +899,7 @@ import { confirmDialog } from "@/libs/dialog";
                     : (t.manager.batchAddPrompt ?? `将已选的 ${selected.length} 张卡片加入目标卡组：`)}
             </p>
             <div style="margin-bottom: var(--lv-sp-2)">
-                <div class="ft__smaller" style="margin-bottom: 4px; color: var(--lv-color-text-muted)">{t.deckPickerTitle ?? "选择已有卡组"}</div>
+                <div class="ft__smaller" style="margin-bottom: calc(var(--lv-space-unit) * 2); color: var(--lv-color-text-muted)">{t.deckPickerTitle ?? "选择已有卡组"}</div>
                 <select class="b3-select fn__block" bind:value={selectedDeckId} disabled={deckActionBusy || availableDecks.length === 0}>
                     {#each availableDecks as d (d.id)}
                         <option value={d.id}>{d.name}</option>
@@ -907,7 +907,7 @@ import { confirmDialog } from "@/libs/dialog";
                 </select>
             </div>
             <div style="margin-bottom: var(--lv-sp-4)">
-                <div class="ft__smaller" style="margin-bottom: 4px; color: var(--lv-color-text-muted)">{t.deckNewName ?? "或新建卡组"}</div>
+                <div class="ft__smaller" style="margin-bottom: calc(var(--lv-space-unit) * 2); color: var(--lv-color-text-muted)">{t.deckNewName ?? "或新建卡组"}</div>
                 <input class="b3-text-field fn__block" placeholder={t.deckNewName ?? "输入新卡组名称"} bind:value={newDeckNameInput} disabled={deckActionBusy} />
             </div>
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2)">
@@ -1131,8 +1131,8 @@ import { confirmDialog } from "@/libs/dialog";
     }
     .lv-select-all-btn {
         border-radius: var(--lv-r-pill);
-        padding: 2px 10px;
-        font-size: 11px;
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 5);
+        font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
         color: var(--lv-color-brand);
         border-color: var(--lv-primary-border);
@@ -1159,7 +1159,7 @@ import { confirmDialog } from "@/libs/dialog";
         border-radius: var(--lv-r-circle);
         background: color-mix(in srgb, var(--lv-color-text) 12%, transparent);
         color: var(--lv-color-text-muted);
-        font-size: 10px;
+        font-size: var(--lv-type-caption-size);
         display: grid;
         place-items: center;
         cursor: pointer;
@@ -1192,7 +1192,7 @@ import { confirmDialog } from "@/libs/dialog";
         border-radius: var(--lv-r-control);
         border: 1px solid var(--lv-border);
         background: var(--lv-color-surface);
-        padding: 4px 10px;
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
         transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
         &:focus-visible,
         &:focus {
@@ -1211,7 +1211,7 @@ import { confirmDialog } from "@/libs/dialog";
     .lv-modal-mask {
         position: fixed;
         inset: 0;
-        z-index: 1000;
+        z-index: var(--lv-z-modal-backdrop);
         background: color-mix(in srgb, black 32%, transparent);
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
@@ -1221,7 +1221,7 @@ import { confirmDialog } from "@/libs/dialog";
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        z-index: 1001;
+        z-index: var(--lv-z-modal-card);
         width: min(440px, 92vw);
         padding: var(--lv-sp-4);
         border-radius: var(--lv-r-dialog);
@@ -1242,7 +1242,7 @@ import { confirmDialog } from "@/libs/dialog";
     .lv-batchbar {
         position: sticky;
         top: var(--lv-sp-2);
-        z-index: 10;
+        z-index: var(--lv-z-review-peek);
         display: flex;
         align-items: center;
         gap: var(--lv-sp-2);
@@ -1281,11 +1281,11 @@ import { confirmDialog } from "@/libs/dialog";
         .lv-sort {
             height: 30px;
             max-width: 140px;
-            font-size: 12px;
+            font-size: var(--lv-type-control-size);
             border-radius: var(--lv-r-pill);
             border: 1px solid var(--lv-border);
             background: var(--lv-color-surface);
-            padding: 0 10px;
+            padding: 0 calc(var(--lv-space-unit) * 5);
             box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
         }
         .lv-toolbar-caption { margin-left: auto; font-size: 12px; color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
@@ -1297,7 +1297,7 @@ import { confirmDialog } from "@/libs/dialog";
         justify-content: space-between;
         gap: var(--lv-sp-3);
         margin: 0 0 var(--lv-sp-3);
-        padding: 8px 14px;
+        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-m);
         border: 1px solid var(--lv-primary-border);
         background: var(--lv-primary-soft);
@@ -1368,7 +1368,7 @@ import { confirmDialog } from "@/libs/dialog";
                 color: var(--lv-color-text);
                 font-weight: var(--lv-fw-semibold);
                 border-radius: var(--lv-r-track);
-                padding: 0 2px;
+                padding: 0 calc(var(--lv-space-unit) * 1);
             }
 
             .lv-row-main {

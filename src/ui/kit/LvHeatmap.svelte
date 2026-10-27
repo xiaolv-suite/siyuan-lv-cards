@@ -71,7 +71,7 @@
     }
     .lv-cell:hover {
         transform: scale(1.3);
-        z-index: 2;
+        z-index: var(--lv-z-elevated);
         outline-color: var(--lv-primary-border);
         box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
     }

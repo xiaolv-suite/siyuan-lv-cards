@@ -318,7 +318,7 @@
     .lv-inbox-search-input {
         width: 130px;
         height: 28px;
-        padding: 0 10px;
+        padding: 0 calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
         font-size: var(--lv-type-control-size);
         transition: width var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
@@ -339,7 +339,7 @@
     .lv-batchbar {
         position: sticky;
         top: var(--lv-sp-2);
-        z-index: 10;
+        z-index: var(--lv-z-review-peek);
         display: flex;
         align-items: center;
         gap: var(--lv-sp-2);

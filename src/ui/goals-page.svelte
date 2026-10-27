@@ -366,10 +366,10 @@
         .lv-step {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: calc(var(--lv-space-unit) * 3);
             font-size: var(--lv-type-caption-size);
             color: var(--lv-color-text-muted);
-            padding: 3px 10px;
+            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
             border-radius: var(--lv-r-pill);
             background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
             border: 1px solid var(--lv-border);
@@ -385,7 +385,7 @@
             border: 1px solid var(--lv-border);
             background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             color: var(--lv-color-text-muted);
-            font-size: 10px;
+            font-size: var(--lv-type-caption-size);
             font-weight: var(--lv-fw-bold);
         }
         .lv-step-done { color: var(--lv-color-brand); font-weight: 500; }

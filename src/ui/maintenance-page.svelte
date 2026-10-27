@@ -504,8 +504,8 @@
         <section class="lv-card2 lv-maint-repair" aria-labelledby="lv-maint-last-repair-title" style="margin-bottom: var(--lv-sp-4);">
             <div class="lv-maint-repair-draft-head">
                 <div>
-                    <h3 id="lv-maint-last-repair-title" style="margin: 0; font-size: 15px; font-weight: 600;">{repairText("lastRepairTitle", "上次批量修复记录")}</h3>
-                    <span class="ft__smaller ft__on-surface" style="margin-top: 4px; display: block;">
+                    <h3 id="lv-maint-last-repair-title" style="margin: 0; font-size: 15px; font-weight: var(--lv-fw-semibold);">{repairText("lastRepairTitle", "上次批量修复记录")}</h3>
+                    <span class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2); display: block;">
                         {repairText("lastRepairApplied", "已更新 ${n} 张卡片 · ${time}").replace("${n}", String(lastRepair.summary.update)).replace("${time}", new Date(lastRepair.appliedAt).toLocaleString())}
                     </span>
                 </div>
@@ -844,7 +844,7 @@
     .lv-maint-similar-card { min-width: 0; padding: var(--lv-sp-2); border: 1px solid var(--lv-border); border-radius: var(--lv-r-m); background: var(--lv-color-surface); }
     .lv-maint-similar-card-head { display: flex; align-items: baseline; gap: var(--lv-sp-1); margin-bottom: var(--lv-sp-1); }
     .lv-maint-similar-card-head code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); }
-    .lv-maint-similar-face { max-height: 220px; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.45; }
+    .lv-maint-similar-face { max-height: 220px; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: var(--lv-lh-reading-tight); }
     .lv-maint-similar-actions { display: flex; flex-direction: column; gap: var(--lv-sp-1); }
     .lv-maint-similar-action-row { display: flex; flex-wrap: wrap; gap: var(--lv-sp-1); }
     .lv-maint-decision-active { outline: 2px solid var(--lv-color-brand); outline-offset: 1px; }

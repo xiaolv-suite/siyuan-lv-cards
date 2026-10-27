@@ -172,7 +172,7 @@
             transform: translateY(-2px) scale(1.04);
             border-color: var(--lv-primary-border);
             box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
-            z-index: 1;
+            z-index: var(--lv-z-card-control);
         }
     }
     button.lv-cal-day {
@@ -182,7 +182,7 @@
     button.lv-cal-day:focus-visible {
         outline: 2px solid var(--lv-color-brand);
         outline-offset: 2px;
-        z-index: 2;
+        z-index: var(--lv-z-elevated);
     }
     button.lv-cal-day[aria-pressed="true"] {
         border-color: var(--lv-color-brand);
@@ -250,7 +250,7 @@
         width: 1px;
         height: 1px;
         padding: 0;
-        margin: -1px;
+        margin: calc(var(--lv-space-hairline) * -1);
         overflow: hidden;
         clip: rect(0 0 0 0);
         white-space: nowrap;

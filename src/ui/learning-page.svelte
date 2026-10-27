@@ -275,11 +275,11 @@
         border-radius: var(--lv-r-pill);
         background: var(--lv-color-surface);
         color: var(--lv-color-brand);
-        padding: 3px 10px;
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
         font-size: var(--lv-type-meta-size);
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: calc(var(--lv-space-unit) * 2);
         cursor: pointer;
         box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
         transition: all var(--lv-dur-1) var(--lv-ease);

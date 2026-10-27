@@ -477,6 +477,8 @@
         "pauseConfirm": "暂停并返回今日",
         "pauseToast": "会话现场已保留，可从今日页继续复习。",
         "tbMarkIssue": "标记疑问",
+        "tbDismiss": "解散归档 (Ctrl+D)",
+        "cardDismissed": "已解散归档该卡片 (Ctrl+D)",
         "issueMarked": "疑问已保留到待修列表；可以先完成复习再修卡。",
         "issueChip": "待修",
         "rescheduleTarget": "目标到期时间",

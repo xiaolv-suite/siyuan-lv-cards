@@ -46,10 +46,10 @@
         color: var(--lv-color-brand);
         background: var(--lv-primary-soft);
         border: 1px solid var(--lv-primary-border);
-        padding: 2px 8px;
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
         border-radius: var(--lv-r-pill);
         min-width: 36px;
         text-align: center;
-        font-weight: 600;
+        font-weight: var(--lv-fw-semibold);
     }
 </style>

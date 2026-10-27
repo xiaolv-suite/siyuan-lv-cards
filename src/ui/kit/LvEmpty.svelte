@@ -46,10 +46,10 @@
     .lv-empty-btn {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
         border-radius: var(--lv-r-pill);
-        padding: 4px 14px;
-        font-size: 12px;
-        margin-top: 4px;
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 7);
+        font-size: var(--lv-type-control-size);
+        margin-top: calc(var(--lv-space-unit) * 2);
     }
 </style>

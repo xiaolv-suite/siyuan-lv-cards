@@ -475,8 +475,8 @@
     /* T05 分面导航（R52 segmented 同构，现代圆润胶囊排） */
     .lv-facets {
         display: flex;
-        gap: 3px;
-        padding: 3px;
+        gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 7%, transparent);
@@ -490,7 +490,7 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
-        padding: 6px 12px;
+        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
@@ -523,9 +523,9 @@
     .lv-diff-row {
         white-space: pre-wrap;
         word-break: break-word;
-        padding: 2px calc(var(--lv-space-unit) * 3);
-        border-radius: 4px;
-        margin: 1px 0;
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
+        border-radius: var(--lv-r-xs);
+        margin: var(--lv-space-hairline) 0;
     }
     .lv-diff-del {
         background: var(--lv-danger-soft);

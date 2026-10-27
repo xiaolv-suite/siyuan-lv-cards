@@ -187,7 +187,7 @@
 
     .lv-relations-dir {
         font-weight: var(--lv-fw-bold);
-        font-size: 13px;
+        font-size: var(--lv-type-body-size);
         &.lv-dir-out { color: var(--lv-color-brand); }
         &.lv-dir-in { color: var(--lv-color-warning); }
     }

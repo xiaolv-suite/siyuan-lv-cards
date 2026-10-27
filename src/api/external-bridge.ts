@@ -8,6 +8,8 @@
  * - 生态事件总线：通过 window.dispatchEvent 派发 lv-cards:reviewed 自定义事件（带幂等键），供快门、打卡等消费
  */
 
+import type { ExtractEnvelope } from "@/core/incremental-learning";
+
 export const CARDS_BRIDGE_PROTOCOL = 1;
 export const CARDS_BRIDGE_NAME = "xiaolv-cards" as const;
 export const CARDS_BRIDGE_CAPABILITIES = [
@@ -18,6 +20,7 @@ export const CARDS_BRIDGE_CAPABILITIES = [
     "openReview",
     "hasCapability",
     "getOverview",
+    "receiveExtract",
 ] as const;
 
 export const CARDS_BRIDGE_ALIASES = [
@@ -74,6 +77,7 @@ export interface CardsBridgeApi {
     getDueSummary(): Promise<ActionResult<FlashcardDueSummary>>;
     openHub(tab?: string): Promise<ActionResult<boolean>>;
     openReview(options?: ReviewOpenOptions): Promise<ActionResult<boolean>>;
+    receiveExtract(envelope: ExtractEnvelope): Promise<ActionResult<{ blockID?: string; enrolled?: boolean }>>;
 }
 
 export interface CardsBridgeHost {
@@ -81,6 +85,7 @@ export interface CardsBridgeHost {
     getDueSummary(): Promise<FlashcardDueSummary>;
     openHub(tab?: string): void;
     openReview(options?: ReviewOpenOptions): void;
+    receiveExtract?(envelope: ExtractEnvelope): Promise<{ blockID?: string; enrolled?: boolean }>;
 }
 
 export interface CardReviewedEventDetail {
@@ -148,6 +153,12 @@ export function buildCardsBridge(host: CardsBridgeHost): CardsBridgeApi {
         getDueSummary: () => wrap("due-error", () => host.getDueSummary()),
         openHub: (tab?: string) => wrap("open-hub-failed", () => (host.openHub(tab), true)),
         openReview: (opts?: ReviewOpenOptions) => wrap("open-review-failed", () => (host.openReview(opts), true)),
+        receiveExtract: (envelope: ExtractEnvelope) => {
+            if (typeof host.receiveExtract === "function") {
+                return wrap("extract-failed", () => host.receiveExtract!(envelope));
+            }
+            return Promise.resolve({ ok: false, code: "not-supported", message: "receiveExtract is not supported by current host" });
+        },
     };
 }
 

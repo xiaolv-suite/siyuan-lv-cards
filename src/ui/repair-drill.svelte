@@ -157,7 +157,7 @@
         <button class="b3-button b3-button--outline lv-btn-tool" disabled={step <= 1} onclick={() => (step = Math.max(1, step - 1))}><LvIcon name="chevron-left" size={13} /> <span>{t.drillPrev}</span></button>
         <span class="ft__smaller ft__on-surface">{step} / {STEPS}</span>
         {#if step < STEPS}
-            <button class="b3-button lv-btn-primary" style="display: inline-flex; align-items: center; gap: 4px;" onclick={() => (step = Math.min(STEPS, step + 1))}><span>{t.drillNext}</span> <LvIcon name="chevron-right" size={13} /></button>
+            <button class="b3-button lv-btn-primary" style="display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 2);" onclick={() => (step = Math.min(STEPS, step + 1))}><span>{t.drillNext}</span> <LvIcon name="chevron-right" size={13} /></button>
         {:else}
             <button class="b3-button lv-btn-primary" onclick={onClose}>{t.drillExit}</button>
         {/if}

@@ -145,3 +145,8 @@ export function hasImageContent(markdown: string): boolean {
 
     return false;
 }
+
+export {
+    checkMinimumInformationPrinciple,
+    type OverloadInspection,
+} from "./incremental-learning";

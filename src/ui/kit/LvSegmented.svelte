@@ -52,11 +52,11 @@
 <style>
     .lv-seg {
         display: inline-flex;
-        padding: 3px;
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 7%, transparent);
         border: 1px solid var(--lv-border);
-        gap: 3px;
+        gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
     }
     .lv-seg--disabled { opacity: 0.5; pointer-events: none; }
     .lv-seg-item {
@@ -65,7 +65,7 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         line-height: var(--lv-lh-tight);
-        padding: 6px 14px;
+        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
         font-weight: var(--lv-fw-emphasis);

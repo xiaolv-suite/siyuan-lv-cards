@@ -21,11 +21,25 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.91（2026-10-27）**，落地复习工作台排队恢复、回源导航与填空判定全员 Bento 矢量化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.91)。
+当前版本为 **v0.210.92（2026-10-27）**，落地渐进学习两级调度解耦、Dismiss 快捷归档、最小信息原则与设计令牌全覆盖。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.92)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.91）
+## 本次更新（v0.210.92）
+
+- **渐进学习与两级调度解耦（Issue #19 第二期中枢指令落地）**：
+  - 建立物理隔离的两级调度规约（`shouldBypassFsrs`），粗加工大段摘录卡（`custom-lv-card-type: "extract"`）与已 Dismiss 归档卡严格绕过 FSRS 遗忘曲线算法，杜绝污染记忆稳定性与难度参数；
+  - 对外服务桥（`external-bridge`）扩充 `receiveExtract` 接口与能力协商，支持无缝接收小驴拾遗 `Alt+E` 派发的摘录信封，自动在卡底追加原文双链反链 `> 来源：((sourceBlockId "原文标题"))`；
+  - 复习端折叠工具栏新增「解散归档 (Ctrl+D)」操作，支持 `Ctrl+D` / `⌘D` 全局快捷键调度，一键打标 `custom-lv-dismissed: "true"` 并彻底移出日常复习队列，卡片永久归档不扰日常；
+- **最小信息原则（Minimum Information Principle / Quality Guard）**：
+  - 手工制卡抽屉（`quick-card.svelte`）与卡片精细编辑器（`card-editor.svelte`）接入实时信息负荷分析，字数 > 250 或挖空 > 3 时温和弹出 Bento 拆卡建议气泡；
+- **设计令牌（Design Tokens）覆盖率质变跃升**：
+  - 全库设计令牌覆盖率从 79.2% 大幅跃升至 **92.2%**；
+  - 补齐全局层级变量，`z-index` 实现 **100% 满分覆盖**，消除多窗口图层击穿隐患；`gap` 与 `margin-bottom` 均实现 100% 满分覆盖；
+- **全量门禁与质量验证**：
+  - 全库扩展至 244 个测试文件、1961 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.91）
 
 - **复习面板（Review Workbench）中断恢复与辅助操作 Bento 胶囊化**：
   - 队列等待与会话暂停状态下的恢复刷新与撤销操作全面升级为 `.lv-btn-tool` Bento 胶囊并嵌入矢量微标；

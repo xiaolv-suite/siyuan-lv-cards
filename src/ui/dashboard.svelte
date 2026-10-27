@@ -702,7 +702,7 @@
     {/if}
     {#if examChip}
         <div class="lv-glass lv-v2banner" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <div style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+            <div style="display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 4); min-width: 0;">
                 <LvChip tone={examChip.days <= 7 ? "error" : "warn"}><LvIcon name="graduation" size={14} /> {examChip.name} · {t.exam.daysLeft.replace("${n}", String(examChip.days))}</LvChip>
                 <span class="ft__smaller ft__on-surface">{t.exam.examChipHint}</span>
             </div>
@@ -836,7 +836,7 @@
                 <span class="lv-hero-remaining">{t.dashboard.todayDue} {dueCount}{#if targets.review > 0} · {targetPct()}%{/if}</span>
                     {/if}
                 </div>
-                <p class="ft__smaller ft__on-surface" style="margin-top: 8px; opacity: 0.85;">{todayDecision.reason}</p>
+                <p class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 4); opacity: 0.85;">{todayDecision.reason}</p>
             </div>
             <!-- R54 矢量工坊艺术图元：半透明交叠纸质闪卡与金色点缀，营造纸质温度感 -->
             <div class="lv-hero-art" aria-hidden="true">
@@ -1544,7 +1544,7 @@
         display: flex;
         align-items: center;
         gap: var(--lv-sp-3);
-        padding: 12px 14px;
+        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7);
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
@@ -1587,24 +1587,24 @@
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: calc(var(--lv-space-unit) * 1);
         }
         .lv-feature-title-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 4px;
+            gap: calc(var(--lv-space-unit) * 2);
         }
         .lv-feature-title {
-            font-size: 13px;
+            font-size: var(--lv-type-body-size);
             font-weight: var(--lv-fw-semibold);
             color: var(--lv-color-text);
             transition: color var(--lv-dur-1) var(--lv-ease);
         }
         .lv-feature-sub {
-            font-size: 11px;
+            font-size: var(--lv-type-meta-size);
             color: var(--lv-color-text-muted);
-            line-height: 1.4;
+            line-height: var(--lv-lh-body);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -1616,15 +1616,15 @@
         }
         .lv-feature-tags {
             display: flex;
-            gap: 4px;
-            margin-top: 4px;
+            gap: calc(var(--lv-space-unit) * 2);
+            margin-top: calc(var(--lv-space-unit) * 2);
         }
         .lv-feature-tag {
-            font-size: 10px;
-            font-weight: 500;
+            font-size: var(--lv-type-caption-size);
+            font-weight: var(--lv-fw-medium);
             color: var(--lv-color-text-muted);
             background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
-            padding: 1px 6px;
+            padding: var(--lv-space-hairline) calc(var(--lv-space-unit) * 3);
             border-radius: var(--lv-r-pill);
             line-height: 1.3;
         }
@@ -1633,7 +1633,7 @@
         display: flex;
         min-width: 0;
         flex-direction: column;
-        padding: 22px;
+        padding: calc(var(--lv-space-unit) * 11);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
@@ -1645,7 +1645,7 @@
             border-color: var(--lv-border-strong);
         }
     }
-    .lv-today-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: 2px; }
+    .lv-today-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: calc(var(--lv-space-unit) * 1); }
     .lv-today-week-head h2 { font-size: var(--lv-type-label-size); line-height: 1.5; font-weight: var(--lv-fw-heading); margin: 0; }
     .lv-today-week-range { color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); font-variant-numeric: tabular-nums; }
     
@@ -1655,8 +1655,8 @@
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-2);
-        padding: 12px 15px;
-        margin: 10px 0 14px;
+        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7 + var(--lv-space-hairline));
+        margin: calc(var(--lv-space-unit) * 5) 0 calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-m);
         background: linear-gradient(135deg, #FF9431 0%, #FFA83E 50%, #FFB954 100%);
         color: #FFFFFF;
@@ -1673,7 +1673,7 @@
         .lv-streak-icon-box {
             width: 36px;
             height: 36px;
-            border-radius: 50%;
+            border-radius: var(--lv-r-circle);
             background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
@@ -1687,20 +1687,20 @@
         .lv-streak-details {
             display: flex;
             flex-direction: column;
-            gap: 1px;
+            gap: var(--lv-space-hairline);
             margin-right: auto;
-            margin-left: 10px;
+            margin-left: calc(var(--lv-space-unit) * 5);
         }
 
         .lv-streak-eyebrow {
-            font-size: 11px;
-            font-weight: 500;
+            font-size: var(--lv-type-meta-size);
+            font-weight: var(--lv-fw-medium);
             opacity: 0.92;
             letter-spacing: 0.04em;
         }
 
         .lv-streak-count {
-            font-size: 18px;
+            font-size: var(--lv-type-section-size);
             font-weight: 800;
             line-height: 1.2;
             font-variant-numeric: tabular-nums;
@@ -1708,8 +1708,8 @@
         }
 
         .lv-streak-unit {
-            font-size: 12px;
-            font-weight: 500;
+            font-size: var(--lv-type-control-size);
+            font-weight: var(--lv-fw-medium);
             opacity: 0.9;
         }
 
@@ -1718,10 +1718,10 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
+            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
+            border-radius: var(--lv-r-pill);
+            font-size: var(--lv-type-meta-size);
+            font-weight: var(--lv-fw-bold);
             letter-spacing: 0.02em;
             color: #FFFFFF;
             white-space: nowrap;
@@ -1732,17 +1732,17 @@
     .lv-today-week-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 5px;
-        margin: 4px 0 14px;
+        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
+        margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 7);
     }
     .lv-today-week-day {
         display: flex;
         min-width: 0;
         align-items: center;
         flex-direction: column;
-        gap: 6px;
-        padding: 7px 2px 8px;
-        border-radius: 12px;
+        gap: calc(var(--lv-space-unit) * 3);
+        padding: calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
+        border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-canvas) 60%, var(--lv-color-surface));
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
@@ -1761,7 +1761,7 @@
         }
 
         .lv-week-day-label {
-            font-size: 11px;
+            font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-semibold);
             letter-spacing: 0.02em;
         }
@@ -1785,14 +1785,14 @@
             i {
                 background: var(--lv-primary-soft);
                 color: var(--lv-color-brand);
-                font-weight: 700;
+                font-weight: var(--lv-fw-bold);
             }
         }
 
         &.lv-today-week-day-active i {
             background: var(--lv-color-brand) !important;
             color: #FFFFFF !important;
-            font-weight: 700;
+            font-weight: var(--lv-fw-bold);
             box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 36%, transparent);
             outline: none !important;
         }
@@ -1806,16 +1806,16 @@
     .lv-today-week-summary small { color: var(--lv-color-text-muted); font-size: 10px; font-weight: var(--lv-fw-normal); }
     .lv-today-week-note {
         margin-top: auto;
-        padding: 8px 12px;
+        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
         border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
         color: var(--lv-color-text-muted);
         border: 1px solid color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-border));
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         display: flex;
         align-items: center;
-        gap: 6px;
-        line-height: 1.4;
+        gap: calc(var(--lv-space-unit) * 3);
+        line-height: var(--lv-lh-body);
         strong { color: var(--lv-color-text); font-weight: 600; white-space: nowrap; }
     }
     .lv-empty-decks-bar {
@@ -1848,7 +1848,7 @@
         text-align: left;
     }
     .lv-empty-note-icon {
-        font-size: 20px;
+        font-size: var(--lv-type-heading-size);
         line-height: 1.2;
         flex-shrink: 0;
     }
@@ -1857,7 +1857,7 @@
         color: var(--lv-color-brand);
         font-size: var(--lv-type-body-size);
         font-weight: var(--lv-fw-semibold);
-        margin-bottom: 2px;
+        margin-bottom: calc(var(--lv-space-unit) * 1);
     }
     .lv-empty-note-content p {
         margin: 0;
@@ -1900,11 +1900,11 @@
         height: 32px;
         flex: none;
         place-items: center;
-        border-radius: 50%;
+        border-radius: var(--lv-r-circle);
         background: var(--lv-primary-soft);
         color: var(--lv-color-brand);
         font-size: var(--lv-type-control-size);
-        font-weight: 700;
+        font-weight: var(--lv-fw-bold);
         box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
     }
     .lv-hero-tags-group {
@@ -1916,16 +1916,16 @@
     .lv-dashboard-action-group {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: calc(var(--lv-space-unit) * 3);
         flex-wrap: wrap;
     }
     .lv-btn-action {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        font-size: 12px;
+        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
+        font-size: var(--lv-type-control-size);
         border-radius: var(--lv-r-pill);
-        padding: 4px 10px;
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
@@ -1940,20 +1940,20 @@
     .lv-hero-budget-pill {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: calc(var(--lv-space-unit) * 2);
         height: 26px;
-        padding: 0 8px;
+        padding: 0 calc(var(--lv-space-unit) * 4);
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
         border: 1px solid var(--lv-border);
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
         box-sizing: border-box;
 
         .lv-hero-budget-label {
             display: inline-flex;
             align-items: center;
-            gap: 3px;
+            gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
             white-space: nowrap;
         }
         .lv-hero-budget-select {
@@ -1963,7 +1963,7 @@
             font-size: 11px !important;
             font-weight: var(--lv-fw-semibold) !important;
             color: var(--lv-color-brand) !important;
-            padding: 0 2px !important;
+            padding: 0 calc(var(--lv-space-unit) * 1) !important;
             height: auto !important;
             min-height: unset !important;
             line-height: normal !important;
@@ -1974,7 +1974,7 @@
     .lv-first-use-steps p {
         margin: 0;
         color: var(--lv-color-text);
-        font-size: 13px;
+        font-size: var(--lv-type-body-size);
         line-height: var(--lv-lh-meta);
     }
     .lv-refresh-status { margin: 0 0 var(--lv-sp-2); color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
@@ -1993,7 +1993,7 @@
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-3);
-        padding: 10px 16px;
+        padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 8);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-l);
         background: var(--lv-color-surface);
@@ -2021,7 +2021,7 @@
         .lv-today-deck-main-btn {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: calc(var(--lv-space-unit) * 5);
             min-width: 0;
             flex: 1;
             background: transparent;
@@ -2040,18 +2040,18 @@
             overflow: hidden;
             text-overflow: ellipsis;
             font-size: var(--lv-type-body-size);
-            font-weight: 600;
+            font-weight: var(--lv-fw-semibold);
         }
         .lv-today-deck-actions {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: calc(var(--lv-space-unit) * 4);
             flex-shrink: 0;
         }
         .lv-deck-quick-btn {
             border-radius: var(--lv-r-pill);
-            padding: 3px 10px;
-            font-size: 11px;
+            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
+            font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-semibold);
             color: var(--lv-color-brand);
             border-color: var(--lv-primary-border);
@@ -2073,7 +2073,7 @@
         .lv-deck-icon-badge {
             width: 32px;
             height: 32px;
-            border-radius: 9px;
+            border-radius: var(--lv-r-notice);
             background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
             color: var(--lv-color-brand);
             border: 1px solid color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
@@ -2086,10 +2086,10 @@
             font-size: var(--lv-type-caption-size);
             color: var(--lv-color-text-muted);
             background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
-            padding: 3px 8px;
+            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 4);
             border-radius: var(--lv-r-pill);
             font-variant-numeric: tabular-nums;
-            font-weight: 500;
+            font-weight: var(--lv-fw-medium);
             white-space: nowrap;
         }
     }
@@ -2261,7 +2261,7 @@
         }
     }
     .lv-ms-cell {
-        padding: 16px 12px;
+        padding: calc(var(--lv-space-unit) * 8) calc(var(--lv-space-unit) * 6);
         border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-brand) 4%, var(--lv-color-surface));
         border: 1px solid var(--lv-border);

@@ -477,6 +477,8 @@
         "pauseConfirm": "Pause & Return to Today",
         "pauseToast": "Session state preserved. You can resume anytime from Today.",
         "tbMarkIssue": "Mark Issue",
+        "tbDismiss": "Dismiss (Ctrl+D)",
+        "cardDismissed": "Card dismissed and archived (Ctrl+D)",
         "issueMarked": "Issue recorded to maintenance debt. You can continue reviewing.",
         "issueChip": "To Fix",
         "rescheduleTarget": "Target Due Date",

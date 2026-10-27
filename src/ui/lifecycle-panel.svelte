@@ -160,10 +160,10 @@
     .lv-lc-actions { display: flex; flex-wrap: wrap; gap: var(--lv-sp-1); margin-top: var(--lv-sp-1); }
     .lv-lc-history ul {
         margin: var(--lv-sp-1) 0 0;
-        padding-left: 18px;
+        padding-left: calc(var(--lv-space-unit) * 9);
         li {
-            margin: 3px 0;
-            line-height: 1.5;
+            margin: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) 0;
+            line-height: var(--lv-lh-meta);
             &::marker {
                 color: var(--lv-color-brand);
             }

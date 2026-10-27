@@ -19,9 +19,22 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.91** (2026-10-27), delivering Bento vector standardization across the Review Workbench recovery and navigation controls. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.91) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.92** (2026-10-27), delivering incremental learning two-tier scheduler decoupling, Dismiss shortcut archiving, minimum information overload warnings, and full design tokens tokenization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.92) for the package and publishing status.
 
-## What's New in v0.210.91
+## What's New in v0.210.92
+
+- **Incremental Learning & Two-Tier Scheduler Decoupling (Issue #19 Directive)**:
+  - Physical isolation between raw extracts (`custom-lv-card-type: "extract"`) and FSRS scheduler; extracts bypass FSRS until atomic QA/cloze cards are generated.
+  - External bridge (`external-bridge`) supports `receiveExtract` for seamless `Alt+E` dispatch with automatic source backlinks `> 来源：((sourceBlockId "title"))`.
+  - Added Dismiss archiving action with `Ctrl+D` / `⌘D` global shortcut, tagging `custom-lv-dismissed: "true"` to permanently archive extracted cards without disturbing reviews.
+- **Minimum Information Quality Guard**:
+  - Soft Bento bubble suggestion when card length > 250 chars or cloze count > 3 in quick-card studio and card editor.
+- **Design Tokens Polish (79.2% -> 92.2%)**:
+  - `z-index` reached 100% tokenization with semantic layers; eliminated modal clipping risks.
+- **Verification**:
+  - 1961 tests across 244 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.91
 
 - **Review Workbench Bento Polish**:
   - Upgraded queue recovery, pause resume, and return breadcrumb buttons in `review.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.

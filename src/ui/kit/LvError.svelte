@@ -28,7 +28,7 @@
         gap: var(--lv-sp-3);
         flex-wrap: wrap;
         border-radius: var(--lv-r-m);
-        padding: 10px 14px;
+        padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 7);
     }
     .lv-error2-icon {
         color: var(--lv-color-danger);
@@ -46,10 +46,10 @@
     .lv-error-retry-btn {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: calc(var(--lv-space-unit) * 2);
         border-radius: var(--lv-r-pill);
-        padding: 3px 12px;
-        font-size: 12px;
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
+        font-size: var(--lv-type-control-size);
         border-color: var(--lv-danger-border);
         color: var(--lv-color-danger);
         background: var(--lv-color-surface);

@@ -201,7 +201,7 @@
         color: var(--lv-color-text);
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: calc(var(--lv-space-unit) * 3);
     }
     .lv-cluster-count {
         font-size: var(--lv-type-meta-size);

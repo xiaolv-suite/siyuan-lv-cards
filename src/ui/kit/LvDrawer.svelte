@@ -77,7 +77,7 @@
         max-width: min(442px, calc(100vw - 28px));
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-dialog, 20px);
+        border-radius: var(--lv-r-dialog, var(--lv-r-dialog));
         box-shadow: var(--lv-shadow-float), var(--lv-inset-shine);
         overflow: hidden;
     }

@@ -1587,7 +1587,7 @@
         .b3-dialog__action { justify-content: flex-end; }
         .lv-settings-nav-rail {
             display: flex;
-            gap: 6px;
+            gap: calc(var(--lv-space-unit) * 3);
             flex-wrap: wrap;
             margin-bottom: var(--lv-sp-3);
             padding-bottom: var(--lv-sp-2);
@@ -1596,15 +1596,15 @@
         .lv-settings-nav-chip {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: calc(var(--lv-space-unit) * 2);
             height: 28px;
-            padding: 0 10px;
+            padding: 0 calc(var(--lv-space-unit) * 5);
             border-radius: var(--lv-r-pill);
             background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
             border: 1px solid var(--lv-border);
             color: var(--lv-color-text-muted);
-            font-size: 11px;
-            font-weight: 500;
+            font-size: var(--lv-type-meta-size);
+            font-weight: var(--lv-fw-medium);
             cursor: pointer;
             transition: all var(--lv-dur-1) var(--lv-ease);
 
@@ -1619,7 +1619,7 @@
             margin-bottom: var(--lv-sp-4);
             .b3-text-field {
                 border-radius: var(--lv-r-pill);
-                padding: 8px 16px;
+                padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 8);
                 box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
                 transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
                 &:focus {

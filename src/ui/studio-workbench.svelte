@@ -361,15 +361,15 @@
     .lv-studio-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: var(--lv-sp-3); }
     .lv-studio-modes {
         display: inline-flex;
-        gap: 3px;
-        padding: 3px;
+        gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 7%, transparent);
         border: 1px solid var(--lv-border);
     }
     .lv-studio-modes .b3-button {
         min-height: 36px;
-        padding: 0 18px;
+        padding: 0 calc(var(--lv-space-unit) * 9);
         border: none;
         border-radius: var(--lv-r-pill);
         background: transparent;
@@ -390,14 +390,14 @@
         box-shadow: 0 2px 8px color-mix(in srgb, black 6%, transparent), var(--lv-inset-shine);
     }
     .lv-studio-tools { display: flex; align-items: center; gap: var(--lv-sp-2); }
-    .lv-studio-tools .b3-button { min-height: 34px; border-radius: var(--lv-r-pill); padding: 4px 12px; }
+    .lv-studio-tools .b3-button { min-height: 34px; border-radius: var(--lv-r-pill); padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6); }
     .lv-studio-replace {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: calc(var(--lv-space-unit) * 5);
         margin: 0 0 calc(var(--lv-space-unit) * 7);
-        padding: 12px 14px;
+        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7);
         border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
         border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));

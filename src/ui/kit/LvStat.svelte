@@ -148,7 +148,7 @@
         margin-left: calc(var(--lv-space-unit) * 2);
     }
     .lv-stat-badge {
-        font-size: 16px;
+        font-size: var(--lv-type-title-size);
         margin-left: calc(var(--lv-space-unit) * 2);
         display: inline-block;
         vertical-align: middle;
@@ -167,7 +167,7 @@
     .lv-stat .lv-stat-progress { margin-top: var(--lv-sp-2); }
     .lv-stat .lv-stat-spark {
         display: block;
-        margin-top: 6px;
+        margin-top: calc(var(--lv-space-unit) * 3);
         width: 100%;
         max-height: 26px;
     }

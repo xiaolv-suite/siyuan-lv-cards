@@ -880,8 +880,8 @@
                 <!-- T02 AI 请求预检确认（docs/13 §4 & R54 原型规范）：实际片段/参数/估算/知情同意 → 确认后才发送 -->
                 <div class="lv-notice" style="display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 3)">
                     <div class="lv-eyebrow">{t.aiWizard.preflightTitle}</div>
-                    <div class="ft__smaller" style="line-height: 1.5; color: var(--lv-color-text-muted)">{t.aiWizard.preflightNotice}</div>
-                    <div style="background: var(--lv-color-surface-subtle); border-radius: 6px; padding: var(--lv-sp-2); max-height: 120px; overflow: auto; white-space: pre-wrap; font-size: 12px">{source.trim().slice(0, 600)}{source.trim().length > 600 ? "…" : ""}</div>
+                    <div class="ft__smaller" style="line-height: var(--lv-lh-meta); color: var(--lv-color-text-muted)">{t.aiWizard.preflightNotice}</div>
+                    <div style="background: var(--lv-color-surface-subtle); border-radius: 6px; padding: var(--lv-sp-2); max-height: 120px; overflow: auto; white-space: pre-wrap; font-size: var(--lv-type-control-size)">{source.trim().slice(0, 600)}{source.trim().length > 600 ? "…" : ""}</div>
                     <div class="ft__smaller ft__on-surface">
                         {t.aiWizard.previewParams.replace("${n}", String(count)).replace("${lang}", language).replace("${type}", cardType === "qa" ? t.aiWizard.typeQa : t.aiWizard.typeCloze)}
                         · {t.aiWizard.preflightScopeDetail.replace("${chars}", String(source.trim().length))}
@@ -1066,17 +1066,17 @@
                                             <div class="lv-eyebrow">{t.aiWizard.assertionTitle}</div>
                                             <span class="ft__smaller ft__on-surface">{t.aiWizard.sourceTrustScore}: <strong>{rep.sourceTrustScore}%</strong></span>
                                         </div>
-                                        <div style="display: flex; flex-direction: column; gap: 6px">
+                                        <div style="display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 3)">
                                             {#each rep.assertions as ass, assertionIndex (assertionIndex)}
-                                                <div class="lv-card2" style="padding: 8px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--lv-border); border-left: 3px solid {ass.status === 'supported' ? 'var(--lv-color-success)' : ass.status === 'partial' ? 'var(--lv-color-brand)' : 'var(--lv-color-warning)'}">
+                                                <div class="lv-card2" style="padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6); font-size: 12px; display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 2); border: 1px solid var(--lv-border); border-left: 3px solid {ass.status === 'supported' ? 'var(--lv-color-success)' : ass.status === 'partial' ? 'var(--lv-color-brand)' : 'var(--lv-color-warning)'}">
                                                     <div class="fn__flex between" style="align-items: baseline; gap: var(--lv-sp-2)">
-                                                        <span style="font-weight: 500; flex: 1">{ass.text}</span>
+                                                        <span style="font-weight: var(--lv-fw-medium); flex: 1">{ass.text}</span>
                                                         <LvChip tone={ass.status === "supported" ? "default" : ass.status === "partial" ? "primary" : "warn"}>
                                                             {ass.status === "supported" ? t.aiWizard.assertionSupported : ass.status === "partial" ? t.aiWizard.assertionPartial : t.aiWizard.assertionUnsupported}
                                                         </LvChip>
                                                     </div>
                                                     {#if ass.matchedSourceExcerpt}
-                                                        <div class="ft__smaller ft__on-surface" style="padding: 3px 8px; border-radius: 4px; background: var(--lv-surface-hover); opacity: 0.9; font-style: italic">
+                                                        <div class="ft__smaller ft__on-surface" style="padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 4); border-radius: 4px; background: var(--lv-surface-hover); opacity: 0.9; font-style: italic">
                                                             “{ass.matchedSourceExcerpt}”
                                                         </div>
                                                     {/if}

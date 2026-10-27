@@ -19,6 +19,7 @@ export type ReviewKeyAction =
     | "suspend"
     | "toggle-memo"
     | "undo"
+    | "dismiss"
     | null;
 
 export interface ReviewShortcutContext {
@@ -36,6 +37,8 @@ export interface ReviewShortcutContext {
 export interface ReviewKeyEventLike {
     key: string;
     code?: string;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
     target?: EventTarget | null;
     preventDefault?: () => void;
 }
@@ -125,6 +128,13 @@ export function resolveReviewKeyAction(
     }
 
     // 8. 辅助控制（问题态与答案态均可用，对齐工具栏）
+    if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) {
+        if (ctx.hasCurrent) {
+            e.preventDefault?.();
+            return "dismiss";
+        }
+        return null;
+    }
     if (e.key === "x" || e.key === "0") {
         return "skip";
     }

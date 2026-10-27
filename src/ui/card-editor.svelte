@@ -3,6 +3,7 @@
      * 单字段=块 markdown 整体（三字段级 diff 待字段↔块映射设计定稿后接入 BX-9）。
      * 验收硬性要求：差异先于写入可见；取消/拒绝保留原卡；纯前端流转，不产生评分/外发。 */
     import { charDiff } from "@/core/field-diff";
+    import { checkMinimumInformationPrinciple } from "@/core/incremental-learning";
 
     let { t, original, onsave, oncancel }: {
         t: any;
@@ -51,6 +52,7 @@
 
     const segments = $derived(charDiff(original, deferred));
     const changed = $derived(deferred !== original);
+    const overloadNotice = $derived(checkMinimumInformationPrinciple(text));
 
     async function save() {
         if (!changed || saving) return;
@@ -116,6 +118,11 @@
             {/if}
         </div>
     </div>
+    {#if overloadNotice.overloaded}
+        <div class="lv-editor-overload-tip ft__smaller" role="status">
+            {overloadNotice.suggestion}
+        </div>
+    {/if}
     {#if errMsg}<div class="lv-editor-err ft__smaller">{errMsg}</div>{/if}
     <div class="lv-editor-actions">
         <button class="b3-button lv-btn-primary b3-button--small" disabled={!changed || saving} onclick={save}>
@@ -137,6 +144,15 @@
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+    }
+    .lv-editor-overload-tip {
+        margin: var(--lv-sp-1) 0;
+        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-warning, #f59e0b) 12%, var(--lv-color-surface));
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning, #f59e0b) 28%, transparent);
+        color: var(--lv-color-warning, #d97706);
+        line-height: var(--lv-lh-meta);
     }
     .lv-editor-head {
         display: flex;
@@ -166,8 +182,8 @@
     }
     .lv-editor-cloze-btn {
         border-radius: var(--lv-r-pill);
-        padding: 2px 10px;
-        font-size: 11px;
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 5);
+        font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
         color: var(--lv-color-brand);
         border-color: var(--lv-primary-border);

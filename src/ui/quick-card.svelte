@@ -2,6 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
     import { serializeQaCard, validateQaDraft } from "@/core/flashcard-quality";
+    import { checkMinimumInformationPrinciple } from "@/core/incremental-learning";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -62,6 +63,7 @@
     const clozeParts = $derived(q.split("____"));
     const hasClozeMarker = $derived(clozeParts.length > 1);
     const draftIssues = $derived(validateQaDraft(q, a));
+    const overloadNotice = $derived(checkMinimumInformationPrinciple(`${q} ${a}`));
     const canSubmit = $derived(!busy && draftIssues.length === 0 && canCreateDeck && (template !== "cloze" || hasClozeMarker));
 
     function setTemplate(value: "qa" | "cloze") {
@@ -297,6 +299,11 @@
             </div>
         </section>
     </div>
+    {#if overloadNotice.overloaded}
+        <div class="lv-qc-overload-tip" role="status">
+            {overloadNotice.suggestion}
+        </div>
+    {/if}
     {#if createdNotice}<div class="lv-qc-success" role="status">{createdNotice}</div>{/if}
     {#if errorMsg}
         <div class="ft__smaller lv-qc-error" role="alert">{errorMsg}</div>
@@ -314,29 +321,39 @@
         padding: var(--lv-sp-4);
         container: lv-quickcard / inline-size;
     }
+    .lv-qc-overload-tip {
+        margin: var(--lv-sp-2) 0;
+        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-warning, #f59e0b) 12%, var(--lv-color-surface));
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning, #f59e0b) 28%, transparent);
+        color: var(--lv-color-warning, #d97706);
+        font-size: var(--lv-type-control-size);
+        line-height: var(--lv-lh-meta);
+    }
     .lv-qc-toolbar {
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
-        gap: 20px;
+        gap: calc(var(--lv-space-unit) * 10);
         margin-bottom: var(--lv-sp-4);
         padding-bottom: var(--lv-sp-3);
         border-bottom: 1px solid var(--lv-border);
     }
     .lv-qc-template {
         display: inline-flex;
-        padding: 3px;
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
         border: 1px solid var(--lv-border);
-        gap: 3px;
+        gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
     }
     .lv-qc-template button {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: calc(var(--lv-space-unit) * 3);
         min-height: 38px;
-        padding: 0 16px;
+        padding: 0 calc(var(--lv-space-unit) * 8);
         border: none;
         border-radius: var(--lv-r-pill);
         background: transparent;
@@ -401,16 +418,16 @@
     .lv-quickcard .lv-qc-help { margin-top: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
     .lv-qc-guidance { margin: 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.65; }
     .lv-qc-preview { display: flex; min-width: 0; flex-direction: column; gap: var(--lv-sp-2); margin: 0; }
-    .lv-qc-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--lv-space-unit) * 4); font-size: 13px; font-weight: var(--lv-fw-semibold); }
+    .lv-qc-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--lv-space-unit) * 4); font-size: var(--lv-type-body-size); font-weight: var(--lv-fw-semibold); }
     .lv-qc-preview-tags { display: inline-flex; align-items: center; gap: var(--lv-sp-2); }
-    .lv-qc-preview-sub { margin-bottom: 2px; color: var(--lv-color-text-muted); font-size: 11px; }
+    .lv-qc-preview-sub { margin-bottom: calc(var(--lv-space-unit) * 1); color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-qc-reveal {
         border-radius: var(--lv-r-pill);
-        padding: 4px 12px;
-        font-size: 12px;
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6);
+        font-size: var(--lv-type-control-size);
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
     }
     .lv-qc-preview-face {
         min-width: 0;
@@ -428,12 +445,12 @@
     .lv-qc-preview-label {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
+        gap: calc(var(--lv-space-unit) * 2);
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
         border-radius: var(--lv-r-pill);
         background: var(--lv-primary-soft);
         color: var(--lv-color-brand);
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
         width: fit-content;
     }
@@ -442,7 +459,7 @@
     .lv-qc-preview-answer p { margin-top: calc(var(--lv-space-unit) * 4); }
     .lv-qc-mask {
         display: inline-block;
-        margin-left: 4px;
+        margin-left: calc(var(--lv-space-unit) * 2);
         padding: var(--lv-space-hairline) calc(var(--lv-space-unit) * 3);
         border-radius: var(--lv-r-tag);
         background: var(--lv-primary-soft);

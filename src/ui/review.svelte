@@ -52,6 +52,7 @@
     import { parseInteractiveQuiz, cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { filterBurySiblings } from "@/core/sibling-cards";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
+    import { buildDismissAttrs } from "@/core/incremental-learning";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -601,6 +602,25 @@
     // 汲取自番茄插件：复习端就地移出卡组
     let showRetireModal = $state(false);
     let retireBusy = $state(false);
+    let dismissBusy = $state(false);
+
+    async function dismissCurrentCard() {
+        if (!current || submitting || rescheduleBusy || dismissBusy) return;
+        dismissBusy = true;
+        const blockID = current.blockID;
+        try {
+            if (siyuanApi.setBlockAttrs) {
+                await siyuanApi.setBlockAttrs(blockID, buildDismissAttrs());
+            }
+            showMessage(t.review?.cardDismissed ?? "已解散归档该卡片 (Ctrl+D)", 1500, "info");
+            announce(t.review?.cardDismissed ?? "已解散归档该卡片", "polite");
+            await next();
+        } catch (e: any) {
+            showMessage(friendlyError(e, t), 2000, "error");
+        } finally {
+            dismissBusy = false;
+        }
+    }
     function adjustFontScale(delta: number) {
         const cur = eff().cardFontScale || 1;
         const next = Math.min(1.6, Math.max(0.8, Math.round((cur + delta) * 10) / 10));
@@ -1971,6 +1991,9 @@
             case "undo":
                 undoHistory();
                 break;
+            case "dismiss":
+                void dismissCurrentCard();
+                break;
         }
     }
 
@@ -2842,6 +2865,9 @@
                             <button type="button" class="lv-toolbar-menu-item" disabled={!current || actionBusy} title={t.review.tbMemo} onclick={() => { showMemoEditor = true; showMoreToolbar = false; }}>
                                 <span class="lv-menu-icon"><LvIcon name="lightbulb" size={16} /></span><span>{t.review.tbMemo ?? "助记便签"}</span>
                             </button>
+                            <button type="button" class="lv-toolbar-menu-item" disabled={!current || actionBusy || dismissBusy} title={t.review?.tbDismiss ?? "解散归档 (Ctrl+D)"} onclick={() => { void dismissCurrentCard(); showMoreToolbar = false; }}>
+                                <span class="lv-menu-icon"><LvIcon name="close" size={16} /></span><span>{t.review?.tbDismiss ?? "解散归档 (Ctrl+D)"}</span>
+                            </button>
                             <button type="button" class="lv-toolbar-menu-item lv-menu-danger" disabled={!current || actionBusy} title={t.review.retireCard} onclick={() => { showRetireModal = true; showMoreToolbar = false; }}>
                                 <span class="lv-menu-icon"><LvIcon name="ban" size={16} /></span><span>{t.review.retireCard ?? "移出卡组"}</span>
                             </button>
@@ -3117,22 +3143,22 @@
             {#if !showAnswer}
                 {#if showReschedule}
                     {@const invalidRescheduleDays = !Number.isSafeInteger(rescheduleDays) || rescheduleDays < 1 || rescheduleDays > 36500}
-                    <div class="lv-reschedule lv-card2" aria-busy={rescheduleBusy} style="display:flex;flex-direction:column;gap:var(--lv-sp-2);padding:var(--lv-sp-3);margin:var(--lv-sp-2) 0;border:1px solid var(--lv-border);border-radius:12px;background:var(--lv-color-surface-subtle)">
+                    <div class="lv-reschedule lv-card2" aria-busy={rescheduleBusy} style="display:flex;flex-direction:column;gap: var(--lv-sp-2);padding:var(--lv-sp-3);margin: var(--lv-sp-2) 0;border:1px solid var(--lv-border);border-radius: var(--lv-r-m);background:var(--lv-color-surface-subtle)">
                         <div style="display:flex;gap:var(--lv-sp-2);align-items:center;flex-wrap:wrap">
                             <span class="ft__smaller ft__on-surface">{t.review.rescheduleIn}</span>
                             <input class="b3-text-field" style="width:70px" type="number" min="1" max="36500" step="1" bind:value={rescheduleDays} aria-invalid={invalidRescheduleDays} aria-describedby={invalidRescheduleDays ? "lv-reschedule-error" : undefined} />
                             <span class="ft__smaller ft__on-surface">{t.review.rescheduleDays}</span>
                             {#if previewTargetLabel}
-                                <span class="ft__smaller ft__on-surface" style="color:var(--lv-color-brand);margin-left:var(--lv-sp-2)">
+                                <span class="ft__smaller ft__on-surface" style="color: var(--lv-color-brand);margin-left:var(--lv-sp-2)">
                                     {t.review.rescheduleTarget}: <strong>{previewTargetLabel}</strong>
                                 </span>
                             {/if}
                         </div>
                         {#if invalidRescheduleDays}
-                            <span id="lv-reschedule-error" class="ft__smaller" role="alert" style="color:var(--lv-color-danger)">{t.review.rescheduleRange}</span>
+                            <span id="lv-reschedule-error" class="ft__smaller" role="alert" style="color: var(--lv-color-danger)">{t.review.rescheduleRange}</span>
                         {/if}
                         {#if rescheduleError}
-                            <div class="ft__smaller lv-reschedule-error" role="alert" style="color:var(--lv-color-danger);background:var(--lv-danger-soft);padding:var(--lv-sp-1) var(--lv-sp-2);border-radius:6px">
+                            <div class="ft__smaller lv-reschedule-error" role="alert" style="color: var(--lv-color-danger);background:var(--lv-danger-soft);padding: var(--lv-sp-1) var(--lv-sp-2);border-radius:6px">
                                 <strong>{t.review.rescheduleErrorPreserved}</strong>: {rescheduleError}
                             </div>
                         {/if}
@@ -3429,17 +3455,17 @@
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
             <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.pauseTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
                 <div class="lv-help-head">
-                    <span style="font-weight:600;font-size:16px">{t.review.pauseTitle}</span>
+                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px">{t.review.pauseTitle}</span>
                     <div class="fn__flex-1"></div>
                     <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (showPauseModal = false)}><LvIcon name="close" size={13} /></button>
                 </div>
-                <div style="padding:var(--lv-sp-3) 0">
-                    <p class="ft__smaller ft__on-surface" style="line-height:1.6">{t.review.pauseDesc}</p>
-                    <div style="margin-top:var(--lv-sp-2);font-size:12px;color:var(--lv-color-brand)">
+                <div style="padding: var(--lv-sp-3) 0">
+                    <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review.pauseDesc}</p>
+                    <div style="margin-top: var(--lv-sp-2);font-size:12px;color: var(--lv-color-brand)">
                         {t.review.doneConfirm}: <strong>{reviewedIDs.length}</strong> · {t.review.skipNotRated}: <strong>{sessionSkipped.length}</strong>
                     </div>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:var(--lv-sp-2);margin-top:var(--lv-sp-3)">
+                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
                     <button class="b3-button b3-button--text" onclick={() => (showPauseModal = false)}>{t.review.pauseContinue}</button>
                     <button class="b3-button lv-btn-primary" onclick={pauseSessionAndReturn}>{t.review.pauseConfirm}</button>
                 </div>
@@ -3453,13 +3479,13 @@
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
             <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.sessionOptionsTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
                 <div class="lv-help-head">
-                    <span style="font-weight:600;font-size:16px">{t.review.sessionOptionsTitle}</span>
+                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px">{t.review.sessionOptionsTitle}</span>
                     <div class="fn__flex-1"></div>
                     <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (showSessionOptionsModal = false)}><LvIcon name="close" size={13} /></button>
                 </div>
-                <div style="padding:var(--lv-sp-3) 0;display:flex;flex-direction:column;gap:var(--lv-sp-2)">
+                <div style="padding: var(--lv-sp-3) 0;display:flex;flex-direction:column;gap:var(--lv-sp-2)">
                     <p class="ft__smaller ft__on-surface">{t.review.sessionOptionsHint}</p>
-                    <label class="ft__smaller ft__on-surface" style="display:flex;align-items:center;gap:var(--lv-sp-2);margin-top:var(--lv-sp-1)">
+                    <label class="ft__smaller ft__on-surface" style="display:flex;align-items:center;gap: var(--lv-sp-2);margin-top:var(--lv-sp-1)">
                         <span>{t.review.answerModeLabel}</span>
                         <select class="b3-select fn__flex-1" bind:value={tempAnswerVariant}>
                             <option value="normal">{t.review.modeRecall}</option>
@@ -3468,7 +3494,7 @@
                         </select>
                     </label>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:var(--lv-sp-2);margin-top:var(--lv-sp-3)">
+                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
                     <button class="b3-button b3-button--text" onclick={() => (showSessionOptionsModal = false)}>{window.siyuan.languages.cancel}</button>
                     <button class="b3-button lv-btn-primary" onclick={applySessionOptions}>{t.review.applySessionOptions}</button>
                 </div>
@@ -3482,23 +3508,23 @@
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
             <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.memoModalTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
                 <div class="lv-help-head">
-                    <span style="font-weight:600;font-size:16px"><LvIcon name="lightbulb" size={17} /> {t.review.memoModalTitle ?? "给未来的自己留助记线索"}</span>
+                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px"><LvIcon name="lightbulb" size={17} /> {t.review.memoModalTitle ?? "给未来的自己留助记线索"}</span>
                     <div class="fn__flex-1"></div>
                     <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={memoSaving} aria-label={window.siyuan.languages.cancel} onclick={closeMemoEditor}><LvIcon name="close" size={13} /></button>
                 </div>
-                <div style="padding:var(--lv-sp-3) 0">
-                    <p class="ft__smaller ft__on-surface" style="line-height:1.6">{t.review.memoModalDesc ?? "写下一句巧记口诀、易错陷阱或关键关联。下次复习此卡时将直接呈现。"}</p>
+                <div style="padding: var(--lv-sp-3) 0">
+                    <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review.memoModalDesc ?? "写下一句巧记口诀、易错陷阱或关键关联。下次复习此卡时将直接呈现。"}</p>
                     <textarea
                         class="b3-text-field fn__block"
                         rows="3"
-                        style="margin-top:var(--lv-sp-2)"
+                        style="margin-top: var(--lv-sp-2)"
                         placeholder={t.review.memoPlaceholder ?? "例如：谐音记忆口诀、与某定理的对比..."}
                         aria-label={t.review.memoPlaceholder ?? "助记便签"}
                         bind:value={memoDraft}
                         disabled={memoSaving}
                     ></textarea>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:var(--lv-sp-2);margin-top:var(--lv-sp-3)">
+                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
                     <button class="b3-button b3-button--text" disabled={memoSaving} onclick={closeMemoEditor}>{window.siyuan.languages.cancel ?? "取消"}</button>
                     <button class="b3-button lv-btn-primary" disabled={memoSaving} onclick={saveCardMemo}>
                         {memoSaving ? t.dashboard.loading : (t.review.memoSave ?? "保存便签")}
@@ -3514,14 +3540,14 @@
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
             <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.retireCardTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
                 <div class="lv-help-head">
-                    <span style="font-weight:600;font-size:16px"><LvIcon name="ban" size={17} /> {t.review.retireCardTitle ?? "移出复习卡组"}</span>
+                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px"><LvIcon name="ban" size={17} /> {t.review.retireCardTitle ?? "移出复习卡组"}</span>
                     <div class="fn__flex-1"></div>
                     <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy} aria-label={window.siyuan.languages.cancel} onclick={closeRetireModal}><LvIcon name="close" size={13} /></button>
                 </div>
-                <div style="padding:var(--lv-sp-3) 0">
-                    <p class="ft__smaller ft__on-surface" style="line-height:1.6">{t.review.retireCardDesc ?? "将此卡移出当前复习卡组，不再参与复习调度。思源笔记正文内容不会受到任何修改。确认移出？"}</p>
+                <div style="padding: var(--lv-sp-3) 0">
+                    <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review.retireCardDesc ?? "将此卡移出当前复习卡组，不再参与复习调度。思源笔记正文内容不会受到任何修改。确认移出？"}</p>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:var(--lv-sp-2);margin-top:var(--lv-sp-3)">
+                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
                     <button class="b3-button b3-button--text" disabled={retireBusy} onclick={closeRetireModal}>{window.siyuan.languages.cancel ?? "取消"}</button>
                     <button class="b3-button lv-btn-danger" disabled={retireBusy} onclick={retireCurrentCard}>
                         {retireBusy ? t.dashboard.loading : (t.review.retireCardConfirm ?? "确认移出")}
@@ -3653,8 +3679,8 @@
                 .lv-ready-eyebrow {
                     display: inline-flex;
                     align-items: center;
-                    gap: 6px;
-                    font-size: 11px;
+                    gap: calc(var(--lv-space-unit) * 3);
+                    font-size: var(--lv-type-meta-size);
                     font-weight: var(--lv-fw-semibold);
                     text-transform: uppercase;
                     letter-spacing: 0.08em;
@@ -3662,7 +3688,7 @@
                     background: var(--lv-primary-soft);
                     border: 1px solid var(--lv-primary-border);
                     border-radius: var(--lv-r-pill);
-                    padding: 2px 10px;
+                    padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 5);
                     margin-bottom: var(--lv-sp-2);
                 }
 
@@ -3670,7 +3696,7 @@
                     font-size: var(--lv-type-title-lg-size);
                     font-weight: var(--lv-fw-heading);
                     color: var(--lv-color-text);
-                    margin: 0 0 6px 0;
+                    margin: 0 0 calc(var(--lv-space-unit) * 3) 0;
                     letter-spacing: -0.02em;
                 }
 
@@ -3685,17 +3711,17 @@
             .lv-ready-scope-pill {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                padding: 4px 10px;
+                gap: calc(var(--lv-space-unit) * 4);
+                padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
                 background: color-mix(in srgb, var(--lv-color-surface) 60%, var(--lv-color-canvas));
                 border: 1px solid var(--lv-border);
                 border-radius: var(--lv-r-pill);
-                font-size: 12px;
+                font-size: var(--lv-type-control-size);
 
                 .lv-ready-scope-label {
                     display: inline-flex;
                     align-items: center;
-                    gap: 4px;
+                    gap: calc(var(--lv-space-unit) * 2);
                     color: var(--lv-color-text-muted);
                     white-space: nowrap;
                 }
@@ -3703,10 +3729,10 @@
                 .lv-ready-scope-select {
                     border: none;
                     background: transparent;
-                    font-size: 12px;
+                    font-size: var(--lv-type-control-size);
                     font-weight: var(--lv-fw-semibold);
                     color: var(--lv-color-brand);
-                    padding: 2px 4px;
+                    padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2);
                     cursor: pointer;
                     &:focus { outline: none; }
                 }
@@ -3718,7 +3744,7 @@
             justify-content: space-between;
             gap: var(--lv-sp-3);
             flex-wrap: wrap;
-            padding: 12px 16px;
+            padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
             background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));
             border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
             border-radius: var(--lv-r-m);
@@ -3726,36 +3752,36 @@
             .lv-ready-alert-main {
                 display: flex;
                 align-items: flex-start;
-                gap: 10px;
+                gap: calc(var(--lv-space-unit) * 5);
                 flex: 1;
                 min-width: 240px;
 
                 .lv-ready-alert-icon {
                     color: var(--lv-color-warning);
                     flex: none;
-                    margin-top: 2px;
+                    margin-top: calc(var(--lv-space-unit) * 1);
                 }
 
                 strong {
                     display: block;
-                    font-size: 13px;
+                    font-size: var(--lv-type-body-size);
                     font-weight: var(--lv-fw-semibold);
                     color: var(--lv-color-warning);
-                    margin-bottom: 2px;
+                    margin-bottom: calc(var(--lv-space-unit) * 1);
                 }
 
                 p {
                     margin: 0;
-                    font-size: 12px;
+                    font-size: var(--lv-type-control-size);
                     color: var(--lv-color-text-muted);
-                    line-height: 1.4;
+                    line-height: var(--lv-lh-body);
                 }
             }
 
             .lv-ready-alert-actions {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: calc(var(--lv-space-unit) * 4);
             }
         }
         .lv-ready-grid {
@@ -3786,7 +3812,7 @@
                 .lv-ready-card-head {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: calc(var(--lv-space-unit) * 5);
                     margin-bottom: var(--lv-sp-2);
 
                     .lv-ready-icon-bubble {
@@ -3813,33 +3839,33 @@
                     }
 
                     .lv-ready-card-title {
-                        font-size: 14px;
+                        font-size: var(--lv-type-body-sm-size);
                         font-weight: var(--lv-fw-semibold);
                         color: var(--lv-color-text);
                     }
 
                     .lv-ready-card-subtitle {
-                        font-size: 11px;
+                        font-size: var(--lv-type-meta-size);
                         color: var(--lv-color-text-muted);
                     }
                 }
 
                 .lv-ready-card-desc {
                     margin: 0 0 var(--lv-sp-3) 0;
-                    font-size: 12px;
+                    font-size: var(--lv-type-control-size);
                     color: var(--lv-color-text-muted);
-                    line-height: 1.45;
+                    line-height: var(--lv-lh-reading-tight);
                     flex: 1;
                 }
 
                 .lv-ready-card-footer {
                     display: flex;
-                    gap: 8px;
+                    gap: calc(var(--lv-space-unit) * 4);
                     flex-wrap: wrap;
 
                     .b3-button {
                         border-radius: var(--lv-r-pill);
-                        font-size: 11px;
+                        font-size: var(--lv-type-meta-size);
                     }
                 }
             }
@@ -3854,13 +3880,13 @@
 
             .lv-ready-home-btn {
                 border-radius: var(--lv-r-pill);
-                padding: 6px 18px;
+                padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 9);
                 font-weight: var(--lv-fw-semibold);
             }
 
             .lv-ready-refresh-btn {
                 border-radius: var(--lv-r-pill);
-                font-size: 12px;
+                font-size: var(--lv-type-control-size);
             }
         }
         /* 空队列面板：居中叙述，不做庆祝形态 */
@@ -3882,10 +3908,10 @@
             margin-left: auto;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 3px 10px;
+            gap: calc(var(--lv-space-unit) * 2);
+            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
             border-radius: var(--lv-r-pill);
-            font-size: 11px;
+            font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-semibold);
             background: var(--lv-primary-soft);
             color: var(--lv-color-brand);
@@ -3964,7 +3990,7 @@
             margin: 0 auto var(--lv-sp-2);
             width: 100%;
             box-sizing: border-box;
-            padding: 8px 14px;
+            padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
             background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));
             border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
             border-radius: var(--lv-r-m);
@@ -3976,8 +4002,8 @@
                 border-radius: var(--lv-r-pill);
                 border: 1px solid var(--lv-border);
                 background: var(--lv-color-surface);
-                font-size: 11px;
-                padding: 2px 10px;
+                font-size: var(--lv-type-meta-size);
+                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 5);
                 color: var(--lv-color-text);
                 transition: all var(--lv-dur-1) var(--lv-ease);
                 &:hover {
@@ -4035,19 +4061,19 @@
             }
             .lv-head-tools {
                 flex-wrap: nowrap !important;
-                gap: 5px;
+                gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
                 min-width: 0;
 
                 .lv-scope {
                     height: 28px;
                     min-width: 6em;
                     max-width: 135px;
-                    padding: 0 8px;
+                    padding: 0 calc(var(--lv-space-unit) * 4);
                     border-radius: var(--lv-r-pill);
                     border: 1px solid var(--lv-border);
                     background: var(--lv-color-surface);
                     color: var(--lv-color-text);
-                    font-size: 11px;
+                    font-size: var(--lv-type-meta-size);
                     box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
                     flex-shrink: 1;
                 }
@@ -4055,12 +4081,12 @@
                 .lv-purpose-end-chip {
                     height: 28px;
                     box-sizing: border-box;
-                    padding: 0 8px;
-                    font-size: 11px;
-                    font-weight: 500;
+                    padding: 0 calc(var(--lv-space-unit) * 4);
+                    font-size: var(--lv-type-meta-size);
+                    font-weight: var(--lv-fw-medium);
                     display: inline-flex;
                     align-items: center;
-                    gap: 4px;
+                    gap: calc(var(--lv-space-unit) * 2);
                     white-space: nowrap;
                     border-radius: var(--lv-r-pill);
                     border: 1px solid var(--lv-border);
@@ -4082,8 +4108,8 @@
                     flex-shrink: 0;
                     .lv-font-btn {
                         height: 26px;
-                        padding: 0 7px;
-                        font-size: 11px;
+                        padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
+                        font-size: var(--lv-type-meta-size);
                         border: none;
                         border-radius: 0;
                         color: var(--lv-color-text-muted);
@@ -4097,7 +4123,7 @@
                 .lv-tool-btn {
                     height: 28px;
                     box-sizing: border-box;
-                    padding: 0 8px;
+                    padding: 0 calc(var(--lv-space-unit) * 4);
                     border-radius: var(--lv-r-pill);
                     background: var(--lv-color-surface);
                     border: 1px solid var(--lv-border);
@@ -4106,8 +4132,8 @@
                     flex-shrink: 0;
                     display: inline-flex;
                     align-items: center;
-                    gap: 4px;
-                    font-size: 11px;
+                    gap: calc(var(--lv-space-unit) * 2);
+                    font-size: var(--lv-type-meta-size);
                     box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
                     transition: all var(--lv-dur-1) var(--lv-ease);
 
@@ -4137,8 +4163,8 @@
                 background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
                 border: 1px solid var(--lv-primary-border);
                 border-radius: var(--lv-r-pill);
-                padding: 3px 12px;
-                font-weight: 600;
+                padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
+                font-weight: var(--lv-fw-semibold);
                 font-variant-numeric: tabular-nums;
                 white-space: nowrap;
                 box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent);
@@ -4151,7 +4177,7 @@
                 box-shadow: inset 0 1px 2px color-mix(in srgb, black 6%, transparent);
                 overflow: hidden;
                 display: flex;
-                margin: 4px 0 8px;
+                margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 4);
                 .lv-progress-seg {
                     height: 100%;
                     border-radius: var(--lv-r-pill);
@@ -4167,21 +4193,21 @@
             .lv-timeout {
                 display: inline-flex;
                 align-items: center;
-                gap: 5px;
+                gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
                 font-size: var(--lv-type-control-size);
                 color: var(--lv-color-text);
                 background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
                 border: 1px solid var(--lv-border);
                 border-radius: var(--lv-r-pill);
-                padding: 3px 10px;
+                padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
                 font-variant-numeric: tabular-nums;
-                font-weight: 600;
+                font-weight: var(--lv-fw-semibold);
             }
             .lv-timeout-low {
                 background: var(--lv-danger-soft);
                 color: var(--lv-color-danger);
                 border-color: var(--lv-danger-border);
-                font-weight: 700;
+                font-weight: var(--lv-fw-bold);
             }
             .lv-tags { display: flex; gap: var(--lv-sp-1); }
         }
@@ -4189,17 +4215,17 @@
         @media (max-width: 740px) {
             .lv-head-tools {
                 .lv-tool-btn-label { display: none; }
-                .lv-tool-btn { padding: 0 5px; }
+                .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
             }
         }
 
         .lv-purpose-end-chip {
-            padding: 3px 8px;
-            font-size: 11px;
-            font-weight: 500;
+            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 4);
+            font-size: var(--lv-type-meta-size);
+            font-weight: var(--lv-fw-medium);
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: calc(var(--lv-space-unit) * 2);
             white-space: nowrap;
         }
 
@@ -4213,8 +4239,8 @@
             flex-shrink: 0;
 
             .lv-font-btn {
-                padding: 2px 7px;
-                font-size: 11px;
+                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
+                font-size: var(--lv-type-meta-size);
                 font-weight: var(--lv-fw-semibold);
                 border: none;
                 border-radius: 0;
@@ -4245,9 +4271,9 @@
             border-radius: var(--lv-r-dialog);
             box-shadow: var(--lv-shadow-review-card), var(--lv-inset-shine);
             /* R54 卡面规范：48/44 内边距、min-height 320，窄屏收窄 */
-            padding: clamp(20px, 3.5vw, 36px) clamp(20px, 4vw, 40px);
+            padding: clamp(calc(var(--lv-space-unit) * 10), 3.5vw, calc(var(--lv-space-unit) * 18)) clamp(calc(var(--lv-space-unit) * 10), 4vw, calc(var(--lv-space-unit) * 20));
             min-height: 280px;
-            @media (max-width: 740px) { padding: 18px 16px; }
+            @media (max-width: 740px) { padding: calc(var(--lv-space-unit) * 9) calc(var(--lv-space-unit) * 8); }
             position: relative;
             background: linear-gradient(180deg, color-mix(in srgb, var(--lv-color-brand) 2.5%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 80px);
             box-shadow: 0 16px 36px -6px color-mix(in srgb, black 8%, transparent), 0 4px 16px color-mix(in srgb, black 4%, transparent), var(--lv-inset-shine);
@@ -4265,7 +4291,7 @@
                 height: 20px;
                 background: linear-gradient(to bottom, transparent, var(--lv-color-surface));
                 pointer-events: none;
-                margin-top: -20px;
+                margin-top: calc((calc(var(--lv-space-unit) * 10)) * -1);
                 display: block;
                 border-bottom-left-radius: var(--lv-r-dialog);
                 border-bottom-right-radius: var(--lv-r-dialog);
@@ -4344,9 +4370,9 @@
                     padding-left: calc(var(--lv-space-unit) * 6);
                     margin: var(--lv-sp-2) 0;
                     :global(li) {
-                        margin: 4px 0;
+                        margin: calc(var(--lv-space-unit) * 2) 0;
                         line-height: var(--lv-lh-reading-loose);
-                        padding-left: 2px;
+                        padding-left: calc(var(--lv-space-unit) * 1);
                         &::marker {
                             color: var(--lv-color-brand);
                             font-weight: var(--lv-fw-semibold);
@@ -4442,12 +4468,12 @@
                 align-items: center;
                 gap: calc(var(--lv-space-unit) * 2);
                 max-width: 100%;
-                padding: 4px 12px;
+                padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6);
                 border: 1px solid var(--lv-border);
                 border-radius: var(--lv-r-pill);
                 background: color-mix(in srgb, var(--lv-color-canvas) 85%, transparent);
                 color: var(--lv-color-text-muted);
-                font-size: 11px;
+                font-size: var(--lv-type-meta-size);
                 margin-bottom: var(--lv-sp-3);
                 cursor: pointer;
                 box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
@@ -4468,7 +4494,7 @@
                     transform: translateY(0.5px);
                 }
                 .lv-breadcrumb-icon {
-                    font-size: 12px;
+                    font-size: var(--lv-type-control-size);
                     flex-shrink: 0;
                     color: var(--lv-color-brand);
                     opacity: 0.85;
@@ -4479,12 +4505,12 @@
                     white-space: nowrap;
                     display: inline-flex;
                     align-items: center;
-                    gap: 3px;
+                    gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
                 }
                 .lv-breadcrumb-sep {
                     opacity: 0.4;
                     font-weight: 300;
-                    padding: 0 1px;
+                    padding: 0 var(--lv-space-hairline);
                 }
             }
         }
@@ -4501,11 +4527,11 @@
             box-shadow: var(--lv-shadow-card);
             animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
 
-            .lv-pomodoro-icon { font-size: 22px; flex: none; }
+            .lv-pomodoro-icon { font-size: var(--lv-type-page-size); flex: none; }
             .lv-pomodoro-text {
                 flex: 1;
                 strong { font-weight: var(--lv-fw-semibold); display: block; font-size: var(--lv-type-body-size); color: var(--lv-color-text); }
-                p { margin: 2px 0 0; font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); }
+                p { margin: calc(var(--lv-space-unit) * 1) 0 0; font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); }
             }
             .lv-pomodoro-actions {
                 display: flex;
@@ -4518,7 +4544,7 @@
             display: flex;
             align-items: flex-start;
             gap: calc(var(--lv-space-unit) * 3);
-            padding: 12px 16px;
+            padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
             margin-top: var(--lv-sp-3);
             border: 1px solid var(--lv-primary-border);
             border-radius: var(--lv-r-m);
@@ -4530,7 +4556,7 @@
             .lv-native-recall-icon {
                 color: var(--lv-color-brand);
                 flex: none;
-                margin-top: 1px;
+                margin-top: var(--lv-space-hairline);
             }
             .lv-native-recall-body {
                 flex: 1;
@@ -4538,15 +4564,15 @@
                     display: block;
                     font-weight: var(--lv-fw-semibold);
                     color: var(--lv-color-brand);
-                    font-size: 11px;
+                    font-size: var(--lv-type-meta-size);
                     letter-spacing: 0.04em;
-                    margin-bottom: 2px;
+                    margin-bottom: calc(var(--lv-space-unit) * 1);
                 }
                 p {
                     margin: 0;
                     color: var(--lv-color-text-muted);
-                    line-height: 1.45;
-                    font-size: 12px;
+                    line-height: var(--lv-lh-reading-tight);
+                    font-size: var(--lv-type-control-size);
                 }
             }
         }
@@ -4563,11 +4589,11 @@
             font-size: var(--lv-type-control-size);
             animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
 
-            .lv-memo-icon { font-size: 16px; flex: none; line-height: 1.3; }
+            .lv-memo-icon { font-size: var(--lv-type-title-size); flex: none; line-height: 1.3; }
             .lv-memo-body {
                 flex: 1;
-                strong { display: block; font-weight: var(--lv-fw-semibold); color: var(--lv-color-warning); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-                p { margin: 0; color: var(--lv-color-text); line-height: 1.5; font-size: var(--lv-type-control-size); }
+                strong { display: block; font-weight: var(--lv-fw-semibold); color: var(--lv-color-warning); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: calc(var(--lv-space-unit) * 1); }
+                p { margin: 0; color: var(--lv-color-text); line-height: var(--lv-lh-meta); font-size: var(--lv-type-control-size); }
             }
             .lv-memo-edit-btn { flex: none; opacity: 0.7; &:hover { opacity: 1; } }
         }
@@ -4580,13 +4606,13 @@
         .lv-memo-add-btn {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: calc(var(--lv-space-unit) * 2);
             border: 1px dashed var(--lv-border);
             border-radius: var(--lv-r-pill);
             background: transparent;
             color: var(--lv-color-text-muted);
-            font-size: 11px;
-            padding: 2px 8px;
+            font-size: var(--lv-type-meta-size);
+            padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
             cursor: pointer;
             opacity: 0.75;
             transition: all var(--lv-dur-1) var(--lv-ease);
@@ -4616,7 +4642,7 @@
             color: var(--lv-color-text) !important;
             border-bottom: 2px solid var(--lv-color-brand) !important;
             border-radius: var(--lv-r-track);
-            padding: 0 4px;
+            padding: 0 calc(var(--lv-space-unit) * 2);
             box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
             animation: lv-pulse-glow 0.3s var(--lv-ease);
         }
@@ -4632,11 +4658,11 @@
             position: absolute;
             top: 20px;
             right: 24px;
-            z-index: 1002;
+            z-index: var(--lv-z-popover);
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
+            gap: calc(var(--lv-space-unit) * 3);
+            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
             background: color-mix(in srgb, var(--lv-color-surface) 88%, black 12%);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -4645,7 +4671,7 @@
             box-shadow: var(--lv-shadow-float);
 
             .lv-lightbox-scale-num {
-                font-size: 12px;
+                font-size: var(--lv-type-control-size);
                 font-weight: var(--lv-fw-semibold);
                 color: var(--lv-color-text);
                 min-width: 44px;
@@ -4654,8 +4680,8 @@
             }
 
             .lv-lightbox-reset {
-                font-size: 11px;
-                padding: 2px 7px;
+                font-size: var(--lv-type-meta-size);
+                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
                 border-radius: var(--lv-r-pill);
             }
         }
@@ -4788,13 +4814,13 @@
                 }
 
                 .lv-btn-wide-kbd {
-                    margin-left: 12px;
-                    padding: 2px 8px;
+                    margin-left: calc(var(--lv-space-unit) * 6);
+                    padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
                     border-radius: var(--lv-r-pill);
                     background: rgba(255, 255, 255, 0.22);
                     border: 1px solid rgba(255, 255, 255, 0.35);
-                    font-size: 11px;
-                    font-weight: 600;
+                    font-size: var(--lv-type-meta-size);
+                    font-weight: var(--lv-fw-semibold);
                     color: #fff;
                 }
             }
@@ -4908,14 +4934,14 @@
         .lv-toolbar-more-scrim {
             position: fixed;
             inset: 0;
-            z-index: 100;
+            z-index: var(--lv-z-sticky);
             background: transparent;
         }
         .lv-toolbar-more-menu {
             position: absolute;
             top: calc(100% + 6px);
             right: 0;
-            z-index: 101;
+            z-index: var(--lv-z-sticky);
             min-width: 180px;
             background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
             backdrop-filter: blur(16px);
@@ -4926,7 +4952,7 @@
             padding: calc(var(--lv-space-unit) * 2);
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: calc(var(--lv-space-unit) * 1);
             animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
         }
         .lv-toolbar-menu-item {
@@ -4959,7 +4985,7 @@
             }
         }
         .lv-menu-icon {
-            font-size: 13px;
+            font-size: var(--lv-type-body-size);
             flex-shrink: 0;
         }
         .lv-toolbar-menu-divider {
@@ -5029,7 +5055,7 @@
             inset: 0;
             background: rgba(0, 0, 0, 0.45);
             backdrop-filter: blur(4px);
-            z-index: 100;
+            z-index: var(--lv-z-sticky);
             display: flex;
             align-items: center;
             justify-content: center;

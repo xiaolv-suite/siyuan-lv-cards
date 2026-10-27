@@ -110,9 +110,11 @@ function transformValue(property, value) {
     }
     if (property === "z-index") {
         const token = ({
-            "0": "--lv-z-base", "1": "--lv-z-card-control", "10": "--lv-z-review-peek",
-            "11": "--lv-z-review-help", "40": "--lv-z-host-overlay", "300": "--lv-z-drawer",
-            "301": "--lv-z-drawer-content",
+            "0": "--lv-z-base", "1": "--lv-z-card-control", "2": "--lv-z-elevated",
+            "10": "--lv-z-review-peek", "11": "--lv-z-review-help", "40": "--lv-z-host-overlay",
+            "100": "--lv-z-sticky", "101": "--lv-z-sticky",
+            "300": "--lv-z-drawer", "301": "--lv-z-drawer-content",
+            "1000": "--lv-z-modal-backdrop", "1001": "--lv-z-modal-card", "1002": "--lv-z-popover",
         })[value.trim()];
         if (token) return `var(${token})`;
     }
