@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.4** (2026-10-28), delivering Issue #20 closure, native editor shortcut 'e', and Task Horizon daily task integration. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.4) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.5** (2026-10-28), delivering one-click daily review task copying and compact breadcrumb parent path hiding. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.5) for the package and publishing status.
 
-## What's New in v0.211.4
+## What's New in v0.211.5
+
+- **One-Click Daily Review Task Copy in Dashboard (Task Horizon Integration)**:
+  - Added a dedicated "Copy Task" Bento action in the Dashboard hero section to copy today's FSRS review workload task (`- [ ] / - [x]`) directly to the clipboard.
+  - Seamlessly pasteable into daily journal notes or Task Horizon task boards.
+- **Card Source Breadcrumb Parent Path Hiding**:
+  - Added level toggle in `review.svelte` breadcrumbs to hide verbose parent hierarchies and show only the leaf core document title, aligning with SiYuan's clean card presentation. Full hierarchy remains accessible via tooltip and context drawer.
+  - Added dedicated unit tests in `tests/daily-task-and-breadcrumbs.spec.ts`.
+- **Verification**:
+  - 2010 tests across 257 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.4
 
 - **Native Editor Shortcut 'e' / 'E' (Issue #20 Closure)**:
   - Added review shortcut support for `e` / `E` to immediately zoom into the current card block within SiYuan's native editor.

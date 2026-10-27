@@ -332,6 +332,20 @@
         }
     }
 
+    async function copyTodayTask() {
+        const prefix = t.dashboard?.dailyTaskPrefix ?? "记忆复习";
+        const isComplete = dueCount === 0;
+        const taskText = isComplete
+            ? `- [x] ${prefix}：今日已无待复习闪卡`
+            : `- [ ] ${prefix}：今日待复习 ${dueCount} 张闪卡`;
+        try {
+            await navigator.clipboard.writeText(taskText);
+            showMessage(t.dashboard?.dailyTaskCopied ?? "已复制今日复习待办，可直接粘贴到日记或任务视界", 2500, "info");
+        } catch {
+            showMessage(taskText, 4000, "info");
+        }
+    }
+
     /** hero 环首绘（灵动感）：先画 0 弧，下一帧过渡到目标值；reduced-motion 时 --lv-dur-3=0 直落 */
     let ringDrawn = $state(false);
     onMount(() => {
@@ -812,6 +826,15 @@
                 <div class="lv-hero-cta">
                     <button class="b3-button lv-btn-primary" disabled={todayDecision.actionDisabled || (loading && !hasLoadedSnapshot)} onclick={heroAction}>
                         {heroActionLabel()}
+                    </button>
+                    <button
+                        type="button"
+                        class="b3-button b3-button--outline lv-btn-tool"
+                        onclick={copyTodayTask}
+                        title={t.dashboard?.copyDailyTaskTitle ?? "复制今日复习待办（支持一键挂载到日记或任务视界 Task Horizon）"}
+                    >
+                        <LvIcon name="check" size={13} />
+                        <span>{t.dashboard?.copyDailyTask ?? "复制待办"}</span>
                     </button>
                     {#if todayDecision.primaryAction !== "start-review" && todayDecision.primaryAction !== "continue-review"}
                         <button

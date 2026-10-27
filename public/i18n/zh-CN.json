@@ -271,7 +271,11 @@
         "unknown": "未知",
         "emptyGuideTitle": "思源笔记即是闪卡",
         "emptyGuideDesc": "无需单独录入卡片。在文档中选中文本打上 ==挖空==，或点击段落块图标「制作闪卡」，即可自动生成复习卡片。",
-        "emptyGuideTour": "上手使用指南"
+        "emptyGuideTour": "上手使用指南",
+        "copyDailyTask": "复制待办",
+        "copyDailyTaskTitle": "复制今日复习任务待办（支持一键挂载到日记或任务视界 Task Horizon）",
+        "dailyTaskCopied": "已复制今日复习待办，可直接粘贴到日记或任务视界",
+        "dailyTaskPrefix": "记忆复习"
     },
     "dashboardDecision": {
         "blockedTitle": "正在核对当前范围",
@@ -354,6 +358,8 @@
         "nativeRecallTitle": "思源原生自由回忆",
         "nativeRecallDesc": "该卡为原生笔记闪卡；原笔记未做任何修改。请对照上方内容，在下方直接自评打分。",
         "breadcrumbHint": "点击查阅来源文档上下文",
+        "breadcrumbHideParent": "隐藏父路径（仅保留末级文档）",
+        "breadcrumbShowParent": "显示完整父路径",
         "readyHasIssuesTitle": "当前队列暂无可学闪卡",
         "readyEmptyTitle": "今日复习任务已轻松搞定",
         "readyHasIssuesDesc": "检测到当前范围内部分卡片存在异常并已被安全隔离保护，其它卡片均已完成。",

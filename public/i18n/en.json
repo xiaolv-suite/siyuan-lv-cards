@@ -271,7 +271,11 @@
         "unknown": "Unknown",
         "emptyGuideTitle": "Notes are Flashcards",
         "emptyGuideDesc": "No need for manual re-entry. Simply add ==cloze== highlights in notes or use the paragraph block menu to create flashcards.",
-        "emptyGuideTour": "Quick Tour Guide"
+        "emptyGuideTour": "Quick Tour Guide",
+        "copyDailyTask": "Copy Task",
+        "copyDailyTaskTitle": "Copy today's review task item (supports Task Horizon and daily notes)",
+        "dailyTaskCopied": "Copied review task item to clipboard. Paste into your daily note or Task Horizon.",
+        "dailyTaskPrefix": "Flashcard Review"
     },
     "dashboardDecision": {
         "blockedTitle": "Checking Scope",
@@ -354,6 +358,8 @@
         "nativeRecallTitle": "Native Free Recall",
         "nativeRecallDesc": "This is a native note flashcard without modification. Please self-rate below based on your recall.",
         "breadcrumbHint": "Click to view document context",
+        "breadcrumbHideParent": "Hide parent path (leaf doc only)",
+        "breadcrumbShowParent": "Show full parent path",
         "readyHasIssuesTitle": "No Cards Ready to Review",
         "readyEmptyTitle": "Today's Reviews Are Done!",
         "readyHasIssuesDesc": "Some cards in this scope were safely quarantined due to structural changes; all other cards are complete.",
