@@ -3133,6 +3133,8 @@ export default class LvCardsPlugin extends Plugin {
             }
             if (!blockID) throw new Error(this.i18n.quickCardFail);
             blockIDs.push(blockID);
+            // 微小缓冲，避免连续高频写锁造成内核 SQLite 元数据未就绪
+            await new Promise(r => setTimeout(r, 60));
             // ADR-7：逐卡入组成功即记账（单卡批），origIndex 指向作业 candidates 原位（✕ 移除后仍正确）
             await addRiffCards(deckID, [blockID]);
             await this.rememberSourceFingerprint(blockID, docID, cardMarkdown);

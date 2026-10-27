@@ -79,12 +79,38 @@ export function isMetadataNotReadyError(error: unknown): boolean {
     );
 }
 
+/**
+ * 确保多级文档树的父级路径存在
+ * 例如创建 /a/b/c 时，如果 /a 不存在则先创建 /a，如果 /a/b 不存在则创建 /a/b
+ * 彻底消除思源内核因深层未建立父文档导致的 "document metadata is not ready"
+ */
+async function ensureParentDocsExist(notebook: string, normalizedPath: string): Promise<void> {
+    const parts = normalizedPath.split("/").filter(Boolean);
+    if (parts.length <= 1) return; // 单级文档无需父级
+    let currentPath = "";
+    for (let i = 0; i < parts.length - 1; i++) {
+        currentPath += `/${parts[i]}`;
+        try {
+            await kernelPost<string | null>("/api/filetree/createDocWithMd", {
+                notebook,
+                path: currentPath,
+                markdown: "",
+            });
+        } catch {
+            // 父文档已存在或创建报错时忽略，继续向下逐级构建
+        }
+    }
+}
+
 /** Markdown 创建文档，返回文档块 ID（快速制卡/示例卡落点） */
 export const createDocWithMd = async (notebook: string, path: string, markdown: string): Promise<string | null> => {
     // 1. 规范化路径：思源 API 必须以 / 开头，杜绝新版内核因相对路径解析失败触发 metadata not ready
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-    // 2. 抗抖动与内核元数据就绪重试（借鉴 e2e-isolated.mjs 实践，最多 5 次退避）
+    // 2. 自动逐级自愈多级文档父路径，根治三级深层路径在冷启动时父级不存在抛出的 metadata not ready
+    await ensureParentDocsExist(notebook, normalizedPath);
+
+    // 3. 抗抖动与内核元数据就绪重试（借鉴 e2e-isolated.mjs 实践，最多 5 次退避）
     let lastError: unknown;
     for (let attempt = 0; attempt < 5; attempt++) {
         if (attempt > 0) {
@@ -111,7 +137,6 @@ export const createDocWithMd = async (notebook: string, path: string, markdown: 
 /** 在指定父块下追加块（快速制卡问答对） */
 export const appendBlock = async (dataType: "markdown", data: string, parentID: string): Promise<string[]> => {
     // 内核 3.8.x 事务响应双形态兼容：旧 {operations:[{id}]} / 新 [{doOperations:[{id, action}]}]
-    // （后者是 3.8.6 实测形态；解析不到 id 会让快速制卡/示例卡/标记制卡全部「制卡失败」）
     // 挂载对内核暂态 metadata not ready 的自愈重试
     let lastError: unknown;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -119,9 +144,14 @@ export const appendBlock = async (dataType: "markdown", data: string, parentID: 
             await new Promise(r => setTimeout(r, 150 * attempt));
         }
         try {
-            const body = await kernelPost<
-                { operations?: { id?: string; action?: string }[] } | { doOperations?: { id?: string; action?: string }[] }[]
-            >("/api/block/insertBlock", { dataType, data, parentID });
+            let body: any;
+            try {
+                // 优先使用官方标准的 /api/block/appendBlock 追加接口
+                body = await kernelPost("/api/block/appendBlock", { dataType, data, parentID });
+            } catch (err: any) {
+                // 若 appendBlock 失败或不存在，回退使用 insertBlock
+                body = await kernelPost("/api/block/insertBlock", { dataType, data, parentID });
+            }
             const ids: string[] = [];
             const collect = (ops: { id?: string; action?: string }[] | undefined) => {
                 for (const op of ops ?? []) {
@@ -130,8 +160,11 @@ export const appendBlock = async (dataType: "markdown", data: string, parentID: 
             };
             if (Array.isArray(body)) {
                 for (const tx of body) collect(tx?.doOperations);
-            } else {
+            } else if (body && typeof body === "object") {
                 collect(body?.operations);
+                if (ids.length === 0 && typeof body?.id === "string" && body.id) {
+                    ids.push(body.id);
+                }
             }
             return ids;
         } catch (e: any) {

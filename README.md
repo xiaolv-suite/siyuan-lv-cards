@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.93（2026-10-27）**，落地复习工作台完成屏与专注岛独立组件分拆。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.93)。
+当前版本为 **v0.210.94（2026-10-27）**，落地 AI 制卡落库多级父文档自愈创建与追加块端点加固。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.94)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.93）
+## 本次更新（v0.210.94）
+
+- **AI 制卡落库多级父文档自愈创建（彻底终结 document metadata is not ready）**：
+  - 在 `createDocWithMd` 中实现 `ensureParentDocsExist` 逐级自愈创建机制，当创建三级深层路径（如 `/小驴闪卡/AI 制卡/2026-10-27`）时，自动逐层核实并建立父级文档树，彻底解决内核因深层未建立父文档导致的元数据未就绪致命阻断；
+  - 将 `appendBlock` 的底层调用端点由容易触发相对位置重排的 `insertBlock` 全面升级为官方标准的 `/api/block/appendBlock`，并内置双端点自动 fallback 容灾；
+  - 在连续块写入与入组之间加入毫秒级缓冲，消灭高频写锁竞争导致的 SQLite 事务抖动；
+- **全量门禁与质量验证**：
+  - 全库 247 个测试文件、1968 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.93）
 
 - **AI 制卡落库元数据未就绪异常根治（思源 v3.8.9-beta.2+ 兼容加固）**：
   - 彻底根治新创建文档或冷启动时偶发的 `kernel error (code=-1): document metadata is not ready` 阻断异常；

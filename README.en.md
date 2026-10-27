@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.93** (2026-10-27), delivering Review Workbench component modularization with ReviewDonePanel and ReviewZenIsland. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.93) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.94** (2026-10-27), delivering multi-level parent document self-healing creation and appendBlock endpoint hardening. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.94) for the package and publishing status.
 
-## What's New in v0.210.93
+## What's New in v0.210.94
+
+- **Multi-Level Parent Document Tree Self-Healing Creation**:
+  - Implemented `ensureParentDocsExist` in `createDocWithMd` to auto-construct missing parent documents when creating deep-nested paths (e.g. `/小驴闪卡/AI 制卡/YYYY-MM-DD`).
+  - Completely eliminates the `kernel error (code=-1): document metadata is not ready` blocker in SiYuan v3.8.9-beta.2+.
+  - Upgraded `appendBlock` transport to official `/api/block/appendBlock` with fallback.
+- **Verification**:
+  - 1968 tests across 247 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.93
 
 - **Fixed "document metadata is not ready" in AI Card Generation (SiYuan v3.8.9-beta.2+ Compatibility)**:
   - Fixed the fatal `kernel error (code=-1): document metadata is not ready` during AI candidate card enrollment.
