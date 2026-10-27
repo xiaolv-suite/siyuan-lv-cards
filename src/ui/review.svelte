@@ -46,7 +46,6 @@
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
-    import { trapFocus } from "@/libs/focus-trap";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { filterBurySiblings } from "@/core/sibling-cards";
@@ -56,6 +55,7 @@
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
     import ReviewInteractiveQuiz from "./review/ReviewInteractiveQuiz.svelte";
+    import ReviewActionModals from "./review/ReviewActionModals.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -591,16 +591,9 @@
     let memoSaving = $state(false);
     // 卡面大图全屏原图聚焦预览（Lightroom Zoom）
     let zoomedImage = $state<{ src: string; alt?: string } | null>(null);
-    let imgScale = $state(1);
-    let imgPanX = $state(0);
-    let imgPanY = $state(0);
-    let isDraggingImg = $state(false);
-    let dragStartX = 0;
-    let dragStartY = 0;
     let reversedRecall = $state(false);
     let stepRevealedCount = $state(0);
     let pressedKeyFeedback = $state<string | null>(null);
-    let lightboxEl: HTMLDivElement | null = $state(null);
 
     // 汲取自番茄插件：复习端就地移出卡组
     let showRetireModal = $state(false);
@@ -1188,10 +1181,6 @@
         showRetireModal = false;
         retireBusy = false;
         zoomedImage = null;
-        imgScale = 1;
-        imgPanX = 0;
-        imgPanY = 0;
-        isDraggingImg = false;
         reversedRecall = false;
         stepRevealedCount = 0;
         ctxOpen = false;
@@ -1295,43 +1284,6 @@
 
     function openZoomedImage(src: string, alt?: string) {
         zoomedImage = { src, alt };
-        imgScale = 1;
-        imgPanX = 0;
-        imgPanY = 0;
-    }
-
-    function onLightboxWheel(e: WheelEvent) {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.15 : 0.15;
-        imgScale = Math.min(4, Math.max(0.5, Math.round((imgScale + delta) * 100) / 100));
-    }
-
-    function onLightboxPointerDown(e: PointerEvent) {
-        if (e.button !== 0) return;
-        isDraggingImg = true;
-        dragStartX = e.clientX - imgPanX;
-        dragStartY = e.clientY - imgPanY;
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    }
-
-    function onLightboxPointerMove(e: PointerEvent) {
-        if (!isDraggingImg) return;
-        imgPanX = e.clientX - dragStartX;
-        imgPanY = e.clientY - dragStartY;
-    }
-
-    function onLightboxPointerUp(_e?: PointerEvent) {
-        isDraggingImg = false;
-    }
-
-    function onImageDblClick() {
-        if (imgScale !== 1) {
-            imgScale = 1;
-            imgPanX = 0;
-            imgPanY = 0;
-        } else {
-            imgScale = 2;
-        }
     }
 
     function revealSingleClozeElement(mark: HTMLElement) {
@@ -1384,13 +1336,6 @@
         zoomedImage = null;
         returnFocus();
     }
-
-    // 图片灯箱也是模态对话框：焦点移入并在关闭按钮中循环，Esc/关闭后归还卡面焦点。
-    $effect(() => {
-        if (!zoomedImage || !lightboxEl) return;
-        const trap = trapFocus(lightboxEl, { onEscape: closeZoomedImage, restoreOnRelease: false });
-        return () => trap.release();
-    });
 
     /** TTS 朗读（Web Speech，防御式） */
     function speakText(text: string) {
@@ -3226,149 +3171,29 @@
         </div>
     {/if}
 
-    {#if showPauseModal}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={() => (showPauseModal = false)}>
-            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.pauseTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
-                <div class="lv-help-head">
-                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px">{t.review.pauseTitle}</span>
-                    <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (showPauseModal = false)}><LvIcon name="close" size={13} /></button>
-                </div>
-                <div style="padding: var(--lv-sp-3) 0">
-                    <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review.pauseDesc}</p>
-                    <div style="margin-top: var(--lv-sp-2);font-size:12px;color: var(--lv-color-brand)">
-                        {t.review.doneConfirm}: <strong>{reviewedIDs.length}</strong> · {t.review.skipNotRated}: <strong>{sessionSkipped.length}</strong>
-                    </div>
-                </div>
-                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
-                    <button class="b3-button b3-button--text" onclick={() => (showPauseModal = false)}>{t.review.pauseContinue}</button>
-                    <button class="b3-button lv-btn-primary" onclick={pauseSessionAndReturn}>{t.review.pauseConfirm}</button>
-                </div>
-            </div>
-        </div>
-    {/if}
-
-    {#if showSessionOptionsModal}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={() => (showSessionOptionsModal = false)}>
-            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.sessionOptionsTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
-                <div class="lv-help-head">
-                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px">{t.review.sessionOptionsTitle}</span>
-                    <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={() => (showSessionOptionsModal = false)}><LvIcon name="close" size={13} /></button>
-                </div>
-                <div style="padding: var(--lv-sp-3) 0;display:flex;flex-direction:column;gap:var(--lv-sp-2)">
-                    <p class="ft__smaller ft__on-surface">{t.review.sessionOptionsHint}</p>
-                    <label class="ft__smaller ft__on-surface" style="display:flex;align-items:center;gap: var(--lv-sp-2);margin-top:var(--lv-sp-1)">
-                        <span>{t.review.answerModeLabel}</span>
-                        <select class="b3-select fn__flex-1" bind:value={tempAnswerVariant}>
-                            <option value="normal">{t.review.modeRecall}</option>
-                            <option value="choice">{t.review.modeChoice}</option>
-                            <option value="typing">{t.review.modeTyping}</option>
-                        </select>
-                    </label>
-                </div>
-                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
-                    <button class="b3-button b3-button--text" onclick={() => (showSessionOptionsModal = false)}>{window.siyuan.languages.cancel}</button>
-                    <button class="b3-button lv-btn-primary" onclick={applySessionOptions}>{t.review.applySessionOptions}</button>
-                </div>
-            </div>
-        </div>
-    {/if}
-
-    {#if showMemoEditor && current}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={closeMemoEditor}>
-            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.memoModalTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
-                <div class="lv-help-head">
-                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px"><LvIcon name="lightbulb" size={17} /> {t.review.memoModalTitle ?? "给未来的自己留助记线索"}</span>
-                    <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={memoSaving} aria-label={window.siyuan.languages.cancel} onclick={closeMemoEditor}><LvIcon name="close" size={13} /></button>
-                </div>
-                <div style="padding: var(--lv-sp-3) 0">
-                    <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review.memoModalDesc ?? "写下一句巧记口诀、易错陷阱或关键关联。下次复习此卡时将直接呈现。"}</p>
-                    <textarea
-                        class="b3-text-field fn__block"
-                        rows="3"
-                        style="margin-top: var(--lv-sp-2)"
-                        placeholder={t.review.memoPlaceholder ?? "例如：谐音记忆口诀、与某定理的对比..."}
-                        aria-label={t.review.memoPlaceholder ?? "助记便签"}
-                        bind:value={memoDraft}
-                        disabled={memoSaving}
-                    ></textarea>
-                </div>
-                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
-                    <button class="b3-button b3-button--text" disabled={memoSaving} onclick={closeMemoEditor}>{window.siyuan.languages.cancel ?? "取消"}</button>
-                    <button class="b3-button lv-btn-primary" disabled={memoSaving} onclick={saveCardMemo}>
-                        {memoSaving ? t.dashboard.loading : (t.review.memoSave ?? "保存便签")}
-                    </button>
-                </div>
-            </div>
-        </div>
-    {/if}
-
-    {#if showRetireModal && current}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={closeRetireModal}>
-            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review.retireCardTitle} tabindex="-1" bind:this={sessionModalEl} onclick={(e: Event) => e.stopPropagation()}>
-                <div class="lv-help-head">
-                    <span style="font-weight: var(--lv-fw-semibold);font-size:16px"><LvIcon name="ban" size={17} /> {t.review.retireCardTitle ?? "移出复习卡组"}</span>
-                    <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy} aria-label={window.siyuan.languages.cancel} onclick={closeRetireModal}><LvIcon name="close" size={13} /></button>
-                </div>
-                <div style="padding: var(--lv-sp-3) 0">
-                    <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review.retireCardDesc ?? "将此卡移出当前复习卡组，不再参与复习调度。思源笔记正文内容不会受到任何修改。确认移出？"}</p>
-                </div>
-                <div style="display:flex;justify-content:flex-end;gap: var(--lv-sp-2);margin-top:var(--lv-sp-3)">
-                    <button class="b3-button b3-button--text" disabled={retireBusy} onclick={closeRetireModal}>{window.siyuan.languages.cancel ?? "取消"}</button>
-                    <button class="b3-button lv-btn-danger" disabled={retireBusy} onclick={retireCurrentCard}>
-                        {retireBusy ? t.dashboard.loading : (t.review.retireCardConfirm ?? "确认移出")}
-                    </button>
-                </div>
-            </div>
-        </div>
-    {/if}
-
-    {#if zoomedImage}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div
-            class="lv-img-lightbox lv-glass"
-            role="dialog"
-            aria-modal="true"
-            aria-label="图片全屏聚焦预览"
-            tabindex="-1"
-            bind:this={lightboxEl}
-            onclick={closeZoomedImage}
-            onwheel={onLightboxWheel}
-        >
-            <div class="lv-lightbox-toolbar" onclick={(e) => e.stopPropagation()} tabindex="-1">
-                <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="缩小" onclick={() => (imgScale = Math.max(0.5, Math.round((imgScale - 0.2) * 100) / 100))}>−</button>
-                <span class="lv-lightbox-scale-num" title="双击图片还原">{Math.round(imgScale * 100)}%</span>
-                <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="放大" onclick={() => (imgScale = Math.min(4, Math.round((imgScale + 0.2) * 100) / 100))}>+</button>
-                <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--outline lv-lightbox-reset" onclick={() => { imgScale = 1; imgPanX = 0; imgPanY = 0; }}>1:1</button>
-                <button type="button" class="b3-button b3-button--small lv-img-lightbox-close" aria-label={window.siyuan.languages.cancel ?? "关闭"} onclick={closeZoomedImage}><LvIcon name="close" size={14} /></button>
-            </div>
-
-            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div
-                class="lv-img-lightbox-content"
-                style={`transform: translate(${imgPanX}px, ${imgPanY}px) scale(${imgScale}); cursor: ${imgScale > 1 ? (isDraggingImg ? 'grabbing' : 'grab') : 'zoom-in'};`}
-                onclick={(e) => e.stopPropagation()}
-                ondblclick={onImageDblClick}
-                onpointerdown={onLightboxPointerDown}
-                onpointermove={onLightboxPointerMove}
-                onpointerup={onLightboxPointerUp}
-                onpointercancel={onLightboxPointerUp}
-            >
-                <img src={zoomedImage.src} alt={zoomedImage.alt ?? "Flashcard image preview"} draggable="false" />
-            </div>
-        </div>
-    {/if}
+    <ReviewActionModals
+        {t}
+        {showPauseModal}
+        {showSessionOptionsModal}
+        {showMemoEditor}
+        {showRetireModal}
+        {zoomedImage}
+        reviewedCount={reviewedIDs.length}
+        skippedCount={sessionSkipped.length}
+        {tempAnswerVariant}
+        {memoDraft}
+        {memoSaving}
+        {retireBusy}
+        onClosePause={() => (showPauseModal = false)}
+        onConfirmPause={pauseSessionAndReturn}
+        onCloseSessionOptions={() => (showSessionOptionsModal = false)}
+        onApplySessionOptions={(v) => { tempAnswerVariant = v; applySessionOptions(); }}
+        onCloseMemoEditor={closeMemoEditor}
+        onSaveMemo={(m) => { memoDraft = m; void saveCardMemo(); }}
+        onCloseRetireModal={closeRetireModal}
+        onConfirmRetire={retireCurrentCard}
+        onCloseZoomedImage={closeZoomedImage}
+    />
 </div>
 
 <style lang="scss">
@@ -4326,88 +4151,6 @@
             transition: all 0.1s var(--lv-ease) !important;
         }
 
-        .lv-lightbox-toolbar {
-            position: absolute;
-            top: 20px;
-            right: 24px;
-            z-index: var(--lv-z-popover);
-            display: inline-flex;
-            align-items: center;
-            gap: calc(var(--lv-space-unit) * 3);
-            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
-            background: color-mix(in srgb, var(--lv-color-surface) 88%, black 12%);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-pill);
-            box-shadow: var(--lv-shadow-float);
-
-            .lv-lightbox-scale-num {
-                font-size: var(--lv-type-control-size);
-                font-weight: var(--lv-fw-semibold);
-                color: var(--lv-color-text);
-                min-width: 44px;
-                text-align: center;
-                user-select: none;
-            }
-
-            .lv-lightbox-reset {
-                font-size: var(--lv-type-meta-size);
-                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
-                border-radius: var(--lv-r-pill);
-            }
-        }
-
-        .lv-img-lightbox {
-            position: fixed;
-            inset: 0;
-            z-index: var(--lv-z-dialog, 9999);
-            background: rgba(0, 0, 0, 0.82);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--lv-sp-4);
-            cursor: zoom-out;
-            animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
-
-            .lv-img-lightbox-content {
-                position: relative;
-                max-width: 95vw;
-                max-height: 92vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: default;
-
-                img {
-                    max-width: 100%;
-                    max-height: 90vh;
-                    object-fit: contain;
-                    border-radius: var(--lv-r-m);
-                    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
-                    user-select: none;
-                }
-            }
-
-            .lv-img-lightbox-close {
-                width: 28px;
-                height: 28px;
-                border-radius: var(--lv-r-circle);
-                background: var(--lv-color-surface);
-                color: var(--lv-color-text);
-                display: grid;
-                place-items: center;
-                cursor: pointer;
-                border: 1px solid var(--lv-border);
-                &:hover {
-                    background: var(--lv-surface-hover);
-                    color: var(--lv-color-brand);
-                }
-            }
-        }
-
         .lv-ctxpanel {
             max-width: var(--lv-card-max, 880px);
             width: 100%;
@@ -4720,28 +4463,6 @@
                 font-size: var(--lv-type-body-size);
                 &:last-child { border-bottom: none; }
             }
-        }
-
-        .lv-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.45);
-            backdrop-filter: blur(4px);
-            z-index: var(--lv-z-sticky);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--lv-sp-4);
-        }
-
-        .lv-pause-dialog {
-            width: min(460px, 92vw);
-            background: var(--lv-color-surface-raised, var(--lv-color-surface));
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-l);
-            box-shadow: var(--lv-shadow-2);
-            padding: var(--lv-sp-4);
-            text-align: left;
         }
     }
 </style>

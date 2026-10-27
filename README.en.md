@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.98** (2026-10-27), delivering SuperBlock authoring template in QuickCard studio and structured preview in CardDetail drawer. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.98) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.99** (2026-10-27), delivering ReviewActionModals component modularization and lightbox decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.99) for the package and publishing status.
 
-## What's New in v0.210.98
+## What's New in v0.210.99
+
+- **ReviewActionModals Component Modularization (TSK-08)**:
+  - Extracted pause modal, session options modal, memo editor modal, retire modal, and image lightbox into `ReviewActionModals.svelte`.
+  - Encapsulated lightbox zoom and pan micro-states within the modal component, reducing review template size by over 150 lines.
+  - Added dedicated test suite `tests/review-action-modals.spec.ts`.
+- **Verification**:
+  - 1992 tests across 252 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.98
 
 - **QuickCard Studio SuperBlock Template**:
   - Added "SuperBlock format" template option in `quick-card.svelte`, generating standard `{{{col ... }}}` multi-block flashcards.
