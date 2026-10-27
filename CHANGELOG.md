@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.210.95 2026-10-27 · 顶栏自愈控制器独立模块化与生命周期解耦落地
+
+- **顶栏图标与生命周期控制器独立解耦（TSK-07 持续深化）**：
+  - 抽离 `src/bootstrap/topbar-controller.ts`，由独立控制器完全托管顶栏图标断连自愈重挂载、右键上下文菜单绑定、到期徽标悬浮文本（Native Title/Aria-label）计算与考试里程碑通知；
+  - 主入口 `LvCardsPlugin` 彻底剥离顶栏相关私有定时器、DOM 句柄与事件监听，卸载生命周期统一收敛至 `topbarController.destroy()`；
+  - 配备完整的独立单元测试套件 `tests/topbar-controller.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 248 个测试文件、1972 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+
 ## v0.210.94 2026-10-27 · AI 制卡落库多级父文档自愈创建与追加块端点加固落地
 
 - **AI 制卡落库多级父文档自愈创建（彻底终结 document metadata is not ready）**：

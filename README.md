@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.94（2026-10-27）**，落地 AI 制卡落库多级父文档自愈创建与追加块端点加固。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.94)。
+当前版本为 **v0.210.95（2026-10-27）**，落地顶栏自愈控制器独立模块化与生命周期解耦。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.95)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.94）
+## 本次更新（v0.210.95）
+
+- **顶栏图标与生命周期控制器独立解耦（TSK-07 持续深化）**：
+  - 抽离 `src/bootstrap/topbar-controller.ts`，由独立控制器完全托管顶栏图标断连自愈重挂载、右键上下文菜单绑定、到期徽标悬浮文本（Native Title/Aria-label）计算与考试里程碑通知；
+  - 主入口 `LvCardsPlugin` 彻底剥离顶栏相关私有定时器、DOM 句柄与事件监听，卸载生命周期统一收敛至 `topbarController.destroy()`；
+  - 配备完整的独立单元测试套件 `tests/topbar-controller.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 248 个测试文件、1972 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.94）
 
 - **AI 制卡落库多级父文档自愈创建（彻底终结 document metadata is not ready）**：
   - 在 `createDocWithMd` 中实现 `ensureParentDocsExist` 逐级自愈创建机制，当创建三级深层路径（如 `/小驴闪卡/AI 制卡/2026-10-27`）时，自动逐层核实并建立父级文档树，彻底解决内核因深层未建立父文档导致的元数据未就绪致命阻断；

@@ -83,9 +83,9 @@ import {
     decideBacklogWarning,
     decideExamMilestoneReminder,
     shouldTriggerDailyReminder,
-    computeBadgeDescriptor,
 } from "./core/badge-reminder";
 import { addBlockMenuItems, computeBlockMenuItems, extractBlockIDs } from "./bootstrap/block-menu";
+import { TopbarController } from "./bootstrap/topbar-controller";
 import {
     resolveTargetNotebook,
     queryNotebookBlockIDs,
@@ -348,12 +348,10 @@ export default class LvCardsPlugin extends Plugin {
     private saveRevlogTimer: ReturnType<typeof setTimeout> | null = null;
     /** 内核闪卡 V2 状态（null = 当前内核 < 3.9.0，无 V2 API） */
     private flashcardV2: MigrationStatus | null = null;
-    public static readonly TOPBAR_ICON_ID = "topbar-lv-cards";
-    private topBarElement: HTMLElement | null = null;
-    public presentationPrivacyController = createPresentationPrivacyController();
-    /** 生命周期清理：保存顶栏右键监听，避免禁用/重载后重复菜单。 */
-    private topBarContextMenuHandler: ((evt: MouseEvent) => void) | null = null;
+    public static readonly TOPBAR_ICON_ID = TopbarController.TOPBAR_ICON_ID;
+    private topbarController: TopbarController | null = null;
     private badgeTimer: ReturnType<typeof setInterval> | null = null;
+    public presentationPrivacyController = createPresentationPrivacyController();
     /** 首次布局后的引导延迟句柄，卸载时必须取消。 */
     private onboardingTimer: ReturnType<typeof setTimeout> | null = null;
     /** null=idle, object=pending/active, undefined=unloaded. Identity rejects late completions. */
@@ -937,6 +935,18 @@ export default class LvCardsPlugin extends Plugin {
         // AT-6：启动性能计时起点（onload 首行）
         this.perf.markStart();
         this.paletteState = null;
+        this.topbarController = new TopbarController({
+            i18n: this.i18n,
+            settings: this.settings,
+            revlog: this.revlog,
+            examPlans: this.examPlans,
+            addIcons: (svg) => this.addIcons(svg),
+            addTopBar: (opts) => this.addTopBar(opts),
+            removeTopBar: (id) => (this as any).removeTopBar(id),
+            openTabOf: (tab) => this.openTabOf(tab),
+            showTopbarMenu: (evt) => this.showTopbarMenu(evt),
+            showMessage: (msg, timeout, type) => showMessage(msg, timeout, type),
+        }, ICON_LV_CARDS_SVG);
         this.addIcons(ICON_LV_CARDS_SVG);
 
         // AQ-1：批量加载以 keys 数组驱动并按位置配对，杜绝「6 项加载只解构 5 项」的错位回归
@@ -1904,18 +1914,7 @@ export default class LvCardsPlugin extends Plugin {
         this.unbindExamPlansSync();
         this.eventBus.off("click-flashcard-action", this.onNativeCardAction);
         this.eventBus.off("click-blockicon", this.onBlockIcon);
-        if (this.topBarElement) {
-            if (this.topBarContextMenuHandler) {
-                this.topBarElement.removeEventListener("contextmenu", this.topBarContextMenuHandler);
-                this.topBarContextMenuHandler = null;
-            }
-            if (typeof (this as any).removeTopBar === "function") {
-                try {
-                    (this as any).removeTopBar(LvCardsPlugin.TOPBAR_ICON_ID);
-                } catch { /* 忽略卸载错误 */ }
-            }
-            this.topBarElement = null;
-        }
+        this.topbarController?.destroy();
         if (this.onboardingTimer) {
             clearTimeout(this.onboardingTimer);
             this.onboardingTimer = null;
@@ -1947,105 +1946,16 @@ export default class LvCardsPlugin extends Plugin {
 
     async uninstall(): Promise<void> {
         lvLog("info", "[uninstall] done");
-        if (this.badgeTimer) {
-            clearInterval(this.badgeTimer);
-            this.badgeTimer = null;
-        }
-        if (this.topBarElement) {
-            try { this.removeTopBar(LvCardsPlugin.TOPBAR_ICON_ID); } catch {}
-        }
+        this.topbarController?.destroy();
     }
 
     public ensureTopBarElement(): HTMLElement | null {
-        if (!document.getElementById("iconLvCards")) this.addIcons(ICON_LV_CARDS_SVG);
-        if (this.topBarElement && this.topBarElement.isConnected && document.contains(this.topBarElement)) {
-            return this.topBarElement;
-        }
-        try {
-            if (this.topBarElement && this.topBarContextMenuHandler) {
-                try { this.topBarElement.removeEventListener("contextmenu", this.topBarContextMenuHandler); } catch {}
-            }
-            this.topBarElement = this.addTopBar({
-                id: LvCardsPlugin.TOPBAR_ICON_ID,
-                icon: "iconLvCards",
-                title: this.i18n.topbarTitle,
-                position: "right",
-                callback: () => {
-                    if (this.settings.topbarDirectReview && this.settings.modules.review && this.lastDue > 0) {
-                        this.openTabOf(TAB_REVIEW);
-                    } else {
-                        this.openTabOf(TAB_DASHBOARD);
-                    }
-                },
-            });
-            if (this.topBarElement) {
-                this.topBarElement.style.position = "relative";
-                this.topBarContextMenuHandler = (evt: MouseEvent) => {
-                    evt.preventDefault();
-                    this.showTopbarMenu(evt);
-                };
-                this.topBarElement.addEventListener("contextmenu", this.topBarContextMenuHandler);
-            }
-        } catch (e) {
-            lvLog("warn", "ensureTopBarElement failed: " + (e instanceof Error ? e.message : e));
-        }
-        return this.topBarElement;
+        return this.topbarController?.ensureTopBarElement() ?? null;
     }
-
-    private badgeSeq = 0;
 
     private refreshDueBadge() {
-        const topBar = this.ensureTopBarElement();
-        if (!topBar) return;
-        const seq = ++this.badgeSeq;
-        cachedDueCount().then(count => {
-            if (seq !== this.badgeSeq) return;
-            this.lastDue = count;
-            const activePlan = this.examPlans.plans.find(p => p.enabled && p.examDate);
-            const todayStat = this.revlog.days[todayDate()];
-            const descriptor = computeBadgeDescriptor({
-                reviewEnabled: !!this.settings.modules.review,
-                count,
-                activeExamPlan: activePlan,
-                dailyReviewTarget: this.settings.dailyReviewTarget,
-                doneToday: todayStat?.review ?? 0,
-                i18n: this.i18n,
-            });
-            this.renderBadge(descriptor, activePlan, topBar);
-        }).catch((e) => {
-            lvLog("warn", "refreshDueBadge failed: " + (e instanceof Error ? e.message : e));
-        });
-    }
-
-    private milestonesSeen = new Set<string>();
-
-    private renderBadge(desc: ReturnType<typeof computeBadgeDescriptor>, plan?: ExamPlan, topBar?: HTMLElement | null) {
-        const bar = topBar ?? this.ensureTopBarElement();
-        if (!bar) return;
-        // 去除顶栏刺眼的红底数字小球：彻底清理并阻止插入 .lv-badge 节点，避免视觉干扰与打扰
-        const badge = bar.querySelector<HTMLElement>(".lv-badge");
-        if (badge) {
-            badge.remove();
-        }
-
-        // 将到期卡数与状态优雅呈现在顶栏图标原生悬浮提示（title / aria-label）中，保持顶栏清爽干净
-        const baseTitle = this.i18n.topbarTitle || "小驴闪卡";
-        if (desc.visible && desc.title) {
-            bar.setAttribute("title", `${baseTitle} (${desc.title})`);
-            bar.setAttribute("aria-label", `${baseTitle}，${desc.title}`);
-        } else {
-            bar.setAttribute("title", baseTitle);
-            bar.setAttribute("aria-label", baseTitle);
-        }
-
-        // 里程碑提醒（30/7/1 天，每天每档一次，内存态）
-        if (desc.milestoneDays && plan) {
-            const key = `${plan.id}:${desc.milestoneDays}:${todayDate()}`;
-            if (!this.milestonesSeen.has(key)) {
-                this.milestonesSeen.add(key);
-                showMessage(this.i18n.examMilestone.replace("${name}", plan.name).replace("${n}", String(desc.milestoneDays)), 4000, "info");
-            }
-        }
+        this.topbarController?.refreshDueBadge(todayDate());
+        this.lastDue = this.topbarController?.getLastDue() ?? 0;
     }
 
     /** 块图标菜单：制卡入口（M2·FR1）。菜单构建必须同步，耗时操作放 click 回调 */

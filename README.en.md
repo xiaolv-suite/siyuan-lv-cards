@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.94** (2026-10-27), delivering multi-level parent document self-healing creation and appendBlock endpoint hardening. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.94) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.95** (2026-10-27), delivering TopbarController modularization and lifecycle decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.95) for the package and publishing status.
 
-## What's New in v0.210.94
+## What's New in v0.210.95
+
+- **TopbarController Modularization & Lifecycle Decoupling**:
+  - Extracted `src/bootstrap/topbar-controller.ts` to manage topbar self-healing DOM reconnection, context menu binding, due badge native title tooltips, and exam milestone notifications.
+  - Reduced `LvCardsPlugin` state footprint by cleaning up private timers and DOM handles into `topbarController.destroy()`.
+  - Added dedicated test suite `tests/topbar-controller.spec.ts`.
+- **Verification**:
+  - 1972 tests across 248 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.94
 
 - **Multi-Level Parent Document Tree Self-Healing Creation**:
   - Implemented `ensureParentDocsExist` in `createDocWithMd` to auto-construct missing parent documents when creating deep-nested paths (e.g. `/小驴闪卡/AI 制卡/YYYY-MM-DD`).
