@@ -1,0 +1,144 @@
+<script lang="ts">
+    import LvIcon from "@/ui/kit/LvIcon.svelte";
+
+    let {
+        t,
+        isStarred = false,
+        disabled = false,
+        onAdjustFontScale,
+        onToggleStar,
+        onOpenMemo,
+        onExitZen,
+    }: {
+        t: any;
+        isStarred?: boolean;
+        disabled?: boolean;
+        onAdjustFontScale: (delta: number) => void;
+        onToggleStar: () => void;
+        onOpenMemo: () => void;
+        onExitZen: () => void;
+    } = $props();
+</script>
+
+<div class="lv-zen-island" role="toolbar" aria-label="专注模式工具栏">
+    <button
+        type="button"
+        class="lv-zen-tool-btn"
+        title="缩小卡面字号"
+        onclick={(e) => { e.stopPropagation(); onAdjustFontScale(-0.1); }}
+    >
+        A−
+    </button>
+    <button
+        type="button"
+        class="lv-zen-tool-btn"
+        title="放大卡面字号"
+        onclick={(e) => { e.stopPropagation(); onAdjustFontScale(0.1); }}
+    >
+        A+
+    </button>
+    <div class="lv-zen-island-sep" aria-hidden="true"></div>
+    <button
+        type="button"
+        class="lv-zen-tool-btn"
+        class:lv-zen-starred={isStarred}
+        title={isStarred ? "已星标重点 (*)" : "星标重点 (*)"}
+        aria-label="星标重点"
+        {disabled}
+        onclick={(e) => { e.stopPropagation(); onToggleStar(); }}
+    >
+        <LvIcon name="star" size={13} />
+    </button>
+    <button
+        type="button"
+        class="lv-zen-tool-btn"
+        title={t.review?.tbMemo ?? "助记便签"}
+        aria-label="助记便签"
+        {disabled}
+        onclick={(e) => { e.stopPropagation(); onOpenMemo(); }}
+    >
+        <LvIcon name="lightbulb" size={13} />
+    </button>
+    <div class="lv-zen-island-sep" aria-hidden="true"></div>
+    <button
+        type="button"
+        class="lv-zen-exit-btn"
+        title="退出专注模式 (z)"
+        onclick={(e) => { e.stopPropagation(); onExitZen(); }}
+    >
+        <span>退出专注 (z)</span>
+    </button>
+</div>
+
+<style>
+    .lv-zen-island {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: var(--lv-z-sticky);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: var(--lv-r-pill);
+        background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
+        border: 1px solid var(--lv-border);
+        box-shadow: 0 4px 20px color-mix(in srgb, black 12%, transparent), var(--lv-inset-shine);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        pointer-events: auto;
+    }
+    .lv-zen-island-sep {
+        width: 1px;
+        height: 14px;
+        background: var(--lv-border);
+        margin: 0 2px;
+    }
+    .lv-zen-tool-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 6px;
+        border: none;
+        border-radius: var(--lv-r-pill);
+        background: transparent;
+        color: var(--lv-color-text-muted);
+        font-size: var(--lv-type-control-size);
+        font-weight: var(--lv-fw-semibold);
+        cursor: pointer;
+        transition: all var(--lv-dur-1) var(--lv-ease);
+    }
+    .lv-zen-tool-btn:hover:not(:disabled) {
+        background: var(--lv-surface-hover);
+        color: var(--lv-color-text);
+    }
+    .lv-zen-tool-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+    .lv-zen-tool-btn.lv-zen-starred {
+        color: #f59e0b;
+    }
+    .lv-zen-exit-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        padding: 0 10px;
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-pill);
+        background: var(--lv-surface-hover);
+        color: var(--lv-color-text-muted);
+        font-size: var(--lv-type-meta-size);
+        cursor: pointer;
+        transition: all var(--lv-dur-1) var(--lv-ease);
+    }
+    .lv-zen-exit-btn:hover {
+        background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-surface-hover));
+        color: var(--lv-color-brand);
+        border-color: var(--lv-primary-border);
+    }
+</style>
