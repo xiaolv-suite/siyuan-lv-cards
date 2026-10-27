@@ -8,6 +8,12 @@
  */
 
 import { parseDelimitedQa, maskDelimitedQaInHtml } from "./delimited-qa";
+import {
+    isSuperBlockHtml,
+    maskSuperBlockForQuestion,
+    renderSuperBlockAnswerFace,
+    extractSuperBlockTexts,
+} from "./superblock-qa";
 
 export interface FaceRichness {
     /** 公式（KaTeX/MathJax 渲染产物） */
@@ -73,6 +79,14 @@ export function extractMarkTexts(holder: HTMLElement): string[] {
  */
 export function maskMarkedAnswersForQuestion(html: string): string {
     if (typeof document === "undefined") return String(html ?? "");
+
+    // 0. 优先检测是否为思源超级块闪卡（SuperBlock）：首子块为问题，后续所有子块为答案！
+    // 彻底解决在问题态把背面所有答案块当成题面提前剧透曝光的问题
+    if (isSuperBlockHtml(html)) {
+        const sbMasked = maskSuperBlockForQuestion(html);
+        if (sbMasked !== html) return sbMasked;
+    }
+
     const template = document.createElement("template");
     template.innerHTML = String(html ?? "");
     const marks = Array.from(template.content.querySelectorAll(MARK_SELECTOR));
@@ -339,3 +353,10 @@ export function renderUnifiedCardFace(input: {
         clozeCount: hasCloze ? extractedAnswers.length : 0,
     };
 }
+
+export {
+    isSuperBlockHtml,
+    maskSuperBlockForQuestion,
+    renderSuperBlockAnswerFace,
+    extractSuperBlockTexts,
+};

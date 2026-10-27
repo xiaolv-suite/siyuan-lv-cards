@@ -52,6 +52,7 @@
     import { filterBurySiblings } from "@/core/sibling-cards";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
+    import { isSuperBlockHtml, renderSuperBlockAnswerFace, extractSuperBlockTexts } from "@/core/card-face";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
 
@@ -692,6 +693,14 @@
     let occl = $state<OcclusionData | null>(null);
     let occlBox = $state<{ l: number; t: number; w: number; h: number } | null>(null);
     let occlHidden = $state<number[]>([]);
+    const hasSvgCanvas = $derived(Boolean(cardHtml && (/<svg\b/i.test(cardHtml) || /\.svg\b/i.test(cardHtml) || /excalidraw/i.test(cardHtml))));
+
+    function openCanvasInEditor(canvasId?: string) {
+        const id = canvasId || current?.blockID;
+        if (!id) return;
+        showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
+        openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+    }
     let isCustomPluginAnswer = $state(false);
     // 选择题模式（M4·FR3，干扰项取自同队列后续卡）
     let answerCache = new Map<string, string>();
@@ -738,6 +747,10 @@
             const marks = extractMarkTexts(holder);
             if (marks.length > 0) {
                 expectedText = marks.join(" / ");
+            } else if (isSuperBlockHtml(cardHtml)) {
+                // 超级块闪卡：第 1 个块为正面/问题，第 2 个及后续所有块为背面/答案
+                const sbTexts = extractSuperBlockTexts(cardHtml);
+                expectedText = sbTexts?.answerText ? sbTexts.answerText : (holder.textContent ?? "").trim();
             } else {
                 const rawText = (holder.textContent ?? "").trim();
                 const delimited = parseDelimitedQa(rawText);
@@ -1265,6 +1278,17 @@
                 revealSingleClozeElement(mark);
                 return;
             }
+        }
+    }
+
+    function onCardContentDblClick(e: MouseEvent) {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        const canvas = target.closest("svg, .lv-card-svg, [data-type='NodeWidget'], [data-subtype='widget'], img[src*='.svg'], img[src*='excalidraw']") as HTMLElement | null;
+        if (canvas) {
+            e.stopPropagation();
+            const canvasBlockId = canvas.closest("[data-node-id]")?.getAttribute("data-node-id") || current?.blockID;
+            openCanvasInEditor(canvasBlockId || undefined);
         }
     }
 
@@ -2635,6 +2659,7 @@
                     {/if}
                     <span class="lv-chip2 lv-chip2--default">
                         {#if occl}<LvIcon name="image" size={14} /> {t.cardTypeBadgeOcclusion ?? "遮挡"}
+                        {:else if isSuperBlockHtml(cardHtml)}<LvIcon name="cards" size={14} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}
                         {:else if cardHtml?.includes("language-")}<LvIcon name="code" size={14} /> {t.cardTypeBadgeCode ?? "代码"}
                         {:else if cardHtml?.includes("lv-masked") || cardHtml?.includes("data-type=\"mark\"")}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
                         {:else if cardMemo}<LvIcon name="lightbulb" size={14} /> {isCustomPluginAnswer ? (t.cardTypeBadgePlugin ?? "插件答") : (t.cardTypeBadgeMemo ?? "备注答")}
@@ -2694,6 +2719,9 @@
                     <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="放大卡面字号" onclick={() => adjustFontScale(0.1)}>A+</button>
                 </div>
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.sessionOptionsTitle} aria-label={t.review.sessionOptionsTitle} onclick={openSessionOptions}><LvIcon name="zap" size={14} /><span class="lv-tool-btn-label"> {t.review.sessionOptionsTitle.slice(0, 4)}</span></button>
+                {#if hasSvgCanvas}
+                    <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn lv-canvas-edit-btn" title={t.review?.canvasDoubleClickTip ?? "编辑画布 (或双击画布)"} aria-label="编辑画布" onclick={() => openCanvasInEditor()}><LvIcon name="edit" size={13} /><span class="lv-tool-btn-label"> {t.review?.tbEditCanvas ?? "编辑画布"}</span></button>
+                {/if}
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" class:lv-btn-starred={starredCardIDs.has(current?.cardID ?? '')} title="星标重点卡片 (*)" aria-label="星标重点卡片" aria-pressed={starredCardIDs.has(current?.cardID ?? '')} disabled={!current || actionBusy} onclick={toggleStarCurrent}><LvIcon name="star" size={14} /><span class="lv-tool-btn-label"> {starredCardIDs.has(current?.cardID ?? '') ? "已星标" : "星标"}</span></button>
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" class:lv-btn-primary={markedIssueCardIDs.has(current?.cardID ?? '')} title={markedIssueCardIDs.has(current?.cardID ?? '') ? t.review.issueMarked : t.review.tbMarkIssue} aria-label={t.review.tbMarkIssue} aria-pressed={markedIssueCardIDs.has(current?.cardID ?? '')} disabled={!current || actionBusy || markedIssueCardIDs.has(current?.cardID ?? '')} onclick={toggleMarkIssue}><LvIcon name="flag" size={14} /><span class="lv-tool-btn-label"> {markedIssueCardIDs.has(current?.cardID ?? '') ? t.review.issueChip : t.review.tbMarkIssue}</span></button>
                 <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.pauseTitle} aria-label={t.review.pauseTitle} disabled={actionBusy} onclick={() => (showPauseModal = true)}><LvIcon name="moon" size={14} /><span class="lv-tool-btn-label"> {t.review.tbPause}</span></button>
@@ -2800,11 +2828,11 @@
             {:else}
                 {#key current?.cardID}
                     <!-- 灵动感（R53 纪律内）：切卡 140ms 单次淡入，只动 opacity；翻面淡入由 lv-anim-glow 承担 -->
-                    <div class="lv-card-content lv-unified-face" class:has-interactive-choice={interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2} class:lv-masked={!showAnswer} onclick={onCardContentClick} style={`font-size: ${eff().cardFontScale || 1}em`} in:fade={{ duration: getMotionDuration("standard") }}>
+                    <div class="lv-card-content lv-unified-face" class:has-interactive-choice={interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2} class:lv-masked={!showAnswer} onclick={onCardContentClick} ondblclick={onCardContentDblClick} style={`font-size: ${eff().cardFontScale || 1}em`} in:fade={{ duration: getMotionDuration("standard") }}>
                         {#if eff().customCardCss}
                             {@html `<style>${eff().customCardCss}</style>`}
                         {/if}
-                        {@html interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2 ? cleanChoiceHtml(showAnswer ? cardHtml : maskedCardHtml, interactiveQuiz.options) : (showAnswer ? cardHtml : maskedCardHtml)}
+                        {@html interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2 ? cleanChoiceHtml(showAnswer ? (isSuperBlockHtml(cardHtml) ? renderSuperBlockAnswerFace(cardHtml) : cardHtml) : maskedCardHtml, interactiveQuiz.options) : (showAnswer ? (isSuperBlockHtml(cardHtml) ? renderSuperBlockAnswerFace(cardHtml) : cardHtml) : maskedCardHtml)}
                     </div>
 
                     <!-- 交互式选择题选项矩阵（点击或按 A/B/C/D 作答） -->

@@ -19,9 +19,23 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.95** (2026-10-27), delivering TopbarController modularization and lifecycle decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.95) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.96** (2026-10-27), delivering SuperBlock flashcard QA alignment, SVG/Excalidraw canvas direct editing, and native/community feature alignment research. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.96) for the package and publishing status.
 
-## What's New in v0.210.95
+## What's New in v0.210.96
+
+- **SuperBlock Flashcard Question-Answer Recognition & Masking**:
+  - Aligned with native SiYuan SuperBlock card spec: 1st sub-block is front question, 2nd and subsequent sub-blocks are back answer.
+  - Question stage hides answer blocks behind an elegant mask placeholder to prevent answer spoiler; answer stage reveals full content with clean section dividers.
+  - Expected typing text precisely extracts from answer blocks.
+- **SVG / Excalidraw Canvas Native Editing**:
+  - Added dedicated "Edit Canvas" Bento toolbar capsule when canvas elements are detected.
+  - Double-clicking canvas elements in review cards navigates directly into SiYuan's native Protyle editor for live canvas modification.
+- **Native & Community Flashcard Deep Research**:
+  - Published `docs/51-原生闪卡与社区插件深度调研与全功能对齐方案.md`, formalizing full alignment with native Riff/FSRS, ZY Flashcard breadcrumbs/undo, RemNote concept cards, Anki sibling burial/hint ladders, and SuperMemo incremental learning.
+- **Verification**:
+  - 1982 tests across 250 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.95
 
 - **TopbarController Modularization & Lifecycle Decoupling**:
   - Extracted `src/bootstrap/topbar-controller.ts` to manage topbar self-healing DOM reconnection, context menu binding, due badge native title tooltips, and exam milestone notifications.

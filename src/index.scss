@@ -1311,6 +1311,34 @@ body[data-theme-mode="dark"],
         line-height: var(--lv-lh-reading);
     }
 
+    // 超级块闪卡样式（SuperBlock Card Face）
+    .lv-sb-card {
+        width: 100%;
+    }
+    .lv-sb-question-section {
+        width: 100%;
+    }
+    .lv-sb-answer-placeholder {
+        padding: var(--lv-sp-2) var(--lv-sp-3);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-brand) 5%, transparent);
+        border: 1px dashed var(--lv-primary-border);
+        text-align: center;
+        margin: var(--lv-sp-2) 0;
+    }
+    .lv-sb-answer-section {
+        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
+        box-shadow: 0 2px 8px color-mix(in srgb, black 3%, transparent), var(--lv-inset-shine);
+        margin-top: var(--lv-sp-3);
+    }
+    .lv-sb-answer-body {
+        color: var(--lv-color-text);
+        line-height: var(--lv-lh-reading-loose);
+    }
+
     .lv-card-img,
     .lv-card-svg {
         max-width: 100%;
