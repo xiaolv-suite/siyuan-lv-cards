@@ -57,7 +57,7 @@ import { fnv1a } from "./core/ai-provenance";
 import { isSelectableModel, estimateCallCostUsd } from "./core/ai-model-registry";
 import { budgetState, emptyCostLedger, normalizeCostLedger, recordEntry, type CostLedgerData } from "./core/ai-cost-ledger";
 import { MODEL_PRICE_SNAPSHOT } from "./core/ai-model-registry";
-import { buildBackupBundle, previewRestore } from "./core/backup";
+import { previewRestore } from "./core/backup";
 import { normalizeObLedger, type ObLedgerEntry } from "./core/import-ledgers";
 import { parseRevlogCsv } from "./core/revlog-csv";
 import { normalizeSessionState, type SessionState } from "./core/session-state";
@@ -76,9 +76,6 @@ import { showPluginTopbarMenu } from "./bootstrap/topbar-menu";
 import { createPresentationPrivacyController } from "./core/presentation-privacy";
 import { createFullSampleWorkspace, createOnboardingSampleCards } from "./core/workspace-samples";
 import {
-    downloadFile,
-    formatRevlogExportCsv,
-    buildCostLedgerExportPayload,
     applyRestoreTransaction,
 } from "./core/data-transfer";
 import {
@@ -92,8 +89,15 @@ import { addBlockMenuItems, computeBlockMenuItems, extractBlockIDs } from "./boo
 import {
     resolveTargetNotebook,
     queryNotebookBlockIDs,
-    assembleWeeklyReportPayload,
 } from "./core/report-writer";
+import { maybeWriteWeeklyReport } from "./features/weekly-report-service";
+import {
+    exportRevlogJson,
+    exportSettingsJson,
+    exportRevlogToCsv,
+    exportAiCostLedger,
+    exportAllBackupBundle,
+} from "./features/data-export-manager";
 import {
     findUnfinishedAIJob,
     getRecoverableJobSummaries,
@@ -3814,17 +3818,17 @@ export default class LvCardsPlugin extends Plugin {
 
     /** 导出本地复习日志（M10·FR1） */
     private exportRevlog() {
-        downloadFile(`lv-cards-revlog-${todayDate()}.json`, JSON.stringify(this.revlog), "application/json");
+        exportRevlogJson(this.revlog, todayDate());
     }
 
     /** 导出设置为 JSON 文件 */
     private exportSettings() {
-        downloadFile(`lv-cards-settings-${todayDate()}.json`, JSON.stringify(this.settings), "application/json");
+        exportSettingsJson(this.settings, todayDate());
     }
 
     /** 导出 CSV（带 BOM，Excel 友好） */
     private exportRevlogCsv() {
-        downloadFile(`lv-cards-revlog-${todayDate()}.csv`, formatRevlogExportCsv(this.revlog), "text/csv");
+        exportRevlogToCsv(this.revlog, todayDate());
     }
 
     /** 清空本地复习日志（热力图与连击归零；不影响内核调度） */
@@ -3849,8 +3853,7 @@ export default class LvCardsPlugin extends Plugin {
 
     /** BU-25：导出 AI 用量账本（聚合视图 + 明细；不含 key 与原文） */
     private exportCostLedger() {
-        const payload = buildCostLedgerExportPayload(this.costLedger);
-        downloadFile(`lv-cards-ai-cost-${todayDate()}.json`, JSON.stringify(payload), "application/json");
+        exportAiCostLedger(this.costLedger, todayDate());
     }
 
     /** BU-25：清空 AI 用量账本（预算随之归零重计） */
@@ -3874,7 +3877,7 @@ export default class LvCardsPlugin extends Plugin {
     /** 备份与恢复中心：导出全部私有存储为单文件 bundle（manifest 含校验和；含用户内容，用户自管） */
     private exportBackup() {
         this.readAllStores().then(files => {
-            downloadFile(`lv-cards-backup-${todayDate()}.json`, JSON.stringify(buildBackupBundle(files)), "application/json");
+            exportAllBackupBundle(files, todayDate());
         });
     }
 
@@ -3939,27 +3942,12 @@ export default class LvCardsPlugin extends Plugin {
 
     /** T-周报（docs/41 P1）：自动把上周复盘写入「小驴闪卡/学习周报」文档——静默写入，不自动打开（区别于手动报告） */
     private async maybeWriteWeeklyReport() {
-        const payload = assembleWeeklyReportPayload({
-            now: new Date(),
-            lastWeekKey: this.settings.weeklyReportLast,
-            enabled: this.settings.weeklyReportEnabled,
+        return maybeWriteWeeklyReport({
+            settings: this.settings,
             revlog: this.revlog,
             i18n: this.i18n,
+            targetNotebook: () => this.targetNotebook(),
+            saveSettingsSoon: () => this.saveSettingsSoon(),
         });
-        if (!payload.shouldWrite || !payload.docTitle || !payload.markdown || !payload.weekKey) {
-            return;
-        }
-        const nb = await this.targetNotebook();
-        if (!nb) {
-            throw new Error(this.i18n.onboardingNoNotebook);
-        }
-        const docID = await createDocWithMd(nb.id, payload.docTitle, payload.markdown);
-        if (!docID) {
-            throw new Error(this.i18n.quickCardFail);
-        }
-        // 幂等键推进（仅在写入成功后；失败下周随本周一起补）
-        this.settings.weeklyReportLast = payload.weekKey;
-        this.saveSettingsSoon();
-        showMessage((this.i18n as any).weeklyReport_written ?? docID, 2500, "info");
     }
 }
