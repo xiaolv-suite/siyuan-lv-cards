@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.1** (2026-10-27), delivering tab registrars modularization and index.ts slimming (-700+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.1) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.2** (2026-10-27), delivering storage-loader decoupling and 22-store batch loading resilience. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.2) for the package and publishing status.
 
-## What's New in v0.211.1
+## What's New in v0.211.2
+
+- **22-Store Batch Loader Modularization (TSK-07)**:
+  - Extracted `src/bootstrap/storage-loader.ts` to manage concurrent batch loading, fault-tolerant store resilience, field normalizations, and rollback snapshot baselines.
+  - Eliminated 100+ lines from `src/index.ts`.
+  - Added dedicated test suite `tests/storage-loader.spec.ts`.
+- **Verification**:
+  - 2000 tests across 255 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.1
 
 - **Tab Registrars Modularization & Index Slimming (TSK-07)**:
   - Extracted `src/bootstrap/tab-registrars.ts` to manage dashboard and review tab lifecycles and domain contexts.

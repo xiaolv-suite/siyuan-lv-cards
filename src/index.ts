@@ -10,9 +10,8 @@ import { svelteDialog, confirmDialogBool } from "./libs/dialog";
 // AT-17：UI chunk（独立 IIFE 自带 svelte）经全局取 siyuan 模块——shell 在此注入单一事实源
 (window as unknown as { __lvSiyuan: unknown }).__lvSiyuan = siyuanNamespace;
 import { lvLog, lvLogDump } from "./libs/log";
-import { loadStore, zipLoaded } from "./libs/store";
 import { createPersist, type PersistQueue } from "./libs/persist";
-import { normalizeAIBatches, emptyAIBatches, type AIBatchesData } from "./core/ai-batches";
+import { normalizeAIBatches, type AIBatchesData } from "./core/ai-batches";
 import { defaultSettings, normalizeSettings, type LvCardsSettings } from "./core/settings";
 import { PERSONA_PRESETS } from "./core/personas";
 import { normalizeNativeCardAction, NativeEventDeduper } from "./core/native-events";
@@ -33,20 +32,20 @@ import { mountCardsBridge, dispatchCardReviewedEvent } from "./api/external-brid
 import { registerRaikiriModuleSafely } from "./libs/ecosystem-bridge-kit";
 import { createPerf } from "./libs/perf";
 import { cardsCreatedEvent, gatewayChangedEvent, LV_EVENTS, reviewedEvent, settingsChangedEvent, storesChangedEvent, streakChangedEvent } from "./libs/events";
-import { emptyKnowledgeObjects, normalizeKnowledgeObjects, type KnowledgeObjectsData } from "./core/knowledge-objects";
-import { emptyCardRelations, normalizeCardRelations, type CardRelationsData } from "./core/card-relations";
+import { emptyKnowledgeObjects, type KnowledgeObjectsData } from "./core/knowledge-objects";
+import { emptyCardRelations, type CardRelationsData } from "./core/card-relations";
 import { emptyErrorTags, normalizeErrorTags, tagError, type ErrorTagsData, type ErrorReason } from "./core/error-reasons";
 import { addInboxItem, emptyInbox, normalizeInbox, removeInboxItem, type InboxData } from "./core/inbox";
-import { emptyGoals, normalizeGoals, type LearningGoalsData, type LearningGoal } from "./core/learning-goal";
-import { emptyEntryContexts, normalizeEntryContexts, upsertContext, type EntryContextData, type EntryKind } from "./core/entry-context";
-import { ensureLifecycle, emptyLifecycles, normalizeLifecycles, transition, type ContentLifecyclesData, type ContentState } from "./core/content-lifecycle";
+import { emptyGoals, type LearningGoalsData, type LearningGoal } from "./core/learning-goal";
+import { emptyEntryContexts, upsertContext, type EntryContextData, type EntryKind } from "./core/entry-context";
+import { ensureLifecycle, emptyLifecycles, transition, type ContentLifecyclesData, type ContentState } from "./core/content-lifecycle";
 import { appendBlock, createDocWithMd, getNotebooks, getBlockAttrs, exportMdContent, sqlQuery, kernelVersion, updateBlock, probeAssetRefs } from "./api/siyuan";
 import { aiChat, estimateTokens, parseCards, isAICanceled } from "./api/ai";
-import { normalizeSuspendToday, rollDateIfNeeded, type SuspendTodayData } from "./core/suspend-today";
+import { rollDateIfNeeded, type SuspendTodayData } from "./core/suspend-today";
 import { createSuspendTodayMutations } from "./core/suspend-today-persistence";
 import { createSnapshotMutationQueue } from "./core/snapshot-mutation-queue";
 import { normalizeLedger, type LedgerEntry } from "./core/import-ledgers";
-import { acceptVersion, appendVersion, emptyContentVersions, normalizeContentVersions } from "./core/content-versions";
+import { acceptVersion, appendVersion, emptyContentVersions } from "./core/content-versions";
 import { assembleGeneratePrompt } from "./core/ai-pipeline";
 import { checkEligibility } from "./core/ai-eligibility";
 import { disableTarget, emptyKillSwitch, enableTarget, grantConsent, killSwitchBlock, normalizeKillSwitch, revokeConsent, type AIKillSwitchData } from "./core/ai-kill-switch";
@@ -59,8 +58,8 @@ import { MODEL_PRICE_SNAPSHOT } from "./core/ai-model-registry";
 import { previewRestore } from "./core/backup";
 import { normalizeObLedger, type ObLedgerEntry } from "./core/import-ledgers";
 import { parseRevlogCsv } from "./core/revlog-csv";
-import { normalizeSessionState, type SessionState } from "./core/session-state";
-import { normalizeExamPlans, type ExamPlan, type ExamPlansData } from "./core/exam";
+import { type SessionState } from "./core/session-state";
+import { type ExamPlan, type ExamPlansData } from "./core/exam";
 import {
     EXAM_PLANS_CHANGED_EVENT,
     EXAM_PLANS_PUBLISH_RPC,
@@ -96,6 +95,7 @@ import {
     buildPairingDialogArgs,
     buildOcclusionEditorDialogArgs,
 } from "./bootstrap/dialog-openers";
+import { readAllPluginStores, applyAllPluginStores } from "./bootstrap/storage-loader";
 import {
     resolveTargetNotebook,
     queryNotebookBlockIDs,
@@ -129,7 +129,6 @@ import type { HubServices } from "./core/hub-services";
 import {
     acknowledgeSourceHealth as acknowledgeSourceHealthStore,
     emptySourceHealth,
-    normalizeSourceHealth,
     reconcileSourceHealth,
     upsertSourceFingerprint,
     type SourceHealthData,
@@ -307,7 +306,6 @@ import {
     SUSPEND_TODAY_DATA,
     EXAM_PLANS_DATA,
     AI_BATCHES_DATA,
-    SESSION_STATE_DATA,
     AI_JOBS_DATA,
     KNOWLEDGE_OBJECTS_DATA,
     CARD_RELATIONS_DATA,
@@ -558,7 +556,7 @@ export default class LvCardsPlugin extends Plugin {
         this.settings.onboarded = true;
         this.saveSettingsNow();
     }
-    private sessionState: SessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
+    sessionState: SessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
     /** Anki M3：guid 导入台账（幂等重导） */
     private ankiLedger: LedgerEntry[] = [];
     /** T05：块内容版本快照 */
@@ -865,76 +863,13 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private async readAllStores(): Promise<Record<string, unknown>> {
-        // 单个损坏/暂不可读的槽位不能阻断整个插件启动；normalize 层会为该槽位提供默认值，
-        // 同时保留可观测日志，便于后续诊断和恢复，而不是静默吞掉坏数据。
-        const values = await Promise.all(LvCardsPlugin.STORE_KEYS.map(async key => {
-            try {
-                return await this.loadData(key);
-            } catch (e) {
-                lvLog("error", `load ${key} failed: ${e instanceof Error ? e.message : String(e)}`);
-                return undefined;
-            }
-        }));
-        return zipLoaded(LvCardsPlugin.STORE_KEYS, values);
+        return readAllPluginStores((key) => this.loadData(key), LvCardsPlugin.STORE_KEYS);
     }
 
     private async applyLoadedStores(loaded: Record<string, unknown>) {
-        this.settings = normalizeSettings(loaded[SETTINGS_DATA]);
-        this.revlog = normalizeRevlog(loaded[REVLOG_DATA]); // AQ-3：清洗非法条目并由明细重建 days
-        this.revlogMutationVersion += 1;
-        this.suspendToday = normalizeSuspendToday(loaded[SUSPEND_TODAY_DATA]);
-        this.killSwitch = normalizeKillSwitch(loaded[AI_KILL_SWITCH_DATA]);
-        this.examPlans = normalizeExamPlans(loaded[EXAM_PLANS_DATA]);
-        this.sessionState = normalizeSessionState(loaded[SESSION_STATE_DATA], todayDate());
-        // BK-1/BK-2：知识对象与关系图并入同批加载（normalize 白名单清洗）
-        this.knowledgeObjects = normalizeKnowledgeObjects(loaded[KNOWLEDGE_OBJECTS_DATA]);
-        this.cardRelations = normalizeCardRelations(loaded[CARD_RELATIONS_DATA]);
-        this.errorTags = normalizeErrorTags(loaded[ERROR_TAGS_DATA]);
-        this.inbox = normalizeInbox(loaded[INBOX_DATA]);
-        this.learningGoals = normalizeGoals(loaded[LEARNING_GOALS_DATA]);
-        this.entryContexts = normalizeEntryContexts(loaded[ENTRY_CONTEXTS_DATA]);
-        this.contentLifecycles = normalizeLifecycles(loaded[CONTENT_LIFECYCLES_DATA]);
-        this.sourceHealth = normalizeSourceHealth(loaded[SOURCE_HEALTH_DATA]);
-        // Anki M3：guid 导入台账（幂等重导）——启动装载进内存，ctx 读写内存副本
-        this.ankiLedger = normalizeLedger(loaded[ANKI_LEDGER_DATA]);
-        // T05：内容版本快照装载
-        this.contentVersions = normalizeContentVersions(loaded[CONTENT_VERSIONS_DATA]);
-        // BW-9：来源级禁止外发规则装载（只存 ID 不存内容；规则不因重开/移动失效）
-        this.aiDenyList = normalizeDenyList(loaded[AI_DENY_LIST_DATA]);
-        // BU-24/25：AI 用量账本装载（token 估算/模型/任务，不含 key 与原文）
-        this.costLedger = normalizeCostLedger(loaded[AI_COST_LEDGER_DATA]);
-        // Obsidian SR 导入弱台账装载（指纹→落点，幂等重导）
-        this.obLedger = normalizeObLedger(loaded[OB_LEDGER_DATA]);
-        // 批量修复持久化事务日志装载
-        const rawJournal = loaded[MAINTENANCE_REPAIR_JOURNAL_DATA];
-        this.repairJournal = (rawJournal && Array.isArray((rawJournal as any).entries) && (rawJournal as any).entries.length)
-            ? (await loadHubServices()).normalizeRepairJournal(rawJournal)
-            : createEmptyRepairJournal();
-        // AI 批次走 TypedStore 入口（322）：结构清洗 + 兜底，非法条目剔除（526）；复用批量加载结果不再二次读盘
-        this.aiBatches = await loadStore(this, {
-            key: AI_BATCHES_DATA,
-            fallback: emptyAIBatches,
-            normalize: normalizeAIBatches,
-        }, loaded[AI_BATCHES_DATA]);
-        // ADR-7 第 2 步：AI 批次作业存储接入（同一批量加载批次，normalize 兜底）
-        this.aiJobs = await loadStore(this, {
-            key: AI_JOBS_DATA,
-            fallback: emptyAIJobs,
-            normalize: normalizeAIJobs,
-        }, loaded[AI_JOBS_DATA]);
-        this.persistedSettingsSnapshot = normalizeSettings(cloneStore(this.settings));
-        this.persistedRevlogSnapshot = cloneStore(this.revlog);
-        // Keep immutable disk baselines for all optimistic stores. If several writes
-        // fail in succession, rolling back to the previous in-memory value would
-        // leave state that was never persisted; the last successful snapshot is the
-        // only safe rollback target.
-        this.persistedSessionStateSnapshot = cloneStore(this.sessionState);
-        this.persistedInboxSnapshot = cloneStore(this.inbox);
-        this.persistedAIBatchesSnapshot = cloneStore(this.aiBatches);
-        this.persistedCostLedgerSnapshot = cloneStore(this.costLedger);
-        this.persistedAIJobsSnapshot = cloneStore(this.aiJobs);
-        this.persistedAIDenyListSnapshot = cloneStore(this.aiDenyList);
-        this.persistedErrorTagsSnapshot = cloneStore(this.errorTags);
+        await applyAllPluginStores(this, loaded, {
+            loadHubServices,
+        });
     }
 
     async onload() {
