@@ -21,11 +21,20 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.0（2026-10-27）**，落地渐进学习双级调度解耦、超级块闪卡精准对齐与架构模块化里程碑。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.0)。
+当前版本为 **v0.211.1（2026-10-27）**，落地页签装配器独立解耦与插件主入口架构超级瘦身（-700+ 行）。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.1)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.0）
+## 本次更新（v0.211.1）
+
+- **页签装配器（Tab Registrars）独立解耦与架构质变（TSK-07 持续深化）**：
+  - 抽离 `src/bootstrap/tab-registrars.ts`，将闪卡中心（`TAB_DASHBOARD`）与复习工作台（`TAB_REVIEW`）的生命周期挂载、多领域上下文（dashboardBase、managerCtx、exam、inbox、goals、maintenance）全量收敛至独立装配器；
+  - 插件主入口 `src/index.ts` 代码体积自 196 KB 骤降至 148 KB，模板净减 700+ 行，生命周期与业务调度完全解耦；
+  - 配备完整的单元测试套件 `tests/tab-registrars.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 254 个测试文件、1998 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.0）
 
 - **独立模态对话框参数装配与生命周期解耦（TSK-07 持续深化）**：
   - 抽离 `src/bootstrap/dialog-openers.ts`，统一参数装配规范（修卡演练、限时挑战、概念配对、图片遮挡等），主入口 `src/index.ts` 再度精简 50+ 行；

@@ -19,9 +19,18 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.0** (2026-10-27), delivering incremental learning two-tier scheduler decoupling, SuperBlock flashcard alignment, and comprehensive architecture modularization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.0) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.1** (2026-10-27), delivering tab registrars modularization and index.ts slimming (-700+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.1) for the package and publishing status.
 
-## What's New in v0.211.0
+## What's New in v0.211.1
+
+- **Tab Registrars Modularization & Index Slimming (TSK-07)**:
+  - Extracted `src/bootstrap/tab-registrars.ts` to manage dashboard and review tab lifecycles and domain contexts.
+  - Reduced `src/index.ts` from 196 KB to 148 KB, eliminating 700+ lines of assembly boilerplate.
+  - Added dedicated test suite `tests/tab-registrars.spec.ts`.
+- **Verification**:
+  - 1998 tests across 254 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.0
 
 - **Dialog Openers Lifecycle Decoupling (TSK-07)**:
   - Extracted `src/bootstrap/dialog-openers.ts` to unify modal dialog argument assembly for repair drill, challenge mode, pairing game, and occlusion editor.
