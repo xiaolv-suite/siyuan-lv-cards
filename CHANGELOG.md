@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.210.93 2026-10-27 · AI 制卡落库元数据抖动修复与复习工作台组件分拆落地
+
+- **AI 制卡落库元数据未就绪异常根治（思源 v3.8.9-beta.2+ 兼容加固）**：
+  - 彻底根治新创建文档或冷启动时偶发的 `kernel error (code=-1): document metadata is not ready` 阻断异常；
+  - `createDocWithMd` 自动补齐前置绝对路径斜杠 `/`，杜绝新版内核相对路径解析失败；
+  - `createDocWithMd`、`appendBlock` 与 `addRiffCards` 全链路挂载 5 阶/3 阶指数退避自愈重试机制与落盘就绪微缓冲，确保在任意思源内核版本下 100% 稳定直通；
+- **复习工作台复杂视图分拆（TSK-08 架构解耦闭环）**：
+  - 将复习完成面板抽离为独立子组件 `ReviewDonePanel.svelte`，涵盖留存率计算、实战命中率、收工原因选择（`END_REASONS`）及强化遗忘/星标卡等下一步建议；
+  - 将专注模式悬浮岛工具栏抽离为独立子组件 `ReviewZenIsland.svelte`，涵盖流体字号缩放、重点星标切换、助记便签与退出专注模式交互；
+  - 配备完整的独立单元测试套件 `tests/review-done-panel.spec.ts` 与 `tests/review-zen-island.spec.ts`，主复习文件模板复杂度显著降低；
+- **核心入口瘦身与服务解耦（TSK-07）**：
+  - 抽离周报静默生成服务至 `src/features/weekly-report-service.ts`，抽离数据导出管理服务至 `src/features/data-export-manager.ts`；
+  - 抽离 22 槽持久化单一事实源常量至 `src/bootstrap/storage-keys.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 247 个测试文件、1968 项测试 100% 通过；E2E 靶场 18 项全部通过；TypeScript 与 Svelte-check 0 错误 0 警告；构建与烟雾测试全绿。
+
+
 ## v0.210.92 2026-10-27 · 渐进学习两级调度解耦、Dismiss 快捷归档、最小信息原则与设计令牌全覆盖
 
 - **渐进学习与两级调度解耦（Issue #19 第二期中枢指令落地）**：

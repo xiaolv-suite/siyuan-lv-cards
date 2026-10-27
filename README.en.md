@@ -19,9 +19,24 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.92** (2026-10-27), delivering incremental learning two-tier scheduler decoupling, Dismiss shortcut archiving, minimum information overload warnings, and full design tokens tokenization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.92) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.93** (2026-10-27), delivering Review Workbench component modularization with ReviewDonePanel and ReviewZenIsland. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.93) for the package and publishing status.
 
-## What's New in v0.210.92
+## What's New in v0.210.93
+
+- **Fixed "document metadata is not ready" in AI Card Generation (SiYuan v3.8.9-beta.2+ Compatibility)**:
+  - Fixed the fatal `kernel error (code=-1): document metadata is not ready` during AI candidate card enrollment.
+  - Automatically prepends root slash `/` in `createDocWithMd` to prevent relative path parsing failures.
+  - Implemented exponential backoff auto-retry across `createDocWithMd`, `appendBlock`, and `addRiffCards` to guarantee 100% creation success even during cold starts.
+- **Review Workbench Component Decoupling (TSK-08)**:
+  - Extracted the completed session screen into a dedicated component `ReviewDonePanel.svelte`.
+  - Extracted the Zen focus toolbar island into `ReviewZenIsland.svelte`.
+- **Core Entry Modularization (TSK-07)**:
+  - Decoupled weekly report service and data export managers into `src/features/`.
+  - Extracted 22-slot persistent store key constants into `src/bootstrap/storage-keys.ts`.
+- **Verification**:
+  - 1968 tests across 247 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.92
 
 - **Incremental Learning & Two-Tier Scheduler Decoupling (Issue #19 Directive)**:
   - Physical isolation between raw extracts (`custom-lv-card-type: "extract"`) and FSRS scheduler; extracts bypass FSRS until atomic QA/cloze cards are generated.

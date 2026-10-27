@@ -132,7 +132,22 @@ export const addRiffCards = async (deckID: string, blockIDs: string[]) => {
         const decisions = await validateRiffCardEntries(uniqueBlockIDs);
         if (decisions.some(decision => !decision.ok)) throw new RiffCardEntryGateError(decisions);
     }
-    const r = await kernelAddRiffCards(deckID, uniqueBlockIDs);
+    let r: any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+            await new Promise(res => setTimeout(res, 200 * attempt));
+        }
+        try {
+            r = await kernelAddRiffCards(deckID, uniqueBlockIDs);
+            break;
+        } catch (e: any) {
+            const msg = String(e?.message ?? "");
+            if (attempt < 2 && (msg.includes("metadata is not ready") || msg.includes("not ready"))) {
+                continue;
+            }
+            throw e;
+        }
+    }
     invalidateDueCache();
     return r;
 };

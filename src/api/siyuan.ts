@@ -68,30 +68,81 @@ export const createNotebook = async (name: string): Promise<string | null> => {
     return null;
 };
 
+/** 判定是否为思源内核暂态元数据未就绪异常 */
+export function isMetadataNotReadyError(error: unknown): boolean {
+    const msg = error instanceof Error ? error.message : String(error ?? "");
+    return (
+        msg.includes("metadata is not ready") ||
+        msg.includes("metadata not ready") ||
+        msg.includes("not ready") ||
+        msg.includes("block not found")
+    );
+}
+
 /** Markdown 创建文档，返回文档块 ID（快速制卡/示例卡落点） */
 export const createDocWithMd = async (notebook: string, path: string, markdown: string): Promise<string | null> => {
-    return (await kernelPost<string | null>("/api/filetree/createDocWithMd", { notebook, path, markdown })) ?? null;
+    // 1. 规范化路径：思源 API 必须以 / 开头，杜绝新版内核因相对路径解析失败触发 metadata not ready
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+    // 2. 抗抖动与内核元数据就绪重试（借鉴 e2e-isolated.mjs 实践，最多 5 次退避）
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 5; attempt++) {
+        if (attempt > 0) {
+            await new Promise(r => setTimeout(r, 200 * Math.pow(1.5, attempt - 1)));
+        }
+        try {
+            const docID = await kernelPost<string | null>("/api/filetree/createDocWithMd", {
+                notebook,
+                path: normalizedPath,
+                markdown,
+            });
+            if (docID) return docID;
+        } catch (e: any) {
+            lastError = e;
+            if (!isMetadataNotReadyError(e)) {
+                throw e;
+            }
+        }
+    }
+    if (lastError) throw lastError;
+    return null;
 };
 
 /** 在指定父块下追加块（快速制卡问答对） */
 export const appendBlock = async (dataType: "markdown", data: string, parentID: string): Promise<string[]> => {
     // 内核 3.8.x 事务响应双形态兼容：旧 {operations:[{id}]} / 新 [{doOperations:[{id, action}]}]
     // （后者是 3.8.6 实测形态；解析不到 id 会让快速制卡/示例卡/标记制卡全部「制卡失败」）
-    const body = await kernelPost<
-        { operations?: { id?: string; action?: string }[] } | { doOperations?: { id?: string; action?: string }[] }[]
-    >("/api/block/insertBlock", { dataType, data, parentID });
-    const ids: string[] = [];
-    const collect = (ops: { id?: string; action?: string }[] | undefined) => {
-        for (const op of ops ?? []) {
-            if (op.id && (op.action ?? "insert") !== "delete") ids.push(op.id);
+    // 挂载对内核暂态 metadata not ready 的自愈重试
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+            await new Promise(r => setTimeout(r, 150 * attempt));
         }
-    };
-    if (Array.isArray(body)) {
-        for (const tx of body) collect(tx?.doOperations);
-    } else {
-        collect(body?.operations);
+        try {
+            const body = await kernelPost<
+                { operations?: { id?: string; action?: string }[] } | { doOperations?: { id?: string; action?: string }[] }[]
+            >("/api/block/insertBlock", { dataType, data, parentID });
+            const ids: string[] = [];
+            const collect = (ops: { id?: string; action?: string }[] | undefined) => {
+                for (const op of ops ?? []) {
+                    if (op.id && (op.action ?? "insert") !== "delete") ids.push(op.id);
+                }
+            };
+            if (Array.isArray(body)) {
+                for (const tx of body) collect(tx?.doOperations);
+            } else {
+                collect(body?.operations);
+            }
+            return ids;
+        } catch (e: any) {
+            lastError = e;
+            if (!isMetadataNotReadyError(e)) {
+                throw e;
+            }
+        }
     }
-    return ids;
+    if (lastError) throw lastError;
+    return [];
 };
 
 /** 读块自定义属性（遮挡数据存于 lv-occlusion 属性） */

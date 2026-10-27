@@ -3083,9 +3083,14 @@ export default class LvCardsPlugin extends Plugin {
         }
         let job: AIJob | undefined = jobId ? this.aiJobs.jobs.find(j => j.id === jobId) : undefined;
         const date = todayDate();
-        const docID = job?.targetDocID || await createDocWithMd(nb.id, `小驴闪卡/AI 制卡/${date}`, "");
+        let docID = job?.targetDocID;
         if (!docID) {
-            throw new Error(this.i18n.quickCardFail);
+            docID = (await createDocWithMd(nb.id, `/小驴闪卡/AI 制卡/${date}`, "")) ?? undefined;
+            if (!docID) {
+                throw new Error(this.i18n.quickCardFail);
+            }
+            // 稍作缓冲，确保新文档元数据在 SQLite 与内存中完全就绪
+            await new Promise(r => setTimeout(r, 120));
         }
         if (job) {
             if (job.targetDocID !== docID) {

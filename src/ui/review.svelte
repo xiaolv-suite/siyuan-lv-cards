@@ -2,7 +2,6 @@
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
     import { rafThrottle } from "@/libs/throttle";
-    import { countUp } from "./kit/countup";
     import { getMotionDuration } from "./kit/motion";
     import { openTab, showMessage } from "siyuan";
     import {
@@ -21,7 +20,7 @@
     import { mapChunksOrdered } from "@/core/query-chunks";
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs } from "@/core/session-prefs";
-    import { END_REASONS, hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
+    import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, returnCheck, type ReturnCheckFacts } from "@/core/return-check";
     import { avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired } from "@/core/session-budget";
     import { nominateVariant } from "@/core/question-rotation";
@@ -54,6 +53,7 @@
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
+    import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2559,116 +2559,31 @@
             </div>
         </div>
     {:else if sessionDone || !current}
-        <div class="lv-center lv-done">
-            <!-- T07 结果面（R52 results）：单面板 + check 徽 + 大数字统计 + 行式补充 + NEXT 软面板 -->
-            <div class="lv-done-panel">
-                <div class="lv-done-head">
-                    <span class="check lv-done-check" aria-hidden="true"><LvIcon name="check" size={24} /></span>
-                    <div class="lv-done-headtext">
-                        <div class="lv-done-title">{t.review.done}</div>
-                        <div class="lv-done-sub">
-                            {t.review.doneNew} {sessionNew} · {t.review.doneReview} {sessionReview} · {t.review.doneForget} {sessionForget} · {t.review.doneSkip} {sessionSkip}
-                        </div>
-                    </div>
-                    {#if (sessionNew + sessionReview) > 0}
-                        {@const ret = Math.round(Math.max(0, (sessionNew + sessionReview - sessionForget)) / (sessionNew + sessionReview) * 100)}
-                        <div class="lv-done-retention-bubble" class:lv-ret-high={ret >= 80} class:lv-ret-mid={ret >= 60 && ret < 80}>
-                            <LvIcon name="zap" size={13} />
-                            <span>{t.review.doneRetention ?? "留存率"} {ret}%</span>
-                        </div>
-                    {/if}
-                    {#if sessionQuizTotal > 0}
-                        {@const acc = Math.round(sessionQuizCorrect / sessionQuizTotal * 100)}
-                        <div class="lv-done-quiz-bubble" class:lv-quiz-high={acc >= 80} class:lv-quiz-mid={acc >= 60 && acc < 80}>
-                            <LvIcon name="check" size={13} />
-                            <span>实战命中率 {acc}% ({sessionQuizCorrect}/{sessionQuizTotal})</span>
-                        </div>
-                    {/if}
-                </div>
-                <div class="lv-done-stats">
-                    <div class="lv-done-stat">
-                        <span class="lv-done-stat-label">{t.review.doneReview} · {t.review.doneNew}</span>
-                        <span class="lv-hero-num" use:countUp={sessionNew + sessionReview}>{sessionNew + sessionReview}</span>
-                        <p>{PURPOSE_PROFILES[purpose].grading === "informal" ? t.review.purposeInformal : t.review.doneConfirm}</p>
-                    </div>
-                    <div class="lv-done-stat">
-                        <span class="lv-done-stat-label">{t.review.doneSkip}</span>
-                        <span class="lv-hero-num" use:countUp={sessionSkip}>{sessionSkip}</span>
-                        <p>{t.review.skipNotRated}</p>
-                    </div>
-                    <div class="lv-done-stat">
-                        <span class="lv-done-stat-label">{t.review.sessionTime}</span>
-                        <span class="lv-hero-num">{sessionDurationText()}</span>
-                        <p>{targetProgressText()}</p>
-                    </div>
-                </div>
-                {#if budgetMin > 0}
-                    <!-- BI-12：预算中性提示（到点收工不算失败；未完成项真实保留） -->
-                    <div class="lv-notice">{budgetExpired ? t.review.budgetDoneTip : t.review.budgetOn}</div>
-                {/if}
-                {#if remainingDue !== null && remainingDue > 0}
-                    <!-- T07 结果页（docs/13 §9）：真实剩余如实呈现——不需要为了清零而继续 -->
-                    <div class="lv-notice">{t.review.remainingDue.replace("${n}", String(remainingDue))}</div>
-                {/if}
-                {#if streakMilestoneText()}
-                    <div class="lv-done-milestone">{streakMilestoneText()}</div>
-                {/if}
-                {#if dailyTip()}
-                    <div class="lv-done-tip">{dailyTip()}</div>
-                {/if}
-                <!-- BI-8：收工原因收集（可跳过；写当日现场，返场时恢复横幅/分流可读） -->
-                <div class="lv-done-end-box" role="group" aria-label={t.endReason.title}>
-                    <span class="lv-done-end-title">{t.endReason.title}</span>
-                    <div class="lv-done-end-chips">
-                        {#each END_REASONS as r (r)}
-                            <button
-                                type="button"
-                                class="lv-chipbtn"
-                                class:lv-chipbtn-active={endPicked === r}
-                                aria-pressed={endPicked === r}
-                                onclick={() => pickEnd(r)}
-                            >
-                                {#if endPicked === r}<LvIcon name="check" size={12} />{/if}
-                                <span>{t.endReason[r]}</span>
-                            </button>
-                        {/each}
-                    </div>
-                </div>
-                {#if sessionSkip > 0 || sessionForget > 0 || starredCardIDs.size > 0}
-                    <!-- T07 下一步建议（docs/40）：本场数据推导，本地口径、可忽略——"把疑问留下，也把下一步留下" -->
-                    <div class="lv-done-next">
-                        <div class="lv-eyebrow">{t.review.nextTitle}</div>
-                        {#if sessionSkip > 0}
-                            <div class="lv-next-row">
-                                <span>{t.review.nextSkipped.replace("${n}", String(sessionSkip))}</span>
-                                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openDashboard()}><LvIcon name="home" size={12} /> <span>{t.review.nextAct}</span></button>
-                            </div>
-                        {/if}
-                        {#if sessionForget > 0}
-                            <div class="lv-next-row" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                                <span>{t.review.nextForgotten.replace("${n}", String(sessionForget))}</span>
-                                <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => { cramActive = true; void loadQueue(); }}>
-                                    <LvIcon name="flame" size={13} /> {t.review.reinforceMistakes ?? "强化这批遗忘卡"}
-                                </button>
-                            </div>
-                        {/if}
-                        {#if starredCardIDs.size > 0}
-                            <div class="lv-next-row" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                                <span>⭐ 本场共星标了 {starredCardIDs.size} 张重点卡片</span>
-                                <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => { cramActive = true; void loadQueue(); }}>
-                                    <LvIcon name="star" size={13} /> 立即专项练习星标卡
-                                </button>
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
-                <div class="fn__flex lv-done-actions" style="justify-content: center; gap: var(--lv-sp-2)">
-                    <button class="b3-button lv-btn-primary" onclick={() => ctx.openDashboard()}><LvIcon name="home" size={16} /> <span>{t.review.returnHome ?? "返回闪卡主页"}</span></button>
-                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={() => ctx.openDashboard("manage")}><LvIcon name="cards" size={14} /> <span>{t.menuManager}</span></button>
-                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={loadQueue}><LvIcon name="refresh" size={14} /> <span>{t.review.again}</span></button>
-                </div>
-            </div>
-        </div>
+        <ReviewDonePanel
+            {t}
+            {sessionNew}
+            {sessionReview}
+            {sessionForget}
+            {sessionSkip}
+            {sessionQuizTotal}
+            {sessionQuizCorrect}
+            {purpose}
+            {budgetMin}
+            {budgetExpired}
+            {remainingDue}
+            streakMilestone={streakMilestoneText()}
+            dailyTip={dailyTip()}
+            {endPicked}
+            starredCardCount={starredCardIDs.size}
+            sessionDuration={sessionDurationText()}
+            targetProgress={targetProgressText()}
+            onPickEnd={pickEnd}
+            onReturnHome={() => ctx.openDashboard()}
+            onOpenManager={() => ctx.openDashboard("manage")}
+            onReviewAgain={loadQueue}
+            onCramForgotten={() => { cramActive = true; void loadQueue(); }}
+            onCramStarred={() => { cramActive = true; void loadQueue(); }}
+        />
     {:else}
         <div class="lv-head">
             <!-- R52 review 面三行结构：①身份+状态 ②进度条 ③范围/目的控制 + 工具 -->
@@ -3596,16 +3511,6 @@
         .lv-center { margin: auto; color: var(--lv-color-text-muted); }
         .lv-error-wrap { width: min(560px, 92vw); }
 
-        /* T07 结果面板（R52 .panel）：白面 1px 边框居中，内容左对齐 */
-        .lv-done-panel {
-            width: min(620px, 100%);
-            background: var(--lv-color-surface);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-l);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
-            padding: var(--lv-sp-5);
-            text-align: left;
-        }
         /* 复习就绪看板：宽屏居中，Bento 排布，内聚隔离警告与后续动作 */
         .lv-ready-wrap {
             width: 100%;
@@ -3860,73 +3765,6 @@
                 letter-spacing: -0.02em;
             }
         }
-        .lv-done-head {
-            display: flex; align-items: center; gap: var(--lv-sp-3);
-            margin-bottom: var(--lv-sp-4);
-            flex-wrap: wrap;
-        }
-        .lv-done-retention-bubble {
-            margin-left: auto;
-            display: inline-flex;
-            align-items: center;
-            gap: calc(var(--lv-space-unit) * 2);
-            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
-            border-radius: var(--lv-r-pill);
-            font-size: var(--lv-type-meta-size);
-            font-weight: var(--lv-fw-semibold);
-            background: var(--lv-primary-soft);
-            color: var(--lv-color-brand);
-            border: 1px solid var(--lv-primary-border);
-
-            &.lv-ret-high {
-                background: var(--lv-good-soft);
-                color: var(--lv-color-success);
-                border-color: color-mix(in srgb, var(--lv-color-success) 30%, transparent);
-            }
-            &.lv-ret-mid {
-                background: var(--lv-warn-soft);
-                color: var(--lv-color-warning);
-                border-color: color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
-            }
-        }
-        .lv-done-check {
-            width: 32px; height: 32px; border-radius: var(--lv-r-circle);
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: var(--lv-type-title-size); flex: none;
-            background: var(--lv-good-soft);
-            color: var(--lv-color-success);
-            box-shadow: 0 0 0 4px color-mix(in srgb, var(--lv-color-success) 14%, transparent);
-        }
-        .lv-done-title { font-size: var(--lv-type-display-size); font-weight: 650; letter-spacing: -0.03em; line-height: 1.4; }
-        .lv-done-sub { font-size: var(--lv-type-body-size); color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
-        .lv-done-stats {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--lv-sp-4);
-            padding: var(--lv-sp-3) 0 var(--lv-sp-2);
-            border-top: 1px solid var(--lv-border);
-        }
-        .lv-done-stat {
-            display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 1); min-width: 0;
-            .lv-done-stat-label { font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); }
-            .lv-hero-num { font-size: var(--lv-type-display-size); }
-            p { margin: 0; font-size: 11px; color: var(--lv-color-text-muted); opacity: .85; }
-        }
-        .lv-done-milestone { color: var(--lv-color-warning); font-weight: 600; font-size: var(--lv-type-body-size); }
-        .lv-done-tip {
-            color: var(--lv-color-text-muted);
-            font-size: var(--lv-type-control-size);
-            opacity: 0.85;
-            line-height: var(--lv-lh-reading);
-        }
-        /* BI-8：收工原因 chips 容器 */
-        .lv-done-end-box {
-            display: flex; flex-direction: column; gap: var(--lv-sp-2); align-items: center;
-            margin-top: var(--lv-sp-3);
-            padding: var(--lv-sp-3);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-m);
-            background: color-mix(in srgb, var(--lv-color-text) 3%, transparent);
-        }
-        .lv-done-actions { gap: var(--lv-sp-2); justify-content: flex-end; margin-top: var(--lv-sp-4); padding-top: var(--lv-sp-4); border-top: 1px solid var(--lv-border); }
 
         /* BI-9：恢复分支横幅 */
         .lv-recover {
@@ -3982,34 +3820,6 @@
         .lv-recover-title {
             color: var(--lv-color-text-muted);
             margin-right: var(--lv-sp-1);
-        }
-        .lv-done-milestone { color: var(--lv-color-warning); font-weight: 600; }
-        .lv-done-tip {
-            max-width: 420px;
-            color: var(--lv-color-text-muted);
-            font-size: var(--lv-type-control-size);
-            opacity: 0.85;
-            line-height: var(--lv-lh-reading);
-        }
-        /* T07 下一步建议（docs/40）：软面板 + 行式布局 */
-        .lv-done-next {
-            margin-top: var(--lv-sp-4);
-            padding: var(--lv-sp-3) var(--lv-sp-4);
-            background: var(--lv-surface-hover);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-m);
-            text-align: left;
-        }
-        .lv-next-row {
-            display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2);
-            font-size: var(--lv-type-body-size);
-            padding: calc(var(--lv-space-unit) * 2) 0;
-        }
-
-        /* R52 docs/15 §6：完成态单次淡入，不做逐行错峰 */
-        .lv-done { animation: lv-done-fade var(--lv-dur-3) var(--lv-ease) both; }
-        @keyframes lv-done-fade {
-            from { opacity: 0; transform: translateY(4px); }
         }
 
         .lv-head {
