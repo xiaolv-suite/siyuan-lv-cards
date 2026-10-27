@@ -19,9 +19,23 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.99** (2026-10-27), delivering ReviewActionModals component modularization and lightbox decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.99) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.0** (2026-10-27), delivering incremental learning two-tier scheduler decoupling, SuperBlock flashcard alignment, and comprehensive architecture modularization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.0) for the package and publishing status.
 
-## What's New in v0.210.99
+## What's New in v0.211.0
+
+- **Dialog Openers Lifecycle Decoupling (TSK-07)**:
+  - Extracted `src/bootstrap/dialog-openers.ts` to unify modal dialog argument assembly for repair drill, challenge mode, pairing game, and occlusion editor.
+  - Added dedicated test suite `tests/dialog-openers.spec.ts`.
+- **Milestone v0.211.0 Overview**:
+  - Two-tier incremental learning scheduler decoupling (raw extracts bypass FSRS, `Alt+E` lineage capture, `Ctrl+D` dismiss archiving).
+  - 100% native SuperBlock flashcard alignment (1st block question, rest answers with masking and QuickCard template).
+  - SVG/Excalidraw canvas direct editing and double-click navigation.
+  - Modularized Review workbench components (`ReviewDonePanel`, `ReviewZenIsland`, `ReviewInteractiveQuiz`, `ReviewActionModals`).
+  - Design tokens reached 97.4% coverage (100% in padding, margin, border-radius, z-index, gap, transition).
+- **Verification**:
+  - 1996 tests across 253 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.99
 
 - **ReviewActionModals Component Modularization (TSK-08)**:
   - Extracted pause modal, session options modal, memo editor modal, retire modal, and image lightbox into `ReviewActionModals.svelte`.

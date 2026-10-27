@@ -87,6 +87,12 @@ import {
 import { addBlockMenuItems, computeBlockMenuItems, extractBlockIDs } from "./bootstrap/block-menu";
 import { TopbarController } from "./bootstrap/topbar-controller";
 import {
+    buildRepairDrillDialogArgs,
+    buildChallengeDialogArgs,
+    buildPairingDialogArgs,
+    buildOcclusionEditorDialogArgs,
+} from "./bootstrap/dialog-openers";
+import {
     resolveTargetNotebook,
     queryNotebookBlockIDs,
 } from "./core/report-writer";
@@ -2083,21 +2089,11 @@ export default class LvCardsPlugin extends Plugin {
     /** 图片遮挡编辑器（M4·FR4 riff 先行）：保存块属性后入卡组 */
     private async openOcclusionEditor(blockID: string, deckID: string) {
         const OcclusionEditor = await loadOcclusionEditor();
-        svelteDialog({
-            title: (this.i18n as any).occlusion.title,
-            component: OcclusionEditor,
-            width: "min(760px, 94vw)",
-            props: {
-                i18n: this.i18n,
-                blockID,
-                onSave: async () => {
-                    await addRiffCards(deckID, [blockID]);
-                    await this.rememberSourceFingerprint(blockID);
-                    showMessage((this.i18n as any).occlusion.occlusionSaved, 2000, "info");
-                },
-                onClose: noop,
-            },
-        });
+        svelteDialog(buildOcclusionEditorDialogArgs(this.i18n, OcclusionEditor, blockID, async () => {
+            await addRiffCards(deckID, [blockID]);
+            await this.rememberSourceFingerprint(blockID);
+            showMessage((this.i18n as any).occlusion.occlusionSaved, 2000, "info");
+        }));
     }
 
     private async removeCardsFromDeck(blockIDs: string[]) {
@@ -2561,30 +2557,18 @@ export default class LvCardsPlugin extends Plugin {
     /** AI 制卡向导（M2·FR6-10）：生成回调 + 批次记录落库；initialSource 用于 leech 改写预填 */
     /** T10 修卡演练（docs/13 §12）：独立样例、零网络零写入、进度不迁入真实学习 */
     private async openRepairDrill() {
-        let Drill: any;
         try {
-            Drill = await loadRepairDrill();
+            const Drill = await loadRepairDrill();
+            svelteDialog(buildRepairDrillDialogArgs(this.i18n, Drill));
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.drillTitle, e);
-            return;
         }
-        svelteDialog({
-            title: this.i18n.drillTitle,
-            component: Drill,
-            width: "min(720px, 94vw)",
-            props: { i18n: this.i18n, onClose: noop },
-        });
     }
 
     private async openChallenge() {
         try {
             const ChallengeMode = await loadChallengeMode();
-            svelteDialog({
-                title: (this.i18n as any).challenge.title,
-                component: ChallengeMode,
-                width: "min(560px, 94vw)",
-                props: { i18n: this.i18n, onExit: noop },
-            });
+            svelteDialog(buildChallengeDialogArgs(this.i18n, ChallengeMode));
         } catch (e) {
             this.reportDialogOpenFailure((this.i18n as any).challenge?.title ?? "challenge", e);
         }
@@ -2593,12 +2577,7 @@ export default class LvCardsPlugin extends Plugin {
     private async openPairing() {
         try {
             const PairingGame = await loadPairingGame();
-            svelteDialog({
-                title: (this.i18n as any).pairing.title,
-                component: PairingGame,
-                width: "min(720px, 94vw)",
-                props: { i18n: this.i18n, onExit: noop },
-            });
+            svelteDialog(buildPairingDialogArgs(this.i18n, PairingGame));
         } catch (e) {
             this.reportDialogOpenFailure((this.i18n as any).pairing?.title ?? "pairing", e);
         }
