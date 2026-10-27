@@ -27,3 +27,11 @@
         <option value={o.value}>{o.label}</option>
     {/each}
 </select>
+
+<style lang="scss">
+    select.b3-select {
+        box-sizing: border-box;
+        vertical-align: middle;
+        line-height: 20px;
+    }
+</style>

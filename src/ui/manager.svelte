@@ -1172,27 +1172,15 @@ import { confirmDialog } from "@/libs/dialog";
     }
     .lv-filter {
         width: min(100%, 280px);
+        height: 38px;
         min-height: 38px;
+        line-height: var(--lv-lh-control-lg);
         border-radius: var(--lv-r-pill);
-        padding: 0 var(--lv-sp-4) 0 calc(var(--lv-space-unit) * 7);
+        padding: calc(var(--lv-space-unit) * 4) var(--lv-sp-4) calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
         border: 1px solid var(--lv-border);
         background: var(--lv-color-surface);
+        box-sizing: border-box;
         box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
-        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
-        &:focus-visible,
-        &:focus {
-            outline: none;
-            border-color: var(--lv-color-brand);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
-        }
-    }
-    .lv-sort {
-        font-size: var(--lv-type-control-size);
-        min-height: 34px;
-        border-radius: var(--lv-r-control);
-        border: 1px solid var(--lv-border);
-        background: var(--lv-color-surface);
-        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
         transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
         &:focus-visible,
         &:focus {
@@ -1280,13 +1268,33 @@ import { confirmDialog } from "@/libs/dialog";
 
         .lv-sort {
             height: 30px;
+            min-height: 30px;
             max-width: 140px;
             font-size: var(--lv-type-control-size);
             border-radius: var(--lv-r-pill);
             border: 1px solid var(--lv-border);
-            background: var(--lv-color-surface);
-            padding: 0 calc(var(--lv-space-unit) * 5);
+            background-color: var(--lv-color-surface);
+            line-height: var(--lv-lh-control-lg);
+            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4);
+            box-sizing: border-box;
+            text-align: center;
+            text-align-last: center;
+            vertical-align: middle;
             box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+            cursor: pointer;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+
+            &:focus-visible,
+            &:focus {
+                outline: none;
+                border-color: var(--lv-color-brand);
+                box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+            }
+
+            option {
+                text-align: left;
+                line-height: normal;
+            }
         }
         .lv-toolbar-caption { margin-left: auto; font-size: 12px; color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
     }

@@ -1205,7 +1205,17 @@
     /* 笔记本载入组：按钮 + 范围选择拼接成一行 */
     .lv-wb-nb { display: flex; gap: 6px; }
     .lv-wb-nb .lv-wb-load { flex: 1; min-width: 0; }
-    .lv-wb-nb-select { width: 96px; flex: none; font-size: var(--lv-type-control-size); padding: 4px 6px; }
+    .lv-wb-nb-select {
+        width: 96px;
+        flex: none;
+        height: 28px;
+        min-height: 28px;
+        line-height: 20px;
+        font-size: var(--lv-type-control-size);
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2);
+        box-sizing: border-box;
+        vertical-align: middle;
+    }
     .lv-wb-chips { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 2); margin-top: 4px; }
     .lv-wb-chip {
         display: flex;

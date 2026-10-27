@@ -577,9 +577,28 @@ body[data-theme-mode="dark"],
     }
 
     .b3-select {
-        min-height: 38px;
-        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
-        line-height: var(--lv-lh-body);
+        min-height: 32px;
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
+        line-height: var(--lv-lh-control-lg);
+        box-sizing: border-box;
+        vertical-align: middle;
+
+        &.b3-select--small,
+        &.b3-button--small {
+            min-height: 28px;
+            height: 28px;
+            line-height: var(--lv-lh-control-lg);
+            padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
+            font-size: var(--lv-type-meta-size);
+        }
+    }
+
+    input.b3-text-field {
+        min-height: 32px;
+        line-height: var(--lv-lh-control-lg);
+        padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 4);
+        box-sizing: border-box;
+        vertical-align: middle;
     }
 
     textarea.b3-text-field {

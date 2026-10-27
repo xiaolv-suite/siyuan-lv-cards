@@ -32,3 +32,11 @@
         oninput?.(value);
     }}
 />
+
+<style lang="scss">
+    input.b3-text-field {
+        box-sizing: border-box;
+        vertical-align: middle;
+        line-height: 20px;
+    }
+</style>

@@ -3563,16 +3563,27 @@
 
                 .lv-scope {
                     height: 28px;
+                    min-height: 28px;
+                    line-height: var(--lv-lh-control-lg);
                     min-width: 6em;
                     max-width: 135px;
-                    padding: 0 calc(var(--lv-space-unit) * 4);
+                    padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3);
                     border-radius: var(--lv-r-pill);
                     border: 1px solid var(--lv-border);
                     background: var(--lv-color-surface);
                     color: var(--lv-color-text);
                     font-size: var(--lv-type-meta-size);
+                    text-align: center;
+                    text-align-last: center;
+                    vertical-align: middle;
+                    box-sizing: border-box;
                     box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
                     flex-shrink: 1;
+
+                    option {
+                        text-align: left;
+                        line-height: normal;
+                    }
                 }
 
                 .lv-purpose-end-chip {
@@ -3646,7 +3657,17 @@
                 }
             }
 
-            .lv-scope { min-width: 8.5em; max-width: 200px; font-size: var(--lv-type-control-size); padding: 4px 8px; }
+            .lv-scope {
+                min-width: 8.5em;
+                max-width: 200px;
+                min-height: 28px;
+                height: 28px;
+                line-height: var(--lv-lh-control-lg);
+                font-size: var(--lv-type-control-size);
+                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
+                box-sizing: border-box;
+                vertical-align: middle;
+            }
             /* BI-3：入口上下文条（窄屏换行不挤压进度） */
             .lv-entry {
                 display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 1);

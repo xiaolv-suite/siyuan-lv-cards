@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.211.3 2026-10-28 · 下拉选择框与表单输入控件文字垂直水平居中规范化修复
+
+- **全库选择框（Select）与输入控件文字垂直/水平居中排版修复**：
+  - 根治卡库（闪卡管理器）中排序（默认顺序）、状态过滤等药丸下拉框（`.lv-sort`）文字偏上、下方空白脱节的排版 Bug；
+  - 清理多重规则冲突与 `min-height` 高度覆盖隐患，精准定义 `height: 30px; min-height: 30px; line-height: var(--lv-lh-control-lg); padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4); text-align-last: center;`，实现文字在药丸框内绝对垂直居中与水平居中，与相邻胶囊按钮视觉完美对齐；
+  - 修复全局 `src/index.scss` 中 `.b3-select` 被 `min-height: 38px` 强制拉大的历史遗留，统一紧凑尺寸适配；
+  - 联动排查并修复复习工作台范围下拉框（`.lv-scope`）、搜索输入框（`.lv-filter`）、AI 笔记本选择框（`.lv-wb-nb-select`）以及通用 Kit 组件（`LvSelect` / `LvInput`）的文字垂直居中基线；
+  - 编写专用样式与盒模型审查测试套件 `tests/select-and-input-alignment.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 256 个测试文件、2004 项测试 100% 通过；E2E 靶场 18 项全部通过；设计令牌覆盖率保持 97.2%；构建与烟雾测试全绿。
+
+
 ## v0.211.2 2026-10-27 · 22 槽持久化存储装载器解耦与坏键容错架构深化
 
 - **22 槽持久化存储批量装载器（Storage Loader）独立解耦（TSK-07 持续深化）**：

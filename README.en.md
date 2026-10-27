@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.2** (2026-10-27), delivering storage-loader decoupling and 22-store batch loading resilience. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.2) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.3** (2026-10-28), delivering select and input control vertical and horizontal text centering normalization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.3) for the package and publishing status.
 
-## What's New in v0.211.2
+## What's New in v0.211.3
+
+- **Form Controls & Select Dropdown Text Centering Alignment**:
+  - Fixed vertical text misalignment in Flashcard Manager `.lv-sort` pill dropdowns (default sort, status filters).
+  - Cleaned up conflicting min-height and padding overrides, enforcing `line-height: var(--lv-lh-control-lg); text-align-last: center;` for centered text presentation matching adjacent chip buttons.
+  - Aligned review scope dropdowns (`.lv-scope`), search input (`.lv-filter`), AI notebook selectors, and Kit components (`LvSelect` / `LvInput`).
+  - Added dedicated style verification suite `tests/select-and-input-alignment.spec.ts`.
+- **Verification**:
+  - 2004 tests across 256 test suites 100% passing; 18/18 isolated E2E tests passing; 97.2% design token coverage; production build and smoke tests green.
+
+## Previous Update: v0.211.2
 
 - **22-Store Batch Loader Modularization (TSK-07)**:
   - Extracted `src/bootstrap/storage-loader.ts` to manage concurrent batch loading, fault-tolerant store resilience, field normalizations, and rollback snapshot baselines.

@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.2（2026-10-27）**，落地 22 槽持久化存储装载器解耦与坏键容错架构深化。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.2)。
+当前版本为 **v0.211.3（2026-10-28）**，落地下拉选择框与表单输入控件文字垂直水平居中规范化修复。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.3)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.2）
+## 本次更新（v0.211.3）
+
+- **全库选择框（Select）与输入控件文字垂直/水平居中排版修复**：
+  - 根治卡库（闪卡管理器）中排序（默认顺序）、状态过滤等药丸下拉框（`.lv-sort`）文字偏上、下方空白脱节的排版 Bug；
+  - 清理多重规则冲突与 `min-height` 高度覆盖隐患，精准定义 `height: 30px; min-height: 30px; line-height: var(--lv-lh-control-lg); padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4); text-align-last: center;`，实现文字在药丸框内绝对垂直居中与水平居中，与相邻胶囊按钮视觉完美对齐；
+  - 修复全局 `src/index.scss` 中 `.b3-select` 被 `min-height: 38px` 强制拉大的历史遗留，统一紧凑尺寸适配；
+  - 联动排查并修复复习工作台范围下拉框（`.lv-scope`）、搜索输入框（`.lv-filter`）、AI 笔记本选择框（`.lv-wb-nb-select`）以及通用 Kit 组件（`LvSelect` / `LvInput`）的文字垂直居中基线；
+  - 编写专用样式与盒模型审查测试套件 `tests/select-and-input-alignment.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 256 个测试文件、2004 项测试 100% 通过；E2E 靶场 18 项全部通过；设计令牌覆盖率保持 97.2%；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.2）
 
 - **22 槽持久化存储批量装载器（Storage Loader）独立解耦（TSK-07 持续深化）**：
   - 抽离 `src/bootstrap/storage-loader.ts`，统一负责 22 槽持久化存储的并发批量读取、单槽损坏防断死容错、多领域字段白名单清洗以及乐观回滚快照基线初始化；
