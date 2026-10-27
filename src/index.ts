@@ -290,34 +290,32 @@ function mountChunkFallback(el: HTMLElement, i18n: Record<string, any>, err: unk
 
 const TAB_DASHBOARD = "lv-cards-dashboard";
 const TAB_REVIEW = "lv-cards-review";
-const SETTINGS_DATA = "settings.json";
-const REVLOG_DATA = "revlog.json";
-const SUSPEND_TODAY_DATA = "suspend-today.json";
-const EXAM_PLANS_DATA = "exam-plans.json";
-const AI_BATCHES_DATA = "ai-batches.json";
-const SESSION_STATE_DATA = "session-state.json";
-const AI_JOBS_DATA = "ai-jobs.json";
-const KNOWLEDGE_OBJECTS_DATA = "knowledge-objects.json";
-const CARD_RELATIONS_DATA = "relations.json";
-const ERROR_TAGS_DATA = "error-tags.json";
-const INBOX_DATA = "inbox.json";
-const LEARNING_GOALS_DATA = "learning-goals.json";
-const ENTRY_CONTEXTS_DATA = "entry-contexts.json";
-const CONTENT_LIFECYCLES_DATA = "content-lifecycles.json";
-const SOURCE_HEALTH_DATA = "source-health.json";
-const AI_KILL_SWITCH_DATA = "ai-killswitch.json";
-/** Anki M3：guid 导入台账（幂等重导） */
-const ANKI_LEDGER_DATA = "anki-ledger.json";
-/** T05：块内容版本快照（每块上限 10） */
-const CONTENT_VERSIONS_DATA = "content-versions.json";
-/** BW-9：来源级 AI 禁止外发规则（笔记本/文档/块 ID，不含内容） */
-const AI_DENY_LIST_DATA = "ai-deny-list.json";
-/** BU-24/25：AI 用量账本（token 估算/模型/任务，不含 key 与原文） */
-const AI_COST_LEDGER_DATA = "ai-cost-ledger.json";
-/** Obsidian SR 导入弱台账（指纹→落点，幂等重导；不含卡片原文） */
-const OB_LEDGER_DATA = "ob-import-ledger.json";
-/** 批量修复持久化事务日志（成功写入后落盘，供重启后审计与撤销） */
-const MAINTENANCE_REPAIR_JOURNAL_DATA = "maintenance-repair-journal.json";
+
+import {
+    SETTINGS_DATA,
+    REVLOG_DATA,
+    SUSPEND_TODAY_DATA,
+    EXAM_PLANS_DATA,
+    AI_BATCHES_DATA,
+    SESSION_STATE_DATA,
+    AI_JOBS_DATA,
+    KNOWLEDGE_OBJECTS_DATA,
+    CARD_RELATIONS_DATA,
+    ERROR_TAGS_DATA,
+    INBOX_DATA,
+    LEARNING_GOALS_DATA,
+    ENTRY_CONTEXTS_DATA,
+    CONTENT_LIFECYCLES_DATA,
+    SOURCE_HEALTH_DATA,
+    AI_KILL_SWITCH_DATA,
+    ANKI_LEDGER_DATA,
+    CONTENT_VERSIONS_DATA,
+    AI_DENY_LIST_DATA,
+    AI_COST_LEDGER_DATA,
+    OB_LEDGER_DATA,
+    MAINTENANCE_REPAIR_JOURNAL_DATA,
+    ALL_STORE_KEYS,
+} from "./bootstrap/storage-keys";
 
 function createEmptyRepairJournal(): MaintenanceRepairJournal {
     return { schema: 1, entries: [] };
@@ -758,7 +756,7 @@ export default class LvCardsPlugin extends Plugin {
     private lastDue = 0;
 
     /** AT-1：批量装载键（onload 与同步重载共用同一路径，防错位回归） */
-    private static readonly STORE_KEYS = [SETTINGS_DATA, REVLOG_DATA, SUSPEND_TODAY_DATA, EXAM_PLANS_DATA, AI_BATCHES_DATA, SESSION_STATE_DATA, AI_JOBS_DATA, KNOWLEDGE_OBJECTS_DATA, CARD_RELATIONS_DATA, ERROR_TAGS_DATA, INBOX_DATA, LEARNING_GOALS_DATA, ENTRY_CONTEXTS_DATA, CONTENT_LIFECYCLES_DATA, SOURCE_HEALTH_DATA, AI_KILL_SWITCH_DATA, ANKI_LEDGER_DATA, CONTENT_VERSIONS_DATA, AI_DENY_LIST_DATA, AI_COST_LEDGER_DATA, OB_LEDGER_DATA, MAINTENANCE_REPAIR_JOURNAL_DATA] as const;
+    private static readonly STORE_KEYS = ALL_STORE_KEYS;
 
     /** AT-1（保守版）：同步/覆盖变更 → 有界串行重载。防抖 2s、单飞、先冲刷本地在途写（绝不覆盖未 flush 的本地状态）。
      * 打开中的页签不会自动重渲染（完整 UI 刷新协议待真机专项）；重载后新读取即取到新数据，角标即时刷新。 */
