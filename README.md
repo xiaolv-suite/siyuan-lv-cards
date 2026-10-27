@@ -21,11 +21,23 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.3（2026-10-28）**，落地下拉选择框与表单输入控件文字垂直水平居中规范化修复。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.3)。
+当前版本为 **v0.211.4（2026-10-28）**，落地 Issue #20 闭环验收、原生编辑快捷键 e 打通与任务视界每日复习待办直连。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.4)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.3）
+## 本次更新（v0.211.4）
+
+- **思源原生闪卡核心快捷键 `e` / `E` 原位编辑卡片打通（Issue #20 深度闭环）**：
+  - 补齐复习快捷键调度中的 `e` / `E`（Edit）按键支持，复习时敲击 `e` 即可立即通过 `openTab({ id, zoomIn: true })` 放大打开当前卡片块原位进行编辑，无论卡片包含文本、SVG 画布、Excalidraw 挂件还是公式均可极速修改，修改后回切无缝刷新；
+  - 完善单元测试 `tests/review-shortcuts.spec.ts`；正式在 GitHub 评论并关闭 Issue #20；
+- **配合 Task Horizon (任务视界) 落地每日 FSRS 记忆负荷微任务挂载（Issue #19 协同）**：
+  - 在对外桥 `src/api/external-bridge.ts` 中接入 `daily-task-export` 能力，提供 `generateDailyTaskMarkdown(options)` 接口；
+  - 自动根据当前未复习卡片总数生成 Markdown 待办任务（未完成 `- [ ] 记忆复习：今日待复习 N 张闪卡` / 已完成 `- [x] 记忆复习：今日已无待复习闪卡`），支持任务视界等任务插件一键挂载与完成打勾；
+  - 完善单元测试 `tests/external-bridge.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 256 个测试文件、2006 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.3）
 
 - **全库选择框（Select）与输入控件文字垂直/水平居中排版修复**：
   - 根治卡库（闪卡管理器）中排序（默认顺序）、状态过滤等药丸下拉框（`.lv-sort`）文字偏上、下方空白脱节的排版 Bug；

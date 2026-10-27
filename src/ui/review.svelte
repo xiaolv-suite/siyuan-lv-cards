@@ -1965,6 +1965,9 @@
             case "dismiss":
                 void dismissCurrentCard();
                 break;
+            case "open-editor":
+                openInEditor();
+                break;
         }
     }
 

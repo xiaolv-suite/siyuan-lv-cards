@@ -135,6 +135,12 @@ describe("review-shortcuts 键盘调度解析器", () => {
             expect(resolveReviewKeyAction({ key: "[" }, baseContext({ hasLastAnswered: true }))).toBe("toggle-peek");
             expect(resolveReviewKeyAction({ key: "[" }, baseContext({ hasLastAnswered: false }))).toBeNull();
         });
+
+        it("e 或 E 触发 open-editor 原生编辑，对齐思源原生操作体验", () => {
+            expect(resolveReviewKeyAction({ key: "e" }, baseContext({ hasCurrent: true }))).toBe("open-editor");
+            expect(resolveReviewKeyAction({ key: "E" }, baseContext({ hasCurrent: true }))).toBe("open-editor");
+            expect(resolveReviewKeyAction({ key: "e" }, baseContext({ hasCurrent: false }))).toBeNull();
+        });
     });
 
     describe("四档与三档评分（1~4）与撤销（p / q）", () => {

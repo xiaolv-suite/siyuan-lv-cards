@@ -145,6 +145,39 @@ describe("小驴闪卡对外窗口桥与事件总线（Epoch 6）", () => {
         unmountSecond();
     });
 
+    it("generateDailyTaskMarkdown：支持为任务视界/任务插件生成每日复习微任务 Markdown", async () => {
+        const host = makeHost({
+            getDueSummary: async () => ({
+                unreviewedCount: 40,
+                unreviewedNewCardCount: 10,
+                unreviewedOldCardCount: 30,
+                updatedAt: "2026-10-28T00:00:00.000Z",
+            }),
+        });
+        const bridge = buildCardsBridge(host);
+        const taskRes = await bridge.generateDailyTaskMarkdown();
+        expect(taskRes.ok).toBe(true);
+        if (!taskRes.ok) return;
+
+        expect(taskRes.data.dueCount).toBe(40);
+        expect(taskRes.data.markdown).toBe("- [ ] 记忆复习：今日待复习 40 张闪卡");
+
+        // 今日已完成状态（due = 0）
+        const completeHost = makeHost({
+            getDueSummary: async () => ({
+                unreviewedCount: 0,
+                unreviewedNewCardCount: 0,
+                unreviewedOldCardCount: 0,
+                updatedAt: "2026-10-28T00:00:00.000Z",
+            }),
+        });
+        const completeBridge = buildCardsBridge(completeHost);
+        const doneTaskRes = await completeBridge.generateDailyTaskMarkdown();
+        expect(doneTaskRes.ok).toBe(true);
+        if (!doneTaskRes.ok) return;
+        expect(doneTaskRes.data.markdown).toBe("- [x] 记忆复习：今日已无待复习闪卡");
+    });
+
     it("dispatchCardReviewedEvent：通过 window.dispatchEvent 派发标准生态事件", () => {
         const dispatchSpy = vi.spyOn(window, "dispatchEvent");
         try {

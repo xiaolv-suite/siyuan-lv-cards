@@ -45,7 +45,7 @@ export interface EcosystemEventEnvelope<T = Record<string, unknown>> {
     idempotencyKey: string;
 }
 
-export const ECOSYSTEM_EVENTS = {
+export const ECOSYSTEM_EVENTS = Object.freeze({
     // 打卡
     CHECKIN_RECORDED: "checkin:event-recorded",
     CHECKIN_DELETED: "checkin:event-deleted",
@@ -73,7 +73,9 @@ export const ECOSYSTEM_EVENTS = {
     // 快门
     QUICKGATE_COMMAND_EXECUTED: "lv-quickgate:command-executed",
     QUICKGATE_DATA_CHANGED: "lv-quickgate:data-changed",
-} as const;
+    // 联盟伙伴：Task Horizon (任务视界)
+    TASK_COMPLETED: "tm:task-completed",
+} as const);
 
 /* ========================================================================= */
 /* 3. 各插件公开桥类型定义 (Public Bridge Interfaces)                        */
@@ -298,11 +300,72 @@ export interface QuickGateBridgeApi {
     runCommand(plugin: string, command: string): Promise<ActionResult<unknown>>;
 }
 
+// --- ⑩ Task Horizon 任务视界 (siyuan-plugin-task-horizon) ---
+export interface TaskHorizonItem {
+    id: string;
+    blockId: string;
+    title: string;
+    docId: string;
+    status: string;
+    done: boolean;
+    priority: "high" | "medium" | "low" | "none" | string;
+    startDate?: string;
+    completionTime?: string;
+    tags: string[];
+}
+
+export interface TaskHorizonQueryOptions {
+    date?: "today" | string;
+    scope?: "current" | "all";
+    limit?: number;
+    includeCompleted?: boolean;
+}
+
+export interface TaskHorizonQueryResult {
+    tasks: TaskHorizonItem[];
+    total: number;
+    partial: boolean;
+    truncated: boolean;
+}
+
+export interface TaskHorizonStatusOption {
+    id: string;
+    name: string;
+    marker: string;
+}
+
+export interface TaskHorizonCompletedEventDetail {
+    id: string;
+    title: string;
+    blockId: string;
+    docId: string;
+    completedAt: number;
+    tags: string[];
+    operationId?: string;
+    occurrenceId?: string;
+    source?: string;
+}
+
+export interface TaskHorizonBridgeApi {
+    readonly protocol: "task-horizon";
+    readonly apiVersion: number;
+    readonly version: string;
+    readonly capabilities?: readonly string[];
+    isReady(): boolean;
+    whenReady(): Promise<boolean>;
+    hasCapability?(name: string): boolean;
+    getTodayTasks(): Promise<TaskHorizonItem[]>;
+    queryTasks(options?: TaskHorizonQueryOptions): Promise<TaskHorizonQueryResult>;
+    getStatusOptions(): TaskHorizonStatusOption[];
+    setTaskStatus(blockId: string, statusId: string): Promise<boolean>;
+    openView(viewType: "list" | "checklist" | "timeline" | "kanban" | "calendar" | "whiteboard"): Promise<void> | void;
+}
+
 /* ========================================================================= */
 /* 4. 统一别名检索表 (Ecosystem Bridge Aliases Registry)                      */
 /* ========================================================================= */
 
-export const BRIDGE_ALIASES = {
+export const BRIDGE_ALIASES = Object.freeze({
     checkin: ["siyuanCheckin", "LvCheckin", "lvCheckin", "xiaolvCheckin"],
     contacts: ["LvContacts", "lvContacts", "xiaolvContacts", "siyuanContacts"],
     home: ["LvHome", "lvHome", "xiaolvHome", "siyuanHome"],
@@ -312,7 +375,8 @@ export const BRIDGE_ALIASES = {
     cards: ["xiaolvCards", "lvCards", "LvCards", "siyuanCards"],
     common: ["xiaolvCommon", "LvCommon", "lvCommon", "siyuanCommon"],
     quickgate: ["LvQuickgate", "lvQuickgate", "xiaolvQuickgate", "siyuanQuickgate"],
-} as const;
+    taskHorizon: ["TaskHorizon", "taskHorizon", "siyuanTaskHorizon"],
+} as const);
 
 /* ========================================================================= */
 /* 5. 核心工具函数：安全探测、调用与优雅降级                                 */
@@ -416,15 +480,14 @@ export async function logCheckinEventSafely(options: {
  */
 export function registerRaikiriModuleSafely(options: RaikiriHomeModuleOptions): () => void {
     if (typeof window === "undefined") return () => {};
-    const w = window as any;
-    const raikiri = (w.siyuanSpeedSwitch || w.xiaolvSpeedSwitch || w.xiaolvRaikiri || w.lvRaikiri) as RaikiriBridgeApi | undefined;
+    const raikiri = getBridgeSafely<RaikiriBridgeApi>("raikiri");
     if (!raikiri || typeof raikiri.registerHomeModule !== "function") return () => {};
     try {
         const handle = raikiri.registerHomeModule(options);
         if (typeof handle === "function") return handle;
         if (handle && typeof handle.unregister === "function") return () => handle.unregister!();
     } catch (e) {
-        console.warn("[LvCards] raikiri reg failed:", e);
+        console.warn("[小驴生态联邦] 注册雷切小组件失败:", e);
     }
     return () => {};
 }
@@ -450,5 +513,29 @@ export function subscribeEcosystemEvent<T = Record<string, unknown>>(
     window.addEventListener(eventName, listener);
     return () => {
         window.removeEventListener(eventName, listener);
+    };
+}
+
+/**
+ * 监听 Task Horizon 任务完成事件 (tm:task-completed)
+ * 返回注销清理函数
+ */
+export function onTaskHorizonCompleted(
+    listener: (detail: TaskHorizonCompletedEventDetail) => void
+): () => void {
+    if (typeof window === "undefined" || typeof window.addEventListener !== "function") {
+        return () => {};
+    }
+    const handler = (evt: Event) => {
+        try {
+            const custom = evt as CustomEvent<TaskHorizonCompletedEventDetail>;
+            if (custom.detail) listener(custom.detail);
+        } catch (e) {
+            console.error("[小驴生态联邦] 处理 Task Horizon 完成事件异常:", e);
+        }
+    };
+    window.addEventListener("tm:task-completed", handler);
+    return () => {
+        window.removeEventListener("tm:task-completed", handler);
     };
 }

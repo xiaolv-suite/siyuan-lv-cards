@@ -20,6 +20,7 @@ export type ReviewKeyAction =
     | "toggle-memo"
     | "undo"
     | "dismiss"
+    | "open-editor"
     | null;
 
 export interface ReviewShortcutContext {
@@ -143,6 +144,13 @@ export function resolveReviewKeyAction(
     }
     if (e.key === "s") {
         return "suspend";
+    }
+    if (e.key === "e" || e.key === "E") {
+        if (ctx.hasCurrent) {
+            e.preventDefault?.();
+            return "open-editor";
+        }
+        return null;
     }
     if (e.key === "m") {
         if (ctx.hasCurrent) {

@@ -19,9 +19,20 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.3** (2026-10-28), delivering select and input control vertical and horizontal text centering normalization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.3) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.4** (2026-10-28), delivering Issue #20 closure, native editor shortcut 'e', and Task Horizon daily task integration. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.4) for the package and publishing status.
 
-## What's New in v0.211.3
+## What's New in v0.211.4
+
+- **Native Editor Shortcut 'e' / 'E' (Issue #20 Closure)**:
+  - Added review shortcut support for `e` / `E` to immediately zoom into the current card block within SiYuan's native editor.
+  - Verified and closed Issue #20 on GitHub.
+- **Task Horizon Daily Review Micro-Task Export (Issue #19 Collaboration)**:
+  - Added `daily-task-export` capability to `src/api/external-bridge.ts`, exposing `generateDailyTaskMarkdown(options)` to generate `- [ ] / - [x]` task items for Task Horizon and task management plugins.
+  - Added unit tests in `tests/external-bridge.spec.ts`.
+- **Verification**:
+  - 2006 tests across 256 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.3
 
 - **Form Controls & Select Dropdown Text Centering Alignment**:
   - Fixed vertical text misalignment in Flashcard Manager `.lv-sort` pill dropdowns (default sort, status filters).

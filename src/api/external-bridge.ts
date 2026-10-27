@@ -21,6 +21,7 @@ export const CARDS_BRIDGE_CAPABILITIES = [
     "hasCapability",
     "getOverview",
     "receiveExtract",
+    "daily-task-export",
 ] as const;
 
 export const CARDS_BRIDGE_ALIASES = [
@@ -78,6 +79,7 @@ export interface CardsBridgeApi {
     openHub(tab?: string): Promise<ActionResult<boolean>>;
     openReview(options?: ReviewOpenOptions): Promise<ActionResult<boolean>>;
     receiveExtract(envelope: ExtractEnvelope): Promise<ActionResult<{ blockID?: string; enrolled?: boolean }>>;
+    generateDailyTaskMarkdown(options?: { customPrefix?: string }): Promise<ActionResult<{ markdown: string; dueCount: number }>>;
 }
 
 export interface CardsBridgeHost {
@@ -158,6 +160,21 @@ export function buildCardsBridge(host: CardsBridgeHost): CardsBridgeApi {
                 return wrap("extract-failed", () => host.receiveExtract!(envelope));
             }
             return Promise.resolve({ ok: false, code: "not-supported", message: "receiveExtract is not supported by current host" });
+        },
+        generateDailyTaskMarkdown: (opts?: { customPrefix?: string }) => {
+            return wrap("daily-task-failed", async () => {
+                const dueSummary = await host.getDueSummary();
+                const totalDue = dueSummary.unreviewedCount;
+                const prefix = opts?.customPrefix ?? "记忆复习";
+                const isComplete = totalDue === 0;
+                const markdown = isComplete
+                    ? `- [x] ${prefix}：今日已无待复习闪卡`
+                    : `- [ ] ${prefix}：今日待复习 ${totalDue} 张闪卡`;
+                return {
+                    markdown,
+                    dueCount: totalDue,
+                };
+            });
         },
     };
 }
