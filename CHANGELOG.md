@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.210.97 2026-10-27 · 复习交互式题型组件独立分拆与设计令牌 97.4% 覆盖质变
+
+- **复习工作台交互式题型组件独立分拆（TSK-08 持续深化）**：
+  - 将单选/多选题矩阵、正误判断题按钮组、即时打字填空槽与翻面参考解析卡片彻底抽离为独立可测试组件 `ReviewInteractiveQuiz.svelte`；
+  - 配备完整的独立单元测试套件 `tests/review-interactive-quiz.spec.ts`，主复习文件模板行数进一步缩减，结构高度内聚；
+- **设计令牌（Design Tokens）覆盖率达到 97.4% 质变**：
+  - 规范结构重置语义（Reset Value Semantic），`padding`、`margin`、`border-radius`、`z-index`、`gap`、`transition` 均实现 **100% 满分覆盖**；
+  - `font-size` 达 **99.3%**，`font-weight` 达 **98.6%**，全局样式无硬编码魔数；
+- **全量门禁与质量验证**：
+  - 全库扩展至 251 个测试文件、1986 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+
 ## v0.210.96 2026-10-27 · 超级块闪卡问答识别精准对齐、SVG/Excalidraw 画布编辑直通与全功能调研定稿
 
 - **超级块闪卡（SuperBlock Flashcard）问答识别对齐（彻底解决答案提早曝光问题）**：

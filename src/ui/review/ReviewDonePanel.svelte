@@ -229,15 +229,15 @@
     }
     .lv-done-title {
         font-size: var(--lv-type-display-size);
-        font-weight: 650;
+        font-weight: var(--lv-fw-heading);
         letter-spacing: -0.03em;
-        line-height: 1.4;
+        line-height: var(--lv-lh-body);
     }
     .lv-done-sub {
         font-size: var(--lv-type-body-size);
         color: var(--lv-color-text-muted);
         font-variant-numeric: tabular-nums;
-        margin-top: 2px;
+        margin-top: calc(var(--lv-space-unit) * 1);
     }
     .lv-done-stats {
         display: grid;
@@ -261,13 +261,13 @@
     }
     .lv-done-stat p {
         margin: 0;
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
         opacity: .85;
     }
     .lv-done-milestone {
         color: var(--lv-color-warning);
-        font-weight: 600;
+        font-weight: var(--lv-fw-semibold);
         font-size: var(--lv-type-body-size);
     }
     .lv-done-tip {

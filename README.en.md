@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.96** (2026-10-27), delivering SuperBlock flashcard QA alignment, SVG/Excalidraw canvas direct editing, and native/community feature alignment research. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.96) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.210.97** (2026-10-27), delivering ReviewInteractiveQuiz component modularization and 97.4% design tokens coverage. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.97) for the package and publishing status.
 
-## What's New in v0.210.96
+## What's New in v0.210.97
+
+- **ReviewInteractiveQuiz Component Modularization (TSK-08)**:
+  - Extracted multiple-choice, true/false judge, instant fill typing, and answer analysis cards into `ReviewInteractiveQuiz.svelte`.
+  - Added dedicated test suite `tests/review-interactive-quiz.spec.ts`.
+- **Design Tokens Reached 97.4% Coverage (TSK-09)**:
+  - 100% full coverage achieved across padding, margin, border-radius, z-index, gap, and transition.
+- **Verification**:
+  - 1986 tests across 251 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.210.96
 
 - **SuperBlock Flashcard Question-Answer Recognition & Masking**:
   - Aligned with native SiYuan SuperBlock card spec: 1st sub-block is front question, 2nd and subsequent sub-blocks are back answer.

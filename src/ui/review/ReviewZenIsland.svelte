@@ -79,8 +79,8 @@
         z-index: var(--lv-z-sticky);
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
+        gap: calc(var(--lv-space-unit) * 3);
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
         border: 1px solid var(--lv-border);
@@ -93,7 +93,7 @@
         width: 1px;
         height: 14px;
         background: var(--lv-border);
-        margin: 0 2px;
+        margin: 0 calc(var(--lv-space-unit) * 1);
     }
     .lv-zen-tool-btn {
         display: inline-flex;
@@ -101,7 +101,7 @@
         justify-content: center;
         min-width: 26px;
         height: 26px;
-        padding: 0 6px;
+        padding: 0 calc(var(--lv-space-unit) * 3);
         border: none;
         border-radius: var(--lv-r-pill);
         background: transparent;
@@ -125,9 +125,9 @@
     .lv-zen-exit-btn {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: calc(var(--lv-space-unit) * 2);
         height: 26px;
-        padding: 0 10px;
+        padding: 0 calc(var(--lv-space-unit) * 5);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
         background: var(--lv-surface-hover);

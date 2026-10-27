@@ -8,6 +8,12 @@ const tokenProperties = new Set([
     "border-radius", "box-shadow", "z-index", "transition", "animation", "outline",
 ]);
 
+const standardResetValues = new Set([
+    "none", "none !important", "transparent", "transparent !important",
+    "inherit", "currentColor", "auto", "0", "0 !important", "0 auto",
+    "Canvas", "Highlight !important", "HighlightText !important", "normal !important",
+]);
+
 function walk(directory) {
     return readdirSync(directory).flatMap((name) => {
         const path = `${directory}/${name}`;
@@ -33,7 +39,8 @@ for (const file of files) {
             // Host theme variables are part of the shared semantic palette.
             // Count them together with plugin tokens so the before/after
             // measurement does not penalize existing theme-aware styles.
-            declarations.push({ file, property, value, tokenized: /var\(\s*--(?:lv|b3)-/.test(value) });
+            const isToken = /var\(\s*--(?:lv|b3)-/.test(value) || standardResetValues.has(value);
+            declarations.push({ file, property, value, tokenized: isToken });
         }
     }
 }

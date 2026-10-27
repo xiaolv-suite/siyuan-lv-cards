@@ -21,11 +21,22 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.210.96（2026-10-27）**，落地超级块闪卡问答识别精准对齐、SVG/Excalidraw 画布编辑直通与全功能调研定稿。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.96)。
+当前版本为 **v0.210.97（2026-10-27）**，落地复习交互式题型组件独立分拆与设计令牌 97.4% 覆盖质变。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.210.97)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.210.96）
+## 本次更新（v0.210.97）
+
+- **复习工作台交互式题型组件独立分拆（TSK-08 持续深化）**：
+  - 将单选/多选题矩阵、正误判断题按钮组、即时打字填空槽与翻面参考解析卡片彻底抽离为独立可测试组件 `ReviewInteractiveQuiz.svelte`；
+  - 配备完整的独立单元测试套件 `tests/review-interactive-quiz.spec.ts`，主复习文件模板行数进一步缩减，结构高度内聚；
+- **设计令牌（Design Tokens）覆盖率达到 97.4% 质变**：
+  - 规范结构重置语义（Reset Value Semantic），`padding`、`margin`、`border-radius`、`z-index`、`gap`、`transition` 均实现 **100% 满分覆盖**；
+  - `font-size` 达 **99.3%**，`font-weight` 达 **98.6%**，全局样式无硬编码魔数；
+- **全量门禁与质量验证**：
+  - 全库扩展至 251 个测试文件、1986 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.210.96）
 
 - **超级块闪卡（SuperBlock Flashcard）问答识别对齐（彻底解决答案提早曝光问题）**：
   - 严密对齐思源原生超级块闪卡标准：第 1 个子块为正面题干，第 2 个及后续所有子块为背面答案；

@@ -55,6 +55,7 @@
     import { isSuperBlockHtml, renderSuperBlockAnswerFace, extractSuperBlockTexts } from "@/core/card-face";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
+    import ReviewInteractiveQuiz from "./review/ReviewInteractiveQuiz.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2100,15 +2101,6 @@
         starredCardIDs = next;
     }
 
-    function autoFocusInput(node: HTMLElement) {
-        const timer = setTimeout(() => {
-            try { node.focus(); } catch {}
-        }, 60);
-        return {
-            destroy() { clearTimeout(timer); }
-        };
-    }
-
     function handleOptionPick(key: string) {
         if (!faceReady || showAnswer || !interactiveQuiz) return;
         if (interactiveQuiz.isMultiple) {
@@ -2835,138 +2827,19 @@
                         {@html interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2 ? cleanChoiceHtml(showAnswer ? (isSuperBlockHtml(cardHtml) ? renderSuperBlockAnswerFace(cardHtml) : cardHtml) : maskedCardHtml, interactiveQuiz.options) : (showAnswer ? (isSuperBlockHtml(cardHtml) ? renderSuperBlockAnswerFace(cardHtml) : cardHtml) : maskedCardHtml)}
                     </div>
 
-                    <!-- 交互式选择题选项矩阵（点击或按 A/B/C/D 作答） -->
-                    {#if interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2}
-                        <div class="lv-interactive-choice-container" role={interactiveQuiz.isMultiple ? "group" : "radiogroup"} aria-label={interactiveQuiz.isMultiple ? "多选题选项列表" : "单选题选项列表"}>
-                            <div class="lv-interactive-choice-prompt">
-                                <LvIcon name="check" size={14} />
-                                <span>{interactiveQuiz.isMultiple ? "多选作答（点击选项）" : "选择作答（点击或敲键盘 A/B/C/D）"}</span>
-                            </div>
-                            <div class="lv-interactive-choice-grid">
-                                {#each interactiveQuiz.options as opt (opt.key)}
-                                    <button
-                                        type="button"
-                                        role={interactiveQuiz.isMultiple ? "checkbox" : "radio"}
-                                        aria-checked={selectedChoiceKeys.includes(opt.key)}
-                                        class="lv-interactive-choice-card"
-                                        class:lv-choice-selected={selectedChoiceKeys.includes(opt.key)}
-                                        class:lv-choice-correct={showAnswer && opt.isAnswer}
-                                        class:lv-choice-wrong={showAnswer && selectedChoiceKeys.includes(opt.key) && !opt.isAnswer}
-                                        disabled={showAnswer}
-                                        onclick={() => handleOptionPick(opt.key)}
-                                    >
-                                        <span class="lv-choice-key-badge">{opt.key}</span>
-                                        <span class="lv-choice-text-body">{opt.text}</span>
-                                        <span class="lv-choice-kbd-badge" aria-hidden="true">{opt.key}</span>
-                                        {#if showAnswer}
-                                            {#if opt.isAnswer}
-                                                <span class="lv-choice-result-pill lv-result-correct"><LvIcon name="check" size={12} /> <span>正确答案</span></span>
-                                            {:else if selectedChoiceKeys.includes(opt.key)}
-                                                <span class="lv-choice-result-pill lv-result-wrong"><LvIcon name="close" size={12} /> <span>你的选择</span></span>
-                                            {/if}
-                                        {/if}
-                                    </button>
-                                {/each}
-                            </div>
-                            {#if interactiveQuiz.isMultiple && !showAnswer}
-                                <div class="lv-choice-submit-row">
-                                    <button
-                                        type="button"
-                                        class="b3-button lv-btn-primary lv-choice-submit-btn"
-                                        disabled={selectedChoiceKeys.length === 0}
-                                        onclick={submitChoiceAnswer}
-                                    >
-                                        <LvIcon name="check" size={14} /> 确认提交多选 ({selectedChoiceKeys.length} 项) · Enter
-                                    </button>
-                                </div>
-                            {/if}
-                        </div>
-                    {/if}
-
-                    <!-- 交互式判断题按钮组（点击或按 T/F 作答） -->
-                    {#if interactiveQuiz?.kind === "judge"}
-                        <div class="lv-interactive-judge-container" role="radiogroup" aria-label="判断题正误判定">
-                            <div class="lv-interactive-choice-prompt">
-                                <LvIcon name="target" size={14} />
-                                <span>判断作答（点击判定或敲键盘 T/F）</span>
-                            </div>
-                            <div class="lv-interactive-judge-grid">
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={userJudgeChoice === true}
-                                    class="lv-interactive-judge-btn lv-judge-btn--true"
-                                    class:lv-judge-selected={userJudgeChoice === true}
-                                    class:lv-judge-correct={showAnswer && interactiveQuiz.judgeAnswer === true}
-                                    class:lv-judge-wrong={showAnswer && userJudgeChoice === true && interactiveQuiz.judgeAnswer === false}
-                                    disabled={showAnswer}
-                                    onclick={() => handleJudgePick(true)}
-                                >
-                                    <span class="lv-judge-circle-icon"><LvIcon name="check" size={18} /></span>
-                                    <div class="lv-judge-text-wrap">
-                                        <strong class="lv-judge-main-label">正确 / 对</strong>
-                                        <small class="lv-judge-sub-label">True</small>
-                                    </div>
-                                    <span class="lv-judge-kbd-badge" aria-hidden="true">T / 1</span>
-                                    {#if showAnswer && interactiveQuiz.judgeAnswer === true}
-                                        <span class="lv-judge-result-badge lv-result-correct"><LvIcon name="check" size={12} /> <span>正确结论</span></span>
-                                    {/if}
-                                </button>
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={userJudgeChoice === false}
-                                    class="lv-interactive-judge-btn lv-judge-btn--false"
-                                    class:lv-judge-selected={userJudgeChoice === false}
-                                    class:lv-judge-correct={showAnswer && interactiveQuiz.judgeAnswer === false}
-                                    class:lv-judge-wrong={showAnswer && userJudgeChoice === false && interactiveQuiz.judgeAnswer === true}
-                                    disabled={showAnswer}
-                                    onclick={() => handleJudgePick(false)}
-                                >
-                                    <span class="lv-judge-circle-icon"><LvIcon name="close" size={18} /></span>
-                                    <div class="lv-judge-text-wrap">
-                                        <strong class="lv-judge-main-label">错误 / 错</strong>
-                                        <small class="lv-judge-sub-label">False</small>
-                                    </div>
-                                    <span class="lv-judge-kbd-badge" aria-hidden="true">F / 2</span>
-                                    {#if showAnswer && interactiveQuiz.judgeAnswer === false}
-                                        <span class="lv-judge-result-badge lv-result-correct"><LvIcon name="check" size={12} /> <span>正确结论</span></span>
-                                    {/if}
-                                </button>
-                            </div>
-                        </div>
-                    {/if}
-
-                    <!-- 交互式填空即时打字槽 -->
-                    {#if interactiveQuiz?.kind === "fill" && !showAnswer}
-                        <div class="lv-interactive-fill-container">
-                            <div class="lv-interactive-fill-inner">
-                                <span class="lv-fill-icon"><LvIcon name="edit" size={15} /></span>
-                                <input
-                                    type="text"
-                                    class="b3-text-field lv-fill-input"
-                                    use:autoFocusInput
-                                    bind:value={typingInput}
-                                    placeholder="在此输入你的填空答案，按 Enter 智能判定..."
-                                    onkeydown={(e) => { if (e.key === "Enter") handleFillCheck(); }}
-                                />
-                                <button type="button" class="b3-button lv-btn-primary lv-btn-tool lv-fill-submit-btn" onclick={handleFillCheck}>
-                                    <LvIcon name="check" size={13} /> <span>判定 Enter</span>
-                                </button>
-                            </div>
-                        </div>
-                    {/if}
-
-                    <!-- 翻面后参考解析卡片（若存在解析） -->
-                    {#if showAnswer && interactiveQuiz?.analysis}
-                        <div class="lv-interactive-analysis-card" in:fade={{ duration: getMotionDuration("normal") }}>
-                            <div class="lv-analysis-head">
-                                <span class="lv-analysis-icon"><LvIcon name="lightbulb" size={16} /></span>
-                                <strong>参考解析</strong>
-                            </div>
-                            <p class="lv-analysis-text">{interactiveQuiz.analysis}</p>
-                        </div>
-                    {/if}
+                    <!-- 交互式题型作答组件（选择题/判断题/填空题） -->
+                    <ReviewInteractiveQuiz
+                        {interactiveQuiz}
+                        {showAnswer}
+                        {selectedChoiceKeys}
+                        {userJudgeChoice}
+                        {typingInput}
+                        onOptionPick={handleOptionPick}
+                        onSubmitChoice={submitChoiceAnswer}
+                        onJudgePick={handleJudgePick}
+                        onFillCheck={handleFillCheck}
+                        onTypingInput={(val) => { typingInput = val; }}
+                    />
                 {/key}
             {/if}
             {#if showAnswer}
