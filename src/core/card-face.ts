@@ -62,6 +62,13 @@ export function faceHintKeys(r: FaceRichness): string[] {
 }
 
 /**
+ * 从卡面富内容分析结果推导提示键列表（无富内容或为 null 时返回空数组）
+ */
+export function deriveFaceHints(faceRich: FaceRichness | null | undefined): string[] {
+    return faceRich && hasRichContent(faceRich) ? faceHintKeys(faceRich) : [];
+}
+
+/**
  * 将提示行 i18n 键（如 "aiFace.hint.formula"）解析为本地化展示文本
  */
 export function resolveFaceHintLabel(

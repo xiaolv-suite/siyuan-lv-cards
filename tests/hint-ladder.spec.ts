@@ -5,6 +5,7 @@ import {
     logHint,
     nextHint,
     advanceCardHint,
+    resolveHintLevelIndicator,
     type HintLevelsInput,
 } from "../src/core/hint-ladder";
 
@@ -93,5 +94,17 @@ describe("advanceCardHint（卡片提示状态流转）", () => {
 
     it("空卡面内容返回 null", () => {
         expect(advanceCardHint("", null, "c1")).toBeNull();
+    });
+
+    describe("resolveHintLevelIndicator", () => {
+        it("根据卡片内容推导指示文本", () => {
+            const html = "<p><strong>线粒体</strong>是有氧呼吸的主要场所，为细胞提供能量。</p>";
+            expect(resolveHintLevelIndicator("keyword", true, html)).toBe("1/3");
+        });
+
+        it("无提示或无当前卡片返回空串", () => {
+            expect(resolveHintLevelIndicator(null, true, "<p>题面</p>")).toBe("");
+            expect(resolveHintLevelIndicator("keyword", false, "<p>题面</p>")).toBe("");
+        });
     });
 });

@@ -119,6 +119,21 @@ export function formatHintLevelIndicator(
 }
 
 /**
+ * 解析并格式化当前卡片的提示级别文本指示（例如 "1/3"）
+ */
+export function resolveHintLevelIndicator(
+    hintLevel: HintLevel | null,
+    hasCurrent: boolean,
+    cardHtml: string,
+    cachedAvail: readonly HintLevel[] = []
+): string {
+    if (!hintLevel || !hasCurrent) return "";
+    const cardText = (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+    const avail = cachedAvail.length > 0 ? cachedAvail : availableLevels(deriveHintLevels(cardText));
+    return formatHintLevelIndicator(hintLevel, avail);
+}
+
+/**
  * 构建提示阶梯输入并执行下一级提示推进
  */
 export function stepLadderHint(

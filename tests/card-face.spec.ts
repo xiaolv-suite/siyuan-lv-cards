@@ -11,6 +11,7 @@ import {
     parseCardAttrsMetadata,
     resolveFaceHintLabel,
     hasSvgOrCanvasDrawing,
+    deriveFaceHints,
 } from "../src/core/card-face";
 
 // AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
@@ -298,6 +299,19 @@ describe("统一卡面渲染管线（renderUnifiedCardFace & formatMarkdownToSaf
             expect(hasSvgOrCanvasDrawing("<p>简单文本内容</p>")).toBe(false);
             expect(hasSvgOrCanvasDrawing("")).toBe(false);
             expect(hasSvgOrCanvasDrawing(undefined)).toBe(false);
+        });
+    });
+
+    describe("deriveFaceHints", () => {
+        it("富内容卡面正常推导出提示键列表", () => {
+            const rich = analyzeFaceRichness("<table></table><img src='x'/>");
+            expect(deriveFaceHints(rich)).toEqual(["aiFace.hint.image", "aiFace.hint.table"]);
+        });
+
+        it("纯文本或 null 返回空数组", () => {
+            expect(deriveFaceHints(plainFace())).toEqual([]);
+            expect(deriveFaceHints(null)).toEqual([]);
+            expect(deriveFaceHints(undefined)).toEqual([]);
         });
     });
 });

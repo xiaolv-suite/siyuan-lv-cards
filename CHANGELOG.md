@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.215.9 2026-10-29 · 特征提示推导/评级到期格式化与阶梯指示推导解耦落地
+
+- **富内容特征提示推导解耦（`core/card-face.ts`，TSK-08 持续深化）**：
+  - 提炼 `deriveFaceHints`：纯函数标准化富内容分析结果推导提示键列表，空内容自动安全回退；
+  - 在 `tests/card-face.spec.ts` 中新增 2 项单元测试；
+- **评级到期时间格式化解耦（`core/due-format.ts`）**：
+  - 提炼 `formatNextDueByRating`：纯函数安全格式化卡片 nextDues 字典中对应评级的时间文本；
+  - 在 `tests/due-format.spec.ts` 中新增 2 项单元测试；
+- **提示阶梯级别指示文本推导解耦（`core/hint-ladder.ts`）**：
+  - 提炼 `resolveHintLevelIndicator`：纯函数封装当前卡片提示状态、纯文本清洗与阶梯可用指示计算；
+  - 在 `tests/hint-ladder.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2296 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.8 2026-10-29 · 单指触控点提取/读屏载荷构造与队列头节点提取解耦落地
 
 - **单指触控起始与结束点提取解耦（`core/review-gesture.ts`，TSK-08 持续深化）**：

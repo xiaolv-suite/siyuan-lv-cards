@@ -17,14 +17,14 @@
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, shouldRestartTimeoutOnOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
-    import { formatRatingDueText } from "@/core/due-format";
+    import { formatNextDueByRating } from "@/core/due-format";
     import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray, recordChoicePick, addDistractorToPool } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
-    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing } from "@/core/card-face";
+    import { analyzeFaceRichness, extractMarkTexts, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing, deriveFaceHints } from "@/core/card-face";
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
@@ -41,7 +41,7 @@
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, markAsRequeueCard, isRequeueWaiting, calculateRequeueWaitSeconds, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
-    import { deriveHintLevels, availableLevels, formatHintLevelIndicator, advanceCardHint, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
+    import { advanceCardHint, resolveHintLevelIndicator, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
     import LvError from "./kit/LvError.svelte";
     import { friendlyError } from "@/api/errors";
@@ -205,7 +205,7 @@
     const faceReady = $derived(Boolean(cardHtml) && !faceError);
     /** AS-3：富内容特征提示（随卡面派生） */
     let faceRich = $derived(cardHtml ? analyzeFaceRichness(cardHtml) : null);
-    let faceHints = $derived(faceRich && hasRichContent(faceRich) ? faceHintKeys(faceRich) : []);
+    let faceHints = $derived(deriveFaceHints(faceRich));
     function faceHintText(key: string): string {
         return resolveFaceHintLabel(key, (t as any).aiFace?.hint);
     }
@@ -1304,10 +1304,7 @@
     /** BJ-2：提示级别指示文本（如"关键词提示 (1/2)"） */
     let cachedAvailLevels: HintLevel[] = [];
     function hintLevelText(): string {
-        if (!hintLevel || !current) return "";
-        const cardText = (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-        const avail = cachedAvailLevels.length > 0 ? cachedAvailLevels : availableLevels(deriveHintLevels(cardText));
-        return formatHintLevelIndicator(hintLevel, avail);
+        return resolveHintLevelIndicator(hintLevel, Boolean(current), cardHtml, cachedAvailLevels);
     }
 
     function advanceHint() {
@@ -1449,7 +1446,7 @@
     }
 
     function dueText(rating: string): string {
-        return formatRatingDueText(current?.nextDues?.[rating]);
+        return formatNextDueByRating(current?.nextDues, rating);
     }
 
     /** 键盘双通道去重（AJ 复核）：容器与 window 都绑了 onKeydown，

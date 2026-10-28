@@ -9,3 +9,13 @@ export function formatRatingDueText(dueString?: string | null): string {
     if (!dueString) return "";
     return dueString.replace(/^\d{4}-0?/, "").replace(/:\d{2}$/, "");
 }
+
+/**
+ * 安全格式化给定评级的到期时间文本
+ */
+export function formatNextDueByRating(
+    nextDues: Record<string, string> | null | undefined,
+    rating: string
+): string {
+    return formatRatingDueText(nextDues?.[rating]);
+}
