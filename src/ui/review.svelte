@@ -14,7 +14,7 @@
     import { isCardNew, calcStreak, type RevlogData } from "@/core/revlog";
     import { gradeTyping, type Rating1to4 } from "@/core/card-types";
     import { parseOcclusion, type OcclusionData } from "@/core/occlusion";
-    import { parseDelimitedQa, hasDelimitedQa } from "@/core/delimited-qa";
+    import { parseDelimitedQa } from "@/core/delimited-qa";
     import { hasQuestionMediaContent, validateFlashcardMarkdown } from "@/core/flashcard-quality";
     import { partitionReviewCardsByQuality } from "@/core/review-queue-quality";
     import { mapChunksOrdered } from "@/core/query-chunks";
@@ -38,7 +38,6 @@
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
-    import LvChip from "./kit/LvChip.svelte";
     import LvError from "./kit/LvError.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
     import { friendlyError } from "@/api/errors";
@@ -67,6 +66,8 @@
     import ReviewCardBreadcrumbs from "./review/ReviewCardBreadcrumbs.svelte";
     import ReviewMemoCallout from "./review/ReviewMemoCallout.svelte";
     import ReviewOcclusionOverlay from "./review/ReviewOcclusionOverlay.svelte";
+    import ReviewProgressHeader from "./review/ReviewProgressHeader.svelte";
+    import ReviewAnswerSection from "./review/ReviewAnswerSection.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2377,79 +2378,34 @@
         />
     {:else}
         <div class="lv-head">
-            <!-- R52 review 面三行结构：①身份+状态 ②进度条 ③范围/目的控制 + 工具 -->
-            <div class="lv-head-row">
-                <div class="fn__flex" style="align-items: center; gap: var(--lv-sp-2)">
-                    <span class="lv-eyebrow">REVIEW / {headScopeLabel}</span>
-                    <button
-                        type="button"
-                        class="b3-button b3-button--small lv-btn-ghost lv-review-return-home"
-                        title={t.review.returnHome ?? "返回闪卡主页"}
-                        onclick={() => ctx.openDashboard()}
-                    >
-                        <LvIcon name="home" size={15} /> {t.review.returnHome ?? "返回主页"}
-                    </button>
-                </div>
-                {#if entryCtx}
-                    <!-- BI-3：入口上下文条（来源保留；取消/重开不丢，仅 × 显式清除） -->
-                    <span class="lv-entry" title={t.entry.title}>
-                        <span class="lv-entry-from ft__smaller">{t.entry.title}·{t.entry.kind[entryCtx.entryKind] || entryCtx.entryKind}</span>
-                        {#if ctx.returnToEntry && entryCtx.returnPoint}
-                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.returnToEntry!(entryCtx!.returnPoint)}>
-                                <LvIcon name="chevron-left" size={12} />
-                                <span>{t.entry.return}</span>
-                            </button>
-                        {/if}
-                        {#if ctx.dismissEntry}
-                            <button class="b3-button b3-button--text b3-button--small lv-btn-tool" aria-label={t.entry.dismiss} title={t.entry.dismiss} onclick={() => { ctx.dismissEntry!(entryCtx!.entryKind, entryCtx!.sourceID); entryCtx = null; }}><LvIcon name="close" size={12} /></button>
-                        {/if}
-                    </span>
-                {/if}
-                <div class="fn__flex-1"></div>
-                {#if cramActive}<span class="b3-chip b3-chip--error">{t.exam.cramOn}</span>{/if}
-                {#if budgetMin > 0}
-                    <!-- BI-12：预算倒计时；到点转为中性提示（不自动结束、不算失败） -->
-                    {#if budgetExpired}
-                        <span class="lv-chip2 lv-chip2--default" title={t.review.budgetDoneTip}>{t.review.budgetDone}</span>
-                    {:else}
-                        <span class="lv-timeout lv-budget-chip" title={t.review.budgetLabel}><LvIcon name="timer" size={13} /><small>总余</small> {budgetClockText()}</span>
-                    {/if}
-                {/if}
-                {#if current.lvRequeue}<span class="lv-chip2 lv-chip2--warn" title={t.review.requeueTip}>{t.review.requeueChip}</span>{/if}
-                {#if eff().timeoutMode !== "off" && !showAnswer}
-                    <span class="lv-timeout lv-card-timeout-chip" class:lv-timeout-low={timeoutLeft <= 10} title="单卡作答限时"><LvIcon name="zap" size={13} /><small>限时</small> {timeoutText()}</span>
-                {/if}
-                <span class="lv-tags">
-                    {#if !(eff().hideMetaUntilAnswer && !showAnswer)}
-                        {#if current.state === 0}<span class="lv-chip2 lv-chip2--primary">{t.review.tagNew}</span>{/if}
-                        <span class="lv-chip2 lv-chip2--default">{t.review.reps} {current.reps} · {t.review.lapses} {current.lapses}</span>
-                    {/if}
-                    <span class="lv-chip2 lv-chip2--default">
-                        {#if occl}<LvIcon name="image" size={14} /> {t.cardTypeBadgeOcclusion ?? "遮挡"}
-                        {:else if isSuperBlockHtml(cardHtml)}<LvIcon name="cards" size={14} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}
-                        {:else if cardHtml?.includes("language-")}<LvIcon name="code" size={14} /> {t.cardTypeBadgeCode ?? "代码"}
-                        {:else if (cardHtml?.includes("NodeList") || cardHtml?.includes("<ul") || cardHtml?.includes("<ol") || cardHtml?.includes("NodeListItem")) && (cardHtml?.includes("lv-masked") || cardHtml?.includes("data-type=\"mark\""))}<LvIcon name="list" size={14} /> {t.cardTypeBadgeOutlineCloze ?? "大纲挖空"}
-                        {:else if cardHtml?.includes("lv-masked") || cardHtml?.includes("data-type=\"mark\"")}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
-                        {:else if cardMemo}<LvIcon name="lightbulb" size={14} /> {isCustomPluginAnswer ? (t.cardTypeBadgePlugin ?? "插件答") : (t.cardTypeBadgeMemo ?? "备注答")}
-                        {:else if hasDelimitedQa(cardHtml)}<LvIcon name="message" size={14} /> {t.cardTypeBadgeQA ?? "问答"}
-                        {:else}<LvIcon name="book" size={14} /> {t.cardTypeBadgeNative ?? "原生闪卡"}
-                        {/if}
-                    </span>
-                    {#if current.lapses >= (eff().leechThreshold ?? 4)}
-                        <span class="lv-chip2 lv-chip2--warn" title={t.review.leechTip?.replace("${n}", String(current.lapses)) ?? `已遗忘 ${current.lapses} 次，建议拆解知识点`}><LvIcon name="warning" size={14} /> {t.review.leechChip ?? "易混淆"}</span>
-                    {/if}
-                    {#if markedIssueCardIDs.has(current.cardID)}
-                        <span class="lv-chip2 lv-chip2--warn" title={t.review.issueMarked}><LvIcon name="flag" size={14} /> {t.review.issueChip}</span>
-                    {/if}
-                </span>
-                <span class="lv-progress">{reviewedIDs.length + 1} / {reviewedIDs.length + queue.length}</span>
-            </div>
-            <div class="lv-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={reviewedIDs.length + queue.length} aria-valuenow={reviewedIDs.length}>
-                <!-- 灵感融合（AnkiDroid）：进度条按本场评分语义分段——遗忘段 error 色、已评段 primary 色，
-                     宽度取持久化计数（sessionForget/总进度），刷新恢复后口径一致 -->
-                <div class="lv-progress-seg lv-progress-seg--forget" style={`width:${(Math.max(0, sessionForget) / Math.max(1, reviewedIDs.length + queue.length)) * 100}%`}></div>
-                <div class="lv-progress-seg" style={`width:${(Math.max(0, reviewedIDs.length - sessionForget) / Math.max(1, reviewedIDs.length + queue.length)) * 100}%`}></div>
-            </div>
+            <ReviewProgressHeader
+                {headScopeLabel}
+                {entryCtx}
+                {cramActive}
+                {budgetMin}
+                {budgetExpired}
+                budgetClockText={budgetClockText()}
+                {current}
+                {showAnswer}
+                timeoutMode={eff().timeoutMode}
+                {timeoutLeft}
+                timeoutText={timeoutText()}
+                hideMetaUntilAnswer={eff().hideMetaUntilAnswer}
+                {occl}
+                {cardHtml}
+                {cardMemo}
+                {isCustomPluginAnswer}
+                leechThreshold={eff().leechThreshold ?? 4}
+                isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
+                currentProgress={reviewedIDs.length + 1}
+                reviewedCount={reviewedIDs.length}
+                totalCount={reviewedIDs.length + queue.length}
+                {sessionForget}
+                {t}
+                onOpenDashboard={() => ctx.openDashboard()}
+                onReturnToEntry={(point) => ctx.returnToEntry?.(point)}
+                onDismissEntry={(kind, sourceID) => { ctx.dismissEntry?.(kind, sourceID); entryCtx = null; }}
+            />
             <ReviewToolbar
                 bind:this={toolbarRef}
                 bind:scopeKey
@@ -2572,85 +2528,30 @@
                     onReschedule={reschedule}
                     onClose={() => { showReschedule = false; rescheduleError = ""; }}
                 />
-                {#if answerVariant === "typing"}
-                    <div class="lv-typing">
-                        <input
-                            class="b3-text-field fn__block"
-                            bind:value={typingInput}
-                            onkeydown={(e: KeyboardEvent) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    submitTyping();
-                                }
-                            }}
-                            placeholder={t.review.typingPlaceholder}
-                        />
-                    </div>
-                {:else if answerVariant === "choice"}
-                    {#if choiceFallbackMode === "free-recall"}
-                        <div class="ft__smaller ft__on-surface lv-choice-fallback" role="status">
-                            {t.review.choiceFallbackFreeRecall}
-                        </div>
-                    {:else if choices}
-                        <div class="lv-choices">
-                            {#each choices.options as opt, i (i)}
-                                <button
-                                    class="b3-button lv-choice-opt"
-                                    class:lv-choice-correct={choices.picked !== null && i === choices.answerIdx}
-                                    class:lv-choice-wrong={choices.picked === i && i !== choices.answerIdx}
-                                    disabled={choices.picked !== null}
-                                    onclick={() => {
-                                        pickChoice(i);
-                                        showMessage(i === choices.answerIdx ? t.review.choiceCorrect : t.review.choiceWrong, 1500, i === choices.answerIdx ? "info" : "error");
-                                    }}
-                                >{String.fromCharCode(65 + i)}. {opt}</button>
-                            {/each}
-                            {#if choices.picked !== null}
-                                <LvChip tone={choices.picked === choices.answerIdx ? "primary" : "error"}>
-                                    {t.review.typingSuggested}: {choices.picked === choices.answerIdx ? 3 : 1}
-                                </LvChip>
-                            {/if}
-                        </div>
-                    {:else if choiceLoading}
-                        <div class="ft__smaller ft__on-surface" role="status" aria-busy="true">{t.review.choiceLoading}</div>
-                    {:else}
-                        <button class="b3-button b3-button--small lv-choice-btn" onclick={startChoice}><LvIcon name="dice" size={15} /> {t.review.choiceMake}</button>
-                    {/if}
-                {/if}
-                <!-- BJ-2：分级提示显示区（不自动提交评分；含级别指示器） -->
-                {#if hintText}
-                    <div class="lv-hint-text">
-                        <span class="ft__smaller ft__on-surface lv-hint-level">{hintLevelText()}</span>
-                        {hintText}
-                    </div>
-                {/if}
-                <!-- AQ-2：显示答案按钮补 onclick——此前覆盖层按钮无处理器且容器点击跳过 button，鼠标点击翻面失效 -->
-                <div class="fn__flex" style="gap: var(--lv-sp-2); justify-content: center; align-items: center;">
-                    {#if !showAnswer}
-                        <button class="b3-button b3-button--small lv-btn-ghost" onclick={advanceHint}>{t.review.hintBtn}</button>
-                    {/if}
-                    <button class="b3-button b3-button--text lv-reveal" disabled={!faceReady} onclick={revealAnswer}>{t.review.showAnswer}</button>
-                </div>
-                <span class="lv-reveal-hint" aria-hidden="true">⎵ {t.review.revealHint}</span>
             {/if}
-            {#if typingGrade}
-                <div class="lv-typing-diff">
-                    <span class="ft__smaller ft__on-surface">{typingGrade.isTypo ? "拼写微瑕容错" : t.review.typingSuggested}</span>
-                    <LvChip tone={typingGrade.isTypo ? "warn" : typingGrade.suggested === 3 ? "primary" : typingGrade.suggested === 2 ? "warn" : "error"}>
-                        {typingGrade.isTypo ? "微瑕 · 建议: 3" : typingGrade.suggested}
-                    </LvChip>
-                    <span class="lv-diff">
-                        {#each typingGrade.chars as c, i (i)}
-                            <span class:lv-diff-ok={c.ok} class:lv-diff-bad={!c.ok}>{c.ch}</span>
-                        {/each}
-                    </span>
-                </div>
-            {:else if showAnswer && eff().ttsEnabled}
-                <div class="lv-tts-row">
-                    <button class="b3-button b3-button--small lv-btn-ghost" title={t.review.speak} onclick={speakAnswer}>{t.review.speak}</button>
-                </div>
-            {/if}
+            <ReviewAnswerSection
+                {showAnswer}
+                {answerVariant}
+                bind:typingInput
+                {choiceFallbackMode}
+                {choices}
+                {choiceLoading}
+                {hintText}
+                hintLevelLabel={hintLevelText()}
+                {faceReady}
+                {typingGrade}
+                ttsEnabled={eff().ttsEnabled}
+                {t}
+                onSubmitTyping={submitTyping}
+                onPickChoice={(i) => {
+                    pickChoice(i);
+                    showMessage(i === choices.answerIdx ? t.review.choiceCorrect : t.review.choiceWrong, 1500, i === choices.answerIdx ? "info" : "error");
+                }}
+                onStartChoice={startChoice}
+                onAdvanceHint={advanceHint}
+                onRevealAnswer={revealAnswer}
+                onSpeakAnswer={speakAnswer}
+            />
         </div>
         <ReviewContextDrawer
             open={ctxOpen}
@@ -2793,70 +2694,6 @@
             /* R52 review 面：三行结构（身份行 / 进度条 / 控制行），行距 8px、条底 1px 分隔 */
             display: flex; flex-direction: column; gap: var(--lv-sp-2);
             max-width: 760px; margin: 0 auto; width: 100%;
-            .lv-head-row {
-                display: flex; align-items: center; gap: var(--lv-sp-2);
-                min-width: 0; flex-wrap: wrap;
-            }
-            /* BI-3：入口上下文条（窄屏换行不挤压进度） */
-            .lv-entry {
-                display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 1);
-                padding: var(--lv-space-hairline) calc(var(--lv-space-unit) * 2);
-                border-left: 2px solid var(--lv-color-brand);
-                .lv-entry-from { color: var(--lv-color-text-muted); white-space: nowrap; }
-            }
-            .lv-progress {
-                font-size: var(--lv-type-control-size);
-                color: var(--lv-color-text);
-                background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
-                border: 1px solid var(--lv-primary-border);
-                border-radius: var(--lv-r-pill);
-                padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
-                font-weight: var(--lv-fw-semibold);
-                font-variant-numeric: tabular-nums;
-                white-space: nowrap;
-                box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent);
-            }
-            .lv-progress-bar {
-                width: 100%;
-                height: 6px;
-                border-radius: var(--lv-r-pill);
-                background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-                box-shadow: inset 0 1px 2px color-mix(in srgb, black 6%, transparent);
-                overflow: hidden;
-                display: flex;
-                margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 4);
-                .lv-progress-seg {
-                    height: 100%;
-                    border-radius: var(--lv-r-pill);
-                    background: linear-gradient(90deg, var(--lv-color-brand), color-mix(in srgb, var(--lv-color-brand) 75%, var(--lv-color-success)));
-                    transition: width var(--lv-dur-3) var(--lv-ease);
-                    box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
-                }
-                .lv-progress-seg--forget {
-                    background: var(--lv-color-danger);
-                    box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-danger) 30%, transparent);
-                }
-            }
-            .lv-timeout {
-                display: inline-flex;
-                align-items: center;
-                gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
-                font-size: var(--lv-type-control-size);
-                color: var(--lv-color-text);
-                background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
-                border: 1px solid var(--lv-border);
-                border-radius: var(--lv-r-pill);
-                padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);
-                font-variant-numeric: tabular-nums;
-                font-weight: var(--lv-fw-semibold);
-            }
-            .lv-timeout-low {
-                background: var(--lv-danger-soft);
-                color: var(--lv-color-danger);
-                border-color: var(--lv-danger-border);
-                font-weight: var(--lv-fw-bold);
-            }
-            .lv-tags { display: flex; gap: var(--lv-sp-1); }
         }
 
         .lv-card {
@@ -2894,17 +2731,6 @@
                 border-bottom-left-radius: var(--lv-r-dialog);
                 border-bottom-right-radius: var(--lv-r-dialog);
                 opacity: 0.9;
-            }
-
-            // 问题态遮罩规则已移至 index.scss 全局（scoped 编译会误剪 :global 结尾选择器）
-
-            .lv-typing { margin-top: var(--lv-sp-3); }
-
-            // AQ-2：翻面覆盖层按钮（inset:0）在最底层；交互元素抬高一层，鼠标可直达
-            .lv-typing,
-            .lv-choices {
-                position: relative;
-                z-index: var(--lv-z-card-control);
             }
 
             // AS-3：富内容窄屏横向滚动（表格/长链不撑破卡面）与大图/公式防溢出
@@ -2985,70 +2811,6 @@
                         font-weight: var(--lv-fw-semibold);
                     }
                 }
-            }
-
-            .lv-tts-row { display: flex; justify-content: flex-end; margin-top: var(--lv-sp-2); }
-
-            .lv-choice-btn { margin-top: var(--lv-sp-3); }
-            .lv-choices {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: var(--lv-sp-2);
-                .lv-choice-opt {
-                    text-align: left;
-                    border: 1px solid var(--lv-border);
-                    background: var(--lv-color-canvas);
-                    transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease);
-                    &:hover:not(:disabled) { border-color: var(--lv-primary-border); background: var(--lv-primary-softer); }
-                    &:disabled { cursor: default; opacity: 0.9; }
-                }
-                .lv-choice-correct { border-color: var(--lv-color-brand) !important; background: var(--lv-primary-soft) !important; }
-                .lv-choice-wrong { border-color: var(--lv-danger-border) !important; background: var(--lv-danger-soft) !important; }
-            }
-            .lv-typing-diff {
-                display: flex; align-items: center; gap: var(--lv-sp-2);
-                margin-top: var(--lv-sp-3);
-                flex-wrap: wrap;
-                .lv-diff span { font-variant-numeric: normal; }
-                .lv-diff-ok { color: var(--lv-color-brand); }
-                .lv-diff-bad {
-                    color: var(--lv-color-danger);
-                    text-decoration: line-through;
-                    opacity: 0.85;
-                }
-            }
-
-            .lv-reveal {
-                position: absolute; inset: 0;
-                z-index: var(--lv-z-base);
-                width: 100%; height: 100%;
-                background: transparent;
-                /* 翻面热区覆盖整卡：文字隐藏（底部 48px 宽钮已承担指引），只留可点击与 hover 微光 */
-                color: transparent;
-                font-size: var(--lv-type-body-sm-size);
-                transition: background var(--lv-dur-2) var(--lv-ease);
-
-                &:hover { background: color-mix(in srgb, var(--lv-primary-softer) 55%, transparent); }
-            }
-
-            .lv-hint-text {
-                padding: var(--lv-sp-2) var(--lv-sp-3);
-                border-left: 3px solid var(--lv-color-brand);
-                background: var(--lv-color-surface);
-                border-radius: var(--b3-border-radius);
-                margin: var(--lv-sp-2) auto;
-                max-width: inherit;
-                font-size: var(--lv-type-fluid-size);
-                color: var(--lv-color-text-muted);
-            }
-            .lv-reveal-hint {
-                position: absolute;
-                right: var(--lv-sp-3);
-                bottom: var(--lv-sp-2);
-                font-size: var(--lv-type-meta-size);
-                color: var(--lv-color-text-muted);
-                opacity: 0.7;
-                pointer-events: none;
             }
 
             &.lv-anim-glow {

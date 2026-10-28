@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.212.7 2026-10-28 · 复习进度顶栏与作答交互控制解耦落地（-230+ 行）
+
+- **复习进度与卡片元信息顶栏解耦（`ReviewProgressHeader.svelte`，TSK-08 持续深化）**：
+  - 将复习界面顶部身份行、返回主页入口、`entryCtx` 来源上下文条、冲刺模式标签、会话总预算倒计时与到点提醒、低评分重新入队重考标签、卡片作答限时预警、新卡/复习/遗忘/卡型/易混淆/格式问题等元信息徽章组以及本场评分双段进度条抽离为独立子组件 `src/ui/review/ReviewProgressHeader.svelte`；
+  - 内部完整自收敛 `.lv-head-row`、`.lv-entry`、`.lv-progress`、`.lv-progress-bar`、`.lv-timeout`、`.lv-tags` 等专用 SCSS 样式；
+  - 配备完整的独立单元测试套件 `tests/review-progress-header.spec.ts`（5 项用例全面覆盖返回主页、来源上下文交互、辅助标签响应、卡片类型匹配与双段进度条比例）；
+- **卡片作答交互与阶梯提示翻面控制解耦（`ReviewAnswerSection.svelte`）**：
+  - 将问题态打字输入框（`.lv-typing`）、单选题选项矩阵与自由回忆回退/生成选项按钮（`.lv-choices`）、分级阶梯提示展示区（`.lv-hint-text`）、提示推进与全卡翻面透明热区按键（`.lv-reveal`）、翻面快捷键指引（`.lv-reveal-hint`）、答案态拼写容错与打字逐字对比区（`.lv-typing-diff`）以及朗读按钮（`.lv-tts-row`）抽离为独立子组件 `src/ui/review/ReviewAnswerSection.svelte`；
+  - 内部完整自收敛选项矩阵、打字对比、翻面热区微光以及提示条的全部 SCSS 样式；
+  - 复习主模板 `review.svelte` 代码行数由 3069 行大幅下降至 2831 行（净减 238 行，累计自 3412 行削减近 600 行）；
+  - 配备专门的单元测试套件 `tests/review-answer-section.spec.ts`（5 项用例全面覆盖打字提交、单选高亮与禁用、自由回忆回退、分级提示与翻面触发、答案态逐字对比与语音朗读）；
+- **全量门禁与质量验证**：
+  - 全库扩展至 275 个测试文件、2081 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 96.9%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.212.6 2026-10-28 · 助记便签与图片遮挡交互蒙版解耦落地（-140+ 行）
 
 - **翻面助记便签与原生回忆引导解耦（`ReviewMemoCallout.svelte`，TSK-08 持续深化）**：
