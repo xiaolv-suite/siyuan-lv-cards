@@ -17,7 +17,7 @@
     import { openTab, showMessage } from "siyuan";
     import { friendlyError } from "@/api/errors";
     import { getMotionDuration } from "./kit/motion";
-    import { findDormantKnowledgeBlocks } from "@/core/dormant-knowledge";
+    import { findDormantKnowledgeBlocks, type DormantKnowledgeCandidate } from "@/core/dormant-knowledge";
     import LvPage from "./kit/LvPage.svelte";
     import LvSection from "./kit/LvSection.svelte";
     import LvStat from "./kit/LvStat.svelte";
@@ -81,6 +81,8 @@
         restoreSuspendedToday?: () => Promise<number>;
         /** 直达 hub 其他页签（收件箱等） */
         openHubTab?: (id: string) => void;
+        /** 沉睡知识批量收纳进材料收件箱 */
+        enrollDormantBlocks?: (blockIDs: string[]) => Promise<number>;
         /** 把可信的今日到期数同步给 Hub 导航；读取开始/失败时传 null，避免显示过期数字。 */
         onDueCount?: (count: number | null) => void;
     }
@@ -114,6 +116,8 @@
     let suspendedRestoreBusy = $state(false);
     let suspendedRestoreError = $state("");
     let dormantCount = $state(0);
+    let dormantCandidates = $state<DormantKnowledgeCandidate[]>([]);
+    let dormantAwakening = $state(false);
 
     async function scanDormantKnowledge() {
         try {
@@ -125,10 +129,34 @@
                     ial: String(r.ial ?? ""),
                 }));
                 const candidates = findDormantKnowledgeBlocks(mapped, 10);
+                dormantCandidates = candidates;
                 dormantCount = candidates.length;
             }
         } catch {
+            dormantCandidates = [];
             dormantCount = 0;
+        }
+    }
+
+    async function awakenDormantKnowledge() {
+        if (dormantAwakening || dormantCandidates.length === 0) return;
+        dormantAwakening = true;
+        try {
+            if (ctx.enrollDormantBlocks) {
+                const count = await ctx.enrollDormantBlocks(dormantCandidates.map(c => c.blockID));
+                showMessage((t.dashboard?.dormantEnrolled ?? "已将 ${n} 处沉睡知识收纳至材料收件箱").replace("${n}", String(count)), 2500, "info");
+                dormantCount = 0;
+                dormantCandidates = [];
+                ctx.openHubTab?.("inbox");
+            } else if (ctx.openHubTab) {
+                ctx.openHubTab("inbox");
+            } else if (ctx.openQuickCard) {
+                ctx.openQuickCard();
+            }
+        } catch (e: any) {
+            showMessage(friendlyError(e, t), 3000, "error");
+        } finally {
+            dormantAwakening = false;
         }
     }
     // 页眉日期（R53 .page-head eyebrow 口径）：本地日期 YYYY.MM.DD
@@ -1172,17 +1200,10 @@
                 {#if dormantCount > 0}
                     <div class="lv-todo-row">
                         <span>{t.dashboard.todoDormant ? t.dashboard.todoDormant.replace("${n}", String(dormantCount)) : `发现 ${dormantCount} 处包含重点高亮但尚未制卡的沉睡知识`}</span>
-                        {#if ctx.openHubTab}
-                            <button class="b3-button b3-button--small" onclick={() => ctx.openHubTab?.("inbox")}>
-                                <LvIcon name="lightbulb" size={12} />
-                                <span>{t.dashboard.todoDormantAct ?? "去唤醒"}</span>
-                            </button>
-                        {:else if ctx.openQuickCard}
-                            <button class="b3-button b3-button--small" onclick={() => ctx.openQuickCard?.()}>
-                                <LvIcon name="plus" size={12} />
-                                <span>{t.cmdQuickCard ?? "去制卡"}</span>
-                            </button>
-                        {/if}
+                        <button class="b3-button b3-button--small lv-btn-primary" disabled={dormantAwakening} onclick={awakenDormantKnowledge}>
+                            <LvIcon name="lightbulb" size={12} />
+                            <span>{dormantAwakening ? (t.dashboard?.todoSuspendedSaving ?? "收纳中…") : (t.dashboard.todoDormantAct ?? "去唤醒")}</span>
+                        </button>
                     </div>
                 {/if}
             {/if}

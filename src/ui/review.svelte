@@ -58,6 +58,7 @@
     import ReviewHelpAndPeek from "./review/ReviewHelpAndPeek.svelte";
     import ReviewContextDrawer from "./review/ReviewContextDrawer.svelte";
     import ReviewSessionPrefs from "./review/ReviewSessionPrefs.svelte";
+    import ReviewRescheduleModal from "./review/ReviewRescheduleModal.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2874,36 +2875,18 @@
                 </svg>
             {/if}
             {#if !showAnswer}
-                {#if showReschedule}
-                    {@const invalidRescheduleDays = !Number.isSafeInteger(rescheduleDays) || rescheduleDays < 1 || rescheduleDays > 36500}
-                    <div class="lv-reschedule lv-card2" aria-busy={rescheduleBusy} style="display:flex;flex-direction:column;gap: var(--lv-sp-2);padding:var(--lv-sp-3);margin: var(--lv-sp-2) 0;border:1px solid var(--lv-border);border-radius: var(--lv-r-m);background:var(--lv-color-surface-subtle)">
-                        <div style="display:flex;gap:var(--lv-sp-2);align-items:center;flex-wrap:wrap">
-                            <span class="ft__smaller ft__on-surface">{t.review.rescheduleIn}</span>
-                            <input class="b3-text-field" style="width:70px" type="number" min="1" max="36500" step="1" bind:value={rescheduleDays} aria-invalid={invalidRescheduleDays} aria-describedby={invalidRescheduleDays ? "lv-reschedule-error" : undefined} />
-                            <span class="ft__smaller ft__on-surface">{t.review.rescheduleDays}</span>
-                            {#if previewTargetLabel}
-                                <span class="ft__smaller ft__on-surface" style="color: var(--lv-color-brand);margin-left:var(--lv-sp-2)">
-                                    {t.review.rescheduleTarget}: <strong>{previewTargetLabel}</strong>
-                                </span>
-                            {/if}
-                        </div>
-                        {#if invalidRescheduleDays}
-                            <span id="lv-reschedule-error" class="ft__smaller" role="alert" style="color: var(--lv-color-danger)">{t.review.rescheduleRange}</span>
-                        {/if}
-                        {#if rescheduleError}
-                            <div class="ft__smaller lv-reschedule-error" role="alert" style="color: var(--lv-color-danger);background:var(--lv-danger-soft);padding: var(--lv-sp-1) var(--lv-sp-2);border-radius:6px">
-                                <strong>{t.review.rescheduleErrorPreserved}</strong>: {rescheduleError}
-                            </div>
-                        {/if}
-                        <div style="display:flex;gap:var(--lv-sp-2);align-items:center;justify-content:flex-end">
-                            <button class="b3-button b3-button--text b3-button--small" onclick={() => { showReschedule = false; rescheduleError = ''; }}>{t.review.rescheduleCancel}</button>
-                            <button class="b3-button b3-button--small lv-btn-primary" disabled={actionBusy || invalidRescheduleDays} aria-busy={rescheduleBusy} onclick={reschedule}>
-                                {rescheduleBusy ? t.dashboard.loading : retryReschedule && rescheduleError ? t.review.rescheduleRetrySame : window.siyuan.languages.confirm}
-                            </button>
-                        </div>
-                        <span class="ft__smaller ft__on-surface" style="opacity:0.75;font-size:11px">{t.review.rescheduleTargetHint}</span>
-                    </div>
-                {/if}
+                <ReviewRescheduleModal
+                    open={showReschedule}
+                    bind:rescheduleDays
+                    {previewTargetLabel}
+                    {rescheduleBusy}
+                    {rescheduleError}
+                    {retryReschedule}
+                    {actionBusy}
+                    {t}
+                    onReschedule={reschedule}
+                    onClose={() => { showReschedule = false; rescheduleError = ""; }}
+                />
                 {#if answerVariant === "typing"}
                     <div class="lv-typing">
                         <input
@@ -3732,8 +3715,7 @@
 
             // AQ-2：翻面覆盖层按钮（inset:0）在最底层；交互元素抬高一层，鼠标可直达
             .lv-typing,
-            .lv-choices,
-            .lv-reschedule {
+            .lv-choices {
                 position: relative;
                 z-index: var(--lv-z-card-control);
             }

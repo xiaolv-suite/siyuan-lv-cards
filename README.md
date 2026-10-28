@@ -21,11 +21,25 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.9（2026-10-28）**，落地复习本场偏好面板独立组件解耦。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.9)。
+当前版本为 **v0.212.0（2026-10-28）**，落地沉睡知识一键批量入箱闭环与快速改期组件独立解耦里程碑。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.0)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.9）
+## 本次更新（v0.212.0）
+
+- **沉睡知识自动挖掘一键批量收纳进待提炼收件箱（Extract Inbox 闭环）**：
+  - 在闪卡中心（Dashboard）将沉睡知识挖掘结果与材料收件箱通道深度打通，点击【去唤醒】即可自动将挖掘出的重点高亮孤岛块批量推入收件箱；
+  - 自动回显收纳成功状态，并平滑导航至收件箱供用户开展渐进提炼制卡，真正打通“自动挖掘 -> 批量收纳 -> 渐进蒸馏 -> FSRS 复习”的完整生产力闭环；
+  - 配备专门的单元测试套件 `tests/dormant-to-inbox.spec.ts`；
+- **复习工作台快速改期面板独立解耦（TSK-08 持续深化）**：
+  - 将复习界面内部的快速改期面板（`showReschedule` / `rescheduleDays`）完整剥离为独立可测试组件 `ReviewRescheduleModal.svelte`；
+  - 自自带天数范围合法性校验、到期时间戳精准预览、错误自愈重试机制及独立 scoped 样式；
+  - 主复习模板 `review.svelte` 代码行数再次净减 40+ 行，整体架构更加轻盈内聚；
+  - 配备完整的独立单元测试套件 `tests/review-reschedule-modal.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 263 个测试文件、2032 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.9）
 
 - **复习工作台本场临时偏好面板独立解耦（TSK-08 持续深化）**：
   - 将复习界面内部的本场偏好内联面板（`prefsOpen` / `.lv-prefs`）完整剥离为独立可测试组件 `ReviewSessionPrefs.svelte`；

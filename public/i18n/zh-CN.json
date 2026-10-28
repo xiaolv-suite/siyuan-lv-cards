@@ -265,6 +265,7 @@
         "todoAIAct": "打开恢复页",
         "todoDormant": "发现 ${n} 处包含重点高亮但尚未制卡的沉睡知识",
         "todoDormantAct": "去唤醒",
+        "dormantEnrolled": "已将 ${n} 处沉睡知识收纳至材料收件箱",
         "onboardingStart": "开始引导",
         "report": "学习报告",
         "writeDoc": "写入思源文档",

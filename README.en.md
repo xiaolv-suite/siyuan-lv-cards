@@ -19,9 +19,22 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.9** (2026-10-28), delivering ReviewSessionPrefs component modularization and session preference panel decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.9) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.0** (2026-10-28), delivering dormant knowledge intake to Extract Inbox and ReviewRescheduleModal modularization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.0) for the package and publishing status.
 
-## What's New in v0.211.9
+## What's New in v0.212.0
+
+- **Dormant Knowledge Intake to Extract Inbox (Productivity Loop)**:
+  - Connected the dormant highlight scanner directly with the Extract Inbox, enabling one-click bulk intake of uncarded highlighted notes into the inbox for progressive distillation.
+  - Added dedicated unit tests in `tests/dormant-to-inbox.spec.ts`.
+- **ReviewRescheduleModal Component Modularization (TSK-08)**:
+  - Extracted fast reschedule inline panel (`showReschedule` / `rescheduleDays`) into `ReviewRescheduleModal.svelte`.
+  - Self-contained input validation, due date timestamp preview, error handling, and scoped styles.
+  - Reduced review template code by over 40 lines.
+  - Added dedicated unit tests in `tests/review-reschedule-modal.spec.ts`.
+- **Verification**:
+  - 2032 tests across 263 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.9
 
 - **ReviewSessionPrefs Component Modularization (TSK-08)**:
   - Extracted session preference panel (`prefsOpen` / `.lv-prefs`) into `ReviewSessionPrefs.svelte`.

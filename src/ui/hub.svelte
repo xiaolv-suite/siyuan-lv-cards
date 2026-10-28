@@ -240,6 +240,13 @@
         openQuickCard: loadQuickCardView ? openStudioManual : undefined,
         openAIWizard: openStudioAI,
         openHubTab: (id) => switchTab(id),
+        enrollDormantBlocks: inbox?.add ? async (blockIDs: string[]) => {
+            let count = 0;
+            for (const id of blockIDs) {
+                if (inbox.add([id])) count++;
+            }
+            return count;
+        } : undefined,
     };
 
     // 考试子页懒加载（体积预算 670）：首次切到考试页才拉取 chunk

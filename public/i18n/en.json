@@ -265,6 +265,7 @@
         "todoAIAct": "Open recovery",
         "todoDormant": "Found ${n} dormant highlighted block(s) not yet made into flashcards",
         "todoDormantAct": "Awaken",
+        "dormantEnrolled": "Enrolled ${n} dormant knowledge block(s) into Extract Inbox",
         "onboardingStart": "Start guide",
         "report": "Study report",
         "writeDoc": "Write to SiYuan doc",
