@@ -17,10 +17,11 @@
     import { partitionReviewCardsByQuality } from "@/core/review-queue-quality";
     import { mapChunksOrdered } from "@/core/query-chunks";
     import { todayKey } from "@/core/exam";
-    import { mergeSessionPrefs, pruneSessionPrefs } from "@/core/session-prefs";
+    import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, returnCheck, type ReturnCheckFacts } from "@/core/return-check";
-    import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired } from "@/core/session-budget";
+    import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
+    import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
@@ -424,10 +425,7 @@
             : null
     );
     function budgetClockText(): string {
-        const s = budgetLeft;
-        const m = Math.floor(s / 60);
-        const r = s % 60;
-        return `${m}:${String(r).padStart(2, "0")}`;
+        return formatBudgetClock(budgetLeft);
     }
     /** 统一设置读取：本场覆盖优先，否则走全局设置 */
     function eff(): ReviewSettings {
@@ -436,17 +434,7 @@
     const hasOverrides = $derived(Object.keys(sessionOverride).length > 0);
     /** R52 review 面 eyebrow：当前卡的卡组名优先，退回所选范围文案（不暴露原始 deckID） */
     const headScopeLabel = $derived.by(() => {
-        const deckName = decks.find(d => d.id === current?.deckID)?.name;
-        if (deckName) return deckName;
-        if (scopeKey === "new") return t.review.scopeNew;
-        if (scopeKey === "old") return t.review.scopeOld;
-        const sep = scopeKey.indexOf(":");
-        if (sep > 0) {
-            const kind = scopeKey.slice(0, sep), id = scopeKey.slice(sep + 1);
-            if (kind === "deck") return decks.find(d => d.id === id)?.name ?? t.review.scopeAll;
-            if (kind === "notebook") return notebooks.find(n => n.id === id)?.name ?? t.review.scopeAll;
-        }
-        return t.review.scopeAll;
+        return resolveHeadScopeLabel(scopeKey, current?.deckID, decks, notebooks, t.review);
     });
     /** BX-3：设置本场覆盖项（与全局同值时自动摘除，保持覆盖面最小；超时相关变更即时重启计时器） */
     function setOverride(key: keyof ReviewSettings, value: unknown) {
@@ -587,28 +575,20 @@
             sessionModalTimeoutSeconds = undefined;
         }
     });
-    let tempAnswerVariant = $state<"normal" | "typing" | "choice">("normal");
+    let tempAnswerVariant = $state<SessionVariantOption>("normal");
     function openSessionOptions() {
-        tempAnswerVariant = eff().typingEnabled ? "typing" : eff().choiceEnabled ? "choice" : "normal";
+        tempAnswerVariant = getInitialSessionVariant(eff());
         showSessionOptionsModal = true;
     }
     function applySessionOptions() {
+        const overrides = resolveSessionVariantOverrides(tempAnswerVariant);
+        for (const [k, v] of Object.entries(overrides)) {
+            setOverride(k as keyof ReviewSettings, v);
+        }
         if (tempAnswerVariant === "typing") {
-            setOverride("typingEnabled", true);
-            setOverride("choiceEnabled", false);
-            setOverride("mixedRotation", false);
             typingInput = "";
-        } else if (tempAnswerVariant === "choice") {
-            setOverride("typingEnabled", false);
-            setOverride("choiceEnabled", true);
-            setOverride("mixedRotation", false);
-            if (!choices) {
-                void startChoice();
-            }
-        } else {
-            setOverride("typingEnabled", false);
-            setOverride("choiceEnabled", false);
-            setOverride("mixedRotation", false);
+        } else if (tempAnswerVariant === "choice" && !choices) {
+            void startChoice();
         }
         showSessionOptionsModal = false;
         showMessage(t.review.sessionOptionsApplied, 1500, "info");

@@ -17,3 +17,29 @@ export function pruneSessionPrefs<T extends Record<string, unknown>>(base: T, ne
     }
     return out;
 }
+
+export type SessionVariantOption = "normal" | "typing" | "choice";
+
+/**
+ * 将全局或本场题型设置映射为弹窗单选值
+ */
+export function getInitialSessionVariant(settings: {
+    typingEnabled?: boolean;
+    choiceEnabled?: boolean;
+}): SessionVariantOption {
+    return settings.typingEnabled ? "typing" : settings.choiceEnabled ? "choice" : "normal";
+}
+
+/**
+ * 将临时题型选择映射为覆盖项
+ */
+export function resolveSessionVariantOverrides(
+    variant: SessionVariantOption
+): Record<string, boolean> {
+    return {
+        typingEnabled: variant === "typing",
+        choiceEnabled: variant === "choice",
+        mixedRotation: false,
+    };
+}
+

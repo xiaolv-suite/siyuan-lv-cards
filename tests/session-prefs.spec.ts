@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { mergeSessionPrefs, pruneSessionPrefs } from "../src/core/session-prefs";
+import {
+    mergeSessionPrefs,
+    pruneSessionPrefs,
+    getInitialSessionVariant,
+    resolveSessionVariantOverrides,
+} from "../src/core/session-prefs";
 
 // BX-3 本场偏好：覆盖合并与最小化语义
 describe("session-prefs", () => {
@@ -33,5 +38,31 @@ describe("session-prefs", () => {
 
     it("prune：布尔翻转保留", () => {
         expect(pruneSessionPrefs(base, { reverseOrder: true })).toEqual({ reverseOrder: true });
+    });
+
+    describe("题型弹窗单选与覆盖集合映射", () => {
+        it("getInitialSessionVariant：根据配置初始化为对应题型单选", () => {
+            expect(getInitialSessionVariant({ typingEnabled: true })).toBe("typing");
+            expect(getInitialSessionVariant({ choiceEnabled: true })).toBe("choice");
+            expect(getInitialSessionVariant({})).toBe("normal");
+        });
+
+        it("resolveSessionVariantOverrides：生成对应的覆盖配置项并关闭混合轮换", () => {
+            expect(resolveSessionVariantOverrides("typing")).toEqual({
+                typingEnabled: true,
+                choiceEnabled: false,
+                mixedRotation: false,
+            });
+            expect(resolveSessionVariantOverrides("choice")).toEqual({
+                typingEnabled: false,
+                choiceEnabled: true,
+                mixedRotation: false,
+            });
+            expect(resolveSessionVariantOverrides("normal")).toEqual({
+                typingEnabled: false,
+                choiceEnabled: false,
+                mixedRotation: false,
+            });
+        });
     });
 });

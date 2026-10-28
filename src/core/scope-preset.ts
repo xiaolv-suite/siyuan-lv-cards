@@ -226,3 +226,28 @@ export function filterCardsByScope(
         isDegradedFallback: false,
     };
 }
+
+/**
+ * 解析复习界面顶栏的范围展示文本（当前卡所属卡组名优先，否则回退为所选范围名称）
+ */
+export function resolveHeadScopeLabel(
+    scopeKey: string,
+    currentDeckID?: string,
+    decks: readonly { id: string; name: string }[] = [],
+    notebooks: readonly { id: string; name: string }[] = [],
+    i18nScope: { scopeNew?: string; scopeOld?: string; scopeAll?: string } = {}
+): string {
+    const deckName = decks.find(d => d.id === currentDeckID)?.name;
+    if (deckName) return deckName;
+    if (scopeKey === "new") return i18nScope.scopeNew ?? "新卡";
+    if (scopeKey === "old") return i18nScope.scopeOld ?? "复习";
+    const sep = scopeKey.indexOf(":");
+    if (sep > 0) {
+        const kind = scopeKey.slice(0, sep);
+        const id = scopeKey.slice(sep + 1);
+        if (kind === "deck") return decks.find(d => d.id === id)?.name ?? i18nScope.scopeAll ?? "全部";
+        if (kind === "notebook") return notebooks.find(n => n.id === id)?.name ?? i18nScope.scopeAll ?? "全部";
+    }
+    return i18nScope.scopeAll ?? "全部";
+}
+

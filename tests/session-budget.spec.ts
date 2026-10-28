@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired,
+    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock,
 } from "../src/core/session-budget";
 
 // BI-12 时间预算：预算到≠失败（不自动结束）；估计口径=可完成+未完成=剩余总量
@@ -54,5 +54,14 @@ describe("session-budget（BI-12）", () => {
         // 口径恒等式
         const left = 7 * 60, avg = 25, due = 40;
         expect(estimateCompletable(left, avg, due) + estimateLeftover(left, avg, due)).toBe(due);
+    });
+
+    it("formatBudgetClock：格式化剩余秒数为 m:ss 倒计时时钟文本", () => {
+        expect(formatBudgetClock(65)).toBe("1:05");
+        expect(formatBudgetClock(600)).toBe("10:00");
+        expect(formatBudgetClock(7)).toBe("0:07");
+        expect(formatBudgetClock(0)).toBe("0:00");
+        expect(formatBudgetClock(-5)).toBe("0:00");
+        expect(formatBudgetClock(Number.POSITIVE_INFINITY)).toBe("0:00");
     });
 });

@@ -45,3 +45,14 @@ export function estimateLeftover(leftSec: number, avgSec: number, remainingDue: 
     if (!Number.isFinite(leftSec)) return 0;
     return Math.max(0, remainingDue - estimateCompletable(leftSec, avgSec, remainingDue));
 }
+
+/**
+ * 格式化预算倒计时秒数为分秒时钟文本（m:ss）
+ */
+export function formatBudgetClock(leftSec: number): string {
+    if (!Number.isFinite(leftSec) || leftSec <= 0) return "0:00";
+    const m = Math.floor(leftSec / 60);
+    const r = Math.floor(leftSec % 60);
+    return `${m}:${String(r).padStart(2, "0")}`;
+}
+

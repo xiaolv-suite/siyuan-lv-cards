@@ -5,6 +5,7 @@ import {
     filterCardsByScope,
     hasActiveFilter,
     sanitizeFilterRule,
+    resolveHeadScopeLabel,
 } from "../src/core/scope-preset";
 import type {
     ScopeFilterRule,
@@ -132,6 +133,24 @@ describe("scope-preset (BX-3 范围预设三层合成与复习进度保护引擎
             expect(res.effectiveScope.fallbackReasonKey).toBe("scopePreset.fallback.emptyFiltered");
             // 降级回退后，展示基础可用卡片，防止界面白屏或空死锁
             expect(res.matchedCards.length).toBe(sampleCards.length);
+        });
+    });
+
+    describe("resolveHeadScopeLabel", () => {
+        const decks = [{ id: "deck-1", name: "考研高数" }, { id: "deck-2", name: "英语二" }];
+        const notebooks = [{ id: "nb-1", name: "数学笔记本" }];
+        const i18nScope = { scopeNew: "仅新卡", scopeOld: "仅复习", scopeAll: "全库闪卡" };
+
+        it("当前卡有所属卡组时优先展示卡组名称", () => {
+            expect(resolveHeadScopeLabel("all", "deck-1", decks, notebooks, i18nScope)).toBe("考研高数");
+        });
+
+        it("无当前卡时按 scopeKey 分流", () => {
+            expect(resolveHeadScopeLabel("new", undefined, decks, notebooks, i18nScope)).toBe("仅新卡");
+            expect(resolveHeadScopeLabel("old", undefined, decks, notebooks, i18nScope)).toBe("仅复习");
+            expect(resolveHeadScopeLabel("deck:deck-2", undefined, decks, notebooks, i18nScope)).toBe("英语二");
+            expect(resolveHeadScopeLabel("notebook:nb-1", undefined, decks, notebooks, i18nScope)).toBe("数学笔记本");
+            expect(resolveHeadScopeLabel("all", undefined, decks, notebooks, i18nScope)).toBe("全库闪卡");
         });
     });
 });

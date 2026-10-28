@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.213.4 2026-10-28 · 预算时钟、范围标签与会话选项覆盖解耦落地（-30+ 行）
+
+- **会话时间预算倒计时时钟格式化（`core/session-budget.ts`，TSK-08 持续深化）**：
+  - 将剩余秒数转为分秒格式时钟文本（`m:ss`）逻辑提炼为 `formatBudgetClock` 纯函数，内置异常非数值与非正数边界保护；
+  - 在 `tests/session-budget.spec.ts` 中新增 1 项单测，全套件达 8 项用例全部通过；
+- **顶栏范围展示文本解析器解耦（`core/scope-preset.ts`）**：
+  - 将根据卡片所属卡组名优先、回退至卡组/笔记本/新卡/复习/全库的展示文案映射逻辑抽离为纯函数 `resolveHeadScopeLabel`；
+  - 在 `tests/scope-preset.spec.ts` 中新增 1 项多场景单测，全套件达 13 项用例全部通过；
+- **题型偏好弹窗选择与覆盖状态映射解耦（`core/session-prefs.ts`）**：
+  - 提炼 `getInitialSessionVariant` 与 `resolveSessionVariantOverrides`，将题型弹窗单选状态与本场最小化覆盖集生成彻底函数化；
+  - 在 `tests/session-prefs.spec.ts` 中新增 2 项单测，全套件达 8 项用例全部通过；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数由 2474 行进一步降至 2454 行（净减 20 行，相较最初 3412 行累计削减近 960 行代码）；
+  - 全库扩展至 283 个测试文件、2158 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.3 2026-10-28 · 题型键盘路由与延迟重考调度器解耦落地（-70+ 行）
 
 - **交互题型快捷键路由解耦（`core/quiz-interactive.ts`，TSK-08 持续深化）**：
