@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.212.9 2026-10-28 · 交互式题型判分与挖空逐空控制器解耦落地（-50+ 行）
+
+- **交互式题型评分评估引擎解耦（`quiz-interactive.ts`，TSK-08 持续深化）**：
+  - 将复习界面内部分散的单选/多选对比、判断题判定、填空题评分与反馈消息构造逻辑提炼为纯逻辑评估引擎函数：`evaluateChoiceQuiz`、`evaluateJudgeQuiz`、`evaluateFillQuiz`；
+  - 自动输出标准化评估结果（`isCorrect`、建议评级、触觉震动模式与提示消息类型），消除 `review.svelte` 内部的死状态与冗余分支；
+  - 配备完整的独立单元测试套件 `tests/quiz-evaluator.spec.ts`（12 项用例覆盖单选正误、多选漏选与错选、判断题比对、填空完全匹配与拼写微瑕容错）；
+- **挖空逐空揭晓控制器解耦（`core/cloze-stepper.ts`）**：
+  - 将单张多空闪卡在问题态逐步单独揭晓的 DOM 状态机与推进逻辑抽离为核心纯模块 `src/core/cloze-stepper.ts`；
+  - 提供 `revealSingleCloze`、`queryClozeMarks`、`isAllClozeRevealed`、`stepNextCloze` 与 `handleClozeClick`，实现逐空推进、状态追踪与全空揭晓翻面闭环；
+  - 复习主模板 `review.svelte` 代码行数由 2713 行进一步精简至 2669 行（净减 44 行，累计自 3412 行削减近 750 行）；
+  - 配备专门的单元测试套件 `tests/cloze-stepper.spec.ts`（4 项用例全面验证逐空揭晓属性还原、全空状态检测、多空单步推进与单空直翻防护）；
+- **全量门禁与质量验证**：
+  - 全库扩展至 279 个测试文件、2104 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.212.8 2026-10-28 · 重考倒计时与卡面正文题型解耦落地（-110+ 行，设计令牌突破 97%）
 
 - **短暂重考倒计时等待面板解耦（`ReviewRequeueWaiting.svelte`，TSK-08 持续深化）**：

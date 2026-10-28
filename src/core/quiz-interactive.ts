@@ -4,6 +4,8 @@
  * 提取结构化题干、选项列表、对错标记与参考解析，供复习端呈现精美可点击的选项卡片与互动槽位。
  */
 
+import { gradeTyping, type TypingGrade, type Rating1to4 } from "./card-types";
+
 export type QuizInteractiveKind = "choice" | "judge" | "fill" | "free-recall";
 
 export interface InteractiveOption {
@@ -262,3 +264,110 @@ export function parseInteractiveQuiz(params: {
         hasInteractiveWidgets: false,
     };
 }
+
+// ---- 交互式题型评分与反馈评估引擎 ----
+
+export interface QuizEvaluationResult {
+    isCorrect: boolean;
+    suggestedRating: Rating1to4;
+    sfxRating: Rating1to4;
+    hapticPattern: number | number[];
+    message: string;
+    messageType: "info" | "error";
+    typingGrade?: TypingGrade;
+}
+
+/**
+ * 判定多选/单选答案是否正确，并生成建议评分与反馈消息
+ */
+export function evaluateChoiceQuiz(
+    options: InteractiveOption[],
+    selectedKeys: string[],
+    isMultiple: boolean
+): QuizEvaluationResult | null {
+    if (selectedKeys.length === 0) return null;
+    const correctOptions = options.filter(o => o.isAnswer);
+    const correctKeys = correctOptions.map(o => o.key);
+    if (correctKeys.length === 0) return null;
+
+    const allMatch = correctKeys.length === selectedKeys.length && selectedKeys.every(k => correctKeys.includes(k));
+    const hasWrong = selectedKeys.some(k => !correctKeys.includes(k));
+
+    if (allMatch) {
+        return {
+            isCorrect: true,
+            suggestedRating: 3,
+            sfxRating: 3,
+            hapticPattern: 15,
+            message: isMultiple ? "多选全部正确！" : "回答正确！",
+            messageType: "info",
+        };
+    } else if (!hasWrong && selectedKeys.length < correctKeys.length) {
+        return {
+            isCorrect: false,
+            suggestedRating: 2,
+            sfxRating: 2,
+            hapticPattern: 20,
+            message: "回答部分正确（多选漏选），已标出全部答案",
+            messageType: "info",
+        };
+    } else {
+        return {
+            isCorrect: false,
+            suggestedRating: 1,
+            sfxRating: 1,
+            hapticPattern: 25,
+            message: "回答错误，已标出正确选项",
+            messageType: "error",
+        };
+    }
+}
+
+/**
+ * 判定判断题答案是否正确，并生成建议评分与反馈消息
+ */
+export function evaluateJudgeQuiz(
+    userChoice: boolean,
+    expectedAnswer: boolean | null
+): QuizEvaluationResult | null {
+    if (expectedAnswer === null) return null;
+    const isCorrect = userChoice === expectedAnswer;
+    return {
+        isCorrect,
+        suggestedRating: isCorrect ? 3 : 1,
+        sfxRating: isCorrect ? 3 : 1,
+        hapticPattern: isCorrect ? 15 : 25,
+        message: isCorrect ? "判断正确！" : "判断错误，已标出正确答案",
+        messageType: isCorrect ? "info" : "error",
+    };
+}
+
+/**
+ * 判定填空题答案是否正确，并生成建议评分与反馈消息
+ */
+export function evaluateFillQuiz(
+    expectedText: string,
+    actualInput: string,
+    strict = false
+): QuizEvaluationResult | null {
+    const text = actualInput.trim();
+    if (!text || !expectedText) return null;
+
+    const g = gradeTyping(expectedText, text, strict);
+    const isCorrect = g.suggested >= 3;
+
+    return {
+        typingGrade: g,
+        isCorrect,
+        suggestedRating: g.suggested,
+        sfxRating: g.suggested,
+        hapticPattern: isCorrect ? 15 : 25,
+        message: g.isTypo
+            ? "拼写微瑕（1 字之差），智能容错放行通过！"
+            : isCorrect
+            ? "填空正确！"
+            : "填空已对比，查看答案",
+        messageType: isCorrect ? "info" : "error",
+    };
+}
+

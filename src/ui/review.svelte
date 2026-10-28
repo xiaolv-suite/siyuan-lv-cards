@@ -32,6 +32,7 @@
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
+    import { stepNextCloze, handleClozeClick } from "@/core/cloze-stepper";
     import { enqueueDelayedRequeue, nextRequeueDelay, SHORT_REQUEUE_DELAY_MS, takeDueRequeues, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
@@ -41,7 +42,7 @@
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { filterBurySiblings } from "@/core/sibling-cards";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
@@ -713,7 +714,6 @@
     let interactiveQuiz = $state<InteractiveQuizData | null>(null);
     let selectedChoiceKeys = $state<string[]>([]);
     let userJudgeChoice = $state<boolean | null>(null);
-    let isAnswerCorrect = $state<boolean | null>(null);
     let suggestedRating = $state<number | null>(null);
     let zenMode = $state(false);
 
@@ -736,7 +736,6 @@
                 interactiveQuiz = null;
                 selectedChoiceKeys = [];
                 userJudgeChoice = null;
-                isAnswerCorrect = null;
                 suggestedRating = null;
             }
             cardHtml = dom;
@@ -1181,7 +1180,6 @@
         interactiveQuiz = null;
         selectedChoiceKeys = [];
         userJudgeChoice = null;
-        isAnswerCorrect = null;
         suggestedRating = null;
         memoSaving = false;
         showRetireModal = false;
@@ -1271,7 +1269,13 @@
             const mark = target.closest("span[data-type='mark'], mark.lv-masked, [data-cloze-idx]") as HTMLElement | null;
             if (mark) {
                 e.stopPropagation();
-                revealSingleClozeElement(mark);
+                const res = handleClozeClick(mark, cardEl);
+                if (res.revealed) {
+                    stepRevealedCount++;
+                    if (res.allRevealed) {
+                        revealAnswer();
+                    }
+                }
                 return;
             }
         }
@@ -1292,40 +1296,13 @@
         zoomedImage = { src, alt };
     }
 
-    function revealSingleClozeElement(mark: HTMLElement) {
-        if (mark.classList.contains("lv-step-revealed")) return;
-        const answer = mark.getAttribute("data-real-answer");
-        if (answer) {
-            mark.textContent = answer;
-            mark.removeAttribute("aria-hidden");
-            mark.classList.add("lv-step-revealed");
-            mark.setAttribute("title", "已揭晓");
-        } else {
-            mark.classList.add("lv-step-revealed");
-        }
-        stepRevealedCount++;
-        checkAllClozeRevealed();
-    }
-
-    function checkAllClozeRevealed() {
-        if (!cardEl) return;
-        const allMarks = cardEl.querySelectorAll("span[data-type='mark'][data-cloze-idx], mark.lv-masked[data-cloze-idx]");
-        if (allMarks.length === 0) return;
-        const unrevealed = Array.from(allMarks).filter(m => !m.classList.contains("lv-step-revealed"));
-        if (unrevealed.length === 0) {
-            revealAnswer();
-        }
-    }
-
     function revealNextClozeOrAll(forceAll = false): boolean {
-        if (!cardEl) return false;
-        const allMarks = Array.from(cardEl.querySelectorAll("span[data-type='mark'][data-cloze-idx], mark.lv-masked[data-cloze-idx]")) as HTMLElement[];
-        if (allMarks.length <= 1 || forceAll) {
-            return false;
-        }
-        const nextUnrevealed = allMarks.find(m => !m.classList.contains("lv-step-revealed"));
-        if (nextUnrevealed) {
-            revealSingleClozeElement(nextUnrevealed);
+        const res = stepNextCloze(cardEl, forceAll);
+        if (res.revealed) {
+            stepRevealedCount++;
+            if (res.allRevealed) {
+                revealAnswer();
+            }
             return true;
         }
         return false;
@@ -2070,31 +2047,13 @@
     function submitChoiceAnswer() {
         if (!interactiveQuiz || selectedChoiceKeys.length === 0) return;
         sessionQuizTotal++;
-        const correctOptions = interactiveQuiz.options.filter(o => o.isAnswer);
-        const correctKeys = correctOptions.map(o => o.key);
-        if (correctKeys.length > 0) {
-            const allMatch = correctKeys.length === selectedChoiceKeys.length && selectedChoiceKeys.every(k => correctKeys.includes(k));
-            const hasWrong = selectedChoiceKeys.some(k => !correctKeys.includes(k));
-            if (allMatch) {
-                isAnswerCorrect = true;
-                suggestedRating = 3;
-                sessionQuizCorrect++;
-                playSfx(3);
-                triggerHaptic(15);
-                showMessage(interactiveQuiz.isMultiple ? "多选全部正确！" : "回答正确！", 1800, "info");
-            } else if (!hasWrong && selectedChoiceKeys.length < correctKeys.length) {
-                isAnswerCorrect = false;
-                suggestedRating = 2;
-                playSfx(2);
-                triggerHaptic(20);
-                showMessage("回答部分正确（多选漏选），已标出全部答案", 2000, "info");
-            } else {
-                isAnswerCorrect = false;
-                suggestedRating = 1;
-                playSfx(1);
-                triggerHaptic(25);
-                showMessage("回答错误，已标出正确选项", 1800, "error");
-            }
+        const res = evaluateChoiceQuiz(interactiveQuiz.options, selectedChoiceKeys, interactiveQuiz.isMultiple);
+        if (res) {
+            suggestedRating = res.suggestedRating;
+            if (res.isCorrect) sessionQuizCorrect++;
+            playSfx(res.sfxRating as any);
+            triggerHaptic(res.hapticPattern);
+            showMessage(res.message, res.messageType === "error" ? 1800 : 2000, res.messageType);
         }
         revealAnswer();
     }
@@ -2106,13 +2065,13 @@
         setTimeout(() => {
             if (!showAnswer) {
                 sessionQuizTotal++;
-                if (interactiveQuiz.judgeAnswer !== null) {
-                    isAnswerCorrect = val === interactiveQuiz.judgeAnswer;
-                    suggestedRating = isAnswerCorrect ? 3 : 1;
-                    if (isAnswerCorrect) sessionQuizCorrect++;
-                    playSfx(isAnswerCorrect ? 3 : 1);
-                    triggerHaptic(isAnswerCorrect ? 15 : 25);
-                    showMessage(isAnswerCorrect ? "判断正确！" : "判断错误，已标出正确答案", 1800, isAnswerCorrect ? "info" : "error");
+                const res = evaluateJudgeQuiz(val, interactiveQuiz.judgeAnswer);
+                if (res) {
+                    suggestedRating = res.suggestedRating;
+                    if (res.isCorrect) sessionQuizCorrect++;
+                    playSfx(res.sfxRating as any);
+                    triggerHaptic(res.hapticPattern);
+                    showMessage(res.message, 1800, res.messageType);
                 }
                 revealAnswer();
             }
@@ -2129,18 +2088,15 @@
         }
         const target = interactiveQuiz.fillExpected || expectedText;
         if (target) {
-            const g = gradeTyping(target, text, eff().typingStrict);
-            typingGrade = g;
-            isAnswerCorrect = g.suggested >= 3;
-            suggestedRating = g.suggested;
-            sessionQuizTotal++;
-            if (isAnswerCorrect) sessionQuizCorrect++;
-            playSfx(g.suggested as any);
-            triggerHaptic(isAnswerCorrect ? 15 : 25);
-            if (g.isTypo) {
-                showMessage("拼写微瑕（1 字之差），智能容错放行通过！", 2200, "info");
-            } else {
-                showMessage(isAnswerCorrect ? "填空正确！" : "填空已对比，查看答案", 1800, isAnswerCorrect ? "info" : "error");
+            const res = evaluateFillQuiz(target, text, eff().typingStrict);
+            if (res) {
+                typingGrade = res.typingGrade ?? null;
+                suggestedRating = res.suggestedRating;
+                sessionQuizTotal++;
+                if (res.isCorrect) sessionQuizCorrect++;
+                playSfx(res.sfxRating as any);
+                triggerHaptic(res.hapticPattern);
+                showMessage(res.message, res.typingGrade?.isTypo ? 2200 : 1800, res.messageType);
             }
         }
         revealAnswer();
