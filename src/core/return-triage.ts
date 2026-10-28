@@ -70,3 +70,44 @@ export function recordTriage(history: TriageRecord[], reason: ReturnReason, f: T
     const next = [...history, { at: now, reason, dueCount: f.dueCount, steps: plan.steps }];
     return next.slice(-30);
 }
+
+export interface ReturnBannerInfo {
+    planText: string;
+    steps: string[];
+    capText: string;
+}
+
+/**
+ * 根据历史会话状态计算跨天返场横幅（BI-27，跨天返场且上日有收工原因时返回）
+ */
+export function deriveReturnBanner(
+    sessionState: { date?: string; endReason?: string } | null | undefined,
+    dueCount: number,
+    i18nReturnTriage: any,
+    now: number = Date.now()
+): ReturnBannerInfo | null {
+    if (!sessionState?.date || !sessionState.endReason) return null;
+    const today = new Date(now);
+    const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    if (sessionState.date === localToday) return null;
+
+    const reasonRaw = sessionState.endReason;
+    const mapped: ReturnReason = reasonRaw === "time-up" ? "time-short" : reasonRaw === "energy" ? "pressure" : "plain-leave";
+    if (!(RETURN_REASONS as readonly string[]).includes(mapped)) return null;
+
+    const daysGap = Math.max(1, Math.round((now - new Date(`${sessionState.date}T00:00:00`).getTime()) / 86400000));
+    const plan = triageReturn(mapped, { dueCount, daysGap, staleCount: 0 });
+    const tt = i18nReturnTriage ?? {};
+    const capText = plan.suggestedCap === null
+        ? (tt.capNone ?? "不设限")
+        : plan.suggestedCap === 0
+        ? (tt.capReadonly ?? "建议只读不评分")
+        : (tt.capN ? tt.capN.replace("${n}", String(plan.suggestedCap)) : `建议今日上限 ${plan.suggestedCap} 张`);
+
+    return {
+        planText: tt.plan?.[plan.planKey] ?? plan.planKey,
+        steps: plan.steps.map((k: string) => tt.step?.[k.replace("step.", "")] ?? k),
+        capText,
+    };
+}
+

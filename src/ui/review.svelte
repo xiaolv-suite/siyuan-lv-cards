@@ -27,7 +27,8 @@
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion } from "@/core/card-face";
     import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
-    import { triageReturn, RETURN_REASONS, type ReturnReason } from "@/core/return-triage";
+    import { deriveReturnBanner } from "@/core/return-triage";
+    import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
     import { reviewSwipeAction, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio } from "@/core/review-audio";
@@ -46,7 +47,6 @@
     import { lvLog } from "@/libs/log";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, type InteractiveQuizData } from "@/core/quiz-interactive";
-    import { filterBurySiblings } from "@/core/sibling-cards";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
     import { isSuperBlockHtml, extractSuperBlockTexts } from "@/core/card-face";
@@ -939,50 +939,19 @@
                 }
                 }
             }
-            // 仅新卡 / 仅旧卡模式（睡前巩固包，W 组）
-            if (scopeKey === "new" || scopeKey === "old") {
-                cards = cards.filter(c => (scopeKey === "new") === (c.state === 0));
-            }
-            const bl = eff().batchLimit;
-            if (bl > 0) {
-                cards = cards.slice(0, bl);
-            }
-            if (!cramActive && eff().burySiblings) {
-                // 同源兄弟卡防剧透推迟（Anki Bury Siblings）：每笔记块同一会话优先考 1 空，杜绝即时互为提示
-                const buryRes = filterBurySiblings(cards);
-                cards = buryRes.retained;
-            }
-            if (cramActive) {
-                // 考前 cram：遗忘多的卡优先（M7·FR4）
-                cards = [...cards].sort((a, b) => b.lapses - a.lapses);
-            } else if (eff().reverseOrder) {
-                // 倒序模式（431）：内核到期顺序反转，最新到期优先
-                cards = [...cards].reverse();
-            } else if (eff().randomOrder) {
-                cards = shuffle(cards);
-            }
-            queue = cards;
+            // 管道处理：范围筛选、批次截断、同源兄弟卡防剧透推迟与排序
+            queue = applyQueuePipeline(cards, {
+                scopeKey,
+                batchLimit: eff().batchLimit,
+                burySiblings: eff().burySiblings,
+                cramActive,
+                reverseOrder: eff().reverseOrder,
+                randomOrder: eff().randomOrder,
+                shuffleFn: shuffle,
+            });
             // BI-27 返场分流：跨天返场且上日有收工原因 → 今日方案横幅（展示性，不自动改预算/队列）。
-            // 口径映射：BI-8 收工原因 → BI-27 返场原因（time-up→time-short、energy→pressure、其余→plain-leave）
             if (!recovery) {
-                const ss = ctx.getSessionState();
-                const today = new Date();
-                const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-                const reasonRaw = ss?.endReason;
-                if (ss?.date && ss.date !== localToday && reasonRaw) {
-                    const mapped: ReturnReason = reasonRaw === "time-up" ? "time-short" : reasonRaw === "energy" ? "pressure" : "plain-leave";
-                    if ((RETURN_REASONS as readonly string[]).includes(mapped)) {
-                        const daysGap = Math.max(1, Math.round((Date.now() - new Date(`${ss.date}T00:00:00`).getTime()) / 86400000));
-                        const plan = triageReturn(mapped, { dueCount: queue.length, daysGap, staleCount: 0 });
-                        const tt = t.returnTriage as any;
-                        const capText = plan.suggestedCap === null ? tt.capNone : plan.suggestedCap === 0 ? tt.capReadonly : tt.capN.replace("${n}", String(plan.suggestedCap));
-                        returnBanner = {
-                            planText: tt.plan?.[plan.planKey] ?? plan.planKey,
-                            steps: plan.steps.map((k) => tt.step?.[k.replace("step.", "")] ?? k),
-                            capText,
-                        };
-                    }
-                }
+                returnBanner = deriveReturnBanner(ctx.getSessionState(), queue.length, t.returnTriage);
             }
             // BI-9：首刷后回填队列剩余数，恢复分支可用性随之刷新（继续原场/缩小范围是否可选）
             if (recovery && recoverySnap) {
@@ -1019,11 +988,13 @@
                     const reviewedCount = reviewedIDs.length;
                     if (checkinItemId && reviewedCount > 0) {
                         const today = new Date().toISOString().slice(0, 10);
-                        const accuracy = sessionQuizTotal > 0
-                            ? Math.round((sessionQuizCorrect / sessionQuizTotal) * 100)
-                            : (sessionNew + sessionReview > 0
-                                ? Math.round(Math.max(0, (sessionNew + sessionReview - sessionForget)) / (sessionNew + sessionReview) * 100)
-                                : 100);
+                        const accuracy = calculateReviewAccuracy({
+                            newCount: sessionNew,
+                            reviewCount: sessionReview,
+                            forgetCount: sessionForget,
+                            quizTotal: sessionQuizTotal,
+                            quizCorrect: sessionQuizCorrect,
+                        });
                         void logCheckinEventSafely({
                             itemId: checkinItemId,
                             value: reviewedCount,
@@ -1924,17 +1895,10 @@
 
     function toggleStarCurrent() {
         if (!current) return;
-        const cid = current.cardID;
-        const next = new Set(starredCardIDs);
-        if (next.has(cid)) {
-            next.delete(cid);
-            showMessage("已取消星标", 1500, "info");
-        } else {
-            next.add(cid);
-            showMessage("已加入重点星标卡片", 1800, "info");
-            triggerHaptic(15);
-        }
-        starredCardIDs = next;
+        const res = toggleCardStar(starredCardIDs, current.cardID);
+        starredCardIDs = res.nextStarredIDs;
+        showMessage(res.isStarred ? "已加入重点星标卡片" : "已取消星标", res.isStarred ? 1800 : 1500, "info");
+        if (res.isStarred) triggerHaptic(15);
     }
 
     function handleOptionPick(key: string) {

@@ -1,0 +1,110 @@
+import { describe, expect, it } from "vitest";
+import {
+    applyQueuePipeline,
+    calculateReviewAccuracy,
+    toggleCardStar,
+    type QueuePipelineCard,
+} from "@/core/review-queue-pipeline";
+
+describe("review-queue-pipeline 复习队列处理与排序管道", () => {
+    const mockCards: QueuePipelineCard[] = [
+        { cardID: "c-1", state: 0, lapses: 0, blockID: "b-1" },
+        { cardID: "c-2", state: 1, lapses: 3, blockID: "b-2" },
+        { cardID: "c-3", state: 0, lapses: 1, blockID: "b-1" }, // sibling of c-1
+        { cardID: "c-4", state: 2, lapses: 5, blockID: "b-3" },
+    ];
+
+    describe("applyQueuePipeline", () => {
+        it("scopeKey 为 new 时仅保留新卡", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "new" });
+            expect(res.map(c => c.cardID)).toEqual(["c-1", "c-3"]);
+        });
+
+        it("scopeKey 为 old 时仅保留复习卡", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "old" });
+            expect(res.map(c => c.cardID)).toEqual(["c-2", "c-4"]);
+        });
+
+        it("batchLimit 截断卡片上限", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", batchLimit: 2 });
+            expect(res.length).toBe(2);
+            expect(res.map(c => c.cardID)).toEqual(["c-1", "c-2"]);
+        });
+
+        it("burySiblings 在非冲刺模式下推迟同源兄弟卡", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", burySiblings: true });
+            // c-1 与 c-3 同属于 b-1，同块只保留先出的一张
+            expect(res.map(c => c.cardID)).toEqual(["c-1", "c-2", "c-4"]);
+        });
+
+        it("cramActive 冲刺模式按 lapses 降序优先排卡，且忽略 burySiblings", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", cramActive: true, burySiblings: true });
+            expect(res.map(c => c.cardID)).toEqual(["c-4", "c-2", "c-3", "c-1"]);
+        });
+
+        it("reverseOrder 倒序模式反转队列", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", reverseOrder: true });
+            expect(res.map(c => c.cardID)).toEqual(["c-4", "c-3", "c-2", "c-1"]);
+        });
+
+        it("randomOrder 调用指定洗牌函数", () => {
+            const reverseShuffle = <T>(arr: T[]): T[] => [...arr].reverse();
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", randomOrder: true, shuffleFn: reverseShuffle });
+            expect(res.map(c => c.cardID)).toEqual(["c-4", "c-3", "c-2", "c-1"]);
+        });
+    });
+
+    describe("calculateReviewAccuracy", () => {
+        it("优先依据交互题型正确数统计命中率", () => {
+            const acc = calculateReviewAccuracy({
+                newCount: 2,
+                reviewCount: 3,
+                forgetCount: 1,
+                quizTotal: 10,
+                quizCorrect: 8,
+            });
+            expect(acc).toBe(80);
+        });
+
+        it("无交互题型时按新学+复习扣减遗忘数统计命中率", () => {
+            const acc = calculateReviewAccuracy({
+                newCount: 5,
+                reviewCount: 5,
+                forgetCount: 2,
+                quizTotal: 0,
+                quizCorrect: 0,
+            });
+            expect(acc).toBe(80); // (10-2)/10 = 80%
+        });
+
+        it("无任何作答返回 100", () => {
+            const acc = calculateReviewAccuracy({
+                newCount: 0,
+                reviewCount: 0,
+                forgetCount: 0,
+                quizTotal: 0,
+                quizCorrect: 0,
+            });
+            expect(acc).toBe(100);
+        });
+    });
+
+    describe("toggleCardStar", () => {
+        it("加入星标与移除星标的集合不可变切换", () => {
+            const initial = new Set(["c-1", "c-2"]);
+
+            // 移除 c-2
+            const r1 = toggleCardStar(initial, "c-2");
+            expect(r1.isStarred).toBe(false);
+            expect(r1.nextStarredIDs.has("c-2")).toBe(false);
+            expect(r1.nextStarredIDs.size).toBe(1);
+            expect(initial.size).toBe(2); // 原 Set 不被修改
+
+            // 添加 c-3
+            const r2 = toggleCardStar(r1.nextStarredIDs, "c-3");
+            expect(r2.isStarred).toBe(true);
+            expect(r2.nextStarredIDs.has("c-3")).toBe(true);
+            expect(r2.nextStarredIDs.size).toBe(2);
+        });
+    });
+});

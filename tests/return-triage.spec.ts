@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RETURN_REASONS, recordTriage, triageReturn, type TriageFacts } from "../src/core/return-triage";
+import { RETURN_REASONS, recordTriage, triageReturn, deriveReturnBanner, type TriageFacts } from "../src/core/return-triage";
 
 // BI-27 返场分流：六类原因六套方案，绝不统一补齐逾期；历史追加留痕
 const facts: TriageFacts = { dueCount: 80, daysGap: 9, staleCount: 2 };
@@ -41,5 +41,40 @@ describe("return-triage（BI-27）", () => {
             h = recordTriage(h, "plain-leave", facts, 3000 + i);
         }
         expect(h.length).toBeLessThanOrEqual(30);
+    });
+
+    describe("deriveReturnBanner", () => {
+        const mockI18n = {
+            capNone: "不设限",
+            capReadonly: "建议只读不评分",
+            capN: "建议今日上限 ${n} 张",
+            plan: {
+                "returnTriage.plan.time-short": "时间不足分流方案",
+            },
+            step: {
+                budget: "开启预算",
+                "high-priority": "高优筛选",
+            },
+        };
+
+        const now = new Date("2026-10-28T12:00:00Z").getTime();
+
+        it("同日会话不产生返场横幅", () => {
+            const todayStr = "2026-10-28";
+            expect(deriveReturnBanner({ date: todayStr, endReason: "time-up" }, 20, mockI18n, now)).toBeNull();
+        });
+
+        it("跨天且有已知收工原因时生成返场横幅", () => {
+            const banner = deriveReturnBanner({ date: "2026-10-25", endReason: "time-up" }, 25, mockI18n, now);
+            expect(banner).not.toBeNull();
+            expect(banner?.planText).toBe("时间不足分流方案");
+            expect(banner?.steps).toEqual(["开启预算", "高优筛选"]);
+            expect(banner?.capText).toContain("10");
+        });
+
+        it("无历史状态或无收工原因返回 null", () => {
+            expect(deriveReturnBanner(null, 20, mockI18n, now)).toBeNull();
+            expect(deriveReturnBanner({ date: "2026-10-25" }, 20, mockI18n, now)).toBeNull();
+        });
     });
 });
