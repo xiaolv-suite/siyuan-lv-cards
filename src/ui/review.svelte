@@ -18,7 +18,7 @@
     import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, toggleCardIssue } from "@/core/card-actions";
+    import { clampFontScale, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters } from "@/core/card-actions";
     import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -1011,7 +1011,7 @@
             }
             if (isDisposed) return;
             showMessage(t.review.retireCardDone ?? "已将卡片移出卡组", 2500, "info");
-            queue = queue.filter(c => c.cardID !== card.cardID);
+            queue = removeCardFromQueue(queue, card.cardID);
             if (current?.cardID !== card.cardID) return;
             showRetireModal = false;
             if (queue.length > 0) {
@@ -1270,20 +1270,20 @@
             await reviewRiffCard(current.deckID, current.cardID, rating, reviewedIDs);
             writeSucceeded = true;
             // AQ-13：作答耗时按设置封顶（后台停留/离席不制造超长样本），原生事件无此字段保持 N/A
-            const cap = Math.max(5, eff().answerTimeCapSec || 60);
-            const dur = cardShownAt > 0 ? Math.min(cap, Math.max(0, Math.round((Date.now() - cardShownAt) / 1000))) : undefined;
+            const dur = computeAnswerDuration(cardShownAt, eff().answerTimeCapSec);
             ctx.appendRevlog({ cardID: current.cardID, deckID: current.deckID, blockID: current.blockID, rating, source: "plugin", ...(dur !== undefined ? { dur } : {}) });
             reviewedIDs = [...reviewedIDs, current.cardID];
-            if (rating === 1) {
-                sessionForget += 1;
-                // 遗忘卡短期循环：延迟数分钟后本地重现，避免立即重复；不动内核调度。
-                if (eff().requeueAgain) {
-                    queueDelayedRequeue(current);
-                }
-            } else if (wasNew) {
-                sessionNew += 1;
-            } else {
-                sessionReview += 1;
+            const nextCounters = updateSessionCountersOnRate(
+                { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
+                rating,
+                wasNew
+            );
+            sessionNew = nextCounters.new;
+            sessionReview = nextCounters.review;
+            sessionForget = nextCounters.forget;
+            sessionSkip = nextCounters.skip;
+            if (rating === 1 && eff().requeueAgain) {
+                queueDelayedRequeue(current);
             }
             // AQ-2：先更新计数再落盘——重载恢复的进度与界面一致，不丢刚评的一张
             persistSession();
@@ -1700,10 +1700,11 @@
         clearPendingRequeues();
         reviewedIDs = [];
         sessionSkipped = [];
-        sessionNew = 0;
-        sessionReview = 0;
-        sessionForget = 0;
-        sessionSkip = 0;
+        const empty = createEmptySessionCounters();
+        sessionNew = empty.new;
+        sessionReview = empty.review;
+        sessionForget = empty.forget;
+        sessionSkip = empty.skip;
         loadQueue();
     }
 

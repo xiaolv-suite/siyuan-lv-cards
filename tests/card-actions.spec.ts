@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { clampFontScale, toggleCardIssue } from "@/core/card-actions";
+import {
+    clampFontScale,
+    toggleCardIssue,
+    removeCardFromQueue,
+    computeAnswerDuration,
+    updateSessionCountersOnRate,
+    createEmptySessionCounters,
+} from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
     describe("clampFontScale", () => {
@@ -28,6 +35,52 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
             const res2 = toggleCardIssue(res1.nextMarkedIDs, "card-a");
             expect(res2.isMarked).toBe(false);
             expect(res2.nextMarkedIDs.has("card-a")).toBe(false);
+        });
+    });
+
+    describe("removeCardFromQueue", () => {
+        it("根据 cardID 准确从出题队列移除", () => {
+            const queue = [{ cardID: "c1" }, { cardID: "c2" }, { cardID: "c3" }];
+            expect(removeCardFromQueue(queue, "c2").map(c => c.cardID)).toEqual(["c1", "c3"]);
+            expect(removeCardFromQueue(queue, "not-exist").map(c => c.cardID)).toEqual(["c1", "c2", "c3"]);
+        });
+    });
+
+    describe("computeAnswerDuration", () => {
+        const start = 1000000;
+        it("计算正常作答秒数", () => {
+            expect(computeAnswerDuration(start, 60, start + 12000)).toBe(12);
+        });
+
+        it("超过 capSec 封顶防离席", () => {
+            expect(computeAnswerDuration(start, 30, start + 120000)).toBe(30);
+        });
+
+        it("未提供呈现时间戳返回 undefined", () => {
+            expect(computeAnswerDuration(0, 60, start)).toBeUndefined();
+            expect(computeAnswerDuration(-10, 60, start)).toBeUndefined();
+        });
+    });
+
+    describe("updateSessionCountersOnRate & createEmptySessionCounters", () => {
+        it("正确累加遗忘、新卡与复习计数", () => {
+            const initial = createEmptySessionCounters();
+            expect(initial).toEqual({ new: 0, review: 0, forget: 0, skip: 0 });
+
+            // 遗忘
+            const c1 = updateSessionCountersOnRate(initial, 1, false);
+            expect(c1.forget).toBe(1);
+
+            // 新学
+            const c2 = updateSessionCountersOnRate(c1, 3, true);
+            expect(c2.new).toBe(1);
+            expect(c2.forget).toBe(1);
+
+            // 复习
+            const c3 = updateSessionCountersOnRate(c2, 4, false);
+            expect(c3.review).toBe(1);
+            expect(c3.new).toBe(1);
+            expect(c3.forget).toBe(1);
         });
     });
 });

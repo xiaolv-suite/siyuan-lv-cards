@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.213.9 2026-10-28 · 作答耗时封顶/会话计数更新与就地退役队列解耦落地
+
+- **作答耗时封顶与会话计数状态机解耦（`core/card-actions.ts`，TSK-08 持续深化）**：
+  - 提炼 `computeAnswerDuration`：严格根据题面呈现时间戳与会话封顶秒数（`answerTimeCapSec`，防后台停留或离席异常样本）计算合法 revlog 时长；
+  - 提炼 `updateSessionCountersOnRate`：纯函数驱动遗忘、新卡与复习计数状态更新，消除评分异步流程中的交织突变；
+  - 提炼 `createEmptySessionCounters`：提供全 0 空计数器工厂函数；
+  - 提炼 `removeCardFromQueue`：纯函数按 cardID 过滤出题队列，使就地移出卡组（`retireCurrentCard`）与队列出卡逻辑完全解耦；
+  - 在 `tests/card-actions.spec.ts` 中新增 5 项单测，全套件达 8 项用例全部通过；
+- **全量门禁与质量验证**：
+  - 全库扩展至 287 个测试文件、2177 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.8 2026-10-28 · 出题队列批量质检与范围到期统一查询解耦落地（累积削减 1000+ 行代码！）
 
 - **出题队列批量质检过滤解耦（`core/review-queue-quality.ts`，TSK-08 持续深化）**：

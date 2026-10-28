@@ -25,3 +25,58 @@ export function toggleCardIssue(
         return { nextMarkedIDs: next, isMarked: true };
     }
 }
+
+/**
+ * 从队列中移除已退役或已删除的卡片
+ */
+export function removeCardFromQueue<T extends { cardID: string }>(
+    queue: readonly T[],
+    cardID: string
+): T[] {
+    return queue.filter(c => c.cardID !== cardID);
+}
+
+/**
+ * 计算作答时长（秒），按设置上限封顶防离席异常
+ */
+export function computeAnswerDuration(
+    cardShownAt: number,
+    capSec = 60,
+    now = Date.now()
+): number | undefined {
+    if (cardShownAt <= 0) return undefined;
+    const cap = Math.max(5, capSec || 60);
+    return Math.min(cap, Math.max(0, Math.round((now - cardShownAt) / 1000)));
+}
+
+export interface ReviewSessionCounters {
+    new: number;
+    review: number;
+    forget: number;
+    skip: number;
+}
+
+/**
+ * 创建清空的会话计数对象
+ */
+export function createEmptySessionCounters(): ReviewSessionCounters {
+    return { new: 0, review: 0, forget: 0, skip: 0 };
+}
+
+/**
+ * 依据单张评分更新会话统计计数
+ */
+export function updateSessionCountersOnRate(
+    counters: ReviewSessionCounters,
+    rating: number,
+    wasNew: boolean
+): ReviewSessionCounters {
+    if (rating === 1) {
+        return { ...counters, forget: counters.forget + 1 };
+    }
+    if (wasNew) {
+        return { ...counters, new: counters.new + 1 };
+    }
+    return { ...counters, review: counters.review + 1 };
+}
+
