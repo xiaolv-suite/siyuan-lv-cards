@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.215.5 2026-10-29 · 干扰项追加过滤/预算参数初始化与重现卡标记解耦落地
+
+- **干扰项追加校验纯函数化（`core/choice-options.ts`，TSK-08 持续深化）**：
+  - 提炼 `addDistractorToPool`：纯函数标准化干扰项清洗、去重、排除正确答案并受控容量限制；
+  - 在 `tests/choice-options.spec.ts` 中新增 3 项单元测试；
+- **时间预算会话参数初始化解耦（`core/session-budget.ts`）**：
+  - 提炼 `initBudgetSession`：纯函数统一初始化时间预算启动时间戳、起始时间与基于历史 revlog 耗时的平均每卡秒数推算；
+  - 消除组件层直接对 revlog 耗时映射与兜底处理；
+  - 在 `tests/session-budget.spec.ts` 中新增 2 项单元测试；
+- **重现卡标记纯函数化（`core/delayed-requeue.ts`）**：
+  - 提炼 `markAsRequeueCard`：纯函数安全为短期循环遗忘卡打上 `lvRequeue=1` 标识，保持原字段不可变；
+  - 在 `tests/delayed-requeue.spec.ts` 中新增单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2274 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.4 2026-10-29 · 模态窗口按键拦截与退出流转解耦落地
 
 - **模态窗口按键拦截与退出流转解耦（`core/review-shortcuts.ts`，TSK-08 持续深化）**：

@@ -80,3 +80,26 @@ export function resolveBudgetEstimate(
     };
 }
 
+export interface BudgetInitialization {
+    startedAt: number;
+    now: number;
+    avgSec: number;
+}
+
+/**
+ * 初始化复习时间预算会话参数
+ */
+export function initBudgetSession(
+    budgetMin: number,
+    durations: readonly (number | undefined)[],
+    now = Date.now()
+): BudgetInitialization {
+    const startedAt = budgetMin > 0 ? now : 0;
+    const avgSec = budgetMin > 0 ? avgSecPerCard(durations.filter((d): d is number => d !== undefined)) : 10;
+    return {
+        startedAt,
+        now: startedAt,
+        avgSec,
+    };
+}
+

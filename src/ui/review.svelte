@@ -19,10 +19,10 @@
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
     import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes } from "@/core/card-actions";
-    import { avgSecPerCard, budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate } from "@/core/session-budget";
+    import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
-    import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray, recordChoicePick } from "@/core/choice-options";
+    import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray, recordChoicePick, addDistractorToPool } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing } from "@/core/card-face";
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
@@ -39,7 +39,7 @@
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
-    import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
+    import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, markAsRequeueCard, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { deriveHintLevels, availableLevels, formatHintLevelIndicator, advanceCardHint, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
@@ -276,7 +276,7 @@
     }
 
     function queueDelayedRequeue(card: QueueCard) {
-        pendingRequeues = enqueueDelayedRequeue(pendingRequeues, { ...card, lvRequeue: 1 });
+        pendingRequeues = enqueueDelayedRequeue(pendingRequeues, markAsRequeueCard(card));
         requeueScheduler.schedule();
     }
 
@@ -403,9 +403,10 @@
     });
     function setBudget(min: number) {
         budgetMin = min;
-        budgetStartedAt = min > 0 ? Date.now() : 0;
-        budgetNow = budgetStartedAt;
-        budgetAvg = min > 0 ? avgSecPerCard(ctx.getRevlog().entries.map(e => e.dur ?? 0)) : 10;
+        const b = initBudgetSession(min, ctx.getRevlog().entries.map(e => e.dur));
+        budgetStartedAt = b.startedAt;
+        budgetNow = b.now;
+        budgetAvg = b.avgSec;
     }
     const budgetLeft = $derived(budgetLeftSec(budgetStartedAt, budgetMin, budgetNow || Date.now()));
     const budgetExpired = $derived(isBudgetExpired(budgetStartedAt, budgetMin, budgetNow || Date.now()));
@@ -734,9 +735,7 @@
                 if (pool.length >= 3) break;
                 const text = await answerOf(c.blockID);
                 if (seq !== choiceRequestSeq || current?.cardID !== cardID) return;
-                if (text && text !== answer && !pool.includes(text)) {
-                    pool.push(text);
-                }
+                addDistractorToPool(pool, text, answer);
             }
             const built = assembleChoiceOptions(answer, pool, shuffleArray);
             if (!built) {

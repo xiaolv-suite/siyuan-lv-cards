@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate,
+    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession,
 } from "../src/core/session-budget";
 
 // BI-12 时间预算：预算到≠失败（不自动结束）；估计口径=可完成+未完成=剩余总量
@@ -77,6 +77,22 @@ describe("session-budget（BI-12）", () => {
             expect(resolveBudgetEstimate(0, true, 15, 30, 20)).toBeNull();
             expect(resolveBudgetEstimate(300, false, 0, 30, 20)).toBeNull();
             expect(resolveBudgetEstimate(Number.POSITIVE_INFINITY, false, 15, 30, 20)).toBeNull();
+        });
+    });
+
+    describe("initBudgetSession", () => {
+        it("开启时间预算时初始化时间戳并按历史时长推算平均秒数", () => {
+            const res = initBudgetSession(15, [10, 20, 30], 10000);
+            expect(res.startedAt).toBe(10000);
+            expect(res.now).toBe(10000);
+            expect(res.avgSec).toBe(20);
+        });
+
+        it("关闭时间预算（0）时重置 startedAt 与 now 为 0", () => {
+            const res = initBudgetSession(0, [10, 20], 10000);
+            expect(res.startedAt).toBe(0);
+            expect(res.now).toBe(0);
+            expect(res.avgSec).toBe(10);
         });
     });
 });

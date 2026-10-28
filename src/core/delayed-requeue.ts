@@ -11,6 +11,11 @@ export interface DelayedRequeue<T> {
     dueAt: number;
 }
 
+/** 为重现卡标记 lvRequeue=1 属性。 */
+export function markAsRequeueCard<T>(card: T): T & { lvRequeue: 1 } {
+    return { ...card, lvRequeue: 1 };
+}
+
 /** 将一张遗忘卡加入会话内延迟队列。 */
 export function enqueueDelayedRequeue<T>(
     pending: readonly DelayedRequeue<T>[],

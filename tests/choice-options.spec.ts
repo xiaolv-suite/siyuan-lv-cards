@@ -6,6 +6,7 @@ import {
     extractAnswerFromDomHtml,
     shuffleArray,
     recordChoicePick,
+    addDistractorToPool,
 } from "@/core/choice-options";
 
 describe("cleanChoiceText", () => {
@@ -118,6 +119,28 @@ describe("recordChoicePick", () => {
     it("空 choices 状态安全返回 null", () => {
         expect(recordChoicePick(null, 0)).toBeNull();
         expect(recordChoicePick(undefined, 0)).toBeNull();
+    });
+});
+
+describe("addDistractorToPool", () => {
+    it("成功添加有效干扰项并清洗空白", () => {
+        const pool: string[] = [];
+        expect(addDistractorToPool(pool, "  干扰一  ", "正确答案")).toBe(true);
+        expect(pool).toEqual(["干扰一"]);
+    });
+
+    it("重复项或与正确答案相同的文本被拒绝", () => {
+        const pool = ["干扰一"];
+        expect(addDistractorToPool(pool, "干扰一", "正确答案")).toBe(false);
+        expect(addDistractorToPool(pool, "正确答案", "正确答案")).toBe(false);
+        expect(addDistractorToPool(pool, "", "正确答案")).toBe(false);
+        expect(pool).toEqual(["干扰一"]);
+    });
+
+    it("池达到上限时拒绝添加", () => {
+        const pool = ["A", "B", "C"];
+        expect(addDistractorToPool(pool, "D", "Target", 3)).toBe(false);
+        expect(pool).toHaveLength(3);
     });
 });
 

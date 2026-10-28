@@ -102,6 +102,25 @@ export function recordChoicePick(
 }
 
 /**
+ * 向干扰项池中追加候选文本（去重、排除正确答案且不超容量）
+ */
+export function addDistractorToPool(
+    pool: string[],
+    candidateText: string,
+    targetAnswer: string,
+    maxPoolSize = 3
+): boolean {
+    if (pool.length >= maxPoolSize) return false;
+    const cleanCandidate = cleanChoiceText(candidateText);
+    const cleanTarget = cleanChoiceText(targetAnswer);
+    if (!cleanCandidate || cleanCandidate === cleanTarget || pool.includes(cleanCandidate)) {
+        return false;
+    }
+    pool.push(cleanCandidate);
+    return true;
+}
+
+/**
  * 从 HTML 字符串中提取卡片答案文本（挖空集合 > 问答答案 > 纯文本）
  */
 export function extractAnswerFromDomHtml(domHtml: string): string {

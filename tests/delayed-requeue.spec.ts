@@ -5,6 +5,7 @@ import {
     SHORT_REQUEUE_DELAY_MS,
     takeDueRequeues,
     createDelayedRequeueScheduler,
+    markAsRequeueCard,
     type DelayedRequeue,
 } from "../src/core/delayed-requeue";
 
@@ -71,6 +72,15 @@ describe("delayed requeue（会话内遗忘卡短期循环）", () => {
             } finally {
                 vi.useRealTimers();
             }
+        });
+    });
+
+    describe("markAsRequeueCard", () => {
+        it("为卡片打上 lvRequeue=1 属性且不破坏原字段", () => {
+            const card = { cardID: "c-1", deckID: "d-1" };
+            const requeued = markAsRequeueCard(card);
+            expect(requeued).toEqual({ cardID: "c-1", deckID: "d-1", lvRequeue: 1 });
+            expect(card).not.toHaveProperty("lvRequeue");
         });
     });
 });
