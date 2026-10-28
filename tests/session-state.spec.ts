@@ -8,6 +8,7 @@ import {
     markSessionCompleted,
     createSessionSnapshot,
     restoreSessionProgress,
+    recordSessionEndReason,
     END_REASONS,
 } from "../src/core/session-state";
 
@@ -128,6 +129,21 @@ describe("session-state BI-8：收工原因", () => {
 
             const done = markSessionCompleted(createSessionSnapshot(TODAY, ["c1"], [], { new: 1, review: 0, forget: 0, skip: 0 }));
             expect(restoreSessionProgress(done, TODAY)).toBeNull();
+        });
+    });
+
+    describe("recordSessionEndReason", () => {
+        it("正常持久化收工原因", () => {
+            const snap = createSessionSnapshot(TODAY, ["c1"], [], { new: 1, review: 0, forget: 0, skip: 0 });
+            let saved: any = null;
+            const res = recordSessionEndReason(snap, "time-up", (s) => { saved = s; });
+
+            expect(res?.endReason).toBe("time-up");
+            expect(saved?.endReason).toBe("time-up");
+        });
+
+        it("无会话状态返回 null", () => {
+            expect(recordSessionEndReason(null, "manual", () => {})).toBeNull();
         });
     });
 });

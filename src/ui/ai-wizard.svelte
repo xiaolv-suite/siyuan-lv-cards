@@ -1210,7 +1210,7 @@
         flex: none;
         height: 28px;
         min-height: 28px;
-        line-height: 20px;
+        line-height: var(--lv-lh-control-lg);
         font-size: var(--lv-type-control-size);
         padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2);
         box-sizing: border-box;

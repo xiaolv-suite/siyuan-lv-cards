@@ -68,3 +68,38 @@ export function recoveryOptions(snap: RecoverySnapshot): RecoveryOption[] {
 export function enabledBranches(opts: RecoveryOption[]): RecoveryBranch[] {
     return opts.filter(o => o.enabled).map(o => o.branch);
 }
+
+export interface RecoveryResolution {
+    type: "resume" | "summary" | "narrow" | "end";
+    tipKey?: string;
+}
+
+/**
+ * 解析用户选择的中断恢复分支动作
+ */
+export function resolveRecoveryAction(branch: string): RecoveryResolution {
+    if (branch === "summary") return { type: "summary" };
+    if (branch === "narrow") return { type: "narrow", tipKey: "recoveryNarrowTip" };
+    if (branch === "end") return { type: "end" };
+    return { type: "resume" };
+}
+
+/**
+ * 从会话计数与时间信息构造恢复快照
+ */
+export function createRecoverySnapshotFromCounters(
+    date: string,
+    today: string,
+    counters: { new: number; review: number; forget: number; skip: number },
+    queueRemaining = -1
+): RecoverySnapshot {
+    return {
+        date,
+        today,
+        reviewedCount: counters.new + counters.review,
+        skippedCount: counters.skip,
+        queueRemaining,
+    };
+}
+
+

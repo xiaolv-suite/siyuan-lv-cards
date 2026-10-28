@@ -514,7 +514,7 @@
             box-shadow: var(--lv-shadow-float);
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: calc(var(--lv-space-unit) * 1);
             animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
         }
 

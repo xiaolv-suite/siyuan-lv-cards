@@ -6,6 +6,7 @@ import {
     computeAnswerDuration,
     updateSessionCountersOnRate,
     createEmptySessionCounters,
+    evaluateCardTyping,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -81,6 +82,20 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
             expect(c3.review).toBe(1);
             expect(c3.new).toBe(1);
             expect(c3.forget).toBe(1);
+        });
+    });
+
+    describe("evaluateCardTyping", () => {
+        it("输入为空或期望为空判定为 isBlank 放弃思考", () => {
+            expect(evaluateCardTyping("答案", "").isBlank).toBe(true);
+            expect(evaluateCardTyping("", "输入").isBlank).toBe(true);
+        });
+
+        it("正常输入给出打分建议与逐字对比", () => {
+            const res = evaluateCardTyping("hello", "hello");
+            expect(res.isBlank).toBe(false);
+            expect(res.typingGrade?.suggested).toBe(3);
+            expect(res.typingGrade?.chars.every(c => c.ok)).toBe(true);
         });
     });
 });

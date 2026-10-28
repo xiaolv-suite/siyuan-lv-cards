@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.214.3 2026-10-29 · 中断恢复分支动作与打字作答评测解耦落地
+
+- **中断恢复决策与快照构建解耦（`core/session-recovery.ts`，TSK-08 持续深化）**：
+  - 提炼 `resolveRecoveryAction`：统一解析四种分支操作（resume 保场续用 / summary 查看摘要 / narrow 缩小范围 / end 清空重开）；
+  - 提炼 `createRecoverySnapshotFromCounters`：从会话计数、日期及队列剩余构建标准 `RecoverySnapshot` 结构，消除 `review.svelte` 与 `onMount` 中散落的对象组装；
+  - 在 `tests/recovery-explain.spec.ts` 中补充专用单测用例；
+- **打字作答评测与状态判定解耦（`core/card-actions.ts`）**：
+  - 提炼 `evaluateCardTyping`：统一封装输入判空、放弃思考判定及打字评级计算，消除主组件直接依赖细节算法；
+  - 在 `tests/card-actions.spec.ts` 中新增单元测试；
+- **收工原因持久化与会话快照出口收拢（`core/session-state.ts`）**：
+  - 提炼 `recordSessionEndReason`：安全校验并记录会话结束原因并落盘，精简完成态与自动时间到逻辑；
+  - 消除 `pauseSessionAndReturn` 中重复的会话快照构建代码，统一经由 `persistSession()` 出口；
+  - 在 `tests/session-state.spec.ts` 中新增单元测试；
+- **选择题选项打乱纯函数化（`core/choice-options.ts`）**：
+  - 提炼 `shuffleArray`：Fisher-Yates 算法纯函数，替代 `review.svelte` 内联函数并提供默认选项打乱机制；
+  - 在 `tests/choice-options.spec.ts` 中新增单元测试；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数降至 2316 行（净减 26 行，相较最初 3412 行累计削减达 **1096 行代码**）；
+  - 全库扩展至 289 个测试文件、2209 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.2 2026-10-29 · 视口键盘避让/面板重入刷新与特征文本解析解耦落地
 
 - **视口尺寸计算与软键盘避让器解耦（`core/viewport-keyboard.ts`，TSK-08 持续深化）**：

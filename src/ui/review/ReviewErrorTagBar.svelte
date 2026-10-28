@@ -58,7 +58,7 @@
         box-sizing: border-box;
 
         .lv-err-tag {
-            border-radius: 12px;
+            border-radius: var(--lv-r-m);
             background: var(--lv-surface-hover);
             color: var(--lv-color-text);
             border: 1px solid var(--lv-border);

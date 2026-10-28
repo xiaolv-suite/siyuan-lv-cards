@@ -204,7 +204,7 @@
             gap: var(--lv-sp-2);
             .lv-btn-rate {
                 max-width: 150px;
-                padding: 10px 14px;
+                padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 7);
                 min-height: 52px;
             }
         }
@@ -259,7 +259,7 @@
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            gap: 5px;
+            gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
             text-align: left;
             border-radius: var(--lv-r-m);
             border: 1px solid var(--lv-border);
@@ -288,11 +288,11 @@
                 align-items: center;
                 justify-content: space-between;
                 gap: var(--lv-sp-2);
-                font-weight: 600;
+                font-weight: var(--lv-fw-semibold);
             }
             small {
                 opacity: 0.7;
-                font-size: 11px;
+                font-size: var(--lv-type-meta-size);
                 font-variant-numeric: tabular-nums;
             }
         }

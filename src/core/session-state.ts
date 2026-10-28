@@ -151,3 +151,21 @@ export function restoreSessionProgress(
     };
 }
 
+/**
+ * 记录收工原因并执行存储落盘
+ */
+export function recordSessionEndReason(
+    currentState: SessionState | null | undefined,
+    reason: EndReason,
+    saveFn: (state: SessionState) => void
+): SessionState | null {
+    if (!currentState) return null;
+    const next = withEndReason(currentState, reason);
+    if (next) {
+        saveFn(next);
+        return next;
+    }
+    return null;
+}
+
+

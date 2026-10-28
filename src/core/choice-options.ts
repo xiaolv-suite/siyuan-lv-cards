@@ -56,12 +56,24 @@ export interface GeneratedChoiceState {
 }
 
 /**
+ * 数组随机打乱（Fisher-Yates 算法）
+ */
+export function shuffleArray<T>(arr: readonly T[]): T[] {
+    const out = [...arr];
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+}
+
+/**
  * 组装并打乱选择题选项
  */
 export function assembleChoiceOptions(
     answer: string,
     distractors: readonly string[],
-    shuffleFn: <T>(arr: T[]) => T[] = (a) => [...a]
+    shuffleFn: <T>(arr: T[]) => T[] = shuffleArray
 ): GeneratedChoiceState | null {
     const built = buildChoiceOptions(answer, distractors);
     if (!built) return null;

@@ -150,7 +150,7 @@
         }
         .lv-budget-custom {
             width: 72px;
-            font-size: 12px;
+            font-size: var(--lv-type-control-size);
             padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
             box-sizing: border-box;
             vertical-align: middle;

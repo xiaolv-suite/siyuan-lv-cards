@@ -2,6 +2,8 @@
  * 卡片快捷操作与视图控制纯函数（Card Actions & View Adjusters）
  */
 
+import { gradeTyping, type Rating1to4 } from "./card-types";
+
 /**
  * 调整卡片字号缩放比例（0.7 ~ 2.5 之间以 0.1 步进平滑调整）
  */
@@ -79,4 +81,29 @@ export function updateSessionCountersOnRate(
     }
     return { ...counters, review: counters.review + 1 };
 }
+
+export interface CardTypingResult {
+    typingGrade: { chars: { ch: string; ok: boolean }[]; suggested: Rating1to4 } | null;
+    isBlank: boolean;
+}
+
+/**
+ * 评估打字作答并给出评分建议（空输入直接判定放弃思考）
+ */
+export function evaluateCardTyping(
+    expectedText: string,
+    typingInput: string,
+    strict = false
+): CardTypingResult {
+    const input = typingInput.trim();
+    if (!input || !expectedText) {
+        return { typingGrade: null, isBlank: true };
+    }
+    const g = gradeTyping(expectedText, typingInput, strict);
+    return {
+        typingGrade: { chars: g.chars, suggested: g.suggested },
+        isBlank: false,
+    };
+}
+
 

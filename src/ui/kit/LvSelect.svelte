@@ -32,6 +32,6 @@
     select.b3-select {
         box-sizing: border-box;
         vertical-align: middle;
-        line-height: 20px;
+        line-height: var(--lv-lh-control-lg);
     }
 </style>

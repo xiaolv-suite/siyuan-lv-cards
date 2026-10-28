@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { enabledBranches, recoveryOptions, type RecoverySnapshot } from "../src/core/session-recovery";
+import {
+    enabledBranches,
+    recoveryOptions,
+    resolveRecoveryAction,
+    createRecoverySnapshotFromCounters,
+    type RecoverySnapshot,
+} from "../src/core/session-recovery";
 import { explainState, whyNotReviewable } from "../src/core/state-explain";
 
 // BI-7 状态解释：为什么 + 直达修复
@@ -57,5 +63,30 @@ describe("session-recovery（BI-9）", () => {
     it("队列清空/未知：继续原场与缩小范围不可用", () => {
         expect(enabledBranches(recoveryOptions({ ...base, queueRemaining: 0 }))).toEqual(["summary", "end"]);
         expect(enabledBranches(recoveryOptions({ ...base, queueRemaining: -1 }))).toEqual(["summary", "end"]);
+    });
+
+    describe("createRecoverySnapshotFromCounters 快照构造", () => {
+        it("正确将计数与日期组合为快照对象", () => {
+            const snap = createRecoverySnapshotFromCounters(
+                "2026-10-03",
+                "2026-10-03",
+                { new: 3, review: 5, forget: 2, skip: 4 },
+                10
+            );
+            expect(snap.date).toBe("2026-10-03");
+            expect(snap.today).toBe("2026-10-03");
+            expect(snap.reviewedCount).toBe(8);
+            expect(snap.skippedCount).toBe(4);
+            expect(snap.queueRemaining).toBe(10);
+        });
+
+        it("默认队列剩余为 -1", () => {
+            const snap = createRecoverySnapshotFromCounters(
+                "2026-10-03",
+                "2026-10-03",
+                { new: 1, review: 0, forget: 0, skip: 0 }
+            );
+            expect(snap.queueRemaining).toBe(-1);
+        });
     });
 });

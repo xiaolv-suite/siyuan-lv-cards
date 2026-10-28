@@ -4,6 +4,7 @@ import {
     cleanChoiceText,
     assembleChoiceOptions,
     extractAnswerFromDomHtml,
+    shuffleArray,
 } from "@/core/choice-options";
 
 describe("cleanChoiceText", () => {
@@ -75,6 +76,22 @@ describe("extractAnswerFromDomHtml", () => {
 
     it("空输入返回空串", () => {
         expect(extractAnswerFromDomHtml("")).toBe("");
+    });
+});
+
+describe("shuffleArray", () => {
+    it("保持原数组不变且元素集合一致", () => {
+        const arr = [1, 2, 3, 4, 5];
+        const shuffled = shuffleArray(arr);
+        expect(shuffled).toHaveLength(arr.length);
+        expect(shuffled.slice().sort()).toEqual([1, 2, 3, 4, 5]);
+        // 不修改原数组
+        expect(arr).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it("空数组和单元素数组安全返回", () => {
+        expect(shuffleArray([])).toEqual([]);
+        expect(shuffleArray([42])).toEqual([42]);
     });
 });
 

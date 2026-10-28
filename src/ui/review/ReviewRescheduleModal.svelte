@@ -119,7 +119,7 @@
             color: var(--lv-color-danger);
             background: var(--lv-danger-soft);
             padding: var(--lv-sp-1) var(--lv-sp-2);
-            border-radius: 6px;
+            border-radius: var(--lv-r-compact);
         }
 
         .lv-reschedule-actions {
@@ -131,7 +131,7 @@
 
         .lv-reschedule-hint {
             opacity: 0.75;
-            font-size: 11px;
+            font-size: var(--lv-type-meta-size);
         }
     }
 </style>

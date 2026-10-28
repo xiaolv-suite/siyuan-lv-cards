@@ -10,23 +10,23 @@
     import { getNotebooks, getBlockAttrs, getBlockDOM, type Notebook } from "@/api/siyuan";
     import * as siyuanApi from "@/api/siyuan";
     import { isCardNew, calcStreak, type RevlogData } from "@/core/revlog";
-    import { gradeTyping, type Rating1to4 } from "@/core/card-types";
+    import type { Rating1to4 } from "@/core/card-types";
     import { parseOcclusion, calculateOcclusionBox, type OcclusionData } from "@/core/occlusion";
     import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
-    import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, withEndReason, type EndReason } from "@/core/session-state";
+    import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters } from "@/core/card-actions";
+    import { clampFontScale, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping } from "@/core/card-actions";
     import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
-    import { assembleChoiceOptions, extractAnswerFromDomHtml } from "@/core/choice-options";
+    import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel } from "@/core/card-face";
     import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
-    import { recoveryOptions, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
+    import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
@@ -300,11 +300,7 @@
     // svelte-ignore state_referenced_locally -- 初值刻意的：恢复路径在 onMount 恢复现场时回填 endPicked
     let endPicked = $state<string | null>(ctx.getSessionState()?.endReason ?? null);
     function pickEnd(r: EndReason) {
-        const s = ctx.getSessionState();
-        if (!s) return;
-        const next = withEndReason(s, r);
-        if (next) {
-            ctx.saveSessionState(next);
+        if (recordSessionEndReason(ctx.getSessionState(), r, ctx.saveSessionState)) {
             endPicked = r;
         }
     }
@@ -458,12 +454,7 @@
     function pauseSessionAndReturn() {
         sessionPaused = true;
         pausedTimeoutSeconds = timeoutLeft;
-        ctx.saveSessionState(createSessionSnapshot(
-            todayKey(),
-            reviewedIDs,
-            sessionSkipped,
-            { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip }
-        ));
+        persistSession();
         stopTimeout();
         stopRequeueTimers();
         closeReviewAudio(audioCtx);
@@ -704,15 +695,6 @@
         occlBox = calculateOcclusionBox(cardEl, Boolean(occl));
     }
 
-    function shuffle<T>(arr: T[]): T[] {
-        const out = [...arr];
-        for (let i = out.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [out[i], out[j]] = [out[j], out[i]];
-        }
-        return out;
-    }
-
     /** 从块 DOM 提取答案文本（mark 合集优先，自适应存量问答语法与备注），带缓存（M4·FR3 干扰项采样用） */
     async function answerOf(blockID: string): Promise<string> {
         const cached = answerCache.get(blockID);
@@ -754,7 +736,7 @@
                     pool.push(text);
                 }
             }
-            const built = assembleChoiceOptions(answer, pool, shuffle);
+            const built = assembleChoiceOptions(answer, pool, shuffleArray);
             if (!built) {
                 // 没有可靠的干扰项时保持自由回忆路径；不使用“干扰项 1/2/3”
                 // 一类占位文本，以免把提示内容误当作知识。
@@ -820,7 +802,7 @@
                 cramActive,
                 reverseOrder: eff().reverseOrder,
                 randomOrder: eff().randomOrder,
-                shuffleFn: shuffle,
+                shuffleFn: shuffleArray,
             });
             // BI-27 返场分流：跨天返场且上日有收工原因 → 今日方案横幅（展示性，不自动改预算/队列）。
             if (!recovery) {
@@ -845,14 +827,10 @@
                 }
                 const finished = !sessionDone; // 只在首次进入完成态时广播
                 sessionDone = true;
-                if (finished && (reviewedIDs.length > 0 || sessionSkipped.length > 0)) {
+                const hasWork = reviewedIDs.length > 0 || sessionSkipped.length > 0;
+                if (finished && hasWork) {
                     const s = ctx.getSessionState();
                     if (s && !s.completed) ctx.saveSessionState(markSessionCompleted(s));
-                }
-                // Skipping a card changes the due queue too. Broadcast a
-                // finished session when either rating or skip produced work,
-                // so the dashboard refreshes after a skip-only session.
-                if (finished && (reviewedIDs.length > 0 || sessionSkipped.length > 0)) {
                     ctx.emitSessionFinished({ new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip });
                 }
                 // 联动小驴打卡（Ecosystem Federation Epoch 6）
@@ -879,9 +857,7 @@
                 }
                 // BI-8/BI-12：预算到点自动记「时间到」收工原因（中性事实；用户手动点选的原因优先）
                 if (finished && budgetExpired && !ctx.getSessionState()?.endReason) {
-                    const s = ctx.getSessionState();
-                    const next = s ? withEndReason(s, "time-up") : null;
-                    if (next) ctx.saveSessionState(next);
+                    recordSessionEndReason(ctx.getSessionState(), "time-up", ctx.saveSessionState);
                 }
                 stopTimeout();
             } else {
@@ -1094,14 +1070,13 @@
         if (!current || typingGrade) {
             return;
         }
-        if (!typingInput.trim() || !expectedText) {
+        const res = evaluateCardTyping(expectedText, typingInput, eff().typingStrict);
+        if (res.isBlank) {
             // 输入为空敲 Enter 直接翻面查看答案（放弃思考/不输入直接揭晓）
             revealAnswer();
             return;
         }
-        const s = eff();
-        const g = gradeTyping(expectedText, typingInput, s.typingStrict);
-        typingGrade = { chars: g.chars, suggested: g.suggested };
+        typingGrade = res.typingGrade;
         showAnswer = true;
     }
 
@@ -1646,14 +1621,15 @@
     function recoveryAct(branch: string) {
         recovery = null;
         recoverySnap = null;
-        if (branch === "resume") {
+        const res = resolveRecoveryAction(branch);
+        if (res.type === "resume") {
             return; // 计数已恢复，队列照常
         }
-        if (branch === "summary") {
+        if (res.type === "summary") {
             sessionDone = true; // 只看摘要：完成屏展示已恢复计数，不评分不写卡
             return;
         }
-        if (branch === "narrow") {
+        if (res.type === "narrow") {
             toolbarRef?.focusScope?.();
             showMessage(t.review.recoveryNarrowTip, 2500, "info");
             return;
@@ -1804,13 +1780,11 @@
             sessionForget = restored.counters.forget;
             sessionSkip = restored.counters.skip;
             // BI-9：有现场→给出恢复分支（跨天/零进度/队列空的禁用语义由纯模块判定）
-            recoverySnap = {
-                date: restored.recoverySnap.date,
-                today: restored.recoverySnap.today,
-                reviewedCount: restored.counters.new + restored.counters.review,
-                skippedCount: restored.counters.skip,
-                queueRemaining: -1, // 队列未拉取：首刷后回填
-            };
+            recoverySnap = createRecoverySnapshotFromCounters(
+                restored.recoverySnap.date,
+                restored.recoverySnap.today,
+                restored.counters
+            );
             // BI-8：上次收工原因（若已收集）随横幅展示，辅助返场分流
             endPicked = ss?.endReason ?? null;
             recovery = recoveryOptions(recoverySnap);
