@@ -11,7 +11,7 @@
     import * as siyuanApi from "@/api/siyuan";
     import { isCardNew, calcStreak, type RevlogData } from "@/core/revlog";
     import { gradeTyping, type Rating1to4 } from "@/core/card-types";
-    import { parseOcclusion, type OcclusionData } from "@/core/occlusion";
+    import { parseOcclusion, calculateOcclusionBox, type OcclusionData } from "@/core/occlusion";
     import { parseDelimitedQa } from "@/core/delimited-qa";
     import { hasQuestionMediaContent, validateFlashcardMarkdown } from "@/core/flashcard-quality";
     import { partitionReviewCardsByQuality } from "@/core/review-queue-quality";
@@ -33,6 +33,8 @@
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, handleClozeClick } from "@/core/cloze-stepper";
+    import { computeReschedulePreview } from "@/core/reschedule-preview";
+    import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, SHORT_REQUEUE_DELAY_MS, takeDueRequeues, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
@@ -368,23 +370,7 @@
     let toolbarRef = $state<any>(null);
 
     // 撤销历史栈（M3·FR7，ZY 技法：快照恢复 + 内核重评时按官方缓存恢复原状态）
-    interface HistorySnapshot {
-        queue: QueueCard[];
-        pendingRequeues: DelayedRequeue<QueueCard>[];
-        reviewedIDs: string[];
-        skippedIDs: string[];
-        current: QueueCard;
-        showAnswer: boolean;
-        cardHtml: string;
-        expectedText: string;
-        faceError: string;
-        occlusion: OcclusionData | null;
-        counters: { new: number; review: number; forget: number; skip: number };
-    }
-    // Svelte 5 state proxy keeps the completion actions in sync with the
-    // actual undo stack. Without this, the button stayed enabled after the
-    // last undo because push/pop mutations were not reflected in the view.
-    let history = $state<HistorySnapshot[]>([]);
+    let history = $state<ReviewHistorySnapshot<QueueCard>[]>([]);
 
     /** 会话快照统一出口（AQ-2）：计数与 skip 集合的当前值即时落盘 */
     function persistSession() {
@@ -508,37 +494,9 @@
     let retryReschedule = $state<{ cardID: string; days: number; due: string } | null>(null);
 
     // R54 原型高级交互：改期目标时间友好预览
-    function formatRescheduleTimestamp(d: Date): string {
-        if (!Number.isFinite(d.getTime())) return "";
-        const language = document.documentElement.lang || (window.siyuan as any)?.config?.lang || (window.siyuan as any)?.languages?.lang || navigator.language;
-        const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
-        try {
-            return new Intl.DateTimeFormat(String(language || "").replace(/_/g, "-") || undefined, options).format(d);
-        } catch {
-            return new Intl.DateTimeFormat(undefined, options).format(d);
-        }
-    }
-
-    function parseDueStringToDate(dueStr: string): Date | null {
-        if (!dueStr || dueStr.length < 14) return null;
-        const y = parseInt(dueStr.slice(0, 4), 10);
-        const m = parseInt(dueStr.slice(4, 6), 10) - 1;
-        const d = parseInt(dueStr.slice(6, 8), 10);
-        const h = parseInt(dueStr.slice(8, 10), 10);
-        const min = parseInt(dueStr.slice(10, 12), 10);
-        const s = parseInt(dueStr.slice(12, 14), 10);
-        const date = new Date(y, m, d, h, min, s);
-        return Number.isFinite(date.getTime()) ? date : null;
-    }
-
     let previewTargetLabel = $derived.by(() => {
-        if (retryReschedule && retryReschedule.due) {
-            const d = parseDueStringToDate(retryReschedule.due);
-            if (d) return formatRescheduleTimestamp(d);
-        }
-        const days = Number(rescheduleDays);
-        if (!Number.isSafeInteger(days) || days < 1 || days > 36500) return "";
-        return formatRescheduleTimestamp(new Date(Date.now() + days * 86400000));
+        const lang = document.documentElement.lang || (window.siyuan as any)?.config?.lang || (window.siyuan as any)?.languages?.lang || navigator.language;
+        return computeReschedulePreview(rescheduleDays, retryReschedule?.due, lang);
     });
 
     // R54 原型高级交互：暂停复习并返回今日
@@ -822,23 +780,7 @@
     }
 
     function positionOcclusion() {
-        if (!cardEl || !occl) {
-            occlBox = null;
-            return;
-        }
-        const img = cardEl.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occl-overlay), canvas");
-        if (!img) {
-            occlBox = null;
-            return;
-        }
-        const cardRect = cardEl.getBoundingClientRect();
-        const imageRect = img.getBoundingClientRect();
-        occlBox = {
-            l: imageRect.left - cardRect.left + cardEl.scrollLeft,
-            t: imageRect.top - cardRect.top + cardEl.scrollTop,
-            w: imageRect.width,
-            h: imageRect.height,
-        };
+        occlBox = calculateOcclusionBox(cardEl, Boolean(occl));
     }
 
     function shuffle<T>(arr: T[]): T[] {
@@ -1431,12 +1373,13 @@
     // —— 评分 / 跳过 / 屏蔽 ——
 
     function pushHistory() {
-        history.push({
-            queue: [...queue],
-            pendingRequeues: pendingRequeues.map(item => ({ ...item })),
-            reviewedIDs: [...reviewedIDs],
-            skippedIDs: [...sessionSkipped],
-            current: current!,
+        if (!current) return;
+        const snap = createReviewHistorySnapshot({
+            queue,
+            pendingRequeues,
+            reviewedIDs,
+            skippedIDs: sessionSkipped,
+            current,
             showAnswer,
             cardHtml,
             expectedText,
@@ -1444,16 +1387,14 @@
             occlusion: occl,
             counters: { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
         });
-        if (history.length > 50) {
-            history.shift();
-        }
+        pushReviewHistory(history, snap);
     }
 
     function undoHistory() {
         if (submitting || rescheduleBusy) {
             return;
         }
-        const snap = history.pop();
+        const snap = popReviewHistory(history);
         if (!snap) {
             showMessage(t.review.undoNone, 1800, "info");
             return;
@@ -1536,7 +1477,7 @@
             // 评分失败保留现场（AJ11）：当前卡/答案态/队列不动，只提示错误
             // The snapshot was created before the write. Since no write took
             // effect, keeping it would expose a phantom undo after retry.
-            if (!writeSucceeded) history.pop();
+            if (!writeSucceeded) popReviewHistory(history);
             errorMsg = friendlyError(e, t);
             announce(errorMsg, "assertive");
         } finally {
@@ -1572,7 +1513,7 @@
             // Skip follows the same pre-write snapshot rule as rating: a
             // failed request must not leave an undo entry for an unchanged
             // queue.
-            if (!writeSucceeded) history.pop();
+            if (!writeSucceeded) popReviewHistory(history);
             errorMsg = friendlyError(e, t);
         } finally {
             submitting = false;

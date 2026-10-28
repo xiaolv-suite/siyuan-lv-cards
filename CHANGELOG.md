@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.213.0 2026-10-28 · 复习历史栈管理与改期遮挡几何计算解耦里程碑（累积削减 800+ 行）
+
+- **复习撤销历史栈控制器解耦（`core/review-history.ts`，TSK-08 阶段性里程碑）**：
+  - 将单次复习会话内的全量状态快照生成、压栈、出栈与最大深度限制（`MAX_REVIEW_HISTORY_DEPTH = 50`）抽离为独立纯模块 `src/core/review-history.ts`；
+  - 提供 `createReviewHistorySnapshot`、`pushReviewHistory` 与 `popReviewHistory` 纯函数，确保队列、延迟卡、计数器与已复习集合的浅拷贝隔离，防止状态突变污染历史快照；
+  - 配备专门的单元测试套件 `tests/review-history.spec.ts`（3 项用例全面验证集合深隔离、LIFO 撤销次序与超限安全淘汰）；
+- **图片遮挡几何包围盒计算解耦（`core/occlusion.ts`）**：
+  - 将卡面内部多媒体（图片/SVG/画布）相对容器滚动可视区的几何定位计算逻辑抽离至核心模块 `calculateOcclusionBox`；
+  - 在 `tests/occlusion.spec.ts` 中新增 3 项几何计算测试用例；
+- **快速改期时间推算与友好预览解耦（`core/reschedule-preview.ts`）**：
+  - 将思源 14 位紧凑日期时间戳（`YYYYMMDDHHmmss`）解析、相对天数推算与多语言友好预览文本生成抽离为独立核心模块 `src/core/reschedule-preview.ts`；
+  - 配备完整的单元测试套件 `tests/reschedule-preview.spec.ts`（7 项用例覆盖合法时间戳解析、本地化字符串格式化与天数推算）；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数由 2669 行进一步降至 2610 行（净减 59 行，相较最初 3412 行累计削减超 800 行代码）；
+  - 全库扩展至 281 个测试文件、2117 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.212.9 2026-10-28 · 交互式题型判分与挖空逐空控制器解耦落地（-50+ 行）
 
 - **交互式题型评分评估引擎解耦（`quiz-interactive.ts`，TSK-08 持续深化）**：

@@ -52,3 +52,31 @@ export function serializeOcclusion(data: OcclusionData): Record<string, string> 
 export function emptyOcclusion(): OcclusionData {
     return { v: 1, rects: [] };
 }
+
+export interface OcclusionBox {
+    l: number;
+    t: number;
+    w: number;
+    h: number;
+}
+
+/**
+ * 计算容器内部图片/画布相对容器滚动可视区的几何包围盒
+ */
+export function calculateOcclusionBox(
+    container: HTMLElement | null,
+    hasOcclusion: boolean
+): OcclusionBox | null {
+    if (!container || !hasOcclusion) return null;
+    const img = container.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occl-overlay), canvas");
+    if (!img) return null;
+
+    const cardRect = container.getBoundingClientRect();
+    const imageRect = img.getBoundingClientRect();
+    return {
+        l: imageRect.left - cardRect.left + container.scrollLeft,
+        t: imageRect.top - cardRect.top + container.scrollTop,
+        w: imageRect.width,
+        h: imageRect.height,
+    };
+}
