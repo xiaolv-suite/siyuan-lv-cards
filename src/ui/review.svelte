@@ -15,7 +15,7 @@
     import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
-    import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
+    import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, withEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
     import { clampFontScale, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters } from "@/core/card-actions";
@@ -339,13 +339,12 @@
 
     /** 会话快照统一出口（AQ-2）：计数与 skip 集合的当前值即时落盘 */
     function persistSession() {
-        ctx.saveSessionState({
-            date: todayKey(),
+        ctx.saveSessionState(createSessionSnapshot(
+            todayKey(),
             reviewedIDs,
-            skippedIDs: sessionSkipped,
-            counters: { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
-            completed: false,
-        });
+            sessionSkipped,
+            { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip }
+        ));
     }
 
     // 回看上一张（M3·FR6）
@@ -458,19 +457,12 @@
     function pauseSessionAndReturn() {
         sessionPaused = true;
         pausedTimeoutSeconds = timeoutLeft;
-        const s = {
-            date: todayKey(),
+        ctx.saveSessionState(createSessionSnapshot(
+            todayKey(),
             reviewedIDs,
-            skippedIDs: sessionSkipped,
-            counters: {
-                new: sessionNew,
-                review: sessionReview,
-                forget: sessionForget,
-                skip: sessionSkip,
-            },
-            completed: false,
-        };
-        ctx.saveSessionState(s);
+            sessionSkipped,
+            { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip }
+        ));
         stopTimeout();
         stopRequeueTimers();
         closeReviewAudio(audioCtx);
@@ -552,16 +544,14 @@
 
     // R54 原型高级交互：本场作答方式即时覆盖
     let showSessionOptionsModal = $state(false);
-    let sessionModalEl: HTMLDivElement | null = $state(null);
     let sessionModalWasOpen = false;
     let sessionModalTimeoutSeconds: number | undefined;
     $effect(() => {
         const open = showPauseModal || showSessionOptionsModal || showMemoEditor || showRetireModal;
-        if (open && sessionModalEl && !sessionModalWasOpen) {
+        if (open && !sessionModalWasOpen) {
             sessionModalWasOpen = true;
             sessionModalTimeoutSeconds = countdownCtrl?.getRemaining();
             stopTimeout();
-            sessionModalEl.querySelector<HTMLElement>("button, select")?.focus();
         } else if (!open && sessionModalWasOpen) {
             sessionModalWasOpen = false;
             if (sessionPaused) return;
@@ -1546,12 +1536,6 @@
                 showRetireModal = false;
                 e.preventDefault();
                 returnFocus();
-            } else if (e.key === "Tab" && sessionModalEl) {
-                const controls = Array.from(sessionModalEl.querySelectorAll<HTMLElement>("button:not(:disabled), select:not(:disabled), textarea:not(:disabled)"));
-                const first = controls[0], last = controls[controls.length - 1];
-                if (controls.length === 0) { sessionModalEl.focus(); e.preventDefault(); }
-                else if (e.shiftKey && document.activeElement === first) { last?.focus(); e.preventDefault(); }
-                else if (!e.shiftKey && document.activeElement === last) { first?.focus(); e.preventDefault(); }
             }
             return;
         }
@@ -1833,23 +1817,24 @@
         }
         // 会话中断恢复（M3）：当日已有评分进度时，恢复计数并从剩余卡继续
         const ss = ctx.getSessionState();
-        if (ss && ss.completed !== true && hasSessionProgress(ss)) {
-            reviewedIDs = ss.reviewedIDs;
-            sessionSkipped = ss.skippedIDs ?? []; // AQ-2：跳过集合恢复，重载不重复出卡
-            sessionNew = ss.counters.new;
-            sessionReview = ss.counters.review;
-            sessionForget = ss.counters.forget;
-            sessionSkip = ss.counters.skip;
+        const restored = restoreSessionProgress(ss, todayKey());
+        if (restored) {
+            reviewedIDs = restored.reviewedIDs;
+            sessionSkipped = restored.skippedIDs;
+            sessionNew = restored.counters.new;
+            sessionReview = restored.counters.review;
+            sessionForget = restored.counters.forget;
+            sessionSkip = restored.counters.skip;
             // BI-9：有现场→给出恢复分支（跨天/零进度/队列空的禁用语义由纯模块判定）
             recoverySnap = {
-                date: ss.date,
-                today: todayKey(),
-                reviewedCount: ss.counters.new + ss.counters.review,
-                skippedCount: ss.counters.skip,
+                date: restored.recoverySnap.date,
+                today: restored.recoverySnap.today,
+                reviewedCount: restored.counters.new + restored.counters.review,
+                skippedCount: restored.counters.skip,
                 queueRemaining: -1, // 队列未拉取：首刷后回填
             };
             // BI-8：上次收工原因（若已收集）随横幅展示，辅助返场分流
-            endPicked = ss.endReason ?? null;
+            endPicked = ss?.endReason ?? null;
             recovery = recoveryOptions(recoverySnap);
         }
         loadQueue();

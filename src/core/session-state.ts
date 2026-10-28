@@ -99,3 +99,55 @@ export function normalizeSessionState(raw: unknown, today: string): SessionState
         completed: (d as Partial<SessionState>).completed === true,
     };
 }
+
+/** 创建标准进行中会话快照对象 */
+export function createSessionSnapshot(
+    date: string,
+    reviewedIDs: readonly string[],
+    skippedIDs: readonly string[],
+    counters: SessionState["counters"]
+): SessionState {
+    return {
+        date,
+        reviewedIDs: [...reviewedIDs],
+        skippedIDs: [...skippedIDs],
+        counters: { ...counters },
+        completed: false,
+    };
+}
+
+export interface RestoredSessionState {
+    reviewedIDs: string[];
+    skippedIDs: string[];
+    counters: SessionState["counters"];
+    recoverySnap: {
+        date: string;
+        today: string;
+        counters: SessionState["counters"];
+        queueRemaining: number;
+    };
+}
+
+/**
+ * 尝试从存储的快照恢复会话进度
+ */
+export function restoreSessionProgress(
+    savedState: SessionState | null | undefined,
+    today: string
+): RestoredSessionState | null {
+    if (!savedState || savedState.completed === true || !hasSessionProgress(savedState)) {
+        return null;
+    }
+    return {
+        reviewedIDs: [...savedState.reviewedIDs],
+        skippedIDs: [...(savedState.skippedIDs ?? [])],
+        counters: { ...savedState.counters },
+        recoverySnap: {
+            date: savedState.date,
+            today,
+            counters: { ...savedState.counters },
+            queueRemaining: 0,
+        },
+    };
+}
+

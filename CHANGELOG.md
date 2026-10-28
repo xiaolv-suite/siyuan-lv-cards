@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.214.0 2026-10-28 · 会话快照生成与中断恢复纯引擎解耦大版本里程碑
+
+- **复习会话快照与重载恢复引擎解耦（`core/session-state.ts`，TSK-08 阶段大版本里程碑）**：
+  - 提炼 `createSessionSnapshot`：统一生成进行中会话快照结构（浅拷贝隔离 `reviewedIDs` / `skippedIDs` 集合防突变污染），并在 `persistSession` 与 `pauseSessionAndReturn` 中无缝复用；
+  - 提炼 `restoreSessionProgress`：纯函数驱动重载会话恢复，自动校验完成状态与有效进度，生成干净的 `RestoredSessionState` 与 `recoverySnap`；
+  - 在 `tests/session-state.spec.ts` 中新增 3 项单测，全套件达 12 项用例全部通过；
+- **清理模态弹窗死状态与优化倒计时挂起**：
+  - 清理了未绑定的 `sessionModalEl` 变量与无用键盘 Tab 事件分支；
+  - 规范化弹窗开启时的倒计时暂停与关闭时原剩余时间精确恢复机制；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数降至 2364 行（相较最初 3412 行累计削减近 1050 行代码）；
+  - 全库扩展至 287 个测试文件、2185 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.9 2026-10-28 · 作答耗时封顶/会话计数更新与就地退役队列解耦落地
 
 - **作答耗时封顶与会话计数状态机解耦（`core/card-actions.ts`，TSK-08 持续深化）**：

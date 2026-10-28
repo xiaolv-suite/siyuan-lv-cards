@@ -6,6 +6,8 @@ import {
     hasSessionProgress,
     isSessionLive,
     markSessionCompleted,
+    createSessionSnapshot,
+    restoreSessionProgress,
     END_REASONS,
 } from "../src/core/session-state";
 
@@ -96,5 +98,36 @@ describe("session-state BI-8：收工原因", () => {
         expect(completed.completed).toBe(true);
         expect(isSessionLive(completed, TODAY)).toBe(false);
         expect(isSessionLive({ ...legacy, completed: false }, "2026-10-03")).toBe(false);
+    });
+
+    describe("createSessionSnapshot & restoreSessionProgress", () => {
+        it("createSessionSnapshot 生成独立浅拷贝快照对象", () => {
+            const rev = ["c1"];
+            const skip = ["s1"];
+            const snap = createSessionSnapshot(TODAY, rev, skip, { new: 1, review: 2, forget: 0, skip: 1 });
+            expect(snap.date).toBe(TODAY);
+            expect(snap.reviewedIDs).toEqual(["c1"]);
+            expect(snap.completed).toBe(false);
+
+            rev.push("c2");
+            expect(snap.reviewedIDs.length).toBe(1); // 隔离 mutation
+        });
+
+        it("restoreSessionProgress 成功恢复未完成的有进度会话", () => {
+            const snap = createSessionSnapshot(TODAY, ["c1"], ["s1"], { new: 1, review: 2, forget: 0, skip: 1 });
+            const restored = restoreSessionProgress(snap, TODAY);
+            expect(restored).not.toBeNull();
+            expect(restored?.reviewedIDs).toEqual(["c1"]);
+            expect(restored?.skippedIDs).toEqual(["s1"]);
+            expect(restored?.recoverySnap.today).toBe(TODAY);
+        });
+
+        it("已完成或空进度会话返回 null", () => {
+            const empty = emptySessionState();
+            expect(restoreSessionProgress(empty, TODAY)).toBeNull();
+
+            const done = markSessionCompleted(createSessionSnapshot(TODAY, ["c1"], [], { new: 1, review: 0, forget: 0, skip: 0 }));
+            expect(restoreSessionProgress(done, TODAY)).toBeNull();
+        });
     });
 });
