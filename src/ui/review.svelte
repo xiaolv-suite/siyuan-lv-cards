@@ -2602,6 +2602,7 @@
                         {#if occl}<LvIcon name="image" size={14} /> {t.cardTypeBadgeOcclusion ?? "遮挡"}
                         {:else if isSuperBlockHtml(cardHtml)}<LvIcon name="cards" size={14} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}
                         {:else if cardHtml?.includes("language-")}<LvIcon name="code" size={14} /> {t.cardTypeBadgeCode ?? "代码"}
+                        {:else if (cardHtml?.includes("NodeList") || cardHtml?.includes("<ul") || cardHtml?.includes("<ol") || cardHtml?.includes("NodeListItem")) && (cardHtml?.includes("lv-masked") || cardHtml?.includes("data-type=\"mark\""))}<LvIcon name="list" size={14} /> {t.cardTypeBadgeOutlineCloze ?? "大纲挖空"}
                         {:else if cardHtml?.includes("lv-masked") || cardHtml?.includes("data-type=\"mark\"")}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
                         {:else if cardMemo}<LvIcon name="lightbulb" size={14} /> {isCustomPluginAnswer ? (t.cardTypeBadgePlugin ?? "插件答") : (t.cardTypeBadgeMemo ?? "备注答")}
                         {:else if hasDelimitedQa(cardHtml)}<LvIcon name="message" size={14} /> {t.cardTypeBadgeQA ?? "问答"}

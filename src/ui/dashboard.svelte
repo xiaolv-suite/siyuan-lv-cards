@@ -17,6 +17,7 @@
     import { openTab, showMessage } from "siyuan";
     import { friendlyError } from "@/api/errors";
     import { getMotionDuration } from "./kit/motion";
+    import { findDormantKnowledgeBlocks } from "@/core/dormant-knowledge";
     import LvPage from "./kit/LvPage.svelte";
     import LvSection from "./kit/LvSection.svelte";
     import LvStat from "./kit/LvStat.svelte";
@@ -112,6 +113,24 @@
     let suspended = $state(0);
     let suspendedRestoreBusy = $state(false);
     let suspendedRestoreError = $state("");
+    let dormantCount = $state(0);
+
+    async function scanDormantKnowledge() {
+        try {
+            const rows = await sqlQuery("SELECT id, markdown, ial FROM blocks WHERE markdown LIKE '%==%==' AND ial NOT LIKE '%custom-riff-decks%' LIMIT 20");
+            if (Array.isArray(rows)) {
+                const mapped = rows.map((r: any) => ({
+                    id: String(r.id ?? ""),
+                    markdown: String(r.markdown ?? ""),
+                    ial: String(r.ial ?? ""),
+                }));
+                const candidates = findDormantKnowledgeBlocks(mapped, 10);
+                dormantCount = candidates.length;
+            }
+        } catch {
+            dormantCount = 0;
+        }
+    }
     // 页眉日期（R53 .page-head eyebrow 口径）：本地日期 YYYY.MM.DD
     function heroDateText(): string {
         void dayTick;
@@ -612,6 +631,7 @@
             hasLoadedSnapshot = true;
             lastSuccessfulAt = Date.now();
             loading = false;
+            void scanDormantKnowledge();
             const nextDocCov = await docCovPromise;
             if (seq !== refreshSeq) {
                 return; // 文档归属查询期间用户已刷新（AR-6 generation 守卫）
@@ -1120,7 +1140,7 @@
 
         <!-- T08 待处理与恢复（docs/40 批 5 简化聚合）：只聚合不重做；恢复幂等 -->
         <LvSection title={t.dashboard.todoTitle}>
-            {#if inboxOpen === 0 && suspended === 0 && !unfinishedAI}
+            {#if inboxOpen === 0 && suspended === 0 && !unfinishedAI && dormantCount === 0}
                 <div class="lv-hint">{t.dashboard.todoNone}</div>
             {:else}
                 {#if inboxOpen > 0}
@@ -1147,6 +1167,22 @@
                         <span>{t.dashboard.todoAI.replace("${n}", String(unfinishedAI.total - unfinishedAI.done))}</span>
                         {#if ctx.openHubTab}<button class="b3-button b3-button--small" onclick={() => ctx.openHubTab?.("recovery")}>{t.dashboard.todoAIAct}</button>
                         {:else if ctx.openAIWizard}<button class="b3-button b3-button--small" onclick={() => ctx.openAIWizard?.()}>{t.dashboard.todoAIAct}</button>{/if}
+                    </div>
+                {/if}
+                {#if dormantCount > 0}
+                    <div class="lv-todo-row">
+                        <span>{t.dashboard.todoDormant ? t.dashboard.todoDormant.replace("${n}", String(dormantCount)) : `发现 ${dormantCount} 处包含重点高亮但尚未制卡的沉睡知识`}</span>
+                        {#if ctx.openHubTab}
+                            <button class="b3-button b3-button--small" onclick={() => ctx.openHubTab?.("inbox")}>
+                                <LvIcon name="lightbulb" size={12} />
+                                <span>{t.dashboard.todoDormantAct ?? "去唤醒"}</span>
+                            </button>
+                        {:else if ctx.openQuickCard}
+                            <button class="b3-button b3-button--small" onclick={() => ctx.openQuickCard?.()}>
+                                <LvIcon name="plus" size={12} />
+                                <span>{t.cmdQuickCard ?? "去制卡"}</span>
+                            </button>
+                        {/if}
                     </div>
                 {/if}
             {/if}

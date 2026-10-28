@@ -3,7 +3,7 @@
         | "home" | "cards" | "plus" | "learn" | "settings" | "inbox" | "search" | "question" | "bell"
         | "book" | "target" | "lightbulb" | "calendar" | "graduation" | "flag" | "zap" | "eye" | "edit" | "refresh"
         | "moon" | "ban" | "timer" | "image" | "code" | "message" | "warning" | "dice" | "flame" | "star" | "check"
-        | "trash" | "close" | "swap" | "chevron-up" | "chevron-down" | "chevron-right" | "chevron-left";
+        | "trash" | "close" | "swap" | "list" | "chevron-up" | "chevron-down" | "chevron-right" | "chevron-left";
 
     let { name, size = 18 }: { name: LvIconName; size?: number } = $props();
 
@@ -41,6 +41,7 @@
         trash: "M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3",
         close: "M18 6 6 18M6 6l12 12",
         swap: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4",
+        list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
         "chevron-up": "m18 15-6-6-6 6",
         "chevron-down": "m6 9 6 6 6-6",
         "chevron-right": "m9 18 6-6-6-6",

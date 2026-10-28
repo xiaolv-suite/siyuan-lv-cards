@@ -19,9 +19,21 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.5** (2026-10-28), delivering one-click daily review task copying and compact breadcrumb parent path hiding. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.5) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.6** (2026-10-28), delivering outline tree cloze node review and dormant highlight discovery. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.6) for the package and publishing status.
 
-## What's New in v0.211.5
+## What's New in v0.211.6
+
+- **Outline Cloze Node Review (Inspired by KMind Zen)**:
+  - Preserves hierarchical outline tree context in `NodeList` / `NodeListItem` cards, masking target leaf/child nodes while keeping parent scaffold visible.
+  - Added dedicated `<LvIcon name="list" size={14} /> Outline Cloze` badge.
+- **Dormant Knowledge Discovery Engine (Inspired by Network Lens)**:
+  - Added `src/core/dormant-knowledge.ts` to automatically detect highlighted blocks (`==...==`) that have not yet been enrolled into any flashcard deck.
+  - Added "Awaken Dormant Knowledge" recommendation card in the Dashboard todo section with one-click intake to Inbox or QuickCard.
+  - Added dedicated unit tests in `tests/dormant-knowledge.spec.ts`.
+- **Verification**:
+  - 2014 tests across 258 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.5
 
 - **One-Click Daily Review Task Copy in Dashboard (Task Horizon Integration)**:
   - Added a dedicated "Copy Task" Bento action in the Dashboard hero section to copy today's FSRS review workload task (`- [ ] / - [x]`) directly to the clipboard.

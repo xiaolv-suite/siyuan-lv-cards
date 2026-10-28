@@ -21,11 +21,23 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.5（2026-10-28）**，落地闪卡中心今日复习待办一键复制与卡片纯净隐藏父路径。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.5)。
+当前版本为 **v0.211.6（2026-10-28）**，落地大纲/列表树节点挖空渲染与未制卡沉睡知识自动挖掘。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.6)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.5）
+## 本次更新（v0.211.6）
+
+- **大纲/列表树节点级挖空复习（Cloze Node Review，借鉴 KMind Zen）**：
+  - 在卡片识别中对嵌套大纲树（`NodeList` / `NodeListItem`）的挖空节点进行高保真骨架保留与结构化遮罩，为卡片标注专属 `<LvIcon name="list" size={14} /> 大纲挖空` 徽标；
+  - 树形结构上下级父子节点完整展示作为记忆脚手架，唯独关键知识节点打上灵动遮罩槽，答案态高亮展开，极大提升法学体系、医学解剖与计算机协议等大纲类知识的记忆效率；
+- **沉睡知识挖掘仪（Dormant Knowledge Discovery，借鉴 Network Lens）**：
+  - 新增核心模块 `src/core/dormant-knowledge.ts`，自动分析笔记中带有 `==` 关键高亮但尚未加入任何闪卡组的沉睡知识孤岛；
+  - 在闪卡中心（Dashboard）待处理区域智能呈现「沉睡知识唤醒」推荐行，支持一键直达收件箱或快速制卡，彻底告别“只高亮不复习”的知识沉睡痛点；
+  - 编写专用单元测试 `tests/dormant-knowledge.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 258 个测试文件、2014 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.5）
 
 - **闪卡中心今日行动区常驻【复制待办】快捷动作（协同 Task Horizon 任务视界）**：
   - 在 `dashboard.svelte` 今日行动 Hero 区域常驻次级按钮【复制待办】，用户点击一键生成今日 FSRS 记忆负荷待办卡片并自动复制到剪贴板；
