@@ -113,3 +113,19 @@ export function rebuildImpactPreview(): RebuildImpact {
         ],
     };
 }
+
+/**
+ * 格式化长期返场检查项为渲染所需数据对象
+ */
+export function formatReturnCheckItems(
+    facts: ReturnCheckFacts,
+    i18nTranslator: (key: string) => string
+): Array<{ key: string; level: string; text: string }> {
+    const res = returnCheck(facts);
+    return res.items.map(i => ({
+        key: i.key,
+        level: i.level,
+        text: i18nTranslator(i.whyKey),
+    }));
+}
+

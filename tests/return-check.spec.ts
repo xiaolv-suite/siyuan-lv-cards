@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { returnCheck, rebuildImpactPreview, isLongReturn, BACKLOG_DUE_WARN, GAP_DAYS_WARN } from "../src/core/return-check";
+import {
+    returnCheck,
+    rebuildImpactPreview,
+    isLongReturn,
+    formatReturnCheckItems,
+    BACKLOG_DUE_WARN,
+    GAP_DAYS_WARN,
+} from "../src/core/return-check";
 import type { ReturnCheckFacts } from "../src/core/return-check";
 
 // BI-10 长期返场检查（纯逻辑）：四查只读 + 重建影响只读预览
@@ -101,5 +108,18 @@ describe("rebuildImpactPreview（只读预览契约）", () => {
     it("作废现场声明在场且仅会话现场（不宣称清 due）", () => {
         const impact = rebuildImpactPreview();
         expect(impact.discards).toEqual(["returnCheck.rebuild.session"]);
+    });
+
+    describe("formatReturnCheckItems", () => {
+        it("正确映射为包含本地化文本的检查列表项", () => {
+            const translator = (key: string) => `trans:${key}`;
+            const items = formatReturnCheckItems(base, translator);
+            expect(items.length).toBe(4);
+            expect(items[0]).toEqual({
+                key: "goal",
+                level: "info",
+                text: "trans:returnCheck.goal.ok",
+            });
+        });
     });
 });

@@ -19,7 +19,9 @@
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
-    import { isLongReturn, returnCheck, type ReturnCheckFacts } from "@/core/return-check";
+    import { isLongReturn, formatReturnCheckItems, type ReturnCheckFacts } from "@/core/return-check";
+    import { formatRatingDueText } from "@/core/due-format";
+    import { clampFontScale, toggleCardIssue } from "@/core/card-actions";
     import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -312,15 +314,14 @@
     // BI-10：长期返场检查横幅（只读预览；触发=长间隔或大积压；仅本次会话内可关闭）
     let returnItems = $state<{ key: string; level: string; text: string }[] | null>(null);
     let returnDismissed = $state(false);
-    function tvPath(path: string): string {
-        const v = path.split(".").reduce<any>((o, k) => o?.[k], t);
-        return typeof v === "string" ? v : path;
-    }
     function loadReturnCheck() {
         if (!ctx.getReturnCheckFacts) return;
         ctx.getReturnCheckFacts().then(f => {
             if (!f || returnDismissed || !isLongReturn(f)) return;
-            returnItems = returnCheck(f).items.map(i => ({ key: i.key, level: i.level, text: tvPath(i.whyKey) }));
+            returnItems = formatReturnCheckItems(f, (path) => {
+                const v = path.split(".").reduce<any>((o, k) => o?.[k], t);
+                return typeof v === "string" ? v : path;
+            });
         }).catch(() => { /* 事实聚合失败=不弹横幅，不影响复习 */ });
     }
     // BI-13：减负选择（只读建议；点击展开对 due/历史的影响说明，可跳过）
@@ -538,8 +539,7 @@
         }
     }
     function adjustFontScale(delta: number) {
-        const cur = eff().cardFontScale || 1;
-        const next = Math.min(1.6, Math.max(0.8, Math.round((cur + delta) * 10) / 10));
+        const next = clampFontScale(eff().cardFontScale || 1, delta, 0.8, 1.6);
         setOverride("cardFontScale", next);
         announce(`字号已调整至 ${Math.round(next * 100)}%`, "polite");
         showMessage(`${t.review.fontScaleTitle ?? "卡面字号"}: ${Math.round(next * 100)}%`, 1200, "info");
@@ -547,10 +547,9 @@
 
     function toggleMarkIssue() {
         if (!current || actionBusy || markedIssueCardIDs.has(current.cardID)) return;
-        const cardID = current.cardID;
-        markedIssueCardIDs.add(cardID);
-        markedIssueCardIDs = new Set(markedIssueCardIDs);
-        ctx.tagErrorReason?.(cardID, "question-unclear");
+        const res = toggleCardIssue(markedIssueCardIDs, current.cardID);
+        markedIssueCardIDs = res.nextMarkedIDs;
+        ctx.tagErrorReason?.(current.cardID, "question-unclear");
         showMessage(t.review.issueMarked, 2500, "info");
         announce(t.review.issueMarked, "polite");
     }
@@ -1584,9 +1583,7 @@
     }
 
     function dueText(rating: string): string {
-        const due = current?.nextDues?.[rating];
-        if (!due) { return ""; }
-        return due.replace(/^\d{4}-0?/, "").replace(/:\d{2}$/, "");
+        return formatRatingDueText(current?.nextDues?.[rating]);
     }
 
     /** 键盘双通道去重（AJ 复核）：容器与 window 都绑了 onKeydown，
