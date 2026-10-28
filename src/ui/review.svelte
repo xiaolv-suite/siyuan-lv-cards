@@ -24,7 +24,7 @@
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
-    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel } from "@/core/card-face";
+    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing } from "@/core/card-face";
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
@@ -577,7 +577,7 @@
     let occl = $state<OcclusionData | null>(null);
     let occlBox = $state<{ l: number; t: number; w: number; h: number } | null>(null);
     let occlHidden = $state<number[]>([]);
-    const hasSvgCanvas = $derived(Boolean(cardHtml && (/<svg\b/i.test(cardHtml) || /\.svg\b/i.test(cardHtml) || /excalidraw/i.test(cardHtml))));
+    const hasSvgCanvas = $derived(hasSvgOrCanvasDrawing(cardHtml));
 
     function openCanvasInEditor(canvasId?: string) {
         const id = canvasId || current?.blockID;

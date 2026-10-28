@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.214.8 2026-10-29 · 矢量画板与绘图卡面判定解耦落地
+
+- **矢量画板与绘图卡面判定解耦（`core/card-face.ts`，TSK-08 持续深化）**：
+  - 提炼 `hasSvgOrCanvasDrawing`：纯函数统一识别卡面中包含的 SVG 标签、SVG 矢量素材引用或 Excalidraw 画布；
+  - 在 `tests/card-face.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - `src/ui/review.svelte` 移除内联复杂正则判断；
+  - 全库扩展至 289 个测试文件、2233 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.7 2026-10-29 · 瞬态题型状态重置统一与减负建议展开状态机解耦落地
 
 - **瞬态题型状态机重置统一（`core/quiz-interactive.ts`，TSK-08 持续深化）**：

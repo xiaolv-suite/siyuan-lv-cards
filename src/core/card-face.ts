@@ -73,6 +73,14 @@ export function resolveFaceHintLabel(
     return i18nAiFaceHints[name] ?? key;
 }
 
+/**
+ * 判定卡面 HTML 中是否包含 SVG 画布或 Excalidraw 绘图
+ */
+export function hasSvgOrCanvasDrawing(html: string | undefined): boolean {
+    if (!html) return false;
+    return /<svg\b/i.test(html) || /\.svg\b/i.test(html) || /excalidraw/i.test(html);
+}
+
 /** 挖空（高亮）段选择器：内核 getBlockDOM 把 ==text== 渲染为 span[data-type=mark]（3.8.x 实测），
  * HTML 导出/其他来源可能是 <mark>；两态都要覆盖，否则问题态遮罩失效、答案明文泄露 */
 export const MARK_SELECTOR = "mark, span[data-type='mark']";

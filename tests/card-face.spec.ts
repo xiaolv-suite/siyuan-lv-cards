@@ -10,6 +10,7 @@ import {
     extractExpectedCardAnswer,
     parseCardAttrsMetadata,
     resolveFaceHintLabel,
+    hasSvgOrCanvasDrawing,
 } from "../src/core/card-face";
 
 // AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
@@ -283,6 +284,20 @@ describe("统一卡面渲染管线（renderUnifiedCardFace & formatMarkdownToSaf
             expect(resolveFaceHintLabel("aiFace.hint.formula", i18n)).toBe("数学公式");
             expect(resolveFaceHintLabel("aiFace.hint.image", i18n)).toBe("包含图片");
             expect(resolveFaceHintLabel("aiFace.hint.code", i18n)).toBe("aiFace.hint.code");
+        });
+    });
+
+    describe("hasSvgOrCanvasDrawing", () => {
+        it("正确识别 svg 标签、svg 文件链接与 excalidraw 画布", () => {
+            expect(hasSvgOrCanvasDrawing("<svg viewBox='0 0 10 10'></svg>")).toBe(true);
+            expect(hasSvgOrCanvasDrawing("<img src='assets/diagram.svg' />")).toBe(true);
+            expect(hasSvgOrCanvasDrawing("<div class='protyle-wysiwyg--excalidraw'></div>")).toBe(true);
+        });
+
+        it("普通文本或空字符串返回 false", () => {
+            expect(hasSvgOrCanvasDrawing("<p>简单文本内容</p>")).toBe(false);
+            expect(hasSvgOrCanvasDrawing("")).toBe(false);
+            expect(hasSvgOrCanvasDrawing(undefined)).toBe(false);
         });
     });
 });
