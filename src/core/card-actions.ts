@@ -159,4 +159,11 @@ export function buildMemoAttributes(memoText: string): { memo: string } {
     return { memo: String(memoText ?? "").trim() };
 }
 
+/**
+ * 判定当前卡片是否正处于异步操作忙碌状态（评分提交中、改期中或解散归档中）
+ */
+export function isCardActionBusy(submitting: boolean, rescheduleBusy: boolean, dismissBusy = false): boolean {
+    return submitting || rescheduleBusy || dismissBusy;
+}
+
 

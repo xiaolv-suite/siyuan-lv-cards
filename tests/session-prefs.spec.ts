@@ -4,6 +4,7 @@ import {
     pruneSessionPrefs,
     getInitialSessionVariant,
     resolveSessionVariantOverrides,
+    shouldRestartTimeoutOnOverrides,
 } from "../src/core/session-prefs";
 
 // BX-3 本场偏好：覆盖合并与最小化语义
@@ -63,6 +64,19 @@ describe("session-prefs", () => {
                 choiceEnabled: false,
                 mixedRotation: false,
             });
+        });
+    });
+
+    describe("shouldRestartTimeoutOnOverrides", () => {
+        it("包含 timeoutMode 或 timeoutSeconds 时返回 true", () => {
+            expect(shouldRestartTimeoutOnOverrides({ timeoutMode: "reveal" })).toBe(true);
+            expect(shouldRestartTimeoutOnOverrides({ timeoutSeconds: 30 })).toBe(true);
+            expect(shouldRestartTimeoutOnOverrides({ timeoutMode: "forget", typingEnabled: true })).toBe(true);
+        });
+
+        it("不包含超时相关键时返回 false", () => {
+            expect(shouldRestartTimeoutOnOverrides({ typingEnabled: true })).toBe(false);
+            expect(shouldRestartTimeoutOnOverrides({})).toBe(false);
         });
     });
 });

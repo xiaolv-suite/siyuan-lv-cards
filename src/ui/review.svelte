@@ -14,11 +14,11 @@
     import { parseOcclusion, calculateOcclusionBox, type OcclusionData } from "@/core/occlusion";
     import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
-    import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
+    import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, shouldRestartTimeoutOnOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -32,7 +32,7 @@
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, mapSwipeActionToOutcome } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
-    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction } from "@/core/review-shortcuts";
+    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, type ZoomedImageState } from "@/core/card-interactions";
@@ -426,15 +426,18 @@
         return resolveHeadScopeLabel(scopeKey, current?.deckID, decks, notebooks, t.review);
     });
     /** BX-3：设置本场覆盖项（与全局同值时自动摘除，保持覆盖面最小；超时相关变更即时重启计时器） */
-    function setOverride(key: keyof ReviewSettings, value: unknown) {
-        const next = pruneSessionPrefs(ctx.settings() as unknown as Record<string, unknown>, { ...sessionOverride, [key]: value }) as Partial<ReviewSettings>;
+    function applyOverrides(overrides: Record<string, unknown>) {
+        const next = pruneSessionPrefs(ctx.settings() as unknown as Record<string, unknown>, { ...sessionOverride, ...overrides }) as Partial<ReviewSettings>;
         sessionOverride = next;
-        if (key === "timeoutMode" || key === "timeoutSeconds") restartTimeout();
+        if (shouldRestartTimeoutOnOverrides(overrides)) restartTimeout();
+    }
+    function setOverride(key: keyof ReviewSettings, value: unknown) {
+        applyOverrides({ [key]: value });
     }
     let rescheduleDays = $state(1);
     let rescheduleBusy = $state(false);
     let rescheduleError = $state("");
-    const actionBusy = $derived(submitting || rescheduleBusy);
+    const actionBusy = $derived(isCardActionBusy(submitting, rescheduleBusy));
     let retryReschedule = $state<RescheduleRequest | null>(null);
 
     // R54 原型高级交互：改期目标时间友好预览
@@ -498,7 +501,7 @@
     let dismissBusy = $state(false);
 
     async function dismissCurrentCard() {
-        if (!current || submitting || rescheduleBusy || dismissBusy) return;
+        if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy)) return;
         dismissBusy = true;
         const blockID = current.blockID;
         try {
@@ -536,7 +539,7 @@
     let sessionModalWasOpen = false;
     let sessionModalTimeoutSeconds: number | undefined;
     $effect(() => {
-        const open = showPauseModal || showSessionOptionsModal || showMemoEditor || showRetireModal;
+        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal });
         if (open && !sessionModalWasOpen) {
             sessionModalWasOpen = true;
             sessionModalTimeoutSeconds = countdownCtrl?.getRemaining();
@@ -556,9 +559,7 @@
     }
     function applySessionOptions() {
         const overrides = resolveSessionVariantOverrides(tempAnswerVariant);
-        for (const [k, v] of Object.entries(overrides)) {
-            setOverride(k as keyof ReviewSettings, v);
-        }
+        applyOverrides(overrides);
         if (tempAnswerVariant === "typing") {
             typingInput = "";
         } else if (tempAnswerVariant === "choice" && !choices) {
@@ -1468,7 +1469,7 @@
             }
             return;
         }
-        const anyActionModal = Boolean(showPauseModal || showSessionOptionsModal || showMemoEditor || showRetireModal);
+        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal });
         const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy));
         if (modalAct) {
             if (e.key === "Escape") e.preventDefault();

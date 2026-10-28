@@ -5,6 +5,7 @@ import {
     isInteractiveControl,
     shouldIgnoreReviewKeydown,
     resolveModalKeydownAction,
+    isAnyReviewModalOpen,
     type ReviewShortcutContext,
 } from "../src/core/review-shortcuts";
 
@@ -236,6 +237,19 @@ describe("review-shortcuts 键盘调度解析器", () => {
         it("无模态窗打开时返回 null", () => {
             expect(resolveModalKeydownAction({ key: "Escape" }, false, false)).toBeNull();
             expect(resolveModalKeydownAction({ key: "Enter" }, false, false)).toBeNull();
+        });
+    });
+
+    describe("isAnyReviewModalOpen", () => {
+        it("四种弹窗任一开启时返回 true", () => {
+            expect(isAnyReviewModalOpen({ showPauseModal: true, showSessionOptionsModal: false, showMemoEditor: false, showRetireModal: false })).toBe(true);
+            expect(isAnyReviewModalOpen({ showPauseModal: false, showSessionOptionsModal: true, showMemoEditor: false, showRetireModal: false })).toBe(true);
+            expect(isAnyReviewModalOpen({ showPauseModal: false, showSessionOptionsModal: false, showMemoEditor: true, showRetireModal: false })).toBe(true);
+            expect(isAnyReviewModalOpen({ showPauseModal: false, showSessionOptionsModal: false, showMemoEditor: false, showRetireModal: true })).toBe(true);
+        });
+
+        it("全部关闭时返回 false", () => {
+            expect(isAnyReviewModalOpen({ showPauseModal: false, showSessionOptionsModal: false, showMemoEditor: false, showRetireModal: false })).toBe(false);
         });
     });
 });

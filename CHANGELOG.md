@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.215.6 2026-10-29 · 批量偏好覆盖合并/卡片操作忙碌守卫与模态状态判定解耦落地
+
+- **批量覆盖项融合与超时重启动作解耦（`core/session-prefs.ts`，TSK-08 持续深化）**：
+  - 提炼 `shouldRestartTimeoutOnOverrides`：纯函数统一识别覆盖字典中是否包含 `timeoutMode` 或 `timeoutSeconds`；
+  - `applyOverrides` 一次性完成最小化剪裁落盘并触发计时器重启，消除多次单项循环触发的重复渲染与频繁定时器启停；
+  - 在 `tests/session-prefs.spec.ts` 中新增 2 项单元测试；
+- **卡片操作忙碌守卫统一（`core/card-actions.ts`）**：
+  - 提炼 `isCardActionBusy`：统一判断评分提交、改期或归档操作的忙碌状态，收敛多重逻辑或运算符；
+  - 在 `tests/card-actions.spec.ts` 中新增 2 项单元测试；
+- **全屏模态弹窗打开状态判别（`core/review-shortcuts.ts`）**：
+  - 提炼 `isAnyReviewModalOpen`：集中判断四项核心复习模态窗口的开启状态；
+  - 在 `tests/review-shortcuts.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2280 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.5 2026-10-29 · 干扰项追加过滤/预算参数初始化与重现卡标记解耦落地
 
 - **干扰项追加校验纯函数化（`core/choice-options.ts`，TSK-08 持续深化）**：

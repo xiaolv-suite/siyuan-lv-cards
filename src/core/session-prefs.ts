@@ -43,3 +43,10 @@ export function resolveSessionVariantOverrides(
     };
 }
 
+/**
+ * 判定给定的覆盖字典中是否包含需要重启倒计时的键
+ */
+export function shouldRestartTimeoutOnOverrides(overrides: Record<string, unknown>): boolean {
+    return "timeoutMode" in overrides || "timeoutSeconds" in overrides;
+}
+

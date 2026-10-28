@@ -12,6 +12,7 @@ import {
     createLastAnsweredSnapshot,
     sliceQueueAfterCurrent,
     buildMemoAttributes,
+    isCardActionBusy,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -152,6 +153,19 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
             expect(buildMemoAttributes("  助记重点提示  ")).toEqual({ memo: "助记重点提示" });
             expect(buildMemoAttributes("")).toEqual({ memo: "" });
             expect(buildMemoAttributes(null as any)).toEqual({ memo: "" });
+        });
+    });
+
+    describe("isCardActionBusy", () => {
+        it("任意操作处于忙碌时返回 true", () => {
+            expect(isCardActionBusy(true, false, false)).toBe(true);
+            expect(isCardActionBusy(false, true, false)).toBe(true);
+            expect(isCardActionBusy(false, false, true)).toBe(true);
+        });
+
+        it("所有操作均空闲时返回 false", () => {
+            expect(isCardActionBusy(false, false, false)).toBe(false);
+            expect(isCardActionBusy(false, false)).toBe(false);
         });
     });
 });
