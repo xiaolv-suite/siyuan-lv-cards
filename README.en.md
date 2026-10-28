@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.3** (2026-10-28), delivering ReviewRatingBar and ReviewErrorTagBar modularization (-180+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.3) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.4** (2026-10-28), delivering ReviewReadyDashboard component modularization (-360+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.4) for the package and publishing status.
 
-## What's New in v0.212.3
+## What's New in v0.212.4
+
+- **ReviewReadyDashboard Component Modularization (TSK-08)**:
+  - Extracted the Review Ready Bento Hub (`ReviewReadyDashboard.svelte`) into a dedicated subcomponent.
+  - Encapsulated scope quick-switch pill, quality exclusion alerts, three-card bento grid (advance cram, card authoring, deck management), and bottom bar navigation.
+  - Reduced review template code by nearly 370 lines.
+  - Added dedicated unit tests in `tests/review-ready-dashboard.spec.ts`.
+- **Verification**:
+  - 2048 tests across 269 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.212.3
 
 - **ReviewRatingBar Component Modularization (TSK-08)**:
   - Extracted the bottom actions bar (`ReviewRatingBar.svelte`) into a dedicated subcomponent.

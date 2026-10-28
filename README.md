@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.212.3（2026-10-28）**，落地底部评分条与错误原因标注条独立解耦（-180+ 行）。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.3)。
+当前版本为 **v0.212.4（2026-10-28）**，落地空队列复习就绪看板独立解耦（-360+ 行）。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.4)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.212.3）
+## 本次更新（v0.212.4）
+
+- **空队列复习就绪看板独立解耦（ReviewReadyDashboard，TSK-08 持续深化）**：
+  - 将复习界面内部完整的空队列复习就绪看板（Review Ready Bento Hub）抽离为独立子组件 `src/ui/review/ReviewReadyDashboard.svelte`；
+  - 组件内部自收敛顶部范围快捷切换胶囊、异常隔离卡片专属警示卡、三大便当盒功能矩阵（提前冲刺 Cram、扩充制作新卡、卡库浏览管理）以及底栏状态刷新与返回主页路径；
+  - 复习主模板 `review.svelte` 代码行数再次净减近 370 行，主复习心流与空态逻辑彻底解耦分离；
+  - 配备完整的独立单元测试套件 `tests/review-ready-dashboard.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 269 个测试文件、2048 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.212.3）
 
 - **复习工作台底部评分条独立解耦（TSK-08 持续深化）**：
   - 将复习界面内部的底部操作条（`ReviewRatingBar.svelte`）完整抽离为独立子组件；
