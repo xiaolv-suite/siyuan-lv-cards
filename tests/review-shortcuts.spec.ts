@@ -6,6 +6,7 @@ import {
     shouldIgnoreReviewKeydown,
     resolveModalKeydownAction,
     isAnyReviewModalOpen,
+    resolveRatingFromShortcutAction,
     type ReviewShortcutContext,
 } from "../src/core/review-shortcuts";
 
@@ -250,6 +251,21 @@ describe("review-shortcuts 键盘调度解析器", () => {
 
         it("全部关闭时返回 false", () => {
             expect(isAnyReviewModalOpen({ showPauseModal: false, showSessionOptionsModal: false, showMemoEditor: false, showRetireModal: false })).toBe(false);
+        });
+    });
+
+    describe("resolveRatingFromShortcutAction", () => {
+        it("正确将 rate-1 到 rate-4 动作映射为 1-4 评级数值", () => {
+            expect(resolveRatingFromShortcutAction("rate-1")).toBe(1);
+            expect(resolveRatingFromShortcutAction("rate-2")).toBe(2);
+            expect(resolveRatingFromShortcutAction("rate-3")).toBe(3);
+            expect(resolveRatingFromShortcutAction("rate-4")).toBe(4);
+        });
+
+        it("其他动作或 null 返回 null", () => {
+            expect(resolveRatingFromShortcutAction("reveal")).toBeNull();
+            expect(resolveRatingFromShortcutAction("undo")).toBeNull();
+            expect(resolveRatingFromShortcutAction(null)).toBeNull();
         });
     });
 });

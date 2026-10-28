@@ -6,6 +6,8 @@ import {
     takeDueRequeues,
     createDelayedRequeueScheduler,
     markAsRequeueCard,
+    isRequeueWaiting,
+    calculateRequeueWaitSeconds,
     type DelayedRequeue,
 } from "../src/core/delayed-requeue";
 
@@ -81,6 +83,28 @@ describe("delayed requeue（会话内遗忘卡短期循环）", () => {
             const requeued = markAsRequeueCard(card);
             expect(requeued).toEqual({ cardID: "c-1", deckID: "d-1", lvRequeue: 1 });
             expect(card).not.toHaveProperty("lvRequeue");
+        });
+    });
+
+    describe("isRequeueWaiting & calculateRequeueWaitSeconds", () => {
+        it("未完成、无当前卡、存在待重现卡且无加载/错误时返回 true", () => {
+            expect(isRequeueWaiting(false, false, 2, false, false)).toBe(true);
+        });
+
+        it("已完成、有当前卡、待重现卡为 0 或处于加载/错误态时返回 false", () => {
+            expect(isRequeueWaiting(true, false, 2, false, false)).toBe(false);
+            expect(isRequeueWaiting(false, true, 2, false, false)).toBe(false);
+            expect(isRequeueWaiting(false, false, 0, false, false)).toBe(false);
+            expect(isRequeueWaiting(false, false, 2, true, false)).toBe(false);
+            expect(isRequeueWaiting(false, false, 2, false, true)).toBe(false);
+        });
+
+        it("calculateRequeueWaitSeconds 向上取整计算秒数，负数或 null 安全回退到 0", () => {
+            expect(calculateRequeueWaitSeconds(1500)).toBe(2);
+            expect(calculateRequeueWaitSeconds(1000)).toBe(1);
+            expect(calculateRequeueWaitSeconds(0)).toBe(0);
+            expect(calculateRequeueWaitSeconds(-500)).toBe(0);
+            expect(calculateRequeueWaitSeconds(null)).toBe(0);
         });
     });
 });

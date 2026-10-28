@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.215.7 2026-10-29 · 快捷键评分值解析与延迟重现等待态推导解耦落地
+
+- **快捷键动作评分值解析解耦（`core/review-shortcuts.ts`，TSK-08 持续深化）**：
+  - 提炼 `resolveRatingFromShortcutAction`：纯函数将 rate-1 到 rate-4 动作映射为对应的评级数值（1-4），并在主组件按键调度中消除重复的按键反馈与评分调用分支（净省 16 行）；
+  - 在 `tests/review-shortcuts.spec.ts` 中新增 2 项单元测试；
+- **延迟重现等待态与倒计时秒数推导解耦（`core/delayed-requeue.ts`）**：
+  - 提炼 `isRequeueWaiting`：纯函数集中判断未完成、无当前卡、存在待重现卡且无加载/错误的等待条件；
+  - 提炼 `calculateRequeueWaitSeconds`：纯函数标准化等待毫秒数向上取整计算与非法/负值保护；
+  - 在 `tests/delayed-requeue.spec.ts` 中新增 3 项单元测试；
+- **主复习文件规模与工程指标**：
+  - `src/ui/review.svelte` 代码行数降至 **2293 行**（突破 2300 行大关，相较最初 3412 行累计削减达 **1119 行代码**）；
+  - 全库扩展至 289 个测试文件、2285 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.6 2026-10-29 · 批量偏好覆盖合并/卡片操作忙碌守卫与模态状态判定解耦落地
 
 - **批量覆盖项融合与超时重启动作解耦（`core/session-prefs.ts`，TSK-08 持续深化）**：

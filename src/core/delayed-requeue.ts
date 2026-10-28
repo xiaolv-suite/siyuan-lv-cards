@@ -54,6 +54,27 @@ export function nextRequeueDelay(
     return Math.max(0, nextAt - now);
 }
 
+/**
+ * 判定是否处于延迟重现等待态（未完成、无当前卡片、存在待重现卡且无加载/错误）
+ */
+export function isRequeueWaiting(
+    sessionDone: boolean,
+    hasCurrent: boolean,
+    pendingCount: number,
+    loading: boolean,
+    hasError: boolean
+): boolean {
+    return !sessionDone && !hasCurrent && pendingCount > 0 && !loading && !hasError;
+}
+
+/**
+ * 计算下一张重现卡等待倒计时整秒数
+ */
+export function calculateRequeueWaitSeconds(nextDelayMs: number | null): number {
+    if (nextDelayMs === null || nextDelayMs <= 0) return 0;
+    return Math.max(0, Math.ceil(nextDelayMs / 1000));
+}
+
 export interface RequeueSchedulerOptions<T> {
     onDue: (dueCards: T[]) => void;
     onTick?: (now: number) => void;

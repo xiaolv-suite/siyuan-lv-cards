@@ -32,14 +32,14 @@
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, mapSwipeActionToOutcome } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
-    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen } from "@/core/review-shortcuts";
+    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, type ZoomedImageState } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
-    import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, markAsRequeueCard, type DelayedRequeue } from "@/core/delayed-requeue";
+    import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, markAsRequeueCard, isRequeueWaiting, calculateRequeueWaitSeconds, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { deriveHintLevels, availableLevels, formatHintLevelIndicator, advanceCardHint, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
@@ -246,8 +246,8 @@
     let qualityExcludedCardIDs = $state<string[]>([]); // 结构无效/未能验证的存量卡：仅本场排除，不改内核 due
     let lastAnswered = $state<{ html: string; card: RiffDueCard; revealed: boolean } | null>(null); // 回看数据源（AJ2：不再自动打开）
 
-    const requeueWaiting = $derived(!sessionDone && !current && pendingRequeues.length > 0 && !loading && !errorMsg);
-    const requeueWaitSeconds = $derived(Math.max(0, Math.ceil((nextRequeueDelay(pendingRequeues, requeueNow) ?? 0) / 1000)));
+    const requeueWaiting = $derived(isRequeueWaiting(sessionDone, Boolean(current), pendingRequeues.length, loading, Boolean(errorMsg)));
+    const requeueWaitSeconds = $derived(calculateRequeueWaitSeconds(nextRequeueDelay(pendingRequeues, requeueNow)));
 
     const requeueScheduler = createDelayedRequeueScheduler<QueueCard>({
         getPending: () => pendingRequeues,
@@ -1511,6 +1511,13 @@
 
         if (!action) return;
 
+        const rating = resolveRatingFromShortcutAction(action);
+        if (rating !== null) {
+            triggerKeyFeedback(String(rating));
+            void rate(rating);
+            return;
+        }
+
         switch (action) {
             case "toggle-reversed":
                 reversedRecall = !reversedRecall;
@@ -1560,22 +1567,6 @@
                 break;
             case "toggle-memo":
                 showMemoEditor = !showMemoEditor;
-                break;
-            case "rate-1":
-                triggerKeyFeedback("1");
-                rate(1);
-                break;
-            case "rate-2":
-                triggerKeyFeedback("2");
-                rate(2);
-                break;
-            case "rate-3":
-                triggerKeyFeedback("3");
-                rate(3);
-                break;
-            case "rate-4":
-                triggerKeyFeedback("4");
-                rate(4);
                 break;
             case "undo":
                 undoHistory();

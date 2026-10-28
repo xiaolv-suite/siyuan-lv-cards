@@ -259,3 +259,14 @@ export interface ReviewModalFlags {
 export function isAnyReviewModalOpen(flags: ReviewModalFlags): boolean {
     return Boolean(flags.showPauseModal || flags.showSessionOptionsModal || flags.showMemoEditor || flags.showRetireModal);
 }
+
+/**
+ * 从快捷键动作解析对应的评级数值（1-4）
+ */
+export function resolveRatingFromShortcutAction(action: ReviewKeyAction): 1 | 2 | 3 | 4 | null {
+    if (action === "rate-1") return 1;
+    if (action === "rate-2") return 2;
+    if (action === "rate-3") return 3;
+    if (action === "rate-4") return 4;
+    return null;
+}
