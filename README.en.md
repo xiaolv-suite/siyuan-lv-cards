@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.0** (2026-10-28), delivering dormant knowledge intake to Extract Inbox and ReviewRescheduleModal modularization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.0) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.1** (2026-10-28), delivering ReviewToolbar component modularization and review workbench slimming (-150+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.1) for the package and publishing status.
 
-## What's New in v0.212.0
+## What's New in v0.212.1
+
+- **ReviewToolbar Component Modularization (TSK-08)**:
+  - Extracted the review toolbar and more-actions popover menu into `ReviewToolbar.svelte`.
+  - Self-contained scope picker, session purpose, font scale adjustment, stars, issues, pauses, undo, skip, and keyboard Escape handling.
+  - Reduced review template code by over 150 lines.
+  - Added dedicated unit tests in `tests/review-toolbar.spec.ts`.
+- **Verification**:
+  - 2035 tests across 264 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.212.0
 
 - **Dormant Knowledge Intake to Extract Inbox (Productivity Loop)**:
   - Connected the dormant highlight scanner directly with the Extract Inbox, enabling one-click bulk intake of uncarded highlighted notes into the inbox for progressive distillation.

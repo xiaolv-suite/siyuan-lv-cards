@@ -29,7 +29,7 @@
     import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { triageReturn, RETURN_REASONS, type ReturnReason } from "@/core/return-triage";
-    import { SESSION_PURPOSES, PURPOSE_PROFILES, type SessionPurpose } from "@/core/session-purpose";
+    import type { SessionPurpose } from "@/core/session-purpose";
     import { reviewSwipeAction, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
@@ -59,6 +59,7 @@
     import ReviewContextDrawer from "./review/ReviewContextDrawer.svelte";
     import ReviewSessionPrefs from "./review/ReviewSessionPrefs.svelte";
     import ReviewRescheduleModal from "./review/ReviewRescheduleModal.svelte";
+    import ReviewToolbar from "./review/ReviewToolbar.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -356,13 +357,12 @@
         reliefOpen = reliefOpen === key ? null : key;
         // 「缩小范围」联动范围选择器（聚焦提示用户收窄；不代选任何范围）
         if (key === "narrow") {
-            scopeEl?.focus();
+            toolbarRef?.focusScope?.();
         }
     }
     // BI-2：本次会话目的（默认复习到期；informal 目的完成屏不庆祝每日目标）
     let purpose = $state<SessionPurpose>("review");
-    // svelte-ignore non_reactive_update -- scopeEl 仅作 bind:this 引用（focus 用），无需响应式
-    let scopeEl: HTMLSelectElement | null = null;
+    let toolbarRef = $state<any>(null);
 
     // 撤销历史栈（M3·FR7，ZY 技法：快照恢复 + 内核重评时按官方缓存恢复原状态）
     interface HistorySnapshot {
@@ -1991,7 +1991,7 @@
             return;
         }
         if (branch === "narrow") {
-            scopeEl?.focus();
+            toolbarRef?.focusScope?.();
             showMessage(t.review.recoveryNarrowTip, 2500, "info");
             return;
         }
@@ -2619,107 +2619,45 @@
                 <div class="lv-progress-seg lv-progress-seg--forget" style={`width:${(Math.max(0, sessionForget) / Math.max(1, reviewedIDs.length + queue.length)) * 100}%`}></div>
                 <div class="lv-progress-seg" style={`width:${(Math.max(0, reviewedIDs.length - sessionForget) / Math.max(1, reviewedIDs.length + queue.length)) * 100}%`}></div>
             </div>
-            <div class="lv-head-row lv-head-tools">
-                <select class="b3-select lv-scope" bind:this={scopeEl} bind:value={scopeKey} onchange={() => { ctx.onScopePersist(scopeKey); changeScope(); }} title={t.review.scopeTitle} aria-label={t.review.scopeTitle}>
-                    <option value="all">{t.review.scopeAll}</option>
-                    <option value="new">{t.review.scopeNew}</option>
-                    <option value="old">{t.review.scopeOld}</option>
-                    {#if decks.length > 0}
-                        <optgroup label={t.dashboard.decks}>
-                            {#each decks as d (d.id)}
-                                <option value={`deck:${d.id}`}>{d.name}</option>
-                            {/each}
-                        </optgroup>
-                    {/if}
-                    {#if notebooks.length > 0}
-                        <optgroup label={t.review.scopeNotebooks}>
-                            {#each notebooks as n (n.id)}
-                                <option value={`notebook:${n.id}`}>{n.name}</option>
-                            {/each}
-                        </optgroup>
-                    {/if}
-                </select>
-                <!-- BI-2：本次会话目的（结束条件随目的显示；informal 不计入每日目标） -->
-                <select class="b3-select lv-scope" bind:value={purpose} title={t.review.purposeTitle} aria-label={t.review.purposeTitle}>
-                    {#each SESSION_PURPOSES as p (p)}
-                        <option value={p}>{t.purpose[p].name}</option>
-                    {/each}
-                </select>
-                <!-- R53 主色即动作：结束条件章是信息不是按钮——优雅胶囊态 + 目标语义前缀 + 提示解释 -->
-                <span class="lv-chip2 lv-chip2--default lv-purpose-end-chip" title={PURPOSE_PROFILES[purpose].grading === "formal" ? t.review.purposeFormal : t.review.purposeInformal}>
-                    <LvIcon name="target" size={12} /> {t.purpose[purpose].end}
-                </span>
-                <div class="fn__flex-1"></div>
-                <!-- docs/13 §4：图标可读、操作不依赖 hover；常驻核心高频操作，二级动作折叠进更多气泡 -->
-                <div class="lv-font-scale-group" title={t.review.fontScaleTitle ?? "调整卡面字号"}>
-                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="缩小卡面字号" onclick={() => adjustFontScale(-0.1)}>A−</button>
-                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="放大卡面字号" onclick={() => adjustFontScale(0.1)}>A+</button>
-                </div>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.sessionOptionsTitle} aria-label={t.review.sessionOptionsTitle} onclick={openSessionOptions}><LvIcon name="zap" size={14} /><span class="lv-tool-btn-label"> {t.review.sessionOptionsTitle.slice(0, 4)}</span></button>
-                {#if hasSvgCanvas}
-                    <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn lv-canvas-edit-btn" title={t.review?.canvasDoubleClickTip ?? "编辑画布 (或双击画布)"} aria-label="编辑画布" onclick={() => openCanvasInEditor()}><LvIcon name="edit" size={13} /><span class="lv-tool-btn-label"> {t.review?.tbEditCanvas ?? "编辑画布"}</span></button>
-                {/if}
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" class:lv-btn-starred={starredCardIDs.has(current?.cardID ?? '')} title="星标重点卡片 (*)" aria-label="星标重点卡片" aria-pressed={starredCardIDs.has(current?.cardID ?? '')} disabled={!current || actionBusy} onclick={toggleStarCurrent}><LvIcon name="star" size={14} /><span class="lv-tool-btn-label"> {starredCardIDs.has(current?.cardID ?? '') ? "已星标" : "星标"}</span></button>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" class:lv-btn-primary={markedIssueCardIDs.has(current?.cardID ?? '')} title={markedIssueCardIDs.has(current?.cardID ?? '') ? t.review.issueMarked : t.review.tbMarkIssue} aria-label={t.review.tbMarkIssue} aria-pressed={markedIssueCardIDs.has(current?.cardID ?? '')} disabled={!current || actionBusy || markedIssueCardIDs.has(current?.cardID ?? '')} onclick={toggleMarkIssue}><LvIcon name="flag" size={14} /><span class="lv-tool-btn-label"> {markedIssueCardIDs.has(current?.cardID ?? '') ? t.review.issueChip : t.review.tbMarkIssue}</span></button>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.pauseTitle} aria-label={t.review.pauseTitle} disabled={actionBusy} onclick={() => (showPauseModal = true)}><LvIcon name="moon" size={14} /><span class="lv-tool-btn-label"> {t.review.tbPause}</span></button>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" title={t.review.undoTitle} aria-label={t.review.undoTitle} disabled={actionBusy || history.length === 0} onclick={undoHistory}><LvIcon name="refresh" size={13} /><span class="lv-tool-btn-label"> {t.review.tbUndo}</span></button>
-                <button class="b3-button b3-button--small lv-btn-ghost lv-tool-btn" disabled={actionBusy} onclick={skip}><LvIcon name="chevron-right" size={13} /><span class="lv-tool-btn-label"> {t.review.skip}</span></button>
-                <div class="lv-toolbar-more-wrap">
-                    <button
-                        type="button"
-                        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-                        class:lv-btn-primary={showMoreToolbar}
-                        title={t.review.tbMoreDesc ?? t.review.tbMore}
-                        aria-label={t.review.tbMoreDesc ?? t.review.tbMore}
-                        aria-expanded={showMoreToolbar}
-                        onclick={() => (showMoreToolbar = !showMoreToolbar)}
-                    >
-                        ··· {t.review.tbMore}
-                    </button>
-                    {#if showMoreToolbar}
-                        <div class="lv-toolbar-more-scrim" onclick={() => (showMoreToolbar = false)}></div>
-                        <div class="lv-toolbar-more-menu" role="menu">
-                            <button type="button" class="lv-toolbar-menu-item" class:lv-active={reversedRecall} title={t.review.enableReversed ?? "翻转问答自测 (R)"} onclick={() => { reversedRecall = !reversedRecall; showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span><span>{reversedRecall ? (t.review.cancelReversed ?? "恢复正常顺序") : (t.review.enableReversed ?? "翻转问答自测 (R)")}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" class:lv-active={zenMode} title="沉浸专注模式 (z)" onclick={() => { zenMode = !zenMode; showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="eye" size={16} /></span><span>{zenMode ? "退出专注模式 (z)" : "沉浸专注模式 (z)"}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" class:lv-active={ctxOpen} title={t.review.ctxToggle} onclick={() => { toggleContext(); showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="book" size={16} /></span><span>{t.review.tbCtx}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" class:lv-active={prefsOpen || hasOverrides} title={t.review.prefsTitle} onclick={() => { prefsOpen = !prefsOpen; showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="settings" size={16} /></span><span>{t.review.tbPrefs}{hasOverrides ? " ●" : ""}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" disabled={!lastAnswered} title={t.review.peekPrev} onclick={() => { togglePeek(); showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="eye" size={16} /></span><span>{t.review.peekPrev}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" title={t.review.openInEditor} onclick={() => { openInEditor(); showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="edit" size={16} /></span><span>{t.review.openInEditor ?? t.review.open}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" title={t.review.refreshCard} onclick={() => { refreshCard(); showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span><span>{t.review.tbRefresh}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" disabled={actionBusy} title={t.review.suspendToday} onclick={() => { suspendToday(); showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="moon" size={16} /></span><span>{t.review.suspendToday ?? t.review.tbSuspend}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" disabled={!current || actionBusy} title={t.review.tbMemo} onclick={() => { showMemoEditor = true; showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="lightbulb" size={16} /></span><span>{t.review.tbMemo ?? "助记便签"}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item" disabled={!current || actionBusy || dismissBusy} title={t.review?.tbDismiss ?? "解散归档 (Ctrl+D)"} onclick={() => { void dismissCurrentCard(); showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="close" size={16} /></span><span>{t.review?.tbDismiss ?? "解散归档 (Ctrl+D)"}</span>
-                            </button>
-                            <button type="button" class="lv-toolbar-menu-item lv-menu-danger" disabled={!current || actionBusy} title={t.review.retireCard} onclick={() => { showRetireModal = true; showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="ban" size={16} /></span><span>{t.review.retireCard ?? "移出卡组"}</span>
-                            </button>
-                            <div class="lv-toolbar-menu-divider"></div>
-                            <button type="button" class="lv-toolbar-menu-item" title={t.review.helpTitle} onclick={() => { helpOpen = true; showMoreToolbar = false; }}>
-                                <span class="lv-menu-icon"><LvIcon name="question" size={16} /></span><span>{t.review.tbHelp}</span>
-                            </button>
-                        </div>
-                    {/if}
-                </div>
-            </div>
+            <ReviewToolbar
+                bind:this={toolbarRef}
+                bind:scopeKey
+                bind:purpose
+                {decks}
+                {notebooks}
+                {current}
+                {hasSvgCanvas}
+                isStarred={starredCardIDs.has(current?.cardID ?? '')}
+                isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
+                {actionBusy}
+                {dismissBusy}
+                {lastAnswered}
+                bind:reversedRecall
+                bind:zenMode
+                {ctxOpen}
+                {prefsOpen}
+                {hasOverrides}
+                {t}
+                onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
+                onAdjustFontScale={adjustFontScale}
+                onOpenSessionOptions={openSessionOptions}
+                onOpenCanvasInEditor={openCanvasInEditor}
+                onToggleStar={toggleStarCurrent}
+                onToggleMarkIssue={toggleMarkIssue}
+                onPause={() => (showPauseModal = true)}
+                onUndo={undoHistory}
+                onSkip={skip}
+                onToggleContext={toggleContext}
+                onTogglePrefs={() => (prefsOpen = !prefsOpen)}
+                onTogglePeek={togglePeek}
+                onOpenInEditor={openInEditor}
+                onRefreshCard={refreshCard}
+                onSuspendToday={suspendToday}
+                onOpenMemoEditor={() => (showMemoEditor = true)}
+                onDismissCard={() => void dismissCurrentCard()}
+                onOpenRetireModal={() => (showRetireModal = true)}
+                onOpenHelp={() => (helpOpen = true)}
+            />
         </div>
         <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%; margin:0 auto;`}>
             {#if currentBreadcrumbs && currentBreadcrumbs.nodes.length > 0}
@@ -3449,118 +3387,6 @@
                 display: flex; align-items: center; gap: var(--lv-sp-2);
                 min-width: 0; flex-wrap: wrap;
             }
-            .lv-head-tools {
-                flex-wrap: nowrap !important;
-                gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
-                min-width: 0;
-
-                .lv-scope {
-                    height: 28px;
-                    min-height: 28px;
-                    line-height: var(--lv-lh-control-lg);
-                    min-width: 6em;
-                    max-width: 135px;
-                    padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3);
-                    border-radius: var(--lv-r-pill);
-                    border: 1px solid var(--lv-border);
-                    background: var(--lv-color-surface);
-                    color: var(--lv-color-text);
-                    font-size: var(--lv-type-meta-size);
-                    text-align: center;
-                    text-align-last: center;
-                    vertical-align: middle;
-                    box-sizing: border-box;
-                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-                    flex-shrink: 1;
-
-                    option {
-                        text-align: left;
-                        line-height: normal;
-                    }
-                }
-
-                .lv-purpose-end-chip {
-                    height: 28px;
-                    box-sizing: border-box;
-                    padding: 0 calc(var(--lv-space-unit) * 4);
-                    font-size: var(--lv-type-meta-size);
-                    font-weight: var(--lv-fw-medium);
-                    display: inline-flex;
-                    align-items: center;
-                    gap: calc(var(--lv-space-unit) * 2);
-                    white-space: nowrap;
-                    border-radius: var(--lv-r-pill);
-                    border: 1px solid var(--lv-border);
-                    background: var(--lv-color-surface);
-                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-                    flex-shrink: 0;
-                }
-
-                .lv-font-scale-group {
-                    height: 28px;
-                    box-sizing: border-box;
-                    display: inline-flex;
-                    align-items: center;
-                    border: 1px solid var(--lv-border);
-                    border-radius: var(--lv-r-pill);
-                    background: var(--lv-color-surface);
-                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-                    overflow: hidden;
-                    flex-shrink: 0;
-                    .lv-font-btn {
-                        height: 26px;
-                        padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
-                        font-size: var(--lv-type-meta-size);
-                        border: none;
-                        border-radius: 0;
-                        color: var(--lv-color-text-muted);
-                        &:hover:not(:disabled) {
-                            color: var(--lv-color-brand);
-                            background: var(--lv-primary-soft);
-                        }
-                    }
-                }
-
-                .lv-tool-btn {
-                    height: 28px;
-                    box-sizing: border-box;
-                    padding: 0 calc(var(--lv-space-unit) * 4);
-                    border-radius: var(--lv-r-pill);
-                    background: var(--lv-color-surface);
-                    border: 1px solid var(--lv-border);
-                    color: var(--lv-color-text-muted);
-                    white-space: nowrap;
-                    flex-shrink: 0;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: calc(var(--lv-space-unit) * 2);
-                    font-size: var(--lv-type-meta-size);
-                    box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-                    transition: all var(--lv-dur-1) var(--lv-ease);
-
-                    &:hover:not(:disabled) {
-                        border-color: var(--lv-color-brand);
-                        color: var(--lv-color-brand);
-                        background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
-                    }
-                }
-
-                .lv-toolbar-more-wrap {
-                    flex-shrink: 0;
-                }
-            }
-
-            .lv-scope {
-                min-width: 8.5em;
-                max-width: 200px;
-                min-height: 28px;
-                height: 28px;
-                line-height: var(--lv-lh-control-lg);
-                font-size: var(--lv-type-control-size);
-                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
-                box-sizing: border-box;
-                vertical-align: middle;
-            }
             /* BI-3：入口上下文条（窄屏换行不挤压进度） */
             .lv-entry {
                 display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 1);
@@ -3621,45 +3447,6 @@
                 font-weight: var(--lv-fw-bold);
             }
             .lv-tags { display: flex; gap: var(--lv-sp-1); }
-        }
-
-        @media (max-width: 740px) {
-            .lv-head-tools {
-                .lv-tool-btn-label { display: none; }
-                .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
-            }
-        }
-
-        .lv-purpose-end-chip {
-            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 4);
-            font-size: var(--lv-type-meta-size);
-            font-weight: var(--lv-fw-medium);
-            display: inline-flex;
-            align-items: center;
-            gap: calc(var(--lv-space-unit) * 2);
-            white-space: nowrap;
-        }
-
-        .lv-font-scale-group {
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-pill);
-            overflow: hidden;
-            background: color-mix(in srgb, var(--lv-color-surface) 60%, var(--lv-color-canvas));
-            flex-shrink: 0;
-
-            .lv-font-btn {
-                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
-                font-size: var(--lv-type-meta-size);
-                font-weight: var(--lv-fw-semibold);
-                border: none;
-                border-radius: 0;
-                line-height: 1.2;
-                &:first-child {
-                    border-right: 1px solid var(--lv-border);
-                }
-            }
         }
 
         .lv-err-tags {
@@ -4053,14 +3840,6 @@
             }
         }
 
-        .lv-menu-danger {
-            color: var(--lv-color-danger) !important;
-            &:hover:not(:disabled) {
-                background: var(--lv-danger-soft) !important;
-                color: var(--lv-color-danger) !important;
-            }
-        }
-
         :global(.lv-step-revealed) {
             background: color-mix(in srgb, var(--lv-color-brand) 14%, transparent) !important;
             color: var(--lv-color-text) !important;
@@ -4216,73 +3995,6 @@
                     background: color-mix(in srgb, var(--lv-color-success) 14%, var(--lv-color-surface));
                 }
             }
-        }
-
-        .lv-toolbar-more-wrap {
-            position: relative;
-            display: inline-flex;
-        }
-        .lv-toolbar-more-scrim {
-            position: fixed;
-            inset: 0;
-            z-index: var(--lv-z-sticky);
-            background: transparent;
-        }
-        .lv-toolbar-more-menu {
-            position: absolute;
-            top: calc(100% + 6px);
-            right: 0;
-            z-index: var(--lv-z-sticky);
-            min-width: 180px;
-            background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-m);
-            box-shadow: var(--lv-shadow-float), var(--lv-inset-shine);
-            padding: calc(var(--lv-space-unit) * 2);
-            display: flex;
-            flex-direction: column;
-            gap: calc(var(--lv-space-unit) * 1);
-            animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
-        }
-        .lv-toolbar-menu-item {
-            display: flex;
-            align-items: center;
-            gap: calc(var(--lv-space-unit) * 3);
-            width: 100%;
-            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 3);
-            border: 0;
-            border-radius: var(--lv-r-s);
-            background: transparent;
-            color: var(--lv-color-text);
-            font-size: var(--lv-type-control-size);
-            text-align: left;
-            cursor: pointer;
-            transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
-
-            &:hover:not(:disabled) {
-                background: var(--lv-surface-hover);
-                color: var(--lv-color-brand);
-            }
-            &:disabled {
-                opacity: 0.45;
-                cursor: not-allowed;
-            }
-            &.lv-active {
-                color: var(--lv-color-brand);
-                background: var(--lv-primary-soft);
-                font-weight: var(--lv-fw-semibold);
-            }
-        }
-        .lv-menu-icon {
-            font-size: var(--lv-type-body-size);
-            flex-shrink: 0;
-        }
-        .lv-toolbar-menu-divider {
-            height: 1px;
-            background: var(--lv-border);
-            margin: calc(var(--lv-space-unit) * 1) 0;
         }
     }
 </style>
