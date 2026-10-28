@@ -174,6 +174,23 @@ export const getTreeRiffDueCards = (rootID: string, reviewedCardIDs: string[] = 
 export const getNotebookRiffDueCards = (notebook: string, reviewedCardIDs: string[] = []) =>
     riffRead<RiffDueCardsData>("getNotebookRiffDueCards", { notebook, reviewedCards: reviewedCardIDs.map(id => ({ cardID: id })) });
 
+/** 依据范围键（deck:xxx / notebook:xxx / doc:xxx / all 等）获取到期卡片 */
+export const getRiffDueCardsForScope = async (
+    scopeKey: string,
+    reviewedCardIDs: string[] = []
+): Promise<RiffDueCardsData> => {
+    if (scopeKey.startsWith("deck:")) {
+        return getRiffDueCards(scopeKey.slice(5), reviewedCardIDs);
+    }
+    if (scopeKey.startsWith("notebook:")) {
+        return getNotebookRiffDueCards(scopeKey.slice(9), reviewedCardIDs);
+    }
+    if (scopeKey.startsWith("doc:")) {
+        return getTreeRiffDueCards(scopeKey.slice(4), reviewedCardIDs);
+    }
+    return getRiffDueCards("", reviewedCardIDs);
+};
+
 export type Rating = 1 | 2 | 3 | 4;
 
 export const reviewRiffCard = (deckID: string, cardID: string, rating: Rating, reviewedCardIDs: string[] = []) =>

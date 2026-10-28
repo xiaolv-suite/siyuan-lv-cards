@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.213.8 2026-10-28 · 出题队列批量质检与范围到期统一查询解耦落地（累积削减 1000+ 行代码！）
+
+- **出题队列批量质检过滤解耦（`core/review-queue-quality.ts`，TSK-08 持续深化）**：
+  - 将出题卡片大批量异步查询 Markdown 与遮挡属性的并发分块流程（400/块、3并发）彻底封装为纯函数 `filterReviewQueueByQuality`；
+  - 内部整合 `validateFlashcardMarkdown`、`hasQuestionMediaContent` 与 `mapChunksOrdered`，从 `review.svelte` 中彻底移除了 3 处冗余底层依赖；
+  - 配备完整的独立单元测试套件 `tests/review-queue-quality.spec.ts`（3 项用例全面覆盖丢失块隔离、空内容块检测、异步遮挡校验与空列表安全返回）；
+- **范围到期卡片统一查询路由（`api/riff.ts`）**：
+  - 提供 `getRiffDueCardsForScope`，统一按范围键前缀（`deck:` / `notebook:` / `doc:` / `all`）分发到对应内核 API；
+  - 配备专门的单元测试套件 `tests/riff-scope.spec.ts`；
+- **主复习文件规模突破性收敛**：
+  - 复习主模板 `review.svelte` 代码行数由 2427 行进一步大幅下降至 2378 行（净减 49 行，相较最初 3412 行累计净削减达 **1034 行代码**，总削减量突破千行！）；
+  - 全库扩展至 287 个测试文件、2177 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.7 2026-10-28 · 卡面答案提取与改期时间戳生成引擎解耦落地
 
 - **卡面权威期望答案提取与块属性元信息解析解耦（`core/card-face.ts`，TSK-08 持续深化）**：

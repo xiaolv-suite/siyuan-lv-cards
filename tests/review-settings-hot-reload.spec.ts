@@ -20,6 +20,7 @@ const {
 
 vi.mock("@/api/riff", () => ({
     getRiffDueCards,
+    getRiffDueCardsForScope: vi.fn(async (scope, rev) => getRiffDueCards(scope.startsWith("deck:") ? scope.slice(5) : "", rev)),
     getRiffDecks,
     reviewRiffCard,
     getNotebookRiffDueCards: vi.fn(),

@@ -27,7 +27,14 @@ const { getRiffDueCards, getRiffDecks, batchSetRiffCardsDueTime, reviewRiffCard,
     }),
 }));
 
-vi.mock("@/api/riff", () => ({ getRiffDueCards, getRiffDecks, batchSetRiffCardsDueTime, reviewRiffCard, skipReviewRiffCard }));
+vi.mock("@/api/riff", () => ({
+    getRiffDueCards,
+    getRiffDueCardsForScope: vi.fn(async (scope, rev) => getRiffDueCards(scope.startsWith("deck:") ? scope.slice(5) : "", rev)),
+    getRiffDecks,
+    batchSetRiffCardsDueTime,
+    reviewRiffCard,
+    skipReviewRiffCard,
+}));
 vi.mock("@/api/siyuan", () => ({ getNotebooks, getBlockAttrs, getBlockDOM, setBlockAttrs, sqlQuery }));
 vi.mock("@/api/due-shared", () => ({ dueCache: { get: vi.fn().mockResolvedValue({ unreviewedCount: 0 }) }, invalidateDueCache: vi.fn() }));
 vi.mock("siyuan", () => ({ openTab: vi.fn(), showMessage: vi.fn() }));

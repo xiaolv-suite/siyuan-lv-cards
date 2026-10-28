@@ -3,7 +3,7 @@
     import { rafThrottle } from "@/libs/throttle";
     import { openTab, showMessage } from "siyuan";
     import {
-        getRiffDueCards, getRiffDecks, getNotebookRiffDueCards, getTreeRiffDueCards, reviewRiffCard, skipReviewRiffCard,
+        getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
         batchSetRiffCardsDueTime,
         type RiffDueCard, type RiffDeck, type Rating,
     } from "@/api/riff";
@@ -12,9 +12,7 @@
     import { isCardNew, calcStreak, type RevlogData } from "@/core/revlog";
     import { gradeTyping, type Rating1to4 } from "@/core/card-types";
     import { parseOcclusion, calculateOcclusionBox, type OcclusionData } from "@/core/occlusion";
-    import { hasQuestionMediaContent, validateFlashcardMarkdown } from "@/core/flashcard-quality";
-    import { partitionReviewCardsByQuality } from "@/core/review-queue-quality";
-    import { mapChunksOrdered } from "@/core/query-chunks";
+    import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
@@ -800,16 +798,7 @@
         errorMsg = "";
         try {
             const kernelReviewedIDs = [...new Set([...reviewedIDs, ...qualityExcludedCardIDs])];
-            let data;
-            if (scopeKey.startsWith("deck:")) {
-                data = await getRiffDueCards(scopeKey.slice(5), kernelReviewedIDs);
-            } else if (scopeKey.startsWith("notebook:")) {
-                data = await getNotebookRiffDueCards(scopeKey.slice(9), kernelReviewedIDs);
-            } else if (scopeKey.startsWith("doc:")) {
-                data = await getTreeRiffDueCards(scopeKey.slice(4), kernelReviewedIDs);
-            } else {
-                data = await getRiffDueCards("", kernelReviewedIDs);
-            }
+            const data = await getRiffDueCardsForScope(scopeKey, kernelReviewedIDs);
             if (seq !== queueSeq) {
                 return; // 旧响应：不改队列、卡面、计数或计时器
             }
@@ -818,56 +807,18 @@
             cards = cards.filter(c => !ctx.isSuspendedToday(c.cardID) && !sessionSkipped.includes(c.cardID));
             // 先验证源块的最终 Markdown，避免没有有效挖空标记的历史坏卡在问题态直接露出答案。
             // 此处只从本场展示队列排除；不评分、不跳过、不修改真实 due。
-            if (cards.length > 0) {
-                // 测试/降级宿主若没有 SQL 读能力，不能把未验证内容当作安全卡面；
-                // 但保留已有的卡面加载路径，避免把整个复习页变成不可用状态。
-                let queryBlocks: typeof siyuanApi.sqlQuery | undefined;
-                try {
-                    queryBlocks = (siyuanApi as typeof siyuanApi).sqlQuery;
-                } catch {
-                    queryBlocks = undefined;
-                }
-                if (typeof queryBlocks !== "function") {
-                    // 兼容精简宿主/测试注入：没有只读 SQL 能力时保留原队列，
-                    // 真实思源运行时由共享入组门禁保证新卡结构，维护页负责存量扫描。
-                } else {
-                const blockIDs: string[] = Array.from(new Set(cards.map((card): string => String(card.blockID ?? "")).filter((id): id is string => Boolean(id))));
-                const chunkSize = 400;
-                const concurrency = 3;
-                const chunks: string[][] = Array.from({ length: Math.ceil(blockIDs.length / chunkSize) }, (_, index) =>
-                    blockIDs.slice(index * chunkSize, (index + 1) * chunkSize),
+            if (cards.length > 0 && typeof siyuanApi.sqlQuery === "function") {
+                const quality = await filterReviewQueueByQuality(
+                    cards,
+                    siyuanApi.sqlQuery,
+                    getBlockAttrs,
+                    parseOcclusion
                 );
-                const rowsByChunk = await mapChunksOrdered(chunks, (ids: string[]) => {
-                    const safeIDs = ids.map(id => `'${String(id).replace(/'/g, "''")}'`).join(",");
-                    return queryBlocks(`SELECT id, markdown FROM blocks WHERE id IN (${safeIDs})`);
-                }, concurrency);
-                const rows = rowsByChunk.flat().map(row => ({ id: String(row.id ?? ""), markdown: String(row.markdown ?? "") }));
-                const markdownByID = new Map(rows.map(row => [row.id, row.markdown]));
-                const occlusionCandidates = blockIDs.filter(id => {
-                    const markdown = markdownByID.get(id);
-                    return Boolean(markdown && validateFlashcardMarkdown(markdown) === "missing-answer" && hasQuestionMediaContent(markdown));
-                });
-                const attrChunks: string[][] = Array.from({ length: Math.ceil(occlusionCandidates.length / concurrency) }, (_, index) =>
-                    occlusionCandidates.slice(index * concurrency, (index + 1) * concurrency),
-                );
-                const attrsByChunk = await mapChunksOrdered(attrChunks, (ids: string[]) => Promise.all(ids.map(async id => {
-                    try {
-                        return [id, await getBlockAttrs(id)] as const;
-                    } catch {
-                        return [id, {}] as const;
-                    }
-                })), concurrency);
                 if (seq !== queueSeq) return;
-                const validOcclusionIDs = new Set<string>();
-                for (const [id, attrs] of attrsByChunk.flat() as Array<[string, Record<string, string>]>) {
-                    if (parseOcclusion(attrs)?.rects.length) validOcclusionIDs.add(String(id));
-                }
-                const quality = partitionReviewCardsByQuality(cards, rows, validOcclusionIDs, { allowLegacyFormat: true });
                 cards = quality.valid;
                 if (quality.invalid.length > 0) {
                     qualityExcludedCardIDs = [...new Set([...qualityExcludedCardIDs, ...quality.invalid.map(item => item.cardID).filter(Boolean)])];
                     announce(t.review.qualityExcluded.replace("${n}", String(qualityExcludedCardIDs.length)), "polite");
-                }
                 }
             }
             // 管道处理：范围筛选、批次截断、同源兄弟卡防剧透推迟与排序
