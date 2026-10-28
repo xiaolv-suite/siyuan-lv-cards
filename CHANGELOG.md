@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.214.7 2026-10-29 · 瞬态题型状态重置统一与减负建议展开状态机解耦落地
+
+- **瞬态题型状态机重置统一（`core/quiz-interactive.ts`，TSK-08 持续深化）**：
+  - 提炼 `createInitialEphemeralQuizState`：返回选择题、判断题、打字题等 8 项题型瞬态的初始默认值；
+  - 统一 `resetCardState()` 与 `loadBlockDOM()` 题面变动时的重置逻辑，消除重复内联赋值与潜在状态遗留；
+  - 在 `tests/quiz-interactive.spec.ts` 中新增单元测试；
+- **减负建议展开状态流转解耦（`core/load-relief.ts`）**：
+  - 提炼 `toggleReliefChoice`：纯函数控制单项减负建议（窄屏聚焦、高优先级等）展开与折叠互斥逻辑；
+  - 在 `tests/load-relief.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2231 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.6 2026-10-29 · 题型得分统计更新/字号百分比格式化与题面失效判定解耦落地
 
 - **交互题型得分统计更新解耦（`core/quiz-interactive.ts`，TSK-08 持续深化）**：

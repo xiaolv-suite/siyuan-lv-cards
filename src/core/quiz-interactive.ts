@@ -459,4 +459,31 @@ export function toggleChoiceSelection(
     return { nextKeys: [key], shouldAutoSubmit: true, hapticStrength: 10 };
 }
 
+export interface EphemeralQuizState {
+    choices: null;
+    choiceLoading: false;
+    choiceFallbackMode: "none";
+    typingGrade: null;
+    interactiveQuiz: null;
+    selectedChoiceKeys: string[];
+    userJudgeChoice: null;
+    suggestedRating: null;
+}
+
+/**
+ * 构造交互式题型初始瞬态对象（用于切卡或题面重载重置）
+ */
+export function createInitialEphemeralQuizState(): EphemeralQuizState {
+    return {
+        choices: null,
+        choiceLoading: false,
+        choiceFallbackMode: "none",
+        typingGrade: null,
+        interactiveQuiz: null,
+        selectedChoiceKeys: [],
+        userJudgeChoice: null,
+        suggestedRating: null,
+    };
+}
+
 

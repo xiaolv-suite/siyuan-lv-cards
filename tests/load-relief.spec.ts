@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadReliefChoices, LOAD_CHOICES } from "../src/core/load-relief";
+import { loadReliefChoices, LOAD_CHOICES, toggleReliefChoice } from "../src/core/load-relief";
 
 // BI-13 减负选择：五种路径，每条必带对 due/历史的影响说明（验收硬性要求）
 describe("load-relief（BI-13）", () => {
@@ -17,5 +17,16 @@ describe("load-relief（BI-13）", () => {
         expect(keys[keys.length - 1]).toBe("rebuild");
         expect(keys).toContain("narrow");
         expect(keys).toContain("readOnly");
+    });
+
+    describe("toggleReliefChoice", () => {
+        it("点击已展开项折叠返回 null", () => {
+            expect(toggleReliefChoice("narrow", "narrow")).toBeNull();
+        });
+
+        it("点击未展开项返回该项", () => {
+            expect(toggleReliefChoice(null, "narrow")).toBe("narrow");
+            expect(toggleReliefChoice("highPriority", "narrow")).toBe("narrow");
+        });
     });
 });

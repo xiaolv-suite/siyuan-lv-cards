@@ -10,6 +10,7 @@ import {
     evaluateChoiceQuiz,
     evaluateJudgeQuiz,
     evaluateFillQuiz,
+    createInitialEphemeralQuizState,
 } from "../src/core/quiz-interactive";
 
 describe("quiz-interactive core parser", () => {
@@ -227,6 +228,20 @@ C. 广州
             const judgeRes = evaluateJudgeQuiz(true, false);
             expect(judgeRes?.toastDuration).toBe(1800);
             expect(judgeRes?.isCorrect).toBe(false);
+        });
+    });
+
+    describe("createInitialEphemeralQuizState", () => {
+        it("返回包含所有重置默认值的初始瞬态对象", () => {
+            const state = createInitialEphemeralQuizState();
+            expect(state.choices).toBeNull();
+            expect(state.choiceLoading).toBe(false);
+            expect(state.choiceFallbackMode).toBe("none");
+            expect(state.typingGrade).toBeNull();
+            expect(state.interactiveQuiz).toBeNull();
+            expect(state.selectedChoiceKeys).toEqual([]);
+            expect(state.userJudgeChoice).toBeNull();
+            expect(state.suggestedRating).toBeNull();
         });
     });
 });

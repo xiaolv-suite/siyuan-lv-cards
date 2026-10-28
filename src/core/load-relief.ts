@@ -28,3 +28,10 @@ const CHOICES: Record<LoadChoice, { labelKey: string; impactKey: string }> = {
 export function loadReliefChoices(): LoadReliefChoice[] {
     return LOAD_CHOICES.map(k => ({ key: k, ...CHOICES[k] }));
 }
+
+/**
+ * 切换减负建议项展开状态（点击已展开项折叠，点击未展开项展开）
+ */
+export function toggleReliefChoice(current: LoadChoice | null, picked: LoadChoice): LoadChoice | null {
+    return current === picked ? null : picked;
+}

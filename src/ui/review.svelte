@@ -25,7 +25,7 @@
     import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel } from "@/core/card-face";
-    import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
+    import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar } from "@/core/review-queue-pipeline";
@@ -48,7 +48,7 @@
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { resolveCardBreadcrumbsFromRows, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, createInitialEphemeralQuizState, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
@@ -321,7 +321,7 @@
     const reliefChoices = loadReliefChoices();
     let reliefOpen = $state<LoadChoice | null>(null);
     function onReliefPick(key: LoadChoice) {
-        reliefOpen = reliefOpen === key ? null : key;
+        reliefOpen = toggleReliefChoice(reliefOpen, key);
         // 「缩小范围」联动范围选择器（聚焦提示用户收窄；不代选任何范围）
         if (key === "narrow") {
             toolbarRef?.focusScope?.();
@@ -600,6 +600,18 @@
     let suggestedRating = $state<number | null>(null);
     let zenMode = $state(false);
 
+    function resetEphemeralQuiz() {
+        const s = createInitialEphemeralQuizState();
+        choices = s.choices;
+        choiceLoading = s.choiceLoading;
+        choiceFallbackMode = s.choiceFallbackMode;
+        typingGrade = s.typingGrade;
+        interactiveQuiz = s.interactiveQuiz;
+        selectedChoiceKeys = s.selectedChoiceKeys;
+        userJudgeChoice = s.userJudgeChoice;
+        suggestedRating = s.suggestedRating;
+    }
+
     async function loadBlockDOM(blockID: string) {
         const seq = ++loadSeq;
         try {
@@ -611,15 +623,8 @@
             if (shouldInvalidateCardDerivedState(cardHtml, dom)) {
                 // 编辑返回后题面变化：旧选择题、打字判分与请求都失效。
                 choiceRequestSeq++;
-                choices = null;
-                choiceLoading = false;
-                choiceFallbackMode = "none";
-                typingGrade = null;
                 answerCache.delete(blockID);
-                interactiveQuiz = null;
-                selectedChoiceKeys = [];
-                userJudgeChoice = null;
-                suggestedRating = null;
+                resetEphemeralQuiz();
             }
             cardHtml = dom;
             faceError = "";
@@ -909,10 +914,6 @@
         showAnswer = false;
         expectedText = "";
         typingInput = "";
-        typingGrade = null;
-        choices = null;
-        choiceLoading = false;
-        choiceFallbackMode = "none";
         occl = null;
         occlBox = null;
         occlHidden = [];
@@ -927,10 +928,6 @@
         cardMemo = "";
         showMemoEditor = false;
         memoDraft = "";
-        interactiveQuiz = null;
-        selectedChoiceKeys = [];
-        userJudgeChoice = null;
-        suggestedRating = null;
         memoSaving = false;
         showRetireModal = false;
         retireBusy = false;
@@ -943,6 +940,7 @@
         hintLevel = null;
         hintText = "";
         showErrTags = false;
+        resetEphemeralQuiz();
     }
 
     /** 汲取自渐进学习插件：保存助记便签（给未来的自己留线索） */
