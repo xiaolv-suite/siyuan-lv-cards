@@ -134,6 +134,7 @@ import { confirmDialog } from "@/libs/dialog";
     let leechOnly = $state(false);
     let starredOnly = $state(false);
     let statusFilter = $state<"all" | "new" | "review" | "due">("all");
+    let cardTypeFilter = $state<"all" | "outline-cloze" | "superblock">("all");
     let dueSet = $state(new Set<string>());
     let loadSeq = 0;  // AR-6：分页/刷新请求序号
     let dueSeq = 0;   // AR-6：到期清单请求序号
@@ -172,6 +173,11 @@ import { confirmDialog } from "@/libs/dialog";
                 arr = arr.filter(b => !ctx.isNewBlock(b.id));
             } else if (statusFilter === "due") {
                 arr = arr.filter(b => dueSet.has(b.id));
+            }
+            if (cardTypeFilter === "outline-cloze") {
+                arr = arr.filter(b => (b.content?.includes("NodeList") || b.content?.includes("<ul") || b.content?.includes("<ol") || b.content?.includes("NodeListItem")) && (b.content?.includes("lv-masked") || b.content?.includes("data-type=\"mark\"")));
+            } else if (cardTypeFilter === "superblock") {
+                arr = arr.filter(b => b.content?.includes("NodeSuperBlock") || b.content?.includes("data-type=\"NodeSuperBlock\"") || b.content?.includes("{{{col"));
             }
             if (sortMode === "path") {
                 return [...arr].sort((a, b) => ((a.hPath as string) ?? "").localeCompare((b.hPath as string) ?? ""));
@@ -819,6 +825,11 @@ import { confirmDialog } from "@/libs/dialog";
             <option value="new">{t.manager.statusNew}</option>
             <option value="review">{t.manager.statusReview}</option>
             <option value="due">{t.manager.statusDue}</option>
+        </select>
+        <select class="b3-select lv-sort" bind:value={cardTypeFilter} title={t.manager.cardTypeFilter ?? "卡型"} aria-label={t.manager.cardTypeFilter ?? "卡型"}>
+            <option value="all">{t.manager.cardTypeAll ?? "卡型：全部"}</option>
+            <option value="outline-cloze">{t.manager.cardTypeOutlineCloze ?? "卡型：大纲挖空"}</option>
+            <option value="superblock">{t.manager.cardTypeSuperBlock ?? "卡型：超级块"}</option>
         </select>
         {#if ctx.uiMode !== "simple"}
             <button

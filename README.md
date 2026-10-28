@@ -21,11 +21,25 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.212.1（2026-10-28）**，落地复习顶栏与二级工具菜单独立解耦（-150+ 行）。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.1)。
+当前版本为 **v0.212.2（2026-10-28）**，落地番茄限时组件解耦与管理器卡型大纲挖空过滤。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.2)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.212.1）
+## 本次更新（v0.212.2）
+
+- **复习工作台番茄专注与限时到期提醒独立解耦（TSK-08 持续深化）**：
+  - 将复习界面内部的 25 分钟番茄专注周期达成休息卡片与超时到点自评提醒（`budgetExpired` / `timeoutExpired`）完整剥离为独立子组件 `ReviewCountdownBanner.svelte`；
+  - 内部自收敛番茄图标、休息建议引导、休息返回与继续复习回调；
+  - 主复习模板 `review.svelte` 代码行数再次净减 40+ 行，未使用的 alert SCSS 被完全剔除；
+  - 配备完整的独立单元测试套件 `tests/review-countdown-banner.spec.ts`；
+- **闪卡管理器（Manager）支持大纲挖空与超级块卡型筛选（对齐全卡型徽标体系）**：
+  - 在卡片管理器的药丸工具条中新增卡型下拉选择器（`cardTypeFilter`），支持「全部 / 大纲挖空 / 超级块」精准按需检索；
+  - 过滤算法与复习端大纲卡徽标体系完全一致，用户能够极速检视并批量维护大纲结构化挖空卡；
+  - 配备专门的单元测试套件 `tests/manager-card-type-filter.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 266 个测试文件、2038 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.212.1）
 
 - **复习工作台顶栏与二级工具菜单独立解耦（TSK-08 持续深化）**：
   - 将复习界面内部庞大的顶栏工具行与折叠气泡菜单（`ReviewToolbar.svelte`）完整剥离为独立子组件；

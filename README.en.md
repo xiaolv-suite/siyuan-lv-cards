@@ -19,9 +19,22 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.1** (2026-10-28), delivering ReviewToolbar component modularization and review workbench slimming (-150+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.1) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.2** (2026-10-28), delivering ReviewCountdownBanner modularization and outline cloze filter in Manager. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.2) for the package and publishing status.
 
-## What's New in v0.212.1
+## What's New in v0.212.2
+
+- **ReviewCountdownBanner Component Modularization (TSK-08)**:
+  - Extracted 25-minute Pomodoro alert and timeout notice into `ReviewCountdownBanner.svelte`.
+  - Self-contained icons, rest guidance, and pause/continue callbacks.
+  - Reduced review template code by over 40 lines.
+  - Added dedicated unit tests in `tests/review-countdown-banner.spec.ts`.
+- **Outline Cloze Filter in Card Manager**:
+  - Added `cardTypeFilter` dropdown in manager toolbar to filter outline cloze and superblock cards.
+  - Added dedicated unit tests in `tests/manager-card-type-filter.spec.ts`.
+- **Verification**:
+  - 2038 tests across 266 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.212.1
 
 - **ReviewToolbar Component Modularization (TSK-08)**:
   - Extracted the review toolbar and more-actions popover menu into `ReviewToolbar.svelte`.
