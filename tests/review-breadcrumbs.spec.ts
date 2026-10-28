@@ -3,6 +3,8 @@ import {
     cleanTitleText,
     resolveReviewBreadcrumbs,
     truncateBreadcrumbTitle,
+    formatHPathDisplay,
+    resolveCardBreadcrumbsFromRows,
 } from "../src/core/review-breadcrumbs";
 import enJson from "../public/i18n/en.json";
 import zhJson from "../public/i18n/zh-CN.json";
@@ -117,5 +119,26 @@ describe("BX-11: Review Context Breadcrumbs (复习来源层级面包屑)", () =
         expect(zhJson.reviewBreadcrumbs.ellipsis).toBe("中间层级已折叠");
         expect(enJson.reviewBreadcrumbs.tooltip).toContain("hierarchical context");
         expect(enJson.reviewBreadcrumbs.ellipsis).toContain("collapsed");
+    });
+
+    describe("formatHPathDisplay & resolveCardBreadcrumbsFromRows", () => {
+        it("正确格式化 hpath 显示字符串", () => {
+            expect(formatHPathDisplay("/笔记/章节一/知识点A")).toBe("笔记 › 章节一 › 知识点A");
+            expect(formatHPathDisplay("")).toBe("");
+            expect(formatHPathDisplay(undefined)).toBe("");
+        });
+
+        it("从 SQL 行记录解析路径与面包屑", () => {
+            const rows = [{ hpath: "/知识库/计算机/算法" }];
+            const res = resolveCardBreadcrumbsFromRows("c1", rows);
+            expect(res.currentHPath).toBe("知识库 › 计算机 › 算法");
+            expect(res.currentBreadcrumbs).not.toBeNull();
+            expect(res.currentBreadcrumbs?.cardId).toBe("c1");
+        });
+
+        it("空行记录或无 hpath 字段安全降级", () => {
+            expect(resolveCardBreadcrumbsFromRows("c1", [])).toEqual({ currentHPath: "", currentBreadcrumbs: null });
+            expect(resolveCardBreadcrumbsFromRows("c1", null)).toEqual({ currentHPath: "", currentBreadcrumbs: null });
+        });
     });
 });

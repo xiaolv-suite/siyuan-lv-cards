@@ -183,3 +183,14 @@ export function closeReviewAudio(ctx: AudioContext | null): void {
         // 旁路
     }
 }
+
+/**
+ * 判定听写模式下是否应当自动朗读答案
+ */
+export function shouldAutoSpeakDictation(
+    typingEnabled: boolean,
+    dictationEnabled: boolean,
+    expectedText: string
+): boolean {
+    return Boolean(typingEnabled && dictationEnabled && expectedText?.trim());
+}

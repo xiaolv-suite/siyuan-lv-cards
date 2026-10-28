@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.214.5 2026-10-29 · 路径面包屑行记录解析与听写自动朗读判定解耦落地
+
+- **路径面包屑行记录解析解耦（`core/review-breadcrumbs.ts`，TSK-08 持续深化）**：
+  - 提炼 `formatHPathDisplay`：纯函数标准化将思源块 hpath 格式化为层级导航路径（如 `笔记 › 章节 › 知识点`）；
+  - 提炼 `resolveCardBreadcrumbsFromRows`：从 SQL 查询返回的行记录安全提取路径字符串与面包屑链对象，自带空记录防御；
+  - 在 `tests/review-breadcrumbs.spec.ts` 中新增 3 项单元测试；
+- **听写自动朗读判定纯函数化（`core/review-audio.ts`）**：
+  - 提炼 `shouldAutoSpeakDictation`：统一收敛打字模式、听写开关及答案非空判定的组合逻辑；
+  - 在 `tests/review-audio.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 进一步精简，移除内联字符串替换与条件组合；
+  - 全库扩展至 289 个测试文件、2223 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.4 2026-10-29 · 选项选中流转/快速改期请求构建与分级提示状态机解耦落地
 
 - **选项选中状态流转解耦（`core/quiz-interactive.ts`，TSK-08 持续深化）**：

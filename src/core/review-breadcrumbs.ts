@@ -190,3 +190,35 @@ export function parseHPathToBreadcrumbs(
     });
 }
 
+/**
+ * 格式化思源文档 hpath 为界面友好路径展示（如 "算法笔记 › 二叉树 › 平衡二叉树"）
+ */
+export function formatHPathDisplay(hpath: string | undefined): string {
+    if (!hpath) return "";
+    return String(hpath).trim().replace(/^\/+/, "").replace(/\/+$/, "").replace(/\//g, " › ");
+}
+
+export interface CardPathResolution {
+    currentHPath: string;
+    currentBreadcrumbs: ReviewBreadcrumbChain | null;
+}
+
+/**
+ * 解析 SQL 查询返回的行记录提取路径与面包屑
+ */
+export function resolveCardBreadcrumbsFromRows(
+    cardID: string,
+    rows: any[] | null | undefined
+): CardPathResolution {
+    const rawHPath = rows?.[0]?.hpath;
+    if (!rawHPath) {
+        return { currentHPath: "", currentBreadcrumbs: null };
+    }
+    const hpathStr = String(rawHPath);
+    return {
+        currentHPath: formatHPathDisplay(hpathStr),
+        currentBreadcrumbs: parseHPathToBreadcrumbs(cardID, hpathStr),
+    };
+}
+
+

@@ -31,7 +31,7 @@
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
-    import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio } from "@/core/review-audio";
+    import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze } from "@/core/cloze-stepper";
@@ -47,7 +47,7 @@
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
-    import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
+    import { resolveCardBreadcrumbsFromRows, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
@@ -657,9 +657,10 @@
             try {
                 if (siyuanApi.sqlQuery) {
                     const rows = await siyuanApi.sqlQuery(`SELECT hpath FROM blocks WHERE id = '${blockID.replace(/'/g, "''")}' LIMIT 1`);
-                    if (seq === loadSeq && rows?.[0]?.hpath) {
-                        currentHPath = String(rows[0].hpath).replace(/^\//, "").replace(/\//g, " › ");
-                        currentBreadcrumbs = parseHPathToBreadcrumbs(blockID, String(rows[0].hpath));
+                    if (seq === loadSeq) {
+                        const pathRes = resolveCardBreadcrumbsFromRows(blockID, rows);
+                        currentHPath = pathRes.currentHPath;
+                        currentBreadcrumbs = pathRes.currentBreadcrumbs;
                     }
                 }
             } catch {
@@ -893,7 +894,7 @@
         }
         restartTimeout();
         // 听写模式：问题态自动朗读答案（M4·FR6，需打字模式开启）
-        if (eff().typingEnabled && eff().dictationEnabled && expectedText) {
+        if (shouldAutoSpeakDictation(eff().typingEnabled, eff().dictationEnabled, expectedText)) {
             speakText(expectedText);
         }
     }

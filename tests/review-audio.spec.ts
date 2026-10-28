@@ -6,6 +6,7 @@ import {
     speakReviewText,
     speakAnswerText,
     closeReviewAudio,
+    shouldAutoSpeakDictation,
 } from "../src/core/review-audio";
 
 describe("review-audio 纯逻辑与防御式降级", () => {
@@ -154,6 +155,19 @@ describe("review-audio 纯逻辑与防御式降级", () => {
             closeReviewAudio(mockCtx as any);
             expect(mockClose).not.toHaveBeenCalled();
             expect(() => closeReviewAudio(null)).not.toThrow();
+        });
+    });
+
+    describe("shouldAutoSpeakDictation 听写模式自动朗读判定", () => {
+        it("打字模式与听写模式均开启且存在答案时触发", () => {
+            expect(shouldAutoSpeakDictation(true, true, "hello")).toBe(true);
+        });
+
+        it("打字关闭、听写关闭或答案为空时不触发", () => {
+            expect(shouldAutoSpeakDictation(false, true, "hello")).toBe(false);
+            expect(shouldAutoSpeakDictation(true, false, "hello")).toBe(false);
+            expect(shouldAutoSpeakDictation(true, true, "")).toBe(false);
+            expect(shouldAutoSpeakDictation(true, true, "   ")).toBe(false);
         });
     });
 });
