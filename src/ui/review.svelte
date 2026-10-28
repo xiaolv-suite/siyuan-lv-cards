@@ -63,6 +63,8 @@
     import ReviewRatingBar from "./review/ReviewRatingBar.svelte";
     import ReviewErrorTagBar from "./review/ReviewErrorTagBar.svelte";
     import ReviewReadyDashboard from "./review/ReviewReadyDashboard.svelte";
+    import ReviewSessionBanners from "./review/ReviewSessionBanners.svelte";
+    import ReviewCardBreadcrumbs from "./review/ReviewCardBreadcrumbs.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2284,76 +2286,28 @@
     {/if}
     <!-- AS-4：读屏播报区域（视觉隐藏） -->
     <LvLive message={liveMsg} tone={liveTone} />
-    {#if sessionPaused}
-        <div class="lv-recover" role="status">
-            <span>{t.review.pauseTitle}</span>
-            <button class="b3-button b3-button--small lv-btn-tool" onclick={resumePausedSession}><LvIcon name="refresh" size={12} /> <span>{t.review.pauseContinue}</span></button>
-        </div>
-    {/if}
-    <!-- BI-27 返场分流（docs/13 §4 BI-27 UI 接线）：方案展示可忽略，不自动改预算/队列 -->
-    {#if returnBanner && !recovery}
-        <div class="lv-notice" role="status">
-            <div class="lv-eyebrow">{t.review.returnTriageTitle}</div>
-            <div style="margin-top: calc(var(--lv-space-unit) * 2)">{returnBanner.planText}</div>
-            <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{returnBanner.steps.join(" · ")}</div>
-            <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 1)">{returnBanner.capText}</div>
-            <div style="margin-top: calc(var(--lv-space-unit) * 3); text-align: right">
-                <button class="b3-button b3-button--small" onclick={() => (returnBanner = null)}>{t.review.returnDismiss}</button>
-            </div>
-        </div>
-    {/if}
-    <!-- BI-9：中断恢复分支（四选一，用户拍板；disabled 项带原因） -->
-    {#if recovery}
-        <div class="lv-recover" role="group" aria-label={t.review.recoveryTitle}>
-            <span class="lv-recover-title">{t.review.recoveryTitle}</span>
-            {#if endPicked}
-                <!-- BI-8：上次收工原因随横幅提示（辅助返场分流；不改变任何分支语义） -->
-                <span class="ft__smaller ft__on-surface" style="opacity:.75">{t.endReason.last}{t.endReason[endPicked] ?? ""}</span>
-            {/if}
-            {#each recovery as opt (opt.branch)}
-                <button
-                    class="b3-button b3-button--small"
-                    class:b3-button--outline={opt.branch !== "resume"}
-                    class:lv-btn-primary={opt.branch === "resume"}
-                    disabled={!opt.enabled}
-                    title={opt.enabled ? "" : (t.recovery[opt.disabledWhyKey?.replace("recovery.", "")] ?? opt.disabledWhyKey ?? "")}
-                    onclick={() => recoveryAct(opt.branch)}
-                >{t.recovery[opt.branch]}</button>
-            {/each}
-        </div>
-    {/if}
-    {#if returnItems && !returnDismissed && !sessionDone && !!current && !emptyQueue}
-        <!-- BI-10：长期返场检查（只读预览；不写内核，重建归 BI-28 可撤销批次） -->
-        <div class="lv-return" role="status" aria-live="polite">
-            <span class="lv-return-title">{t.returnCheck.bannerTitle}</span>
-            {#each returnItems as it (it.key)}
-                <span class="b3-chip" class:b3-chip--warning={it.level === "warn"}>{it.text}</span>
-            {/each}
-            <button class="b3-button b3-button--text b3-button--small" onclick={() => (returnDismissed = true)}>{t.returnCheck.dismiss}</button>
-        </div>
-        <!-- BI-13：减负选择（点击展开对 due/历史的影响说明；纯建议可跳过） -->
-        <div class="lv-return lv-relief" role="group" aria-label={t.loadRelief.title}>
-            <span class="lv-return-title">{t.loadRelief.title}</span>
-            {#each reliefChoices as c (c.key)}
-                <button class="b3-button b3-button--small" aria-expanded={reliefOpen === c.key}
-                    onclick={() => onReliefPick(c.key)}>{t.loadRelief[c.key]}</button>
-            {/each}
-        </div>
-        {#if reliefOpen}
-            <div class="lv-return lv-relief-impact" aria-live="polite">
-                <span class="ft__smaller ft__on-surface">{t.loadRelief.impact[reliefOpen]}</span>
-            </div>
-        {/if}
-    {/if}
-    {#if qualityExcludedCardIDs.length > 0 && !emptyQueue}
-        <div class="lv-notice lv-notice--warn" role="status" aria-live="polite" style="display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); flex-wrap: wrap;">
-            <span>{t.review.qualityExcluded.replace("${n}", String(qualityExcludedCardIDs.length))}</span>
-            <div style="display: flex; gap: var(--lv-sp-2); align-items: center;">
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={recheckQualityExcluded}><LvIcon name="refresh" size={12} /> <span>{t.review.qualityRecheck}</span></button>
-                <button class="b3-button b3-button--small lv-btn-primary lv-btn-tool" onclick={() => ctx.openDashboard("maintenance")}><LvIcon name="settings" size={12} /> <span>{t.review.openMaintenance ?? "前往维护中心修复"}</span></button>
-            </div>
-        </div>
-    {/if}
+    <ReviewSessionBanners
+        {sessionPaused}
+        {returnBanner}
+        {recovery}
+        {endPicked}
+        {returnItems}
+        {returnDismissed}
+        {sessionDone}
+        hasCurrent={!!current}
+        {emptyQueue}
+        {reliefChoices}
+        {reliefOpen}
+        qualityExcludedCount={qualityExcludedCardIDs.length}
+        {t}
+        onResumeSession={resumePausedSession}
+        onDismissReturnBanner={() => (returnBanner = null)}
+        onRecoveryAct={recoveryAct}
+        onDismissReturnCheck={() => (returnDismissed = true)}
+        onReliefPick={onReliefPick}
+        onRecheckQuality={recheckQualityExcluded}
+        onOpenMaintenance={() => ctx.openDashboard("maintenance")}
+    />
     {#if loading}
         <div class="lv-center">{t.dashboard.loading}</div>
     {:else if errorMsg}
@@ -2535,47 +2489,13 @@
             />
         </div>
         <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%; margin:0 auto;`}>
-            {#if currentBreadcrumbs && currentBreadcrumbs.nodes.length > 0}
-                <!-- 汲取自闪卡小助手 ZY 与 RemNote：卡面来源文档知识语境层级面包屑 -->
-                <button
-                    type="button"
-                    class="lv-card-source-breadcrumb"
-                    title={(currentBreadcrumbs.formattedText || currentHPath) + " · " + (t.review.breadcrumbHint ?? "点击查阅来源文档上下文")}
-                    onclick={toggleContext}
-                    data-testid="review-breadcrumbs-btn"
-                >
-                    <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
-                    <span class="lv-breadcrumb-text">
-                        {#each (hideBreadcrumbParentPath && currentBreadcrumbs.nodes.length > 1 ? [currentBreadcrumbs.nodes[currentBreadcrumbs.nodes.length - 1]] : currentBreadcrumbs.nodes) as node, idx}
-                            {#if idx > 0}<span class="lv-breadcrumb-sep" aria-hidden="true">›</span>{/if}
-                            <span class="lv-breadcrumb-node" title={node.fullTitle}>{node.displayTitle}</span>
-                        {/each}
-                    </span>
-                    {#if currentBreadcrumbs.nodes.length > 1}
-                        <span
-                            role="button"
-                            tabindex="0"
-                            class="lv-breadcrumb-toggle"
-                            title={hideBreadcrumbParentPath ? (t.review?.breadcrumbShowParent ?? "显示完整父路径") : (t.review?.breadcrumbHideParent ?? "隐藏父路径（仅保留末级文档）")}
-                            onclick={(e) => { e.stopPropagation(); hideBreadcrumbParentPath = !hideBreadcrumbParentPath; }}
-                            onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); hideBreadcrumbParentPath = !hideBreadcrumbParentPath; } }}
-                        >
-                            <LvIcon name={hideBreadcrumbParentPath ? "chevron-right" : "chevron-left"} size={11} />
-                        </span>
-                    {/if}
-                </button>
-            {:else if currentHPath}
-                <!-- 汲取自闪卡小助手 ZY 与 RemNote：卡面来源文档知识语境面包屑 -->
-                <button
-                    type="button"
-                    class="lv-card-source-breadcrumb"
-                    title={t.review.breadcrumbHint ?? "点击查阅来源文档上下文"}
-                    onclick={toggleContext}
-                >
-                    <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
-                    <span class="lv-breadcrumb-text">{currentHPath}</span>
-                </button>
-            {/if}
+            <ReviewCardBreadcrumbs
+                breadcrumbs={currentBreadcrumbs}
+                hpath={currentHPath}
+                bind:hideParentPath={hideBreadcrumbParentPath}
+                {t}
+                onToggleContext={toggleContext}
+            />
             {#if !cardHtml && faceError}
                 <!-- AS-3：卡面加载失败占位（不白屏；重试不丢队列位置） -->
                 <div class="lv-center" style="display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 5); align-items: center; justify-content: center; min-height: 220px" role="status">
@@ -2917,62 +2837,6 @@
             }
         }
 
-        /* BI-9：恢复分支横幅 */
-        .lv-recover {
-            display: flex;
-            align-items: center;
-            gap: var(--lv-sp-2);
-            flex-wrap: wrap;
-            margin: 0 var(--lv-sp-5) var(--lv-sp-2);
-            padding: var(--lv-sp-2) var(--lv-sp-3);
-            background: var(--lv-primary-softer);
-            border: 1px solid var(--lv-primary-border);
-            border-radius: var(--lv-r-m);
-            font-size: var(--lv-type-body-size);
-        }
-        /* BI-10：长期返场检查横幅（warn 项多时换行；只读预览） */
-        .lv-return {
-            display: flex;
-            align-items: center;
-            gap: var(--lv-sp-2);
-            flex-wrap: wrap;
-            max-width: 760px;
-            margin: 0 auto var(--lv-sp-2);
-            width: 100%;
-            box-sizing: border-box;
-            padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
-            background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));
-            border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
-            border-radius: var(--lv-r-m);
-            box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent);
-            font-size: var(--lv-type-control-size);
-        }
-        .lv-relief {
-            button {
-                border-radius: var(--lv-r-pill);
-                border: 1px solid var(--lv-border);
-                background: var(--lv-color-surface);
-                font-size: var(--lv-type-meta-size);
-                padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 5);
-                color: var(--lv-color-text);
-                transition: all var(--lv-dur-1) var(--lv-ease);
-                &:hover {
-                    border-color: var(--lv-color-brand);
-                    color: var(--lv-color-brand);
-                    background: var(--lv-primary-soft);
-                }
-            }
-        }
-        .lv-return-title {
-            color: var(--lv-color-text-muted);
-            margin-right: var(--lv-sp-1);
-            font-weight: var(--lv-fw-semibold);
-        }
-        .lv-recover-title {
-            color: var(--lv-color-text-muted);
-            margin-right: var(--lv-sp-1);
-        }
-
         .lv-head {
             /* R52 review 面：三行结构（身份行 / 进度条 / 控制行），行距 8px、条底 1px 分隔 */
             display: flex; flex-direction: column; gap: var(--lv-sp-2);
@@ -3242,71 +3106,6 @@
 
             &.lv-anim-glow {
                 border-color: var(--lv-primary-border);
-            }
-
-            .lv-card-source-breadcrumb {
-                display: inline-flex;
-                align-items: center;
-                gap: calc(var(--lv-space-unit) * 2);
-                max-width: 100%;
-                padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6);
-                border: 1px solid var(--lv-border);
-                border-radius: var(--lv-r-pill);
-                background: color-mix(in srgb, var(--lv-color-canvas) 85%, transparent);
-                color: var(--lv-color-text-muted);
-                font-size: var(--lv-type-meta-size);
-                margin-bottom: var(--lv-sp-3);
-                cursor: pointer;
-                box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-                transition: background var(--lv-dur-1) var(--lv-ease),
-                    color var(--lv-dur-1) var(--lv-ease),
-                    border-color var(--lv-dur-1) var(--lv-ease),
-                    transform var(--lv-dur-1) var(--lv-ease),
-                    box-shadow var(--lv-dur-2) var(--lv-ease);
-
-                &:hover {
-                    background: var(--lv-surface-hover);
-                    color: var(--lv-color-brand);
-                    border-color: var(--lv-primary-border);
-                    transform: translateY(-1.5px);
-                    box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 12%, transparent);
-                }
-                &:active {
-                    transform: translateY(0.5px);
-                }
-                .lv-breadcrumb-icon {
-                    font-size: var(--lv-type-control-size);
-                    flex-shrink: 0;
-                    color: var(--lv-color-brand);
-                    opacity: 0.85;
-                }
-                .lv-breadcrumb-text {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
-                }
-                .lv-breadcrumb-sep {
-                    opacity: 0.4;
-                    font-weight: 300;
-                    padding: 0 var(--lv-space-hairline);
-                }
-                .lv-breadcrumb-toggle {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-left: calc(var(--lv-space-unit) * 1);
-                    opacity: 0.6;
-                    padding: 0 calc(var(--lv-space-unit) * 1);
-                    border-radius: var(--lv-r-circle);
-                    transition: opacity var(--lv-dur-1) var(--lv-ease), background-color var(--lv-dur-1) var(--lv-ease);
-                    &:hover {
-                        opacity: 1;
-                        background: color-mix(in srgb, var(--lv-color-brand) 15%, transparent);
-                    }
-                }
             }
         }
 

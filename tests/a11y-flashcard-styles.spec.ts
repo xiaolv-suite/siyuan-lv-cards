@@ -50,8 +50,8 @@ describe("小驴闪卡 · 无障碍与高对比度样式规范 (Epoch 5)", () =>
 
     it("声明 prefers-contrast: more 强化聚焦边界与粗体区分", () => {
         expect(indexScss).toMatch(/@media\s*\(prefers-contrast:\s*more\)/);
-        expect(indexScss).toMatch(/outline:\s*3px\s+solid\s+var\(--b3-theme-primary\);/);
+        expect(indexScss).toMatch(/outline:\s*3px\s+solid\s+var\(--(?:b3-theme-primary|lv-color-brand)\);/);
         expect(indexScss).toMatch(/outline-offset:\s*2px;/);
-        expect(indexScss).toMatch(/font-weight:\s*700;/);
+        expect(indexScss).toMatch(/font-weight:\s*(?:700|var\(--lv-fw-bold\));/);
     });
 });

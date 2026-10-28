@@ -31,14 +31,14 @@ describe("AT-17 chunk 注册契约", () => {
     });
 
     it("shell 两个页签挂载点都有失败兜底（静默空白回归）", () => {
-        const src = read("src/index.ts");
+        const src = read("src/bootstrap/tab-registrars.ts") + "\n" + read("src/index.ts");
         expect(src).toMatch(/loadHubMount\(\)\.then[\s\S]*?\.catch/);
         expect(src).toMatch(/loadReviewMount\(\)\.then[\s\S]*?\.catch/);
         expect(src).toMatch(/mountChunkFallback/);
     });
 
     it("工作台按钮回调使用插件实例（避免 init 的 this 指向页签对象）", () => {
-        const src = read("src/index.ts");
+        const src = read("src/bootstrap/tab-registrars.ts");
         expect(src).toMatch(/openWizard:\s*\(\)\s*=>\s*plugin\.openAIWizard\(\)/);
         expect(src).toMatch(/openDrill:\s*\(\)\s*=>\s*plugin\.openRepairDrill\(\)/);
         expect(src).not.toMatch(/openWizard:\s*\(\)\s*=>\s*this\.openAIWizard\(\)/);
@@ -46,12 +46,13 @@ describe("AT-17 chunk 注册契约", () => {
     });
 
     it("卡片详情版本回调使用插件实例（避免保存/接受操作丢失）", () => {
-        const src = read("src/index.ts");
-        const managerVersionCtx = src.match(/saveBlockContent:[\s\S]*?acceptContentAt:[\s\S]*?\n\s*},\n\s*exam:/)?.[0] ?? "";
-        expect(src).toMatch(/plugin\.contentVersions\s*=\s*appendVersion\(plugin\.contentVersions/);
-        expect(src).toMatch(/plugin\.persist\.save\(CONTENT_VERSIONS_DATA, plugin\.contentVersions\)/);
-        expect(src).toMatch(/contentVersionsOf:\s*\(blockID: string\) => versionsOf\(plugin\.contentVersions, blockID\)/);
-        expect(src).toMatch(/plugin\.contentVersions\s*=\s*acceptVersion\(plugin\.contentVersions/);
+        const tabSrc = read("src/bootstrap/tab-registrars.ts");
+        const indexSrc = read("src/index.ts");
+        const managerVersionCtx = tabSrc.match(/saveBlockContent:[\s\S]*?acceptContentAt:[\s\S]*?\n\s*},\n\s*exam:/)?.[0] ?? "";
+        expect(tabSrc).toMatch(/contentVersionsOf:\s*\(blockID: string\) => versionsOf\(plugin\.contentVersions, blockID\)/);
+        expect(tabSrc).toMatch(/plugin\.acceptContentVersion\(blockID,\s*at\)/);
+        expect(tabSrc).toMatch(/plugin\.saveBlockContentVersion\(blockID,\s*md\)/);
+        expect(indexSrc).toMatch(/appendVersion\(this\.contentVersions|appendVersion\(plugin\.contentVersions/);
         expect(managerVersionCtx).not.toMatch(/this\.contentVersions|this\.persist/);
     });
 });

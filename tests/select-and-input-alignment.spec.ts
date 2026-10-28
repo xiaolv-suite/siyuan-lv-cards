@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 
 describe("选择框与输入控件文字垂直/水平居中规范审查", () => {
     it("index.scss 中 b3-select 与 input 统一配置合规的最小高度、垂直对齐与行高", () => {
@@ -31,8 +31,11 @@ describe("选择框与输入控件文字垂直/水平居中规范审查", () => 
         expect(svelte).toMatch(/\.lv-filter\s*\{[\s\S]*?line-height:\s*var\(--lv-lh-control-lg\);/);
     });
 
-    it("review.svelte 中 lv-scope 下拉框严格设置 min-height、行高与文字居中", () => {
-        const svelte = readFileSync("src/ui/review.svelte", "utf8");
+    it("ReviewToolbar / review.svelte 中 lv-scope 下拉框严格设置 min-height、行高与文字居中", () => {
+        const path = existsSync("src/ui/review/ReviewToolbar.svelte")
+            ? "src/ui/review/ReviewToolbar.svelte"
+            : "src/ui/review.svelte";
+        const svelte = readFileSync(path, "utf8");
 
         expect(svelte).toMatch(/\.lv-scope\s*\{[\s\S]*?height:\s*28px;/);
         expect(svelte).toMatch(/\.lv-scope\s*\{[\s\S]*?min-height:\s*28px;/);

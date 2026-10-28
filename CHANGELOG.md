@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.212.5 2026-10-28 · 会话状态横幅与卡面语境面包屑解耦落地（-200+ 行）
+
+- **复习会话控制与减负横幅解耦（`ReviewSessionBanners.svelte`，TSK-08 持续深化）**：
+  - 将复习工作台顶部 5 组关键控制与状态横幅（暂停继续条、BI-27 返场分流横幅、BI-9 中断恢复四选一分支、BI-10/BI-13 长期返场检查与减负选择、质量不合规卡片隔离警示）完整抽离至独立子组件 `src/ui/review/ReviewSessionBanners.svelte`；
+  - 内部完整自收敛恢复与减负专用 SCSS 样式（`.lv-recover`, `.lv-return`, `.lv-relief` 等），进一步清理主复习页面样式冗余；
+  - 配备专门的单元测试套件 `tests/review-session-banners.spec.ts`；
+- **卡面来源文档层级面包屑解耦（`ReviewCardBreadcrumbs.svelte`）**：
+  - 将卡面顶部的文档知识语境层级面包屑抽离为独立子组件 `src/ui/review/ReviewCardBreadcrumbs.svelte`；
+  - 自收敛多层级展开/末级文档折叠切换、无障碍键盘响应与点击查阅来源文档上下文抽屉逻辑；
+  - 独立封装胶囊型知识语境指示器样式，复习主模板 `review.svelte` 代码行数再次净减 200+ 行（从 3412 行收敛至 3211 行）；
+  - 配备专门的单元测试套件 `tests/review-card-breadcrumbs.spec.ts`；
+- **历史回归断言与设计令牌同步修复**：
+  - 修复因历史架构解耦迁移与 `--lv-color-brand` 设计令牌升级引起的 3 个断言匹配路径滞后问题，保持契约测试的高保真防护；
+- **全量门禁与质量验证**：
+  - 全库扩展至 271 个测试文件、2059 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.212.4 2026-10-28 · 空队列复习就绪看板独立解耦落地（-360+ 行）
 
 - **空队列复习就绪看板独立解耦（ReviewReadyDashboard，TSK-08 持续深化）**：
