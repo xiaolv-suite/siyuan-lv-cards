@@ -7,6 +7,8 @@ import {
     updateSessionCountersOnRate,
     createEmptySessionCounters,
     evaluateCardTyping,
+    formatFontScalePercent,
+    shouldInvalidateCardDerivedState,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -96,6 +98,26 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
             expect(res.isBlank).toBe(false);
             expect(res.typingGrade?.suggested).toBe(3);
             expect(res.typingGrade?.chars.every(c => c.ok)).toBe(true);
+        });
+    });
+
+    describe("formatFontScalePercent", () => {
+        it("正确格式化字号百分比字符串", () => {
+            expect(formatFontScalePercent(1.0)).toBe("100%");
+            expect(formatFontScalePercent(1.2)).toBe("120%");
+            expect(formatFontScalePercent(0.85)).toBe("85%");
+            expect(formatFontScalePercent(NaN)).toBe("100%");
+        });
+    });
+
+    describe("shouldInvalidateCardDerivedState", () => {
+        it("旧 HTML 存在且与新 HTML 不一致时判定需要废弃衍生状态", () => {
+            expect(shouldInvalidateCardDerivedState("<p>旧题面</p>", "<p>新题面</p>")).toBe(true);
+        });
+
+        it("初次加载（无旧 HTML）或题面未变更时不废弃", () => {
+            expect(shouldInvalidateCardDerivedState("", "<p>新题面</p>")).toBe(false);
+            expect(shouldInvalidateCardDerivedState("<p>同一题面</p>", "<p>同一题面</p>")).toBe(false);
         });
     });
 });

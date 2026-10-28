@@ -18,7 +18,7 @@
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping } from "@/core/card-actions";
     import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -48,7 +48,7 @@
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { resolveCardBreadcrumbsFromRows, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
@@ -521,8 +521,9 @@
     function adjustFontScale(delta: number) {
         const next = clampFontScale(eff().cardFontScale || 1, delta, 0.8, 1.6);
         setOverride("cardFontScale", next);
-        announce(`字号已调整至 ${Math.round(next * 100)}%`, "polite");
-        showMessage(`${t.review.fontScaleTitle ?? "卡面字号"}: ${Math.round(next * 100)}%`, 1200, "info");
+        const text = formatFontScalePercent(next);
+        announce(`字号已调整至 ${text}`, "polite");
+        showMessage(`${t.review.fontScaleTitle ?? "卡面字号"}: ${text}`, 1200, "info");
     }
 
     function toggleMarkIssue() {
@@ -607,7 +608,7 @@
             if (seq !== loadSeq) {
                 return; // 已切到新卡，丢弃旧响应
             }
-            if (cardHtml && cardHtml !== dom) {
+            if (shouldInvalidateCardDerivedState(cardHtml, dom)) {
                 // 编辑返回后题面变化：旧选择题、打字判分与请求都失效。
                 choiceRequestSeq++;
                 choices = null;
@@ -1683,14 +1684,15 @@
 
     function submitChoiceAnswer() {
         if (!interactiveQuiz || selectedChoiceKeys.length === 0) return;
-        sessionQuizTotal++;
         const res = evaluateChoiceQuiz(interactiveQuiz.options, selectedChoiceKeys, interactiveQuiz.isMultiple);
         if (res) {
+            const nextScore = updateQuizScoreCounters({ total: sessionQuizTotal, correct: sessionQuizCorrect }, res.isCorrect);
+            sessionQuizTotal = nextScore.total;
+            sessionQuizCorrect = nextScore.correct;
             suggestedRating = res.suggestedRating;
-            if (res.isCorrect) sessionQuizCorrect++;
             playSfx(res.sfxRating as any);
             triggerHaptic(res.hapticPattern);
-            showMessage(res.message, res.messageType === "error" ? 1800 : 2000, res.messageType);
+            showMessage(res.message, res.toastDuration ?? 2000, res.messageType);
         }
         revealAnswer();
     }
@@ -1701,14 +1703,15 @@
         triggerHaptic(10);
         setTimeout(() => {
             if (!showAnswer) {
-                sessionQuizTotal++;
                 const res = evaluateJudgeQuiz(val, interactiveQuiz.judgeAnswer);
                 if (res) {
+                    const nextScore = updateQuizScoreCounters({ total: sessionQuizTotal, correct: sessionQuizCorrect }, res.isCorrect);
+                    sessionQuizTotal = nextScore.total;
+                    sessionQuizCorrect = nextScore.correct;
                     suggestedRating = res.suggestedRating;
-                    if (res.isCorrect) sessionQuizCorrect++;
                     playSfx(res.sfxRating as any);
                     triggerHaptic(res.hapticPattern);
-                    showMessage(res.message, 1800, res.messageType);
+                    showMessage(res.message, res.toastDuration ?? 1800, res.messageType);
                 }
                 revealAnswer();
             }
@@ -1727,13 +1730,14 @@
         if (target) {
             const res = evaluateFillQuiz(target, text, eff().typingStrict);
             if (res) {
+                const nextScore = updateQuizScoreCounters({ total: sessionQuizTotal, correct: sessionQuizCorrect }, res.isCorrect);
+                sessionQuizTotal = nextScore.total;
+                sessionQuizCorrect = nextScore.correct;
                 typingGrade = res.typingGrade ?? null;
                 suggestedRating = res.suggestedRating;
-                sessionQuizTotal++;
-                if (res.isCorrect) sessionQuizCorrect++;
                 playSfx(res.sfxRating as any);
                 triggerHaptic(res.hapticPattern);
-                showMessage(res.message, res.typingGrade?.isTypo ? 2200 : 1800, res.messageType);
+                showMessage(res.message, res.toastDuration ?? 1800, res.messageType);
             }
         }
         revealAnswer();

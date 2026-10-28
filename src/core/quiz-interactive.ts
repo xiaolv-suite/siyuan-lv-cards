@@ -274,6 +274,7 @@ export interface QuizEvaluationResult {
     hapticPattern: number | number[];
     message: string;
     messageType: "info" | "error";
+    toastDuration?: number;
     typingGrade?: TypingGrade;
 }
 
@@ -301,6 +302,7 @@ export function evaluateChoiceQuiz(
             hapticPattern: 15,
             message: isMultiple ? "多选全部正确！" : "回答正确！",
             messageType: "info",
+            toastDuration: 2000,
         };
     } else if (!hasWrong && selectedKeys.length < correctKeys.length) {
         return {
@@ -310,6 +312,7 @@ export function evaluateChoiceQuiz(
             hapticPattern: 20,
             message: "回答部分正确（多选漏选），已标出全部答案",
             messageType: "info",
+            toastDuration: 2000,
         };
     } else {
         return {
@@ -319,6 +322,7 @@ export function evaluateChoiceQuiz(
             hapticPattern: 25,
             message: "回答错误，已标出正确选项",
             messageType: "error",
+            toastDuration: 1800,
         };
     }
 }
@@ -339,6 +343,7 @@ export function evaluateJudgeQuiz(
         hapticPattern: isCorrect ? 15 : 25,
         message: isCorrect ? "判断正确！" : "判断错误，已标出正确答案",
         messageType: isCorrect ? "info" : "error",
+        toastDuration: 1800,
     };
 }
 
@@ -368,6 +373,25 @@ export function evaluateFillQuiz(
             ? "填空正确！"
             : "填空已对比，查看答案",
         messageType: isCorrect ? "info" : "error",
+        toastDuration: g.isTypo ? 2200 : 1800,
+    };
+}
+
+export interface QuizScoreCounters {
+    total: number;
+    correct: number;
+}
+
+/**
+ * 更新交互式题型总作答数与正确数
+ */
+export function updateQuizScoreCounters(
+    counters: QuizScoreCounters,
+    isCorrect: boolean
+): QuizScoreCounters {
+    return {
+        total: counters.total + 1,
+        correct: isCorrect ? counters.correct + 1 : counters.correct,
     };
 }
 

@@ -6,6 +6,10 @@ import {
     cleanChoiceHtml,
     checkIsAnswer,
     toggleChoiceSelection,
+    updateQuizScoreCounters,
+    evaluateChoiceQuiz,
+    evaluateJudgeQuiz,
+    evaluateFillQuiz,
 } from "../src/core/quiz-interactive";
 
 describe("quiz-interactive core parser", () => {
@@ -199,6 +203,30 @@ C. 广州
             const r2 = toggleChoiceSelection(["A", "B"], "A", true);
             expect(r2.nextKeys).toEqual(["B"]);
             expect(r2.shouldAutoSubmit).toBe(false);
+        });
+    });
+
+    describe("updateQuizScoreCounters & toastDuration", () => {
+        it("答对时总数与正确数均递增，且包含预设 toastDuration", () => {
+            const next = updateQuizScoreCounters({ total: 2, correct: 1 }, true);
+            expect(next).toEqual({ total: 3, correct: 2 });
+
+            const options = [
+                { key: "A", text: "选项A", isAnswer: true },
+                { key: "B", text: "选项B", isAnswer: false },
+            ];
+            const res = evaluateChoiceQuiz(options, ["A"], false);
+            expect(res?.toastDuration).toBe(2000);
+            expect(res?.isCorrect).toBe(true);
+        });
+
+        it("答错时仅总数递增，正确数保持不变", () => {
+            const next = updateQuizScoreCounters({ total: 5, correct: 3 }, false);
+            expect(next).toEqual({ total: 6, correct: 3 });
+
+            const judgeRes = evaluateJudgeQuiz(true, false);
+            expect(judgeRes?.toastDuration).toBe(1800);
+            expect(judgeRes?.isCorrect).toBe(false);
         });
     });
 });

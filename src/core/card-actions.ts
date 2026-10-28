@@ -12,6 +12,21 @@ export function clampFontScale(currentScale = 1, delta = 0, min = 0.7, max = 2.5
 }
 
 /**
+ * 格式化卡片字号缩放比例百分比字符串（如 "120%"）
+ */
+export function formatFontScalePercent(scale: number): string {
+    const valid = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    return `${Math.round(valid * 100)}%`;
+}
+
+/**
+ * 判定卡片题面在编辑返回后是否发生变动，需要废弃题型及打字等临时状态
+ */
+export function shouldInvalidateCardDerivedState(existingHtml: string, incomingHtml: string): boolean {
+    return Boolean(existingHtml && existingHtml !== incomingHtml);
+}
+
+/**
  * 切换格式问题卡片标记集合（不可变操作）
  */
 export function toggleCardIssue(

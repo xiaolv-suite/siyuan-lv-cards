@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.214.6 2026-10-29 · 题型得分统计更新/字号百分比格式化与题面失效判定解耦落地
+
+- **交互题型得分统计更新解耦（`core/quiz-interactive.ts`，TSK-08 持续深化）**：
+  - 提炼 `updateQuizScoreCounters`：纯函数统一累加总题数（`total`）与答对数（`correct`），消除主复习组件三处题型提交中的分散累加；
+  - `evaluateChoiceQuiz` / `evaluateJudgeQuiz` / `evaluateFillQuiz` 增强携带 `toastDuration`，消除组件层内联硬编码提示延时；
+  - 在 `tests/quiz-interactive.spec.ts` 中新增单元测试；
+- **字号百分比格式化与题面衍生状态废弃判定解耦（`core/card-actions.ts`）**：
+  - 提炼 `formatFontScalePercent`：格式化卡面缩放比例百分比字符串（自带非有限值与空值防御）；
+  - 提炼 `shouldInvalidateCardDerivedState`：判定卡片题面在编辑返回后是否发生变动，需要废弃题型及打字等临时状态；
+  - 在 `tests/card-actions.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2228 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.5 2026-10-29 · 路径面包屑行记录解析与听写自动朗读判定解耦落地
 
 - **路径面包屑行记录解析解耦（`core/review-breadcrumbs.ts`，TSK-08 持续深化）**：
