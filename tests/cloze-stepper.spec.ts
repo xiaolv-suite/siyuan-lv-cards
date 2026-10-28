@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     revealSingleCloze,
     queryClozeMarks,
     isAllClozeRevealed,
     stepNextCloze,
+    advanceClozeStep,
 } from "@/core/cloze-stepper";
 
 describe("cloze-stepper 逐空揭晓控制器", () => {
@@ -82,5 +83,21 @@ describe("cloze-stepper 逐空揭晓控制器", () => {
 
         const res = stepNextCloze(div);
         expect(res.revealed).toBe(false);
+    });
+
+    describe("advanceClozeStep", () => {
+        it("步数递增并在未全部揭晓时不触发回调", () => {
+            const onAllRevealed = vi.fn();
+            const count = advanceClozeStep(1, false, onAllRevealed);
+            expect(count).toBe(2);
+            expect(onAllRevealed).not.toHaveBeenCalled();
+        });
+
+        it("全部揭晓时执行 onAllRevealed 回调", () => {
+            const onAllRevealed = vi.fn();
+            const count = advanceClozeStep(2, true, onAllRevealed);
+            expect(count).toBe(3);
+            expect(onAllRevealed).toHaveBeenCalledTimes(1);
+        });
     });
 });

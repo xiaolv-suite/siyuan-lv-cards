@@ -60,6 +60,25 @@ export function formatCountdown(totalSeconds: number): string {
     return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+export interface CountdownStartEligibilityParams {
+    timeoutMode: TimeoutMode;
+    hasCurrent: boolean;
+    faceReady: boolean;
+    sessionPaused: boolean;
+    showPauseModal: boolean;
+    showSessionOptionsModal: boolean;
+}
+
+/**
+ * 判定当前是否具备启动倒计时条件（超时模式非 off、卡片就绪且未处于暂停或模态弹窗状态）
+ */
+export function isCountdownEligible(params: CountdownStartEligibilityParams): boolean {
+    if (params.timeoutMode === "off") return false;
+    if (!params.hasCurrent || !params.faceReady) return false;
+    if (params.sessionPaused || params.showPauseModal || params.showSessionOptionsModal) return false;
+    return true;
+}
+
 /**
  * 创建全功能复习倒计时状态机控制器
  */

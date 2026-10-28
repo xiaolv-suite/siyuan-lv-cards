@@ -80,3 +80,18 @@ export function stepNextCloze(container: HTMLElement | null, forceAll = false): 
     }
     return { revealed: false, allRevealed: true, nextElement: null };
 }
+
+/**
+ * 推进挖空揭晓步数计数，若全部揭晓则触发完成回调
+ */
+export function advanceClozeStep(
+    currentCount: number,
+    allRevealed: boolean,
+    onAllRevealed: () => void
+): number {
+    const nextCount = currentCount + 1;
+    if (allRevealed) {
+        onAllRevealed();
+    }
+    return nextCount;
+}

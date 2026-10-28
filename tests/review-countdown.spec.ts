@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createReviewCountdown, formatCountdown } from "../src/core/review-countdown";
+import { createReviewCountdown, formatCountdown, isCountdownEligible } from "../src/core/review-countdown";
 
 describe("review-countdown 复习倒计时控制器（AR-7 壁钟校准）", () => {
     describe("formatCountdown 文本格式化", () => {
@@ -124,6 +124,36 @@ describe("review-countdown 复习倒计时控制器（AR-7 壁钟校准）", () 
             fakeNow += 5000;
             vi.advanceTimersByTime(5000);
             expect(onExpire).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("isCountdownEligible 倒计时启动就绪条件", () => {
+        const base = {
+            timeoutMode: "reveal" as const,
+            hasCurrent: true,
+            faceReady: true,
+            sessionPaused: false,
+            showPauseModal: false,
+            showSessionOptionsModal: false,
+        };
+
+        it("所有条件满足时允许启动倒计时", () => {
+            expect(isCountdownEligible(base)).toBe(true);
+        });
+
+        it("timeoutMode 为 off 时不允许启动", () => {
+            expect(isCountdownEligible({ ...base, timeoutMode: "off" })).toBe(false);
+        });
+
+        it("无当前卡片或卡面未就绪时不允许启动", () => {
+            expect(isCountdownEligible({ ...base, hasCurrent: false })).toBe(false);
+            expect(isCountdownEligible({ ...base, faceReady: false })).toBe(false);
+        });
+
+        it("会话处于暂停或打开任意模态窗时不启动", () => {
+            expect(isCountdownEligible({ ...base, sessionPaused: true })).toBe(false);
+            expect(isCountdownEligible({ ...base, showPauseModal: true })).toBe(false);
+            expect(isCountdownEligible({ ...base, showSessionOptionsModal: true })).toBe(false);
         });
     });
 });

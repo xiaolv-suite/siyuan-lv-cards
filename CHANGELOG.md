@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.214.9 2026-10-29 · 倒计时启动前置条件与挖空步进完成回调解耦落地
+
+- **倒计时启动前置条件判定解耦（`core/review-countdown.ts`，TSK-08 持续深化）**：
+  - 提炼 `isCountdownEligible`：纯函数统一校验超时模式非 `off`、当前卡片就绪且未处于暂停或模态窗口开启状态；
+  - 在 `tests/review-countdown.spec.ts` 中新增 4 项单元测试；
+- **挖空揭晓步进与完成判定解耦（`core/cloze-stepper.ts`）**：
+  - 提炼 `advanceClozeStep`：纯函数统一累加挖空揭晓计数并在全部揭晓时执行翻面回调；
+  - 消除 `review.svelte` 中 `onCardContentClick` 与 `revealNextClozeOrAll` 的重复状态处理；
+  - 在 `tests/cloze-stepper.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2239 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.8 2026-10-29 · 矢量画板与绘图卡面判定解耦落地
 
 - **矢量画板与绘图卡面判定解耦（`core/card-face.ts`，TSK-08 持续深化）**：

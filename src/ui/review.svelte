@@ -33,8 +33,8 @@
     import { resolveTouchSwipe, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
-    import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
-    import { stepNextCloze } from "@/core/cloze-stepper";
+    import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
+    import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
@@ -1009,8 +1009,7 @@
         if (act.type === "zoom-image") {
             openZoomedImage(act.src, act.alt);
         } else if (act.type === "cloze-reveal") {
-            stepRevealedCount++;
-            if (act.allRevealed) revealAnswer();
+            stepRevealedCount = advanceClozeStep(stepRevealedCount, act.allRevealed, revealAnswer);
         }
     }
 
@@ -1029,10 +1028,7 @@
     function revealNextClozeOrAll(forceAll = false): boolean {
         const res = stepNextCloze(cardEl, forceAll);
         if (res.revealed) {
-            stepRevealedCount++;
-            if (res.allRevealed) {
-                revealAnswer();
-            }
+            stepRevealedCount = advanceClozeStep(stepRevealedCount, res.allRevealed, revealAnswer);
             return true;
         }
         return false;
@@ -1086,7 +1082,14 @@
         stopTimeout();
         timeoutExpired = false;
         const s = eff();
-        if (s.timeoutMode === "off" || !current || !faceReady || sessionPaused || showPauseModal || showSessionOptionsModal) {
+        if (!isCountdownEligible({
+            timeoutMode: s.timeoutMode,
+            hasCurrent: Boolean(current),
+            faceReady,
+            sessionPaused,
+            showPauseModal,
+            showSessionOptionsModal,
+        })) {
             timeoutLeft = 0;
             return;
         }
