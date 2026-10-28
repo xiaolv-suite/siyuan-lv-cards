@@ -22,7 +22,7 @@
     import { mergeSessionPrefs, pruneSessionPrefs } from "@/core/session-prefs";
     import { hasSessionProgress, markSessionCompleted, withEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, returnCheck, type ReturnCheckFacts } from "@/core/return-check";
-    import { avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired } from "@/core/session-budget";
+    import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired } from "@/core/session-budget";
     import { nominateVariant } from "@/core/question-rotation";
     import { buildChoiceOptions } from "@/core/choice-options";
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion } from "@/core/card-face";
@@ -57,6 +57,7 @@
     import ReviewActionModals from "./review/ReviewActionModals.svelte";
     import ReviewHelpAndPeek from "./review/ReviewHelpAndPeek.svelte";
     import ReviewContextDrawer from "./review/ReviewContextDrawer.svelte";
+    import ReviewSessionPrefs from "./review/ReviewSessionPrefs.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2991,72 +2992,21 @@
             {t}
             onClose={() => (ctxOpen = false)}
         />
-        {#if prefsOpen}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="lv-prefs">
-                <div class="lv-prefs-head">
-                    <span>{t.review.prefsTitle}</span>
-                    <span class="ft__smaller ft__on-surface">{t.review.prefsHint}</span>
-                </div>
-                <div class="lv-prefs-row">
-                    <span>{t.settings.ratingStyle}</span>
-                    <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small" class:lv-btn-primary={eff().ratingStyle === "four"} onclick={() => setOverride("ratingStyle", "four")}>{t.review.prefsFour}</button>
-                    <button class="b3-button b3-button--small" class:lv-btn-primary={eff().ratingStyle === "three"} onclick={() => setOverride("ratingStyle", "three")}>{t.review.prefsThree}</button>
-                </div>
-                <div class="lv-prefs-row">
-                    <span>{t.settings.reverseOrder}</span>
-                    <div class="fn__flex-1"></div>
-                    <input type="checkbox" class="b3-switch" checked={eff().reverseOrder} onchange={(e: Event) => setOverride("reverseOrder", (e.target as HTMLInputElement).checked)} />
-                </div>
-                <!-- 混合题型轮换（v0.179.0）：本场按张数轮换翻面/打字/选择（展示层） -->
-                <div class="lv-prefs-row">
-                    <span>{t.settings.mixedRotationLabel}</span>
-                    <div class="fn__flex-1"></div>
-                    <input type="checkbox" class="b3-switch" checked={eff().mixedRotation === true} onchange={(e: Event) => setOverride("mixedRotation", (e.target as HTMLInputElement).checked)} />
-                </div>
-                <div class="lv-prefs-row">
-                    <span>{t.settings.timeoutMode}</span>
-                    <div class="fn__flex-1"></div>
-                    <select class="b3-select b3-select--small" value={eff().timeoutMode} onchange={(e: Event) => setOverride("timeoutMode", (e.target as HTMLSelectElement).value)}>
-                        <option value="off">{t.settings.timeoutOff}</option>
-                        <option value="reveal">{t.settings.timeoutReveal}</option>
-                        <option value="forget">{t.settings.timeoutForget}</option>
-                    </select>
-                </div>
-                <!-- BI-12：本场时间预算（预设或自定义；预算到≠失败，仅提示；剩余卡保留队列） -->
-                <div class="lv-prefs-row">
-                    <span>{t.review.budgetLabel}</span>
-                    <div class="fn__flex-1"></div>
-                    <select class="b3-select b3-select--small" value={String(budgetMin)} onchange={(e: Event) => setBudget(Number((e.target as HTMLSelectElement).value))}>
-                        <option value="0">{t.review.budgetOff}</option>
-                        {#each BUDGET_PRESETS as m (m)}
-                            <option value={String(m)}>{t.review.budgetMinutes.replace("${n}", String(m))}</option>
-                        {/each}
-                        {#if budgetMin > 0 && !(BUDGET_PRESETS as readonly number[]).includes(budgetMin)}
-                            <!-- 自定义值回显（否则 select 空白） -->
-                            <option value={String(budgetMin)}>{t.review.budgetMinutes.replace("${n}", String(budgetMin))}</option>
-                        {/if}
-                    </select>
-                    <input
-                        class="b3-text-field b3-text-field--small lv-budget-custom"
-                        type="number" min="5" max="480" step="5"
-                        aria-label={t.review.budgetCustomLabel}
-                        placeholder={t.review.budgetCustomHint}
-                        onchange={(e: Event) => setBudget(clampBudgetMinutes((e.target as HTMLInputElement).value))}
-                    />
-                </div>
-                {#if budgetEstimate}
-                    <div class="lv-prefs-row">
-                        <span class="ft__smaller ft__on-surface">{t.review.budgetEst.replace("${done}", String(budgetEstimate.done)).replace("${left}", String(budgetEstimate.left))}</span>
-                    </div>
-                {/if}
-                <div class="lv-prefs-row">
-                    <div class="fn__flex-1"></div>
-                    <button class="b3-button b3-button--small" disabled={!hasOverrides} onclick={() => (sessionOverride = {})}>{t.review.prefsReset}</button>
-                </div>
-            </div>
-        {/if}
+        <ReviewSessionPrefs
+            open={prefsOpen}
+            ratingStyle={eff().ratingStyle}
+            reverseOrder={eff().reverseOrder}
+            mixedRotation={eff().mixedRotation === true}
+            timeoutMode={eff().timeoutMode}
+            {budgetMin}
+            {budgetEstimate}
+            {hasOverrides}
+            {t}
+            onSetOverride={setOverride}
+            onSetBudget={setBudget}
+            onResetOverrides={() => (sessionOverride = {})}
+            onClose={() => (prefsOpen = false)}
+        />
             {#if budgetMin === 25 && budgetExpired && showAnswer}
                 <!-- 汲取自番茄闪卡 sy-tomato：25 分钟番茄专注周期达成，温和建议休息保护精力 -->
                 <div class="lv-notice lv-notice--warn lv-pomodoro-alert" role="status">
@@ -4144,30 +4094,6 @@
             border-color: var(--lv-color-brand) !important;
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 35%, transparent) !important;
             transition: all 0.1s var(--lv-ease) !important;
-        }
-
-        /* BX-3 本场偏好弹层：与源上下文面板同层的内联面板 */
-        .lv-prefs {
-            max-width: var(--lv-card-max, 880px);
-            width: 100%;
-            margin: 0 auto var(--lv-sp-2);
-            padding: var(--lv-sp-3);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-m);
-            background: var(--lv-surface-hover);
-            font-size: var(--lv-type-body-size);
-            .lv-prefs-head {
-                display: flex; align-items: baseline; gap: var(--lv-sp-2);
-                margin-bottom: var(--lv-sp-2);
-                & > span:first-child { font-weight: var(--lv-fw-medium); }
-            }
-            .lv-budget-custom { width: 72px; font-size: 12px; padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4); }
-            .lv-prefs-row {
-                display: flex; align-items: center; gap: var(--lv-sp-2);
-                padding: var(--lv-sp-1) 0;
-                & > span:first-child { color: var(--lv-color-text-muted); }
-                .b3-select { min-width: 9em; }
-            }
         }
 
         .lv-actions {

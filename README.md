@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.8（2026-10-28）**，落地复习来源上下文抽屉独立组件解耦。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.8)。
+当前版本为 **v0.211.9（2026-10-28）**，落地复习本场偏好面板独立组件解耦。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.9)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.8）
+## 本次更新（v0.211.9）
+
+- **复习工作台本场临时偏好面板独立解耦（TSK-08 持续深化）**：
+  - 将复习界面内部的本场偏好内联面板（`prefsOpen` / `.lv-prefs`）完整剥离为独立可测试组件 `ReviewSessionPrefs.svelte`；
+  - 面板内部自收敛评分制切换（三档/四档）、反转自测开关、混合题型轮换、超时模式选择、单场时长预算调整及恢复全局默认等微交互；
+  - 主复习模板 `review.svelte` 代码行数再次净减 80+ 行，代码整洁度与高内聚特性进一步巩固；
+  - 配备完整的独立单元测试套件 `tests/review-session-prefs.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 261 个测试文件、2026 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.8）
 
 - **复习工作台来源文档上下文抽屉独立解耦（TSK-08 持续深化）**：
   - 将复习界面内部的来源上下文抽屉（`ctxOpen` / `ctxBlocks`）彻底抽离为独立可测试组件 `ReviewContextDrawer.svelte`；
