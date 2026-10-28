@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.212.8 2026-10-28 · 重考倒计时与卡面正文题型解耦落地（-110+ 行，设计令牌突破 97%）
+
+- **短暂重考倒计时等待面板解耦（`ReviewRequeueWaiting.svelte`，TSK-08 持续深化）**：
+  - 将会话内低评分卡片重考暂存倒计时面板抽离为独立子组件 `src/ui/review/ReviewRequeueWaiting.svelte`；
+  - 内部自收敛 `.lv-empty-queue` 居中叙述样式，提供倒计时显示、队列刷新与撤销上一张操作；
+  - 配备专门的单元测试套件 `tests/review-requeue-waiting.spec.ts`（3 项用例覆盖倒计时渲染、刷新触发、历史状态与繁忙门禁禁用）；
+- **卡面正文富文本与交互题型呈现解耦（`ReviewCardBody.svelte`）**：
+  - 将卡面加载中骨架、加载失败重试占位（`.lv-face-error`）、正文富文本呈现（`.lv-card-content`，支持普通块/超级块渲染/遮罩/自定义CSS注入/公式/代码块/表格/引用自适应横滚）、交互式题型选择/判断/填空组件（`ReviewInteractiveQuiz`）以及富内容特征提示行（`faceHints`）统一抽离至独立子组件 `src/ui/review/ReviewCardBody.svelte`；
+  - 内部完整自收敛大图微缩防溢出、数学公式横滚、代码块暗色容器、引用线及表格边框等 80 行复杂排版样式；
+  - 复习主模板 `review.svelte` 代码行数由 2831 行进一步收敛至 2713 行（净减 118 行，累计自 3412 行削减近 700 行）；
+  - 全库设计令牌系统覆盖率正式突破 **97.0%**；
+  - 配备专门的单元测试套件 `tests/review-card-body.spec.ts`（4 项用例覆盖错误态重试、加载态骨架、卡面正文点击双击交互与富内容提示）；
+- **全量门禁与质量验证**：
+  - 全库扩展至 277 个测试文件、2088 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.212.7 2026-10-28 · 复习进度顶栏与作答交互控制解耦落地（-230+ 行）
 
 - **复习进度与卡片元信息顶栏解耦（`ReviewProgressHeader.svelte`，TSK-08 持续深化）**：

@@ -1,8 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { fade } from "svelte/transition";
     import { rafThrottle } from "@/libs/throttle";
-    import { getMotionDuration } from "./kit/motion";
     import { openTab, showMessage } from "siyuan";
     import {
         getRiffDueCards, getRiffDecks, getNotebookRiffDueCards, getTreeRiffDueCards, reviewRiffCard, skipReviewRiffCard,
@@ -39,19 +37,17 @@
     import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
     import LvError from "./kit/LvError.svelte";
-    import LvIcon from "./kit/LvIcon.svelte";
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { filterBurySiblings } from "@/core/sibling-cards";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
-    import { isSuperBlockHtml, renderSuperBlockAnswerFace, extractSuperBlockTexts } from "@/core/card-face";
+    import { isSuperBlockHtml, extractSuperBlockTexts } from "@/core/card-face";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
-    import ReviewInteractiveQuiz from "./review/ReviewInteractiveQuiz.svelte";
     import ReviewActionModals from "./review/ReviewActionModals.svelte";
     import ReviewHelpAndPeek from "./review/ReviewHelpAndPeek.svelte";
     import ReviewContextDrawer from "./review/ReviewContextDrawer.svelte";
@@ -68,6 +64,8 @@
     import ReviewOcclusionOverlay from "./review/ReviewOcclusionOverlay.svelte";
     import ReviewProgressHeader from "./review/ReviewProgressHeader.svelte";
     import ReviewAnswerSection from "./review/ReviewAnswerSection.svelte";
+    import ReviewRequeueWaiting from "./review/ReviewRequeueWaiting.svelte";
+    import ReviewCardBody from "./review/ReviewCardBody.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2318,19 +2316,15 @@
             <LvError message={errorMsg} onretry={loadQueue} retryLabel={t.dashboard.refresh} />
         </div>
     {:else if requeueWaiting}
-        <div class="lv-center lv-done">
-            <div class="lv-done-panel lv-empty-queue" role="status" aria-live="polite">
-                <div class="lv-eyebrow">REVIEW / {headScopeLabel}</div>
-                <div class="lv-empty-queue-title">{t.review.requeueWaitingTitle}</div>
-                <p class="ft__smaller ft__on-surface" style="margin: calc(var(--lv-space-unit) * 3) 0 0">
-                    {t.review.requeueWaitingSub.replace("${n}", String(requeueWaitSeconds))}
-                </p>
-                <div class="fn__flex lv-done-actions" style="justify-content: center; margin-top: var(--lv-sp-4)">
-                    <button class="b3-button b3-button--outline lv-btn-tool" onclick={loadQueue}><LvIcon name="refresh" size={13} /> <span>{t.dashboard.refresh}</span></button>
-                    <button class="b3-button b3-button--outline lv-btn-tool" disabled={history.length === 0 || actionBusy} onclick={undoHistory}><LvIcon name="chevron-left" size={13} /> <span>{t.review.undoLast}</span></button>
-                </div>
-            </div>
-        </div>
+        <ReviewRequeueWaiting
+            {headScopeLabel}
+            {requeueWaitSeconds}
+            historyLength={history.length}
+            {actionBusy}
+            {t}
+            onRefresh={loadQueue}
+            onUndo={undoHistory}
+        />
     {:else if emptyQueue}
         <ReviewReadyDashboard
             {headScopeLabel}
@@ -2454,42 +2448,30 @@
                 {t}
                 onToggleContext={toggleContext}
             />
-            {#if !cardHtml && faceError}
-                <!-- AS-3：卡面加载失败占位（不白屏；重试不丢队列位置） -->
-                <div class="lv-center" style="display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 5); align-items: center; justify-content: center; min-height: 220px" role="status">
-                    <span style="font-size: var(--lv-type-hero-size)"><LvIcon name="warning" size={30} /></span>
-                    <span class="ft__smaller ft__on-surface" style="text-align: center">{faceError}</span>
-                    <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" onclick={retryFace}><LvIcon name="refresh" size={12} /> <span>{t.dashboard.refresh}</span></button>
-                </div>
-            {:else if !cardHtml}
-                <div class="lv-center" style="min-height: 220px" aria-busy="true">
-                    <span class="ft__smaller ft__on-surface">{t.dashboard.loading}</span>
-                </div>
-            {:else}
-                {#key current?.cardID}
-                    <!-- 灵动感（R53 纪律内）：切卡 140ms 单次淡入，只动 opacity；翻面淡入由 lv-anim-glow 承担 -->
-                    <div class="lv-card-content lv-unified-face" class:has-interactive-choice={interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2} class:lv-masked={!showAnswer} onclick={onCardContentClick} ondblclick={onCardContentDblClick} style={`font-size: ${eff().cardFontScale || 1}em`} in:fade={{ duration: getMotionDuration("standard") }}>
-                        {#if eff().customCardCss}
-                            {@html `<style>${eff().customCardCss}</style>`}
-                        {/if}
-                        {@html interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2 ? cleanChoiceHtml(showAnswer ? (isSuperBlockHtml(cardHtml) ? renderSuperBlockAnswerFace(cardHtml) : cardHtml) : maskedCardHtml, interactiveQuiz.options) : (showAnswer ? (isSuperBlockHtml(cardHtml) ? renderSuperBlockAnswerFace(cardHtml) : cardHtml) : maskedCardHtml)}
-                    </div>
-
-                    <!-- 交互式题型作答组件（选择题/判断题/填空题） -->
-                    <ReviewInteractiveQuiz
-                        {interactiveQuiz}
-                        {showAnswer}
-                        {selectedChoiceKeys}
-                        {userJudgeChoice}
-                        {typingInput}
-                        onOptionPick={handleOptionPick}
-                        onSubmitChoice={submitChoiceAnswer}
-                        onJudgePick={handleJudgePick}
-                        onFillCheck={handleFillCheck}
-                        onTypingInput={(val) => { typingInput = val; }}
-                    />
-                {/key}
-            {/if}
+            <ReviewCardBody
+                {cardHtml}
+                {faceError}
+                currentCardID={current?.cardID ?? ""}
+                {showAnswer}
+                {maskedCardHtml}
+                {interactiveQuiz}
+                {selectedChoiceKeys}
+                {userJudgeChoice}
+                {typingInput}
+                cardFontScale={eff().cardFontScale}
+                customCardCss={eff().customCardCss}
+                {faceHints}
+                {faceHintText}
+                {t}
+                onRetryFace={retryFace}
+                {onCardContentClick}
+                {onCardContentDblClick}
+                onOptionPick={handleOptionPick}
+                onSubmitChoice={submitChoiceAnswer}
+                onJudgePick={handleJudgePick}
+                onFillCheck={handleFillCheck}
+                onTypingInput={(val) => { typingInput = val; }}
+            />
             <ReviewMemoCallout
                 {showAnswer}
                 {cardMemo}
@@ -2500,15 +2482,6 @@
                 {t}
                 onEditMemo={() => (showMemoEditor = true)}
             />
-            {#if faceHints.length > 0 && !faceError}
-                <!-- AS-3：富内容提示行（特征告知 + 窄屏横滚提示；只读不遮挡） -->
-                <div class="fn__flex fn__flex-wrap ft__smaller ft__on-surface" style="gap: calc(var(--lv-space-unit) * 3); margin-top: var(--lv-sp-2)" role="note">
-                    {#each faceHints as hintKey (hintKey)}
-                        <span class="b3-chip">{faceHintText(hintKey)}</span>
-                    {/each}
-                    <span class="ft__on-surface">{t.aiFace.scrollHint}</span>
-                </div>
-            {/if}
             <ReviewOcclusionOverlay
                 {occl}
                 {occlBox}
@@ -2679,17 +2652,6 @@
         .lv-center { margin: auto; color: var(--lv-color-text-muted); }
         .lv-error-wrap { width: min(560px, 92vw); }
 
-        /* 空队列面板：居中叙述，不做庆祝形态 */
-        .lv-empty-queue {
-            text-align: center;
-            .lv-empty-queue-title {
-                margin-top: var(--lv-sp-3);
-                font-size: var(--lv-type-title-lg-size);
-                font-weight: var(--lv-fw-heading);
-                letter-spacing: -0.02em;
-            }
-        }
-
         .lv-head {
             /* R52 review 面：三行结构（身份行 / 进度条 / 控制行），行距 8px、条底 1px 分隔 */
             display: flex; flex-direction: column; gap: var(--lv-sp-2);
@@ -2731,86 +2693,6 @@
                 border-bottom-left-radius: var(--lv-r-dialog);
                 border-bottom-right-radius: var(--lv-r-dialog);
                 opacity: 0.9;
-            }
-
-            // AS-3：富内容窄屏横向滚动（表格/长链不撑破卡面）与大图/公式防溢出
-            .lv-card-content {
-                overflow-x: auto;
-                max-width: 100%;
-
-                :global(img) {
-                    max-width: 100%;
-                    max-height: 52vh;
-                    height: auto;
-                    object-fit: contain;
-                    border-radius: var(--lv-r-m);
-                    box-shadow: var(--lv-shadow-card);
-                    margin: var(--lv-sp-2) 0;
-                    display: inline-block;
-                    vertical-align: middle;
-                    cursor: zoom-in;
-                    transition: transform var(--lv-dur-1) var(--lv-ease);
-                    &:hover { transform: scale(1.01); }
-                }
-
-                :global(.language-math),
-                :global(.katex-display) {
-                    overflow-x: auto;
-                    overflow-y: hidden;
-                    scrollbar-width: thin;
-                    padding: var(--lv-sp-2) var(--lv-sp-3);
-                    border-radius: var(--lv-r-m);
-                    background: color-mix(in srgb, var(--lv-color-canvas) 85%, transparent);
-                    margin: var(--lv-sp-2) 0;
-                }
-
-                :global(pre) {
-                    overflow-x: auto;
-                    scrollbar-width: thin;
-                    padding: var(--lv-sp-3) var(--lv-sp-4);
-                    border-radius: var(--lv-r-m);
-                    background: var(--lv-color-canvas);
-                    border: 1px solid var(--lv-border);
-                    margin: var(--lv-sp-2) 0;
-                }
-
-                :global(blockquote) {
-                    border-left: 3px solid var(--lv-color-brand);
-                    padding: var(--lv-sp-2) var(--lv-sp-3);
-                    margin: var(--lv-sp-2) 0;
-                    background: var(--lv-surface-hover);
-                    border-radius: 0 var(--lv-r-s) var(--lv-r-s) 0;
-                    color: var(--lv-color-text-muted);
-                    font-style: italic;
-                }
-
-                :global(ul), :global(ol) {
-                    padding-left: calc(var(--lv-space-unit) * 6);
-                    margin: var(--lv-sp-2) 0;
-                    :global(li) {
-                        margin: calc(var(--lv-space-unit) * 2) 0;
-                        line-height: var(--lv-lh-reading-loose);
-                        padding-left: calc(var(--lv-space-unit) * 1);
-                        &::marker {
-                            color: var(--lv-color-brand);
-                            font-weight: var(--lv-fw-semibold);
-                        }
-                    }
-                }
-
-                :global(table) {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: var(--lv-sp-3) 0;
-                    :global(th), :global(td) {
-                        padding: var(--lv-sp-2) var(--lv-sp-3);
-                        border: 1px solid var(--lv-border);
-                    }
-                    :global(th) {
-                        background: var(--lv-color-canvas);
-                        font-weight: var(--lv-fw-semibold);
-                    }
-                }
             }
 
             &.lv-anim-glow {
