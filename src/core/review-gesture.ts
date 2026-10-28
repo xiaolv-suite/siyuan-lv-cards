@@ -63,3 +63,20 @@ export function shouldIgnoreSwipeTarget(target: EventTarget | null): boolean {
     return false;
 }
 
+/**
+ * 触控手势动作解析器：综合判断弹窗屏蔽、交互元素防触碰、横向滚动避让与滑动方向距离
+ */
+export function resolveTouchSwipe(
+    showAnswer: boolean,
+    touchStart: { x: number; y: number },
+    touchEnd: { x: number; y: number },
+    target: EventTarget | null,
+    isOverlayOrModalOpen: boolean
+): ReviewSwipeAction {
+    if (isOverlayOrModalOpen || shouldIgnoreSwipeTarget(target)) return null;
+    const dx = touchEnd.x - touchStart.x;
+    const dy = touchEnd.y - touchStart.y;
+    return reviewSwipeAction(showAnswer, dx, dy);
+}
+
+

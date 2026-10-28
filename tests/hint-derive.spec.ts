@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deriveHintLevels, nextHint } from "../src/core/hint-ladder";
+import {
+    deriveHintLevels,
+    nextHint,
+    formatHintLevelIndicator,
+    stepLadderHint,
+} from "../src/core/hint-ladder";
 
 // BJ-2 内容推导：从卡面纯文本自动生成分级提示（无需预标注）
 describe("deriveHintLevels（BJ-2 内容推导）", () => {
@@ -40,5 +45,34 @@ describe("deriveHintLevels（BJ-2 内容推导）", () => {
         const h2 = nextHint(input, h1!.level);
         expect(h2).not.toBeNull();
         expect(h2!.text).not.toBe(h1!.text); // 下一级文本不同
+    });
+
+    describe("formatHintLevelIndicator", () => {
+        it("正确格式化级别位置文本", () => {
+            expect(formatHintLevelIndicator("keyword", ["keyword", "full"])).toBe("1/2");
+            expect(formatHintLevelIndicator("full", ["keyword", "full"])).toBe("2/2");
+            expect(formatHintLevelIndicator(null, ["keyword", "full"])).toBe("");
+            expect(formatHintLevelIndicator("keyword", [])).toBe("");
+        });
+    });
+
+    describe("stepLadderHint", () => {
+        it("根据卡面文本自动推导并步进下一级提示", () => {
+            const html = "<p><strong>光合作用</strong>在叶绿体中进行。这是植物合成有机物的过程。</p>";
+            const step1 = stepLadderHint(html, null);
+            expect(step1).not.toBeNull();
+            expect(step1?.level).toBe("keyword");
+            expect(step1?.text).toBe("光合作用");
+
+            const step2 = stepLadderHint(html, step1!.level);
+            expect(step2?.level).toBe("explanation");
+        });
+
+        it("传入知识对象 fact 时优先采用结构化回忆目标", () => {
+            const html = "<p>普通文本</p>";
+            const step1 = stepLadderHint(html, null, "核心要点");
+            expect(step1?.level).toBe("recall-target");
+            expect(step1?.text).toContain("回忆：核心要点");
+        });
     });
 });

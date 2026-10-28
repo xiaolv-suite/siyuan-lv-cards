@@ -33,7 +33,7 @@
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
-    import { reviewSwipeAction, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
+    import { resolveTouchSwipe, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
@@ -42,7 +42,7 @@
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
-    import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
+    import { logHint, deriveHintLevels, availableLevels, formatHintLevelIndicator, stepLadderHint, type HintLevel } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
     import LvError from "./kit/LvError.svelte";
     import { friendlyError } from "@/api/errors";
@@ -1423,18 +1423,13 @@
         if (!hintLevel || !current) return "";
         const cardText = (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
         const avail = cachedAvailLevels.length > 0 ? cachedAvailLevels : availableLevels(deriveHintLevels(cardText));
-        const idx = avail.indexOf(hintLevel);
-        return idx >= 0 ? `${idx + 1}/${avail.length}` : "";
+        return formatHintLevelIndicator(hintLevel, avail);
     }
 
     function advanceHint() {
         if (!current || showAnswer) return;
         const ko = ctx.getKOBySource?.(current.blockID);
-        const input: HintLevelsInput = ko
-            ? { "recall-target": `回忆：${ko.fact}`, keyword: ko.fact, full: (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim() }
-            : deriveHintLevels((cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim());
-        if (!input.full) return;
-        const result = nextHint(input, hintLevel);
+        const result = stepLadderHint(cardHtml, hintLevel, ko?.fact);
         if (result) {
             hintLog = [...hintLog, logHint(current.cardID, result.level)];
             if (result.level === "full") {
@@ -1779,12 +1774,10 @@
     }
 
     function onTouchEnd(e: TouchEvent) {
-        if (showPauseModal || showSessionOptionsModal || showMoreToolbar || isOverlayTarget(e.target)) return;
-        if (shouldIgnoreSwipeTarget(e.target)) return;
-        const dx = e.changedTouches[0].clientX - touchStartX;
-        const dy = e.changedTouches[0].clientY - touchStartY;
         if (!current) return;
-        const action = reviewSwipeAction(showAnswer, dx, dy);
+        const anyModal = Boolean(showPauseModal || showSessionOptionsModal || showMoreToolbar || isOverlayTarget(e.target));
+        const touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        const action = resolveTouchSwipe(showAnswer, { x: touchStartX, y: touchStartY }, touchEnd, e.target, anyModal);
         if (action === "good") { rate(3); }
         else if (action === "again") { rate(1); }
         else if (action === "hard") { rate(2); }

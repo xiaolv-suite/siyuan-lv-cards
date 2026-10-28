@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { reviewSwipeAction, shouldIgnoreSwipeTarget } from "../src/core/review-gesture";
+import { reviewSwipeAction, shouldIgnoreSwipeTarget, resolveTouchSwipe } from "../src/core/review-gesture";
 
 describe("review swipe semantics", () => {
     it("question side reveals only on an upward swipe and never rates horizontally", () => {
@@ -73,5 +73,24 @@ describe("review swipe semantics", () => {
             expect(shouldIgnoreSwipeTarget(child)).toBe(true);
         });
     });
+
+    describe("resolveTouchSwipe 触控动作整体调度", () => {
+        const start = { x: 100, y: 100 };
+        const plainDiv = document.createElement("div");
+
+        it("遮罩或弹窗开启时一律忽略滑动", () => {
+            const end = { x: 200, y: 100 }; // 良好滑动
+            expect(resolveTouchSwipe(true, start, end, plainDiv, true)).toBeNull();
+        });
+
+        it("普通卡面区域正常解析滑动动作", () => {
+            const rightEnd = { x: 200, y: 100 };
+            expect(resolveTouchSwipe(true, start, rightEnd, plainDiv, false)).toBe("good");
+
+            const upEnd = { x: 100, y: 10 };
+            expect(resolveTouchSwipe(false, start, upEnd, plainDiv, false)).toBe("reveal");
+        });
+    });
 });
+
 

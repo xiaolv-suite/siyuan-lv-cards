@@ -105,3 +105,32 @@ export function deriveHintLevels(plainText: string): HintLevelsInput {
         full: text,
     };
 }
+
+/**
+ * 获取提示级别指示文本（例如 "1/3"）
+ */
+export function formatHintLevelIndicator(
+    currentLevel: HintLevel | null,
+    available: readonly HintLevel[]
+): string {
+    if (!currentLevel || available.length === 0) return "";
+    const idx = available.indexOf(currentLevel);
+    return idx >= 0 ? `${idx + 1}/${available.length}` : "";
+}
+
+/**
+ * 构建提示阶梯输入并执行下一级提示推进
+ */
+export function stepLadderHint(
+    cardHtml: string,
+    currentLevel: HintLevel | null,
+    koFact?: string
+): { level: HintLevel; text: string } | null {
+    const cardText = (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+    const input: HintLevelsInput = koFact
+        ? { "recall-target": `回忆：${koFact}`, keyword: koFact, full: cardText }
+        : deriveHintLevels(cardText);
+    if (!input.full) return null;
+    return nextHint(input, currentLevel);
+}
+
