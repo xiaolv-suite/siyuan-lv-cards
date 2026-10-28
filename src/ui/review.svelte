@@ -65,6 +65,8 @@
     import ReviewReadyDashboard from "./review/ReviewReadyDashboard.svelte";
     import ReviewSessionBanners from "./review/ReviewSessionBanners.svelte";
     import ReviewCardBreadcrumbs from "./review/ReviewCardBreadcrumbs.svelte";
+    import ReviewMemoCallout from "./review/ReviewMemoCallout.svelte";
+    import ReviewOcclusionOverlay from "./review/ReviewOcclusionOverlay.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2532,47 +2534,16 @@
                     />
                 {/key}
             {/if}
-            {#if showAnswer}
-                {#if cardMemo}
-                    <!-- 汲取自渐进学习与闪卡小助手插件：展示备注与生态插件答案 -->
-                    <div class="lv-card-memo-callout">
-                        <span class="lv-memo-icon"><LvIcon name="lightbulb" size={18} /></span>
-                        <div class="lv-memo-body">
-                            <strong>{isCustomPluginAnswer ? (t.review.customAnswerTitle ?? "参考答案（来自生态插件）") : !cardHtml?.includes("data-type=\"mark\"") ? (t.review.memoAnswerTitle ?? "参考答案（来自思源块备注）") : (t.review.memoTitle ?? "助记线索")}</strong>
-                            <p>{cardMemo}</p>
-                        </div>
-                        <button
-                            type="button"
-                            class="b3-button b3-button--text b3-button--small lv-memo-edit-btn"
-                            title={t.review.memoEdit ?? "修改助记线索"}
-                            onclick={() => (showMemoEditor = true)}
-                        >
-                            <LvIcon name="edit" size={13} />
-                        </button>
-                    </div>
-                {:else if !occl && !cardHtml?.includes("data-type=\"mark\"") && !hasDelimitedQa(cardHtml)}
-                    <!-- 思源原生整块闪卡无损自评引导 -->
-                    <div class="lv-native-recall-guidance">
-                        <span class="lv-native-recall-icon"><LvIcon name="target" size={16} /></span>
-                        <div class="lv-native-recall-body">
-                            <strong>{t.review.nativeRecallTitle ?? "思源原生自由回忆"}</strong>
-                            <p>{t.review.nativeRecallDesc ?? "该卡为原生笔记闪卡；原笔记未做任何修改。请对照上方内容，在下方直接自评打分。"}</p>
-                        </div>
-                    </div>
-                {:else if cardHtml && !faceError}
-                    <!-- 翻面后轻量静默入口：随时为该卡记录口诀与线索 -->
-                    <div class="lv-memo-prompt">
-                        <button
-                            type="button"
-                            class="lv-memo-add-btn"
-                            title={t.review.memoModalTitle ?? "给未来的自己留助记线索"}
-                            onclick={() => (showMemoEditor = true)}
-                        >
-                            <span><LvIcon name="lightbulb" size={15} /> {t.review.tbMemo ?? "助记便签"}</span>
-                        </button>
-                    </div>
-                {/if}
-            {/if}
+            <ReviewMemoCallout
+                {showAnswer}
+                {cardMemo}
+                {isCustomPluginAnswer}
+                {cardHtml}
+                {occl}
+                {faceError}
+                {t}
+                onEditMemo={() => (showMemoEditor = true)}
+            />
             {#if faceHints.length > 0 && !faceError}
                 <!-- AS-3：富内容提示行（特征告知 + 窄屏横滚提示；只读不遮挡） -->
                 <div class="fn__flex fn__flex-wrap ft__smaller ft__on-surface" style="gap: calc(var(--lv-space-unit) * 3); margin-top: var(--lv-sp-2)" role="note">
@@ -2582,31 +2553,12 @@
                     <span class="ft__on-surface">{t.aiFace.scrollHint}</span>
                 </div>
             {/if}
-            {#if occl && occlBox}
-                <!-- 遮罩 overlay：问题态实心（点击逐框显隐），答案态半透明全显 -->
-                <svg
-                    class="lv-occl-overlay"
-                    style={`left:${occlBox.l}px;top:${occlBox.t}px;width:${occlBox.w}px;height:${occlBox.h}px;`}
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                >
-                    {#each occl.rects as r, i (i)}
-                        {@const revealed = showAnswer || occlHidden.includes(i)}
-                        <rect
-                            x={r.x * 100} y={r.y * 100} width={r.w * 100} height={r.h * 100}
-                            fill="var(--lv-color-brand)"
-                            opacity={revealed ? (showAnswer ? 0.12 : 0.05) : 0.55}
-                            stroke="var(--lv-primary-border)" stroke-width="0.3"
-                            style={`cursor:${showAnswer ? "default" : "pointer"}`}
-                            onclick={(e: Event) => {
-                                if (showAnswer) return;
-                                e.stopPropagation();
-                                occlHidden = occlHidden.includes(i) ? occlHidden.filter(x => x !== i) : [...occlHidden, i];
-                            }}
-                        />
-                    {/each}
-                </svg>
-            {/if}
+            <ReviewOcclusionOverlay
+                {occl}
+                {occlBox}
+                bind:occlHidden
+                {showAnswer}
+            />
             {#if !showAnswer}
                 <ReviewRescheduleModal
                     open={showReschedule}
@@ -2954,11 +2906,6 @@
                 position: relative;
                 z-index: var(--lv-z-card-control);
             }
-            // 遮挡 overlay 需绝对定位贴图（内联 left/top 才生效），且高于翻面层接收 rect 点击
-            .lv-occl-overlay {
-                position: absolute;
-                z-index: var(--lv-z-card-control);
-            }
 
             // AS-3：富内容窄屏横向滚动（表格/长链不撑破卡面）与大图/公式防溢出
             .lv-card-content {
@@ -3106,95 +3053,6 @@
 
             &.lv-anim-glow {
                 border-color: var(--lv-primary-border);
-            }
-        }
-
-        .lv-native-recall-guidance {
-            display: flex;
-            align-items: flex-start;
-            gap: calc(var(--lv-space-unit) * 3);
-            padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
-            margin-top: var(--lv-sp-3);
-            border: 1px solid var(--lv-primary-border);
-            border-radius: var(--lv-r-m);
-            background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
-            font-size: var(--lv-type-control-size);
-            box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 8%, transparent);
-            animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
-
-            .lv-native-recall-icon {
-                color: var(--lv-color-brand);
-                flex: none;
-                margin-top: var(--lv-space-hairline);
-            }
-            .lv-native-recall-body {
-                flex: 1;
-                strong {
-                    display: block;
-                    font-weight: var(--lv-fw-semibold);
-                    color: var(--lv-color-brand);
-                    font-size: var(--lv-type-meta-size);
-                    letter-spacing: 0.04em;
-                    margin-bottom: calc(var(--lv-space-unit) * 1);
-                }
-                p {
-                    margin: 0;
-                    color: var(--lv-color-text-muted);
-                    line-height: var(--lv-lh-reading-tight);
-                    font-size: var(--lv-type-control-size);
-                }
-            }
-        }
-
-        .lv-card-memo-callout {
-            display: flex;
-            align-items: flex-start;
-            gap: calc(var(--lv-space-unit) * 3);
-            padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 4);
-            margin-top: var(--lv-sp-3);
-            border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
-            border-radius: var(--lv-r-m);
-            background: color-mix(in srgb, var(--lv-warn-soft) 70%, var(--lv-color-surface));
-            font-size: var(--lv-type-control-size);
-            animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
-
-            .lv-memo-icon { font-size: var(--lv-type-title-size); flex: none; line-height: 1.3; }
-            .lv-memo-body {
-                flex: 1;
-                strong { display: block; font-weight: var(--lv-fw-semibold); color: var(--lv-color-warning); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: calc(var(--lv-space-unit) * 1); }
-                p { margin: 0; color: var(--lv-color-text); line-height: var(--lv-lh-meta); font-size: var(--lv-type-control-size); }
-            }
-            .lv-memo-edit-btn { flex: none; opacity: 0.7; &:hover { opacity: 1; } }
-        }
-
-        .lv-memo-prompt {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: var(--lv-sp-2);
-        }
-        .lv-memo-add-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: calc(var(--lv-space-unit) * 2);
-            border: 1px dashed var(--lv-border);
-            border-radius: var(--lv-r-pill);
-            background: transparent;
-            color: var(--lv-color-text-muted);
-            font-size: var(--lv-type-meta-size);
-            padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
-            cursor: pointer;
-            opacity: 0.75;
-            transition: all var(--lv-dur-1) var(--lv-ease);
-
-            &:hover {
-                opacity: 1;
-                color: var(--lv-color-brand);
-                border-color: var(--lv-primary-border);
-                background: var(--lv-surface-hover);
-                transform: translateY(-1px);
-            }
-            &:active {
-                transform: translateY(1px);
             }
         }
 

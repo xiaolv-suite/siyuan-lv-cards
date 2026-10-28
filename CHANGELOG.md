@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.212.6 2026-10-28 · 助记便签与图片遮挡交互蒙版解耦落地（-140+ 行）
+
+- **翻面助记便签与原生回忆引导解耦（`ReviewMemoCallout.svelte`，TSK-08 持续深化）**：
+  - 将卡面翻面后展示的生态插件答案、思源块备注参考答案、助记线索提示（`.lv-card-memo-callout`）、思源原生自由回忆无损自评引导（`.lv-native-recall-guidance`）以及助记便签快速记录入口（`.lv-memo-prompt`）抽离为独立子组件 `src/ui/review/ReviewMemoCallout.svelte`；
+  - 内部完整自收敛便签与回忆引导的 SCSS 样式，使用 `--lv-type-meta-size` 令牌进一步提升设计令牌覆盖率；
+  - 配备完整的独立单元测试套件 `tests/review-memo-callout.spec.ts`（7 项用例覆盖全部形态切换与交互触发）；
+- **图片遮挡交互蒙版组件解耦（`ReviewOcclusionOverlay.svelte`）**：
+  - 将图片遮挡（Image Occlusion）卡型的 SVG 蒙版图层及逐框点击显隐/答案态全显交互逻辑抽离为独立子组件 `src/ui/review/ReviewOcclusionOverlay.svelte`；
+  - 内置无障碍键盘支持（`role="button"`、`tabindex`、`aria-label` 与 Enter/Space 键响应），Svelte 诊断 0 警告；
+  - 复习主模板 `review.svelte` 代码行数由 3211 行进一步削减至 3069 行（净减 142 行）；
+  - 配备专门的单元测试套件 `tests/review-occlusion-overlay.spec.ts`（5 项用例覆盖包围盒定位、逐框交互、答案态只读及无障碍键盘操控）；
+- **全量门禁与质量验证**：
+  - 全库扩展至 273 个测试文件、2071 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 96.9%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.212.5 2026-10-28 · 会话状态横幅与卡面语境面包屑解耦落地（-200+ 行）
 
 - **复习会话控制与减负横幅解耦（`ReviewSessionBanners.svelte`，TSK-08 持续深化）**：
