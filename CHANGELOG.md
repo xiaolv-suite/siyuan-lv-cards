@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.215.4 2026-10-29 · 模态窗口按键拦截与退出流转解耦落地
+
+- **模态窗口按键拦截与退出流转解耦（`core/review-shortcuts.ts`，TSK-08 持续深化）**：
+  - 提炼 `resolveModalKeydownAction`：纯函数统一拦截模态弹窗打开时的按键事件，防止任何快捷键泄露并安全校验忙碌状态执行 Escape 关闭；
+  - 提炼 `shouldIgnoreReviewKeydown`：纯函数统一检测输入法合成、修饰键、长按重复或表单按钮上的 Space/Enter 忽略；
+  - 在 `tests/review-shortcuts.spec.ts` 中新增 7 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2268 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.3 2026-10-29 · 容器点击翻面守卫与助记块属性构建解耦落地
 
 - **容器点击翻面守卫与大图预览状态构建解耦（`core/card-interactions.ts`，TSK-08 持续深化）**：

@@ -32,7 +32,7 @@
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, mapSwipeActionToOutcome } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
-    import { resolveReviewKeyAction } from "@/core/review-shortcuts";
+    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, type ZoomedImageState } from "@/core/card-interactions";
@@ -1469,17 +1469,15 @@
             }
             return;
         }
-        if (showPauseModal || showSessionOptionsModal || showMemoEditor || showRetireModal) {
-            if (e.key === "Escape") {
-                if (memoSaving || retireBusy) {
-                    e.preventDefault();
-                    return;
-                }
+        const anyActionModal = Boolean(showPauseModal || showSessionOptionsModal || showMemoEditor || showRetireModal);
+        const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy));
+        if (modalAct) {
+            if (e.key === "Escape") e.preventDefault();
+            if (modalAct.shouldClose) {
                 showPauseModal = false;
                 showSessionOptionsModal = false;
                 showMemoEditor = false;
                 showRetireModal = false;
-                e.preventDefault();
                 returnFocus();
             }
             return;
@@ -1488,9 +1486,7 @@
             if (e.key === "Escape") { showMoreToolbar = false; e.preventDefault(); returnFocus(); }
             return;
         }
-        if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
-        // Enter/Space 保留控件自身行为（展开菜单、选择选项、点击按钮），避免触发后台评分。
-        if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element && e.target.closest("button, select, a, [role='button']")) return;
+        if (shouldIgnoreReviewKeydown(e)) return;
 
         // 交互式题型快捷键路由（A/B/C/D、1/2、T/F/Y/N 等）
         const quizAct = resolveQuizKeyboardAction(e, interactiveQuiz, selectedChoiceKeys, showAnswer);

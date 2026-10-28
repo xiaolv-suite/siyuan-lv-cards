@@ -199,3 +199,49 @@ export function resolveReviewKeyAction(
 
     return null;
 }
+
+/**
+ * 判定键盘事件是否应当被全局复习快捷键调度忽略
+ * （已默认阻止、输入法合成中、修饰键组合、长按重复，或交互控件按钮上的 Space/Enter）
+ */
+export function shouldIgnoreReviewKeydown(e: {
+    defaultPrevented?: boolean;
+    isComposing?: boolean;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    altKey?: boolean;
+    repeat?: boolean;
+    key?: string;
+    target?: EventTarget | null;
+}): boolean {
+    if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) {
+        return true;
+    }
+    if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element) {
+        if (e.target.closest("button, select, a, [role='button']")) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export interface ModalKeyboardResolution {
+    shouldIntercept: boolean;
+    shouldClose: boolean;
+    isBusy: boolean;
+}
+
+/**
+ * 解析模态窗口打开时的键盘事件拦截与退出响应
+ */
+export function resolveModalKeydownAction(
+    e: { key: string },
+    isAnyModalOpen: boolean,
+    isModalBusy: boolean
+): ModalKeyboardResolution | null {
+    if (!isAnyModalOpen) return null;
+    if (e.key === "Escape") {
+        return { shouldIntercept: true, shouldClose: !isModalBusy, isBusy: isModalBusy };
+    }
+    return { shouldIntercept: true, shouldClose: false, isBusy: isModalBusy };
+}

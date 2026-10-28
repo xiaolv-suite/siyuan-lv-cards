@@ -3,6 +3,8 @@ import {
     resolveReviewKeyAction,
     isInputOrEditable,
     isInteractiveControl,
+    shouldIgnoreReviewKeydown,
+    resolveModalKeydownAction,
     type ReviewShortcutContext,
 } from "../src/core/review-shortcuts";
 
@@ -188,6 +190,52 @@ describe("review-shortcuts 键盘调度解析器", () => {
 
             expect(resolveReviewKeyAction({ key: "*" }, baseContext({ hasCurrent: true }))).toBe("toggle-star");
             expect(resolveReviewKeyAction({ key: "*" }, baseContext({ hasCurrent: false }))).toBeNull();
+        });
+    });
+
+    describe("shouldIgnoreReviewKeydown", () => {
+        it("修饰键、合成中、重复按键或已阻止事件均被忽略", () => {
+            expect(shouldIgnoreReviewKeydown({ defaultPrevented: true })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ isComposing: true })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ ctrlKey: true })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ metaKey: true })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ altKey: true })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ repeat: true })).toBe(true);
+        });
+
+        it("点击按钮或链接元素上的空格与回车不被全局抢占", () => {
+            const btn = document.createElement("button");
+            expect(shouldIgnoreReviewKeydown({ key: "Enter", target: btn })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ key: " ", target: btn })).toBe(true);
+        });
+
+        it("普通卡面区域内的合法按键不被忽略", () => {
+            const div = document.createElement("div");
+            expect(shouldIgnoreReviewKeydown({ key: "1", target: div })).toBe(false);
+            expect(shouldIgnoreReviewKeydown({ key: " ", target: div })).toBe(false);
+        });
+    });
+
+    describe("resolveModalKeydownAction", () => {
+        it("模态窗打开且按 Esc 时允许拦截并关闭", () => {
+            const res = resolveModalKeydownAction({ key: "Escape" }, true, false);
+            expect(res).toEqual({ shouldIntercept: true, shouldClose: true, isBusy: false });
+        });
+
+        it("模态窗忙碌（保存中/退休中）时拦截但不允许关闭", () => {
+            const res = resolveModalKeydownAction({ key: "Escape" }, true, true);
+            expect(res).toEqual({ shouldIntercept: true, shouldClose: false, isBusy: true });
+        });
+
+        it("模态窗打开时按下其他任意键（如 Space/Enter/x）一律拦截且不关闭", () => {
+            expect(resolveModalKeydownAction({ key: "Enter" }, true, false)).toEqual({ shouldIntercept: true, shouldClose: false, isBusy: false });
+            expect(resolveModalKeydownAction({ key: " " }, true, false)).toEqual({ shouldIntercept: true, shouldClose: false, isBusy: false });
+            expect(resolveModalKeydownAction({ key: "x" }, true, false)).toEqual({ shouldIntercept: true, shouldClose: false, isBusy: false });
+        });
+
+        it("无模态窗打开时返回 null", () => {
+            expect(resolveModalKeydownAction({ key: "Escape" }, false, false)).toBeNull();
+            expect(resolveModalKeydownAction({ key: "Enter" }, false, false)).toBeNull();
         });
     });
 });
