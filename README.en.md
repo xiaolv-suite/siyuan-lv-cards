@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.7** (2026-10-28), delivering ReviewHelpAndPeek component decoupling and review workbench modularization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.7) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.8** (2026-10-28), delivering ReviewContextDrawer component modularization and context drawer decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.8) for the package and publishing status.
 
-## What's New in v0.211.7
+## What's New in v0.211.8
+
+- **ReviewContextDrawer Component Modularization (TSK-08)**:
+  - Extracted source document context drawer (`ctxOpen` / `ctxBlocks`) into `ReviewContextDrawer.svelte`.
+  - Encapsulated skeleton loading animations, contextual blocks rendering, and current card block highlighting.
+  - Reduced review template code by over 80 lines.
+  - Added dedicated unit tests in `tests/review-context-drawer.spec.ts`.
+- **Verification**:
+  - 2021 tests across 260 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.7
 
 - **ReviewHelpAndPeek Component Modularization (TSK-08)**:
   - Extracted keyboard shortcuts help modal (`helpOpen`) and previous card review peek overlay (`peek`) into `ReviewHelpAndPeek.svelte`.

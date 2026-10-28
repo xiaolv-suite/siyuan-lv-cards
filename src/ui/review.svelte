@@ -41,7 +41,6 @@
     import LvLive from "./kit/LvLive.svelte";
     import LvChip from "./kit/LvChip.svelte";
     import LvError from "./kit/LvError.svelte";
-    import LvSkeleton from "./kit/LvSkeleton.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic } from "@/core/haptic";
@@ -57,6 +56,7 @@
     import ReviewInteractiveQuiz from "./review/ReviewInteractiveQuiz.svelte";
     import ReviewActionModals from "./review/ReviewActionModals.svelte";
     import ReviewHelpAndPeek from "./review/ReviewHelpAndPeek.svelte";
+    import ReviewContextDrawer from "./review/ReviewContextDrawer.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -2983,22 +2983,14 @@
                 </div>
             {/if}
         </div>
-        {#if ctxOpen}
-            <div class="lv-ctxpanel b3-typography">
-                <div class="lv-ctx-title">{t.review.ctxTitle}</div>
-                {#if ctxLoading}
-                    <LvSkeleton count={2} height={36} />
-                {:else if ctxBlocks.length === 0}
-                    <div class="lv-hint">{t.review.ctxNone}</div>
-                {:else}
-                    {#each ctxBlocks as b (b.id)}
-                        <div class="lv-ctx-block" class:lv-ctx-cur={current && b.id === current.blockID}>
-                            {@html b.html}
-                        </div>
-                    {/each}
-                {/if}
-            </div>
-        {/if}
+        <ReviewContextDrawer
+            open={ctxOpen}
+            blocks={ctxBlocks}
+            loading={ctxLoading}
+            currentBlockID={current?.blockID ?? ""}
+            {t}
+            onClose={() => (ctxOpen = false)}
+        />
         {#if prefsOpen}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="lv-prefs">
@@ -4152,33 +4144,6 @@
             border-color: var(--lv-color-brand) !important;
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 35%, transparent) !important;
             transition: all 0.1s var(--lv-ease) !important;
-        }
-
-        .lv-ctxpanel {
-            max-width: var(--lv-card-max, 880px);
-            width: 100%;
-            margin: 0 auto;
-            padding: var(--lv-sp-3);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-m);
-            background: var(--lv-surface-hover);
-            font-size: var(--lv-type-body-size);
-            opacity: 0.92;
-            .lv-ctx-title {
-                font-size: var(--lv-type-control-size);
-                color: var(--lv-color-text-muted);
-                margin-bottom: var(--lv-sp-2);
-            }
-            .lv-ctx-block {
-                padding: var(--lv-sp-2);
-                border-bottom: 1px dashed var(--lv-border);
-                &:last-child { border-bottom: none; }
-            }
-            .lv-ctx-cur {
-                border-left: 2px solid var(--lv-color-brand);
-                background: var(--lv-primary-softer);
-                border-radius: var(--lv-r-s);
-            }
         }
 
         /* BX-3 本场偏好弹层：与源上下文面板同层的内联面板 */
