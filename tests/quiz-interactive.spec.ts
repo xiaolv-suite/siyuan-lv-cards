@@ -5,6 +5,7 @@ import {
     parseJudgeAnswer,
     cleanChoiceHtml,
     checkIsAnswer,
+    toggleChoiceSelection,
 } from "../src/core/quiz-interactive";
 
 describe("quiz-interactive core parser", () => {
@@ -177,5 +178,27 @@ C. 广州
         expect(opts[1].isAnswer).toBe(true);
         expect(opts[0].isAnswer).toBe(false);
         expect(opts[2].isAnswer).toBe(false);
+    });
+
+    describe("toggleChoiceSelection", () => {
+        it("单选模式下替换选中国项并触发自动提交", () => {
+            const res = toggleChoiceSelection(["A"], "B", false);
+            expect(res.nextKeys).toEqual(["B"]);
+            expect(res.shouldAutoSubmit).toBe(true);
+            expect(res.hapticStrength).toBe(10);
+        });
+
+        it("多选模式下切换选中状态，不触发自动提交", () => {
+            // 新增选中
+            const r1 = toggleChoiceSelection(["A"], "B", true);
+            expect(r1.nextKeys).toEqual(["A", "B"]);
+            expect(r1.shouldAutoSubmit).toBe(false);
+            expect(r1.hapticStrength).toBe(5);
+
+            // 取消选中
+            const r2 = toggleChoiceSelection(["A", "B"], "A", true);
+            expect(r2.nextKeys).toEqual(["B"]);
+            expect(r2.shouldAutoSubmit).toBe(false);
+        });
     });
 });

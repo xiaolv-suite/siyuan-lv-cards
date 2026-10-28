@@ -129,8 +129,45 @@ export function stepLadderHint(
     const cardText = (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
     const input: HintLevelsInput = koFact
         ? { "recall-target": `回忆：${koFact}`, keyword: koFact, full: cardText }
-        : deriveHintLevels(cardText);
+        : deriveHintLevels(cardHtml || cardText);
     if (!input.full) return null;
     return nextHint(input, currentLevel);
+}
+
+export interface AdvanceHintResult {
+    level: HintLevel | null;
+    text: string;
+    shouldRevealAnswer: boolean;
+    hintLogEntry: HintLogEntry;
+}
+
+/**
+ * 推进卡片提示状态（full 级即翻面并重置提示状态，其他级别推进文本与日志）
+ */
+export function advanceCardHint(
+    cardHtml: string,
+    currentLevel: HintLevel | null,
+    cardID: string,
+    koFact?: string,
+    now = Date.now()
+): AdvanceHintResult | null {
+    const result = stepLadderHint(cardHtml, currentLevel, koFact);
+    if (!result) return null;
+
+    const logEntry = logHint(cardID, result.level, now);
+    if (result.level === "full") {
+        return {
+            level: null,
+            text: "",
+            shouldRevealAnswer: true,
+            hintLogEntry: logEntry,
+        };
+    }
+    return {
+        level: result.level,
+        text: result.text,
+        shouldRevealAnswer: false,
+        hintLogEntry: logEntry,
+    };
 }
 

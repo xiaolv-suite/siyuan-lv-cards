@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.214.4 2026-10-29 · 选项选中流转/快速改期请求构建与分级提示状态机解耦落地
+
+- **选项选中状态流转解耦（`core/quiz-interactive.ts`，TSK-08 持续深化）**：
+  - 提炼 `toggleChoiceSelection`：纯函数统一处理单选与多选选中状态切换、触感强度（`hapticStrength`）与单选自动提交（`shouldAutoSubmit`）标志；
+  - 在 `tests/quiz-interactive.spec.ts` 中新增单元测试（覆盖单选替换与多选增删）；
+- **快速改期请求构建与复用判定解耦（`core/reschedule-preview.ts`）**：
+  - 提炼 `buildRescheduleRequest`：严格校验改期合法天数（1 ~ 36500 天），安全复用正在重试的请求或计算生成 14 位目标时间戳；
+  - 在 `tests/reschedule-preview.spec.ts` 中新增 4 项单元测试；
+- **分级提示状态推进与日志解耦（`core/hint-ladder.ts`）**：
+  - 提炼 `advanceCardHint`：统一封装阶梯推导、full 级即翻面逻辑与日志条目构造；
+  - 在 `tests/hint-ladder.spec.ts` 中新增 3 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数降至 **2300 行**（净减 16 行，相较最初 3412 行累计削减达 **1112 行代码**）；
+  - 全库扩展至 289 个测试文件、2218 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.3 2026-10-29 · 中断恢复分支动作与打字作答评测解耦落地
 
 - **中断恢复决策与快照构建解耦（`core/session-recovery.ts`，TSK-08 持续深化）**：

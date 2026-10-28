@@ -71,3 +71,30 @@ export function calculateTargetDueTimestamp(
     return new Date(now + days * 86400000).toISOString().replace(/[-:T]/g, "").slice(0, 14);
 }
 
+export interface RescheduleRequest {
+    cardID: string;
+    days: number;
+    due: string;
+}
+
+/**
+ * 校验并构建改期请求（复用当前匹配的重试请求或计算生成全新时间戳）
+ */
+export function buildRescheduleRequest(
+    cardID: string | undefined,
+    rescheduleDays: number,
+    retryRequest?: RescheduleRequest | null,
+    now = Date.now()
+): RescheduleRequest | null {
+    if (!cardID) return null;
+    const days = Number(rescheduleDays);
+    if (!Number.isSafeInteger(days) || days < 1 || days > 36500) return null;
+
+    if (retryRequest && retryRequest.cardID === cardID && retryRequest.days === days) {
+        return retryRequest;
+    }
+
+    const due = calculateTargetDueTimestamp(days, null, now);
+    return { cardID, days, due };
+}
+

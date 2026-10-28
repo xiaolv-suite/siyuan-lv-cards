@@ -37,18 +37,18 @@
     import { stepNextCloze } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
-    import { computeReschedulePreview, calculateTargetDueTimestamp } from "@/core/reschedule-preview";
+    import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
-    import { logHint, deriveHintLevels, availableLevels, formatHintLevelIndicator, stepLadderHint, type HintLevel } from "@/core/hint-ladder";
+    import { deriveHintLevels, availableLevels, formatHintLevelIndicator, advanceCardHint, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
     import LvError from "./kit/LvError.svelte";
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
@@ -192,7 +192,7 @@
     // BJ-2：分级提示（不自动提交评分；纯展示+日志）
     let hintLevel: HintLevel | null = $state(null);
     let hintText = $state("");
-    let hintLog: ReturnType<typeof logHint>[] = $state([]);
+    let hintLog: HintLogEntry[] = $state([]);
     // BJ-4：遗忘卡错误原因标注（评分后可选旁路动作；标签走 i18n errReasons 段）
     let showErrTags = $state(false);
     let errTagCardID = $state("");
@@ -439,7 +439,7 @@
     let rescheduleBusy = $state(false);
     let rescheduleError = $state("");
     const actionBusy = $derived(submitting || rescheduleBusy);
-    let retryReschedule = $state<{ cardID: string; days: number; due: string } | null>(null);
+    let retryReschedule = $state<RescheduleRequest | null>(null);
 
     // R54 原型高级交互：改期目标时间友好预览
     let previewTargetLabel = $derived.by(() => {
@@ -1314,18 +1314,12 @@
     function advanceHint() {
         if (!current || showAnswer) return;
         const ko = ctx.getKOBySource?.(current.blockID);
-        const result = stepLadderHint(cardHtml, hintLevel, ko?.fact);
-        if (result) {
-            hintLog = [...hintLog, logHint(current.cardID, result.level)];
-            if (result.level === "full") {
-                // BJ-2：full 级=即翻面（设计口径）
-                showAnswer = true;
-                hintLevel = null;
-                hintText = "";
-            } else {
-                hintLevel = result.level;
-                hintText = result.text;
-            }
+        const res = advanceCardHint(cardHtml, hintLevel, current.cardID, ko?.fact);
+        if (res) {
+            hintLog = [...hintLog, res.hintLogEntry];
+            hintLevel = res.level;
+            hintText = res.text;
+            if (res.shouldRevealAnswer) revealAnswer();
         }
     }
 
@@ -1375,14 +1369,10 @@
     /** 快速改期（M3·FR5，f 键/按钮）：N 天后到期 */
     async function reschedule() {
         const card = current;
-        const days = Number(rescheduleDays);
-        if (!card || submitting || rescheduleBusy || !Number.isSafeInteger(days) || days < 1 || days > 36500) return;
-        let request = retryReschedule?.cardID === card.cardID && retryReschedule.days === days ? retryReschedule : null;
-        if (!request) {
-            const due = calculateTargetDueTimestamp(days, null);
-            request = { cardID: card.cardID, days, due };
-            retryReschedule = request;
-        }
+        if (!card || submitting || rescheduleBusy) return;
+        const request = buildRescheduleRequest(card.cardID, rescheduleDays, retryReschedule);
+        if (!request) return;
+        retryReschedule = request;
         rescheduleBusy = true;
         rescheduleError = "";
         try {
@@ -1390,7 +1380,7 @@
             retryReschedule = null;
             rescheduleError = "";
             invalidateDueCache(); // AT-4：改期改变到期时间，共享缓存失效
-            showMessage(t.review.rescheduled.replace("${n}", String(days)), 2000, "info");
+            showMessage(t.review.rescheduled.replace("${n}", String(request.days)), 2000, "info");
             if (current?.cardID === card.cardID) {
                 showReschedule = false;
                 rescheduleBusy = false;
@@ -1678,16 +1668,10 @@
 
     function handleOptionPick(key: string) {
         if (!faceReady || showAnswer || !interactiveQuiz) return;
-        if (interactiveQuiz.isMultiple) {
-            if (selectedChoiceKeys.includes(key)) {
-                selectedChoiceKeys = selectedChoiceKeys.filter(k => k !== key);
-            } else {
-                selectedChoiceKeys = [...selectedChoiceKeys, key];
-            }
-            triggerHaptic(5);
-        } else {
-            selectedChoiceKeys = [key];
-            triggerHaptic(10);
+        const res = toggleChoiceSelection(selectedChoiceKeys, key, interactiveQuiz.isMultiple);
+        selectedChoiceKeys = res.nextKeys;
+        triggerHaptic(res.hapticStrength);
+        if (res.shouldAutoSubmit) {
             setTimeout(() => {
                 if (!showAnswer) {
                     submitChoiceAnswer();

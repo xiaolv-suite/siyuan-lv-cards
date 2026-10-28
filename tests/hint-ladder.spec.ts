@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { availableLevels, hintStats, logHint, nextHint, type HintLevelsInput } from "../src/core/hint-ladder";
+import {
+    availableLevels,
+    hintStats,
+    logHint,
+    nextHint,
+    advanceCardHint,
+    type HintLevelsInput,
+} from "../src/core/hint-ladder";
 
 // BJ-2 分级提示阶梯：稀疏阶梯/下一级推进/日志与统计/不自动提交评分
 const full: HintLevelsInput = {
@@ -61,5 +68,30 @@ describe("hintStats（提示使用统计）", () => {
         expect(s.totalHints).toBe(3);
         expect(s.cardsWithHints).toBe(2);
         expect(s.deepest).toBe("context"); // c2 的 keyword < c1 的 context
+    });
+});
+
+describe("advanceCardHint（卡片提示状态流转）", () => {
+    it("初次推进提示返回非 full 级别与对应文本及日志记录", () => {
+        const res = advanceCardHint("<p><strong>线粒体</strong>是有氧呼吸的主要场所</p>", null, "c1", undefined, 1000);
+        expect(res).not.toBeNull();
+        expect(res?.level).toBe("keyword");
+        expect(res?.text).toBe("线粒体");
+        expect(res?.shouldRevealAnswer).toBe(false);
+        expect(res?.hintLogEntry).toEqual({ cardID: "c1", level: "keyword", ts: 1000 });
+    });
+
+    it("推进至 full 级别时触发翻面并清空提示", () => {
+        // 先从 explanation 推进到 full
+        const res = advanceCardHint("<p>简答卡片内容</p>", "explanation", "c1", undefined, 2000);
+        expect(res).not.toBeNull();
+        expect(res?.level).toBeNull();
+        expect(res?.text).toBe("");
+        expect(res?.shouldRevealAnswer).toBe(true);
+        expect(res?.hintLogEntry.level).toBe("full");
+    });
+
+    it("空卡面内容返回 null", () => {
+        expect(advanceCardHint("", null, "c1")).toBeNull();
     });
 });

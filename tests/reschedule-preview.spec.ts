@@ -4,6 +4,7 @@ import {
     formatRescheduleTimestamp,
     computeReschedulePreview,
     calculateTargetDueTimestamp,
+    buildRescheduleRequest,
 } from "@/core/reschedule-preview";
 
 describe("reschedule-preview 改期时间计算与预览格式化", () => {
@@ -74,6 +75,39 @@ describe("reschedule-preview 改期时间计算与预览格式化", () => {
             const due = calculateTargetDueTimestamp(1, null, mockNow);
             expect(due.length).toBe(14);
             expect(due.startsWith("20261029")).toBe(true);
+        });
+    });
+
+    describe("buildRescheduleRequest", () => {
+        const mockNow = new Date("2026-10-28T10:00:00Z").getTime();
+
+        it("合法输入生成包含 cardID、days 和 14 位 due 的请求对象", () => {
+            const req = buildRescheduleRequest("card-1", 2, null, mockNow);
+            expect(req).not.toBeNull();
+            expect(req?.cardID).toBe("card-1");
+            expect(req?.days).toBe(2);
+            expect(req?.due.length).toBe(14);
+            expect(req?.due.startsWith("20261030")).toBe(true);
+        });
+
+        it("卡片 ID 与天数匹配时复用 retryRequest", () => {
+            const prev = { cardID: "card-1", days: 2, due: "20261030100000" };
+            const req = buildRescheduleRequest("card-1", 2, prev, mockNow);
+            expect(req).toBe(prev);
+        });
+
+        it("卡片 ID 或天数变动时不复用并重新生成", () => {
+            const prev = { cardID: "card-1", days: 2, due: "20261030100000" };
+            const req = buildRescheduleRequest("card-1", 3, prev, mockNow);
+            expect(req).not.toBe(prev);
+            expect(req?.days).toBe(3);
+        });
+
+        it("非法卡片 ID 或非法天数返回 null", () => {
+            expect(buildRescheduleRequest(undefined, 2)).toBeNull();
+            expect(buildRescheduleRequest("card-1", 0)).toBeNull();
+            expect(buildRescheduleRequest("card-1", -1)).toBeNull();
+            expect(buildRescheduleRequest("card-1", 1.5)).toBeNull();
         });
     });
 });

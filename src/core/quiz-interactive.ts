@@ -412,4 +412,27 @@ export function resolveQuizKeyboardAction(
     return null;
 }
 
+export interface ChoiceSelectionResult {
+    nextKeys: string[];
+    shouldAutoSubmit: boolean;
+    hapticStrength: number;
+}
+
+/**
+ * 处理单选/多选选项选中状态切换
+ */
+export function toggleChoiceSelection(
+    currentKeys: readonly string[],
+    key: string,
+    isMultiple: boolean
+): ChoiceSelectionResult {
+    if (isMultiple) {
+        const nextKeys = currentKeys.includes(key)
+            ? currentKeys.filter(k => k !== key)
+            : [...currentKeys, key];
+        return { nextKeys, shouldAutoSubmit: false, hapticStrength: 5 };
+    }
+    return { nextKeys: [key], shouldAutoSubmit: true, hapticStrength: 10 };
+}
+
 
