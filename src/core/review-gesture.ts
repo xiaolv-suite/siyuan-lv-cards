@@ -79,4 +79,22 @@ export function resolveTouchSwipe(
     return reviewSwipeAction(showAnswer, dx, dy);
 }
 
+export type SwipeOutcome =
+    | { type: "rate"; rating: 1 | 2 | 3 | 4 }
+    | { type: "reveal" }
+    | null;
+
+/**
+ * 将手势动作映射为对应的评级数值或翻面动作
+ */
+export function mapSwipeActionToOutcome(action: ReviewSwipeAction): SwipeOutcome {
+    if (!action) return null;
+    if (action === "again") return { type: "rate", rating: 1 };
+    if (action === "hard") return { type: "rate", rating: 2 };
+    if (action === "good") return { type: "rate", rating: 3 };
+    if (action === "easy") return { type: "rate", rating: 4 };
+    if (action === "reveal") return { type: "reveal" };
+    return null;
+}
+
 

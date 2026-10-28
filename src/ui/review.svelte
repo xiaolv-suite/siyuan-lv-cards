@@ -30,12 +30,12 @@
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
-    import { resolveTouchSwipe, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
+    import { resolveTouchSwipe, shouldIgnoreSwipeTarget, mapSwipeActionToOutcome } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
-    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer } from "@/core/card-interactions";
+    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
@@ -575,7 +575,7 @@
     const hasSvgCanvas = $derived(hasSvgOrCanvasDrawing(cardHtml));
 
     function openCanvasInEditor(canvasId?: string) {
-        const id = canvasId || current?.blockID;
+        const id = resolveEditorNavigationBlockId(canvasId, current?.blockID);
         if (!id) return;
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
         openTab({ app: ctx.app, doc: { id, zoomIn: true } });
@@ -1359,8 +1359,9 @@
     }
 
     function openInEditor() {
-        if (!current) { return; }
-        openTab({ app: ctx.app, doc: { id: current.blockID, zoomIn: true } });
+        const id = resolveEditorNavigationBlockId(undefined, current?.blockID);
+        if (!id) return;
+        openTab({ app: ctx.app, doc: { id, zoomIn: true } });
     }
 
     /** 快速改期（M3·FR5，f 键/按钮）：N 天后到期 */
@@ -1642,11 +1643,12 @@
         const anyModal = Boolean(showPauseModal || showSessionOptionsModal || showMoreToolbar || isOverlayTarget(e.target));
         const touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
         const action = resolveTouchSwipe(showAnswer, { x: touchStartX, y: touchStartY }, touchEnd, e.target, anyModal);
-        if (action === "good") { rate(3); }
-        else if (action === "again") { rate(1); }
-        else if (action === "hard") { rate(2); }
-        else if (action === "easy") { rate(4); }
-        else if (action === "reveal" && faceReady) { revealAnswer(); }
+        const outcome = mapSwipeActionToOutcome(action);
+        if (outcome?.type === "rate") {
+            void rate(outcome.rating);
+        } else if (outcome?.type === "reveal" && faceReady) {
+            revealAnswer();
+        }
     }
 
     function revealAnswer() {

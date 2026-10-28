@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.215.2 2026-10-29 · 触控手势动作映射与编辑器目标块解析解耦落地
+
+- **触控手势动作结果映射解耦（`core/review-gesture.ts`，TSK-08 持续深化）**：
+  - 提炼 `mapSwipeActionToOutcome`：纯函数将四向滑动手势动作（again/hard/good/easy/reveal）映射为评级数值或翻面动作，消除组件层多层 `else-if` 分支；
+  - 在 `tests/review-gesture.spec.ts` 中新增 3 项单元测试；
+- **编辑器导航目标块 ID 解析解耦（`core/card-interactions.ts`）**：
+  - 提炼 `resolveEditorNavigationBlockId`：统一处理画板画布编辑与普通块在思源编辑器中打开时的目标块 ID 提取与回退；
+  - 规范化 `openCanvasInEditor` 与 `openInEditor` 的目标块解析；
+  - 在 `tests/card-interactions.spec.ts` 中新增 3 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2256 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.1 2026-10-29 · 选择题选项选中推进/星标反馈与时间预算预估解耦落地
 
 - **选择题选中态记录与推进解耦（`core/choice-options.ts`，TSK-08 持续深化）**：

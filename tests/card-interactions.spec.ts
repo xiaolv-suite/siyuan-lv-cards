@@ -5,6 +5,7 @@ import {
     togglePeekCard,
     isOverlayTarget,
     shouldRefreshOnPanelPointer,
+    resolveEditorNavigationBlockId,
 } from "@/core/card-interactions";
 
 describe("card-interactions 卡片内容点击、画板编辑与回看切换", () => {
@@ -112,6 +113,22 @@ describe("card-interactions 卡片内容点击、画板编辑与回看切换", (
             expect(shouldRefreshOnPanelPointer(1000, 17000, 15000)).toBe(true);
             expect(shouldRefreshOnPanelPointer(1000, 12000, 15000)).toBe(false);
             expect(shouldRefreshOnPanelPointer(0, 17000, 15000)).toBe(false);
+        });
+    });
+
+    describe("resolveEditorNavigationBlockId", () => {
+        it("优先返回 canvasId", () => {
+            expect(resolveEditorNavigationBlockId("canvas-1", "block-1")).toBe("canvas-1");
+        });
+
+        it("canvasId 为空时回退到 currentBlockId", () => {
+            expect(resolveEditorNavigationBlockId(undefined, "block-1")).toBe("block-1");
+            expect(resolveEditorNavigationBlockId("", "block-1")).toBe("block-1");
+        });
+
+        it("均为空时返回 null", () => {
+            expect(resolveEditorNavigationBlockId(undefined, undefined)).toBeNull();
+            expect(resolveEditorNavigationBlockId("", "")).toBeNull();
         });
     });
 });

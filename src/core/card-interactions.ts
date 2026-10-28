@@ -91,3 +91,13 @@ export function shouldRefreshOnPanelPointer(
     return lastPointerAt > 0 && now - lastPointerAt >= thresholdMs;
 }
 
+/**
+ * 解析在思源编辑器中打开的目标块 ID（优先使用画板/画布块 ID，回退到当前卡片块 ID）
+ */
+export function resolveEditorNavigationBlockId(
+    canvasId: string | undefined,
+    currentBlockId: string | undefined
+): string | null {
+    return canvasId || currentBlockId || null;
+}
+

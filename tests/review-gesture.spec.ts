@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { reviewSwipeAction, shouldIgnoreSwipeTarget, resolveTouchSwipe } from "../src/core/review-gesture";
+import { reviewSwipeAction, shouldIgnoreSwipeTarget, resolveTouchSwipe, mapSwipeActionToOutcome } from "../src/core/review-gesture";
 
 describe("review swipe semantics", () => {
     it("question side reveals only on an upward swipe and never rates horizontally", () => {
@@ -89,6 +89,23 @@ describe("review swipe semantics", () => {
 
             const upEnd = { x: 100, y: 10 };
             expect(resolveTouchSwipe(false, start, upEnd, plainDiv, false)).toBe("reveal");
+        });
+    });
+
+    describe("mapSwipeActionToOutcome", () => {
+        it("将四向手势动作正确映射为 1-4 级评分动作", () => {
+            expect(mapSwipeActionToOutcome("again")).toEqual({ type: "rate", rating: 1 });
+            expect(mapSwipeActionToOutcome("hard")).toEqual({ type: "rate", rating: 2 });
+            expect(mapSwipeActionToOutcome("good")).toEqual({ type: "rate", rating: 3 });
+            expect(mapSwipeActionToOutcome("easy")).toEqual({ type: "rate", rating: 4 });
+        });
+
+        it("将 reveal 动作映射为翻面动作", () => {
+            expect(mapSwipeActionToOutcome("reveal")).toEqual({ type: "reveal" });
+        });
+
+        it("null 动作返回 null", () => {
+            expect(mapSwipeActionToOutcome(null)).toBeNull();
         });
     });
 });
