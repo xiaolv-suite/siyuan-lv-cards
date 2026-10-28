@@ -86,6 +86,22 @@ export function assembleChoiceOptions(
 }
 
 /**
+ * 记录用户选择题选中项并返回更新后的选择题状态
+ */
+export function recordChoicePick(
+    choices: GeneratedChoiceState | null | undefined,
+    idx: number
+): { nextChoices: GeneratedChoiceState; shouldRevealAnswer: boolean } | null {
+    if (!choices || choices.picked !== null) {
+        return null;
+    }
+    return {
+        nextChoices: { ...choices, picked: idx },
+        shouldRevealAnswer: true,
+    };
+}
+
+/**
  * 从 HTML 字符串中提取卡片答案文本（挖空集合 > 问答答案 > 纯文本）
  */
 export function extractAnswerFromDomHtml(domHtml: string): string {

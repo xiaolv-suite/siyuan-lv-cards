@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock,
+    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate,
 } from "../src/core/session-budget";
 
 // BI-12 时间预算：预算到≠失败（不自动结束）；估计口径=可完成+未完成=剩余总量
@@ -63,5 +63,20 @@ describe("session-budget（BI-12）", () => {
         expect(formatBudgetClock(0)).toBe("0:00");
         expect(formatBudgetClock(-5)).toBe("0:00");
         expect(formatBudgetClock(Number.POSITIVE_INFINITY)).toBe("0:00");
+    });
+
+    describe("resolveBudgetEstimate", () => {
+        it("预算正常有效时返回可完成与未完成卡片预估数", () => {
+            const res = resolveBudgetEstimate(300, false, 15, 30, 20);
+            expect(res).not.toBeNull();
+            expect(res?.done).toBe(10);
+            expect(res?.left).toBe(10);
+        });
+
+        it("未启用预算、预算已过期或剩余时间非有限数值时返回 null", () => {
+            expect(resolveBudgetEstimate(0, true, 15, 30, 20)).toBeNull();
+            expect(resolveBudgetEstimate(300, false, 0, 30, 20)).toBeNull();
+            expect(resolveBudgetEstimate(Number.POSITIVE_INFINITY, false, 15, 30, 20)).toBeNull();
+        });
     });
 });

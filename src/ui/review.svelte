@@ -19,16 +19,16 @@
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
     import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent } from "@/core/card-actions";
-    import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
+    import { avgSecPerCard, budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
-    import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray } from "@/core/choice-options";
+    import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray, recordChoicePick } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing } from "@/core/card-face";
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
-    import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar } from "@/core/review-queue-pipeline";
+    import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, shouldIgnoreSwipeTarget } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
@@ -410,9 +410,7 @@
     const budgetLeft = $derived(budgetLeftSec(budgetStartedAt, budgetMin, budgetNow || Date.now()));
     const budgetExpired = $derived(isBudgetExpired(budgetStartedAt, budgetMin, budgetNow || Date.now()));
     const budgetEstimate = $derived(
-        Number.isFinite(budgetLeft) && !budgetExpired && budgetMin > 0
-            ? { done: estimateCompletable(budgetLeft, budgetAvg, queue.length), left: estimateLeftover(budgetLeft, budgetAvg, queue.length) }
-            : null
+        resolveBudgetEstimate(budgetLeft, budgetExpired, budgetMin, budgetAvg, queue.length)
     );
     function budgetClockText(): string {
         return formatBudgetClock(budgetLeft);
@@ -761,11 +759,10 @@
     }
 
     function pickChoice(idx: number) {
-        if (!choices || choices.picked !== null) {
-            return;
-        }
-        choices = { ...choices, picked: idx };
-        showAnswer = true;
+        const res = recordChoicePick(choices, idx);
+        if (!res) return;
+        choices = res.nextChoices;
+        if (res.shouldRevealAnswer) showAnswer = true;
     }
 
     async function loadQueue() {
@@ -1662,8 +1659,9 @@
         if (!current) return;
         const res = toggleCardStar(starredCardIDs, current.cardID);
         starredCardIDs = res.nextStarredIDs;
-        showMessage(res.isStarred ? "已加入重点星标卡片" : "已取消星标", res.isStarred ? 1800 : 1500, "info");
-        if (res.isStarred) triggerHaptic(15);
+        const fb = formatStarToggleFeedback(res.isStarred);
+        showMessage(fb.message, fb.toastDuration, "info");
+        if (fb.hapticPattern) triggerHaptic(fb.hapticPattern);
     }
 
     function handleOptionPick(key: string) {

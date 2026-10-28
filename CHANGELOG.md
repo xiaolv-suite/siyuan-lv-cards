@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.215.1 2026-10-29 · 选择题选项选中推进/星标反馈与时间预算预估解耦落地
+
+- **选择题选中态记录与推进解耦（`core/choice-options.ts`，TSK-08 持续深化）**：
+  - 提炼 `recordChoicePick`：不可变纯函数安全记录选择题用户选中索引并返回翻面信号；
+  - 在 `tests/choice-options.spec.ts` 中新增 3 项单元测试；
+- **星标切换反馈与震动配置解耦（`core/review-queue-pipeline.ts`）**：
+  - 提炼 `formatStarToggleFeedback`：纯函数统一输出加星/取消星标的用户提示与触感模式；
+  - 在 `tests/review-queue-pipeline.spec.ts` 中新增 2 项单元测试；
+- **时间预算完成预估状态计算解耦（`core/session-budget.ts`）**：
+  - 提炼 `resolveBudgetEstimate`：纯函数封装预算剩余、过期与可完成/未完成卡数预估；
+  - 在 `tests/session-budget.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2250 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.0 2026-10-29 · 队列截取/回看快照构建与字典路径安全解析解耦里程碑
 
 - **出题队列截取与回看快照构建解耦（`core/card-actions.ts`，TSK-08 持续深化）**：

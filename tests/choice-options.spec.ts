@@ -5,6 +5,7 @@ import {
     assembleChoiceOptions,
     extractAnswerFromDomHtml,
     shuffleArray,
+    recordChoicePick,
 } from "@/core/choice-options";
 
 describe("cleanChoiceText", () => {
@@ -92,6 +93,31 @@ describe("shuffleArray", () => {
     it("空数组和单元素数组安全返回", () => {
         expect(shuffleArray([])).toEqual([]);
         expect(shuffleArray([42])).toEqual([42]);
+    });
+});
+
+describe("recordChoicePick", () => {
+    const base = {
+        options: ["选项A", "选项B"],
+        answerIdx: 0,
+        picked: null,
+    };
+
+    it("正常记录选项并触发翻面标识", () => {
+        const res = recordChoicePick(base, 1);
+        expect(res).not.toBeNull();
+        expect(res?.nextChoices.picked).toBe(1);
+        expect(res?.shouldRevealAnswer).toBe(true);
+    });
+
+    it("已作答过的状态不可重复作答", () => {
+        const answered = { ...base, picked: 0 };
+        expect(recordChoicePick(answered, 1)).toBeNull();
+    });
+
+    it("空 choices 状态安全返回 null", () => {
+        expect(recordChoicePick(null, 0)).toBeNull();
+        expect(recordChoicePick(undefined, 0)).toBeNull();
     });
 });
 

@@ -56,3 +56,27 @@ export function formatBudgetClock(leftSec: number): string {
     return `${m}:${String(r).padStart(2, "0")}`;
 }
 
+export interface BudgetEstimateResult {
+    done: number;
+    left: number;
+}
+
+/**
+ * 计算预算内可完成与未完成卡片预估数
+ */
+export function resolveBudgetEstimate(
+    budgetLeftSec: number,
+    budgetExpired: boolean,
+    budgetMin: number,
+    budgetAvgSec: number,
+    queueLength: number
+): BudgetEstimateResult | null {
+    if (!Number.isFinite(budgetLeftSec) || budgetExpired || budgetMin <= 0) {
+        return null;
+    }
+    return {
+        done: estimateCompletable(budgetLeftSec, budgetAvgSec, queueLength),
+        left: estimateLeftover(budgetLeftSec, budgetAvgSec, queueLength),
+    };
+}
+

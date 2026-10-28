@@ -101,3 +101,20 @@ export function toggleCardStar(
         return { nextStarredIDs: next, isStarred: true };
     }
 }
+
+export interface StarToggleFeedback {
+    message: string;
+    toastDuration: number;
+    hapticPattern?: number;
+}
+
+/**
+ * 格式化星标切换的用户反馈与震动配置
+ */
+export function formatStarToggleFeedback(isStarred: boolean): StarToggleFeedback {
+    return {
+        message: isStarred ? "已加入重点星标卡片" : "已取消星标",
+        toastDuration: isStarred ? 1800 : 1500,
+        hapticPattern: isStarred ? 15 : undefined,
+    };
+}

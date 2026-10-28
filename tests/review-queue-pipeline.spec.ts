@@ -3,6 +3,7 @@ import {
     applyQueuePipeline,
     calculateReviewAccuracy,
     toggleCardStar,
+    formatStarToggleFeedback,
     type QueuePipelineCard,
 } from "@/core/review-queue-pipeline";
 
@@ -105,6 +106,22 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             expect(r2.isStarred).toBe(true);
             expect(r2.nextStarredIDs.has("c-3")).toBe(true);
             expect(r2.nextStarredIDs.size).toBe(2);
+        });
+    });
+
+    describe("formatStarToggleFeedback", () => {
+        it("加入星标提示较长且携带触感震动模式", () => {
+            const fb = formatStarToggleFeedback(true);
+            expect(fb.message).toBe("已加入重点星标卡片");
+            expect(fb.toastDuration).toBe(1800);
+            expect(fb.hapticPattern).toBe(15);
+        });
+
+        it("取消星标提示简短且无震动", () => {
+            const fb = formatStarToggleFeedback(false);
+            expect(fb.message).toBe("已取消星标");
+            expect(fb.toastDuration).toBe(1500);
+            expect(fb.hapticPattern).toBeUndefined();
         });
     });
 });
