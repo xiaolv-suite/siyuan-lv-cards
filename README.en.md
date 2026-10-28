@@ -19,9 +19,19 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.6** (2026-10-28), delivering outline tree cloze node review and dormant highlight discovery. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.6) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.211.7** (2026-10-28), delivering ReviewHelpAndPeek component decoupling and review workbench modularization. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.7) for the package and publishing status.
 
-## What's New in v0.211.6
+## What's New in v0.211.7
+
+- **ReviewHelpAndPeek Component Modularization (TSK-08)**:
+  - Extracted keyboard shortcuts help modal (`helpOpen`) and previous card review peek overlay (`peek`) into `ReviewHelpAndPeek.svelte`.
+  - Self-contained accessibility focus trapping, two-column responsive grid, and read-only card face masking.
+  - Reduced review template code by over 100 lines.
+  - Added dedicated unit tests in `tests/review-help-and-peek.spec.ts`.
+- **Verification**:
+  - 2016 tests across 259 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.211.6
 
 - **Outline Cloze Node Review (Inspired by KMind Zen)**:
   - Preserves hierarchical outline tree context in `NodeList` / `NodeListItem` cards, masking target leaf/child nodes while keeping parent scaffold visible.

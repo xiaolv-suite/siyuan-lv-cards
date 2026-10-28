@@ -21,11 +21,21 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.211.6（2026-10-28）**，落地大纲/列表树节点挖空渲染与未制卡沉睡知识自动挖掘。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.6)。
+当前版本为 **v0.211.7（2026-10-28）**，落地复习快捷键帮助与回看浮层独立解耦。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.211.7)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.211.6）
+## 本次更新（v0.211.7）
+
+- **复习工作台快捷键帮助与回看浮层独立解耦（TSK-08 持续深化）**：
+  - 将复习界面内部的快捷键帮助浮层（`helpOpen`）与回看上一张已复习卡片浮层（`peek`）完整剥离为独立子组件 `ReviewHelpAndPeek.svelte`；
+  - 浮层内部自收敛键盘无障碍焦点捕获（`helpEl.focus()`）、淡入淡出动画、双栏响应式快捷键网格及只读卡面遮罩渲染；
+  - 复习主文件 `review.svelte` 代码行数再次净减 100+ 行，整体架构更加轻盈内聚；
+  - 配备专门的独立单元测试套件 `tests/review-help-and-peek.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 259 个测试文件、2016 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.211.6）
 
 - **大纲/列表树节点级挖空复习（Cloze Node Review，借鉴 KMind Zen）**：
   - 在卡片识别中对嵌套大纲树（`NodeList` / `NodeListItem`）的挖空节点进行高保真骨架保留与结构化遮罩，为卡片标注专属 `<LvIcon name="list" size={14} /> 大纲挖空` 徽标；
