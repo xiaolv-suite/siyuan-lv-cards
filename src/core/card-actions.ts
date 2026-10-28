@@ -121,4 +121,35 @@ export function evaluateCardTyping(
     };
 }
 
+export interface LastAnsweredSnapshot<T = any> {
+    html: string;
+    card: T;
+    revealed: boolean;
+}
+
+/**
+ * 构造上一张已作答卡片回看快照
+ */
+export function createLastAnsweredSnapshot<T>(
+    card: T | null | undefined,
+    html: string,
+    revealed: boolean
+): LastAnsweredSnapshot<T> | null {
+    if (!card) return null;
+    return { html, card, revealed };
+}
+
+/**
+ * 截取当前卡片之后的剩余复习队列
+ */
+export function sliceQueueAfterCurrent<T extends { cardID: string }>(
+    queue: readonly T[],
+    currentCardID: string | undefined
+): T[] {
+    if (!currentCardID) return [...queue];
+    const idx = queue.findIndex(c => c.cardID === currentCardID);
+    if (idx === -1) return [...queue];
+    return queue.slice(idx + 1);
+}
+
 

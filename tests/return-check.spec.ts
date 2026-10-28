@@ -4,6 +4,7 @@ import {
     rebuildImpactPreview,
     isLongReturn,
     formatReturnCheckItems,
+    resolveI18nPath,
     BACKLOG_DUE_WARN,
     GAP_DAYS_WARN,
 } from "../src/core/return-check";
@@ -120,6 +121,29 @@ describe("rebuildImpactPreview（只读预览契约）", () => {
                 level: "info",
                 text: "trans:returnCheck.goal.ok",
             });
+        });
+    });
+
+    describe("resolveI18nPath", () => {
+        const dict = {
+            review: {
+                title: "闪卡复习",
+                nested: {
+                    desc: "说明文本",
+                },
+            },
+        };
+
+        it("安全解析多层点分路径", () => {
+            expect(resolveI18nPath(dict, "review.title")).toBe("闪卡复习");
+            expect(resolveI18nPath(dict, "review.nested.desc")).toBe("说明文本");
+        });
+
+        it("未匹配或非法输入时安全返回原 path 字符串", () => {
+            expect(resolveI18nPath(dict, "review.notExist")).toBe("review.notExist");
+            expect(resolveI18nPath(dict, "notExist.key")).toBe("notExist.key");
+            expect(resolveI18nPath(null, "some.key")).toBe("some.key");
+            expect(resolveI18nPath(dict, "")).toBe("");
         });
     });
 });

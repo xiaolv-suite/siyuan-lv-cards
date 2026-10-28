@@ -9,6 +9,8 @@ import {
     evaluateCardTyping,
     formatFontScalePercent,
     shouldInvalidateCardDerivedState,
+    createLastAnsweredSnapshot,
+    sliceQueueAfterCurrent,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -118,6 +120,29 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
         it("初次加载（无旧 HTML）或题面未变更时不废弃", () => {
             expect(shouldInvalidateCardDerivedState("", "<p>新题面</p>")).toBe(false);
             expect(shouldInvalidateCardDerivedState("<p>同一题面</p>", "<p>同一题面</p>")).toBe(false);
+        });
+    });
+
+    describe("createLastAnsweredSnapshot & sliceQueueAfterCurrent", () => {
+        it("createLastAnsweredSnapshot 正常生成回看快照，无卡片时返回 null", () => {
+            const snap = createLastAnsweredSnapshot({ cardID: "c1" }, "<p>题面</p>", true);
+            expect(snap).toEqual({
+                card: { cardID: "c1" },
+                html: "<p>题面</p>",
+                revealed: true,
+            });
+
+            expect(createLastAnsweredSnapshot(null, "html", true)).toBeNull();
+            expect(createLastAnsweredSnapshot(undefined, "html", false)).toBeNull();
+        });
+
+        it("sliceQueueAfterCurrent 截取当前卡片后续队列，未命中时安全返回全量队列浅拷贝", () => {
+            const queue = [{ cardID: "c1" }, { cardID: "c2" }, { cardID: "c3" }];
+            expect(sliceQueueAfterCurrent(queue, "c1").map(c => c.cardID)).toEqual(["c2", "c3"]);
+            expect(sliceQueueAfterCurrent(queue, "c2").map(c => c.cardID)).toEqual(["c3"]);
+            expect(sliceQueueAfterCurrent(queue, "c3")).toEqual([]);
+            expect(sliceQueueAfterCurrent(queue, "not-found").map(c => c.cardID)).toEqual(["c1", "c2", "c3"]);
+            expect(sliceQueueAfterCurrent(queue, undefined).map(c => c.cardID)).toEqual(["c1", "c2", "c3"]);
         });
     });
 });

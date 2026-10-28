@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.215.0 2026-10-29 · 队列截取/回看快照构建与字典路径安全解析解耦里程碑
+
+- **出题队列截取与回看快照构建解耦（`core/card-actions.ts`，TSK-08 持续深化）**：
+  - 提炼 `createLastAnsweredSnapshot`：集中封装上一张已作答卡片的数据快照构建（自带空卡防御）；
+  - 提炼 `sliceQueueAfterCurrent`：不可变纯函数安全截取当前卡片之后的剩余复习队列；
+  - 在 `tests/card-actions.spec.ts` 中新增 2 项单元测试；
+- **返场多语言字典点分路径安全读取解耦（`core/return-check.ts`）**：
+  - 提炼 `resolveI18nPath`：纯函数安全读取多层嵌套国际化字典，缺失或异常时安全回退路径键；
+  - 在 `tests/return-check.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2243 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.9 2026-10-29 · 倒计时启动前置条件与挖空步进完成回调解耦落地
 
 - **倒计时启动前置条件判定解耦（`core/review-countdown.ts`，TSK-08 持续深化）**：

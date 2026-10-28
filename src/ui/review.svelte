@@ -16,9 +16,9 @@
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
-    import { isLongReturn, formatReturnCheckItems, type ReturnCheckFacts } from "@/core/return-check";
+    import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent } from "@/core/card-actions";
     import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -311,10 +311,7 @@
         if (!ctx.getReturnCheckFacts) return;
         ctx.getReturnCheckFacts().then(f => {
             if (!f || returnDismissed || !isLongReturn(f)) return;
-            returnItems = formatReturnCheckItems(f, (path) => {
-                const v = path.split(".").reduce<any>((o, k) => o?.[k], t);
-                return typeof v === "string" ? v : path;
-            });
+            returnItems = formatReturnCheckItems(f, (path) => resolveI18nPath(t, path));
         }).catch(() => { /* 事实聚合失败=不弹横幅，不影响复习 */ });
     }
     // BI-13：减负选择（只读建议；点击展开对 due/历史的影响说明，可跳过）
@@ -1335,11 +1332,11 @@
         showErrTags = false;
         errTagged = false;
         // 记录上一张供回看（AJ2：只存数据，不自动打开浮层）
-        if (current) {
-            lastAnswered = { html: cardHtml, card: current, revealed: showAnswer };
+        const snapshot = createLastAnsweredSnapshot(current, cardHtml, showAnswer);
+        if (snapshot) {
+            lastAnswered = snapshot;
         }
-        const idx = current ? queue.findIndex(c => c.cardID === current!.cardID) : -1;
-        const rest = queue.slice(idx + 1);
+        const rest = sliceQueueAfterCurrent(queue, current?.cardID);
         if (rest.length > 0) {
             queue = rest;
             await setCurrent(rest[0]);

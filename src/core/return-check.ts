@@ -129,3 +129,12 @@ export function formatReturnCheckItems(
     }));
 }
 
+/**
+ * 基于点分路径安全读取多语言嵌套字典对象的文本内容，未找到时回退到路径键自身
+ */
+export function resolveI18nPath(dictionary: any, path: string): string {
+    if (!dictionary || !path) return path;
+    const val = path.split(".").reduce<any>((o, k) => o?.[k], dictionary);
+    return typeof val === "string" ? val : path;
+}
+
