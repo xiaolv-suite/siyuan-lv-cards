@@ -68,6 +68,22 @@
                 : cardHtml
             : maskedCardHtml
     );
+
+    let contentEl = $state<HTMLDivElement | null>(null);
+
+    $effect(() => {
+        if (!cardHtml) return;
+        if (cardHtml.includes("katex") || cardHtml.includes("MathJax") || cardHtml.includes("language-math") || cardHtml.includes("language-mermaid")) {
+            const timer = setTimeout(() => {
+                try {
+                    if (contentEl && typeof (window as any).siyuan?.initKaTeX === "function") {
+                        (window as any).siyuan.initKaTeX(contentEl);
+                    }
+                } catch {}
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    });
 </script>
 
 {#if !cardHtml && faceError}
@@ -100,6 +116,7 @@
         <!-- 灵动感（R53 纪律内）：切卡 140ms 单次淡入，只动 opacity；翻面淡入由 lv-anim-glow 承担 -->
         <div
             class="lv-card-content lv-unified-face"
+            bind:this={contentEl}
             class:has-interactive-choice={interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2}
             class:lv-masked={!showAnswer}
             onclick={onCardContentClick}

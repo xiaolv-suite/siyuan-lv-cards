@@ -360,3 +360,63 @@ export {
     renderSuperBlockAnswerFace,
     extractSuperBlockTexts,
 };
+
+/**
+ * 提取卡片期望参考答案（按挖空标记 > 超级块背面 > 存量问答语法 > 纯文本回退顺序提取）
+ */
+export function extractExpectedCardAnswer(cardHtml: string): string {
+    if (!cardHtml) return "";
+    if (typeof document === "undefined") return "";
+    const holder = document.createElement("div");
+    holder.innerHTML = cardHtml;
+    const marks = extractMarkTexts(holder);
+    if (marks.length > 0) {
+        return marks.join(" / ");
+    }
+    if (isSuperBlockHtml(cardHtml)) {
+        const sbTexts = extractSuperBlockTexts(cardHtml);
+        return sbTexts?.answerText ? sbTexts.answerText : (holder.textContent ?? "").trim();
+    }
+    const rawText = (holder.textContent ?? "").trim();
+    const delimited = parseDelimitedQa(rawText);
+    return delimited?.answer ? delimited.answer : rawText;
+}
+
+export interface CardAttrsMetadata<TOccl = any> {
+    occlusion: TOccl | null;
+    customAnswer: string;
+    memo: string;
+    cardMemo: string;
+    isCustomPluginAnswer: boolean;
+    expectedText: string;
+}
+
+/**
+ * 从块属性中解析遮挡数据与助记/插件自定义答案
+ */
+export function parseCardAttrsMetadata<TOccl = any>(
+    attrs: Record<string, string>,
+    currentExpectedText: string,
+    rawHolderText: string,
+    marksCount: number,
+    parseOcclusionFn: (attrs: Record<string, string>) => TOccl | null
+): CardAttrsMetadata<TOccl> {
+    const occlusion = parseOcclusionFn(attrs);
+    const customAnswer = String(attrs["custom-card-answer"] || attrs["custom-flashcard-answer"] || attrs["custom-exam-answer"] || "").trim();
+    const memo = String(attrs.memo || attrs["custom-card-memo"] || attrs["custom-memo"] || attrs["custom-exam-analysis"] || "").trim();
+    const isCustomPluginAnswer = Boolean(customAnswer);
+    const cardMemo = customAnswer || memo;
+    let expectedText = currentExpectedText;
+    if (marksCount === 0 && (!expectedText || expectedText === rawHolderText) && cardMemo) {
+        expectedText = cardMemo;
+    }
+    return {
+        occlusion,
+        customAnswer,
+        memo,
+        cardMemo,
+        isCustomPluginAnswer,
+        expectedText,
+    };
+}
+

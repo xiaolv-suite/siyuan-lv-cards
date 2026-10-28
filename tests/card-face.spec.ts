@@ -7,6 +7,8 @@ import {
     maskMarkedAnswersForQuestion,
     formatMarkdownToSafeHtml,
     renderUnifiedCardFace,
+    extractExpectedCardAnswer,
+    parseCardAttrsMetadata,
 } from "../src/core/card-face";
 
 // AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
@@ -248,5 +250,29 @@ describe("统一卡面渲染管线（renderUnifiedCardFace & formatMarkdownToSaf
         expect(holder.querySelector("img")).toBeNull();
         expect(holder.querySelector("code")?.textContent).toBe("![example](assets/code.png)");
         expect(holder.textContent).toContain("@@CODE_INLINE_0@@ @@LV_CARD_TOKEN_0@@");
+    });
+
+    describe("extractExpectedCardAnswer 与 parseCardAttrsMetadata", () => {
+        it("extractExpectedCardAnswer 依次匹配挖空、问答、纯文本", () => {
+            expect(extractExpectedCardAnswer('<div>记忆点：<span data-type="mark">挖空A</span> / <span data-type="mark">挖空B</span></div>')).toBe("挖空A / 挖空B");
+            expect(extractExpectedCardAnswer("<div>概念术语 :: 概念释义答案</div>")).toBe("概念释义答案");
+            expect(extractExpectedCardAnswer("<div>简单笔记内容</div>")).toBe("简单笔记内容");
+            expect(extractExpectedCardAnswer("")).toBe("");
+        });
+
+        it("parseCardAttrsMetadata 正确解析遮挡、自定义答案与备忘", () => {
+            const attrs = {
+                "custom-card-answer": "插件定制答案",
+                memo: "通用备注",
+            };
+            const mockParseOccl = (a: any) => ({ v: 1, rects: [] });
+            const meta = parseCardAttrsMetadata(attrs, "原始内容", "原始内容", 0, mockParseOccl);
+
+            expect(meta.isCustomPluginAnswer).toBe(true);
+            expect(meta.customAnswer).toBe("插件定制答案");
+            expect(meta.cardMemo).toBe("插件定制答案");
+            expect(meta.expectedText).toBe("插件定制答案");
+            expect(meta.occlusion).toEqual({ v: 1, rects: [] });
+        });
     });
 });

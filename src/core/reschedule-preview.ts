@@ -56,3 +56,18 @@ export function computeReschedulePreview(
     if (!Number.isSafeInteger(days) || days < 1 || days > 36500) return "";
     return formatRescheduleTimestamp(new Date(now + days * 86400000), lang);
 }
+
+/**
+ * 计算改期 14 位目标时间戳（若 retryDue 存在且匹配则优先使用，否则推算当前时间 + days 天）
+ */
+export function calculateTargetDueTimestamp(
+    days: number,
+    retryDue?: string | null,
+    now = Date.now()
+): string {
+    if (retryDue) {
+        return retryDue;
+    }
+    return new Date(now + days * 86400000).toISOString().replace(/[-:T]/g, "").slice(0, 14);
+}
+

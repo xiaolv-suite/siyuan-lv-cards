@@ -12,7 +12,6 @@
     import { isCardNew, calcStreak, type RevlogData } from "@/core/revlog";
     import { gradeTyping, type Rating1to4 } from "@/core/card-types";
     import { parseOcclusion, calculateOcclusionBox, type OcclusionData } from "@/core/occlusion";
-    import { parseDelimitedQa } from "@/core/delimited-qa";
     import { hasQuestionMediaContent, validateFlashcardMarkdown } from "@/core/flashcard-quality";
     import { partitionReviewCardsByQuality } from "@/core/review-queue-quality";
     import { mapChunksOrdered } from "@/core/query-chunks";
@@ -27,7 +26,7 @@
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
-    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion } from "@/core/card-face";
+    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata } from "@/core/card-face";
     import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
@@ -38,7 +37,7 @@
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, handleClozeClick } from "@/core/cloze-stepper";
-    import { computeReschedulePreview } from "@/core/reschedule-preview";
+    import { computeReschedulePreview, calculateTargetDueTimestamp } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
@@ -52,7 +51,6 @@
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
-    import { isSuperBlockHtml, extractSuperBlockTexts } from "@/core/card-face";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
     import ReviewActionModals from "./review/ReviewActionModals.svelte";
@@ -644,37 +642,25 @@
             }
             cardHtml = dom;
             faceError = "";
-            // 打字题期望答案 = 挖空（mark）文本合集；无挖空时自适应存量 ::、Q/A
-            const holder = document.createElement("div");
-            holder.innerHTML = cardHtml;
-            const marks = extractMarkTexts(holder);
-            if (marks.length > 0) {
-                expectedText = marks.join(" / ");
-            } else if (isSuperBlockHtml(cardHtml)) {
-                // 超级块闪卡：第 1 个块为正面/问题，第 2 个及后续所有块为背面/答案
-                const sbTexts = extractSuperBlockTexts(cardHtml);
-                expectedText = sbTexts?.answerText ? sbTexts.answerText : (holder.textContent ?? "").trim();
-            } else {
-                const rawText = (holder.textContent ?? "").trim();
-                const delimited = parseDelimitedQa(rawText);
-                expectedText = delimited?.answer ? delimited.answer : rawText;
-            }
+            expectedText = extractExpectedCardAnswer(cardHtml);
             answerCache.set(blockID, expectedText);
+
             // 遮挡数据与块备注（宽容解析，无属性即为普通卡）
             try {
                 const attrs = await getBlockAttrs(blockID);
                 if (seq === loadSeq) {
-                    occl = parseOcclusion(attrs);
+                    const holder = document.createElement("div");
+                    holder.innerHTML = cardHtml;
+                    const marksCount = extractMarkTexts(holder).length;
+                    const meta = parseCardAttrsMetadata(attrs, expectedText, (holder.textContent ?? "").trim(), marksCount, parseOcclusion);
+                    occl = meta.occlusion;
                     occlHidden = [];
-                    const customAns = String(attrs["custom-card-answer"] || attrs["custom-flashcard-answer"] || attrs["custom-exam-answer"] || "").trim();
-                    const memo = String(attrs.memo || attrs["custom-card-memo"] || attrs["custom-memo"] || attrs["custom-exam-analysis"] || "").trim();
-                    isCustomPluginAnswer = Boolean(customAns);
-                    cardMemo = customAns || memo;
+                    isCustomPluginAnswer = meta.isCustomPluginAnswer;
+                    cardMemo = meta.cardMemo;
                     memoDraft = cardMemo;
-                    if (marks.length === 0 && (!expectedText || expectedText === (holder.textContent ?? "").trim()) && cardMemo) {
-                        expectedText = cardMemo;
-                        answerCache.set(blockID, expectedText);
-                    }
+                    expectedText = meta.expectedText;
+                    answerCache.set(blockID, expectedText);
+
                     interactiveQuiz = parseInteractiveQuiz({
                         domHtml: cardHtml,
                         attrs,
@@ -1495,10 +1481,7 @@
         if (!card || submitting || rescheduleBusy || !Number.isSafeInteger(days) || days < 1 || days > 36500) return;
         let request = retryReschedule?.cardID === card.cardID && retryReschedule.days === days ? retryReschedule : null;
         if (!request) {
-            const d = new Date(Date.now() + days * 86400000);
-            if (!Number.isFinite(d.getTime())) return;
-            const due = "" + d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") +
-                String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + String(d.getSeconds()).padStart(2, "0");
+            const due = calculateTargetDueTimestamp(days, null);
             request = { cardID: card.cardID, days, due };
             retryReschedule = request;
         }

@@ -3,6 +3,7 @@ import {
     parseDueStringToDate,
     formatRescheduleTimestamp,
     computeReschedulePreview,
+    calculateTargetDueTimestamp,
 } from "@/core/reschedule-preview";
 
 describe("reschedule-preview 改期时间计算与预览格式化", () => {
@@ -59,6 +60,20 @@ describe("reschedule-preview 改期时间计算与预览格式化", () => {
             expect(computeReschedulePreview(-5, null, "zh-CN", mockNow)).toBe("");
             expect(computeReschedulePreview(36501, null, "zh-CN", mockNow)).toBe("");
             expect(computeReschedulePreview(1.5, null, "zh-CN", mockNow)).toBe("");
+        });
+    });
+
+    describe("calculateTargetDueTimestamp", () => {
+        const mockNow = new Date("2026-10-28T10:00:00Z").getTime();
+
+        it("retryDue 存在时优先复用该时间戳", () => {
+            expect(calculateTargetDueTimestamp(1, "20261031180000", mockNow)).toBe("20261031180000");
+        });
+
+        it("无 retryDue 时根据天数计算 14 位格式字符串", () => {
+            const due = calculateTargetDueTimestamp(1, null, mockNow);
+            expect(due.length).toBe(14);
+            expect(due.startsWith("20261029")).toBe(true);
         });
     });
 });

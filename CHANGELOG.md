@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.213.7 2026-10-28 · 卡面答案提取与改期时间戳生成引擎解耦落地
+
+- **卡面权威期望答案提取与块属性元信息解析解耦（`core/card-face.ts`，TSK-08 持续深化）**：
+  - 提炼 `extractExpectedCardAnswer`：从卡面 HTML 中按照挖空标记合集 > 超级块背面 > 存量问答语法 > 纯文本回退的层级顺序提取权威参考答案；
+  - 提炼 `parseCardAttrsMetadata`：封装块属性中遮挡数据（`occlusion`）、自定义答案（`custom-card-answer`）、备忘（`memo`）以及无挖空自适应回退解析逻辑；
+  - 同步清理了 `review.svelte` 中不再直接引用的 `parseDelimitedQa`、`isSuperBlockHtml` 与 `extractSuperBlockTexts` 模块导入；
+  - 在 `tests/card-face.spec.ts` 中新增 2 项单测，全套件达 21 项用例全部通过；
+- **改期目标 14 位紧凑时间戳生成器解耦（`core/reschedule-preview.ts`）**：
+  - 提炼 `calculateTargetDueTimestamp`，优先复用重试改期时间戳，否则自动推算 `now + days` 并格式化为 14 位紧凑时间戳（`YYYYMMDDHHmmss`）；
+  - 在 `tests/reschedule-preview.spec.ts` 中新增 2 项单测，全套件达 9 项用例全部通过；
+- **KaTeX/MathJax 渲染生命周期自收敛（`ReviewCardBody.svelte`）**：
+  - 将数学公式与流程图的异步二次渲染检测（`initKaTeX`）完全收敛于 `ReviewCardBody.svelte` 内部，消除主组件跨层 DOM 探测；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数由 2444 行进一步降至 2427 行（净减 17 行，相较最初 3412 行累计削减近 990 行代码）；
+  - 全库扩展至 285 个测试文件、2173 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.6 2026-10-28 · 分级提示步进与移动端触控滑卡解耦落地
 
 - **分级提示阶梯步进与指示器解耦（`core/hint-ladder.ts`，TSK-08 持续深化）**：
