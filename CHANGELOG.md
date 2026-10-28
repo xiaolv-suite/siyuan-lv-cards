@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.214.1 2026-10-29 · 卡面交互解析与回看状态机解耦落地
+
+- **卡面内容点击与画板双击交互控制器解耦（`core/card-interactions.ts`，TSK-08 持续深化）**：
+  - 提炼 `handleCardContentClick`：统一封装卡面图片单击放大（`zoom-image`）与问题态挖空逐空揭晓（`cloze-reveal`）的 DOM 冒泡解析逻辑；
+  - 提炼 `handleCardCanvasDblClick`：解析 SVG/Excalidraw 画布双击就地跳转思源编辑器打开的节点 ID 提取与兜底回退；
+  - 提炼 `togglePeekCard`：纯函数状态机驱动上一张已复习卡片的回看状态（`opened` / `closed` / `none`）；
+  - 配备完整的独立单元测试套件 `tests/card-interactions.spec.ts`（10 项用例全面覆盖图片灯箱、挖空单步、双击画布与回看状态流转）；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数降至 2346 行（净减 18 行，相较最初 3412 行累计削减达 **1066 行代码**）；
+  - 全库扩展至 288 个测试文件、2195 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.0 2026-10-28 · 会话快照生成与中断恢复纯引擎解耦大版本里程碑
 
 - **复习会话快照与重载恢复引擎解耦（`core/session-state.ts`，TSK-08 阶段大版本里程碑）**：

@@ -34,7 +34,8 @@
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
-    import { stepNextCloze, handleClozeClick } from "@/core/cloze-stepper";
+    import { stepNextCloze } from "@/core/cloze-stepper";
+    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard } from "@/core/card-interactions";
     import { computeReschedulePreview, calculateTargetDueTimestamp } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
@@ -1026,40 +1027,22 @@
     }
 
     function onCardContentClick(e: MouseEvent) {
-        const target = e.target as HTMLElement | null;
-        if (!target) return;
-        if (target.tagName.toLowerCase() === "img") {
-            e.stopPropagation();
-            const img = target as HTMLImageElement;
-            openZoomedImage(img.src, img.alt);
-            return;
-        }
-
-        // 问题态下点击遮罩：支持逐步单独揭晓该空（Progressive Cloze Recall）
-        if (!showAnswer) {
-            const mark = target.closest("span[data-type='mark'], mark.lv-masked, [data-cloze-idx]") as HTMLElement | null;
-            if (mark) {
-                e.stopPropagation();
-                const res = handleClozeClick(mark, cardEl);
-                if (res.revealed) {
-                    stepRevealedCount++;
-                    if (res.allRevealed) {
-                        revealAnswer();
-                    }
-                }
-                return;
-            }
+        const act = handleCardContentClick(e.target, showAnswer, cardEl);
+        if (!act) return;
+        e.stopPropagation();
+        if (act.type === "zoom-image") {
+            openZoomedImage(act.src, act.alt);
+        } else if (act.type === "cloze-reveal") {
+            stepRevealedCount++;
+            if (act.allRevealed) revealAnswer();
         }
     }
 
     function onCardContentDblClick(e: MouseEvent) {
-        const target = e.target as HTMLElement | null;
-        if (!target) return;
-        const canvas = target.closest("svg, .lv-card-svg, [data-type='NodeWidget'], [data-subtype='widget'], img[src*='.svg'], img[src*='excalidraw']") as HTMLElement | null;
-        if (canvas) {
+        const canvasBlockId = handleCardCanvasDblClick(e.target, current?.blockID);
+        if (canvasBlockId) {
             e.stopPropagation();
-            const canvasBlockId = canvas.closest("[data-node-id]")?.getAttribute("data-node-id") || current?.blockID;
-            openCanvasInEditor(canvasBlockId || undefined);
+            openCanvasInEditor(canvasBlockId);
         }
     }
 
@@ -1400,12 +1383,11 @@
     }
 
     function togglePeek() {
-        if (peek) {
-            peek = null;
+        const res = togglePeekCard(peek, lastAnswered);
+        peek = res.nextPeek;
+        if (res.status === "closed") {
             returnFocus();
-        } else if (lastAnswered) {
-            peek = { ...lastAnswered };
-        } else {
+        } else if (res.status === "none") {
             showMessage(t.review.peekNone, 1800, "info");
         }
     }
