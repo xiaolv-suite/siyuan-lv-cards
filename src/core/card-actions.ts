@@ -166,4 +166,26 @@ export function isCardActionBusy(submitting: boolean, rescheduleBusy: boolean, d
     return submitting || rescheduleBusy || dismissBusy;
 }
 
+export interface LiveAnnouncement {
+    msg: string;
+    tone: "polite" | "assertive";
+}
+
+/**
+ * 构造无障碍读屏实时播报载荷
+ */
+export function createLiveAnnouncement(
+    msg: string,
+    tone: "polite" | "assertive" = "polite"
+): LiveAnnouncement {
+    return { msg, tone };
+}
+
+/**
+ * 安全提取出题队列头节点卡片，空队列时返回 null
+ */
+export function getNextQueueHead<T>(queue: readonly T[]): T | null {
+    return queue.length > 0 ? queue[0] : null;
+}
+
 

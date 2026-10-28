@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { reviewSwipeAction, shouldIgnoreSwipeTarget, resolveTouchSwipe, mapSwipeActionToOutcome } from "../src/core/review-gesture";
+import {
+    reviewSwipeAction,
+    shouldIgnoreSwipeTarget,
+    resolveTouchSwipe,
+    mapSwipeActionToOutcome,
+    extractSingleTouchCoords,
+    extractChangedTouchCoords,
+} from "../src/core/review-gesture";
 
 describe("review swipe semantics", () => {
     it("question side reveals only on an upward swipe and never rates horizontally", () => {
@@ -106,6 +113,25 @@ describe("review swipe semantics", () => {
 
         it("null 动作返回 null", () => {
             expect(mapSwipeActionToOutcome(null)).toBeNull();
+        });
+    });
+
+    describe("extractSingleTouchCoords & extractChangedTouchCoords", () => {
+        it("单指触控返回坐标对象", () => {
+            const e = { touches: [{ clientX: 120, clientY: 250 }] };
+            expect(extractSingleTouchCoords(e)).toEqual({ x: 120, y: 250 });
+        });
+
+        it("多指触控或无触控点返回 null", () => {
+            expect(extractSingleTouchCoords({ touches: [{ clientX: 1, clientY: 2 }, { clientX: 3, clientY: 4 }] })).toBeNull();
+            expect(extractSingleTouchCoords({ touches: [] })).toBeNull();
+            expect(extractSingleTouchCoords({})).toBeNull();
+        });
+
+        it("extractChangedTouchCoords 提取首个变更点坐标", () => {
+            expect(extractChangedTouchCoords({ changedTouches: [{ clientX: 80, clientY: 90 }] })).toEqual({ x: 80, y: 90 });
+            expect(extractChangedTouchCoords({ changedTouches: [] })).toBeNull();
+            expect(extractChangedTouchCoords({})).toBeNull();
         });
     });
 });

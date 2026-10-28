@@ -18,7 +18,7 @@
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -30,7 +30,7 @@
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
-    import { resolveTouchSwipe, mapSwipeActionToOutcome } from "@/core/review-gesture";
+    import { resolveTouchSwipe, mapSwipeActionToOutcome, extractSingleTouchCoords, extractChangedTouchCoords } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
@@ -364,8 +364,9 @@
     let liveMsg = $state("");
     let liveTone = $state<"polite" | "assertive">("polite");
     function announce(msg: string, tone: "polite" | "assertive" = "polite") {
-        liveMsg = msg;
-        liveTone = tone;
+        const item = createLiveAnnouncement(msg, tone);
+        liveMsg = item.msg;
+        liveTone = item.tone;
     }
     // 移动端软键盘动态避让（visualViewport，防输入法遮挡题面与评分栏）
     let keyboardInset = $state(0);
@@ -975,8 +976,9 @@
             queue = removeCardFromQueue(queue, card.cardID);
             if (current?.cardID !== card.cardID) return;
             showRetireModal = false;
-            if (queue.length > 0) {
-                await setCurrent(queue[0]);
+            const nextHead = getNextQueueHead(queue);
+            if (nextHead) {
+                await setCurrent(nextHead);
             } else {
                 current = null;
             }
@@ -1586,9 +1588,10 @@
     let touchStartY = 0;
 
     function onTouchStart(e: TouchEvent) {
-        if (e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+        const coords = extractSingleTouchCoords(e);
+        if (coords) {
+            touchStartX = coords.x;
+            touchStartY = coords.y;
         }
     }
 
@@ -1627,8 +1630,9 @@
 
     function onTouchEnd(e: TouchEvent) {
         if (!current) return;
+        const touchEnd = extractChangedTouchCoords(e);
+        if (!touchEnd) return;
         const anyModal = Boolean(showPauseModal || showSessionOptionsModal || showMoreToolbar || isOverlayTarget(e.target));
-        const touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
         const action = resolveTouchSwipe(showAnswer, { x: touchStartX, y: touchStartY }, touchEnd, e.target, anyModal);
         const outcome = mapSwipeActionToOutcome(action);
         if (outcome?.type === "rate") {

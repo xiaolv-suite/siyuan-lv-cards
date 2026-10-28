@@ -13,6 +13,8 @@ import {
     sliceQueueAfterCurrent,
     buildMemoAttributes,
     isCardActionBusy,
+    createLiveAnnouncement,
+    getNextQueueHead,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -166,6 +168,21 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
         it("所有操作均空闲时返回 false", () => {
             expect(isCardActionBusy(false, false, false)).toBe(false);
             expect(isCardActionBusy(false, false)).toBe(false);
+        });
+    });
+
+    describe("createLiveAnnouncement", () => {
+        it("构造带有播报级别与文本的载荷对象", () => {
+            expect(createLiveAnnouncement("提示内容", "polite")).toEqual({ msg: "提示内容", tone: "polite" });
+            expect(createLiveAnnouncement("错误发生", "assertive")).toEqual({ msg: "错误发生", tone: "assertive" });
+            expect(createLiveAnnouncement("默认等级")).toEqual({ msg: "默认等级", tone: "polite" });
+        });
+    });
+
+    describe("getNextQueueHead", () => {
+        it("非空队列返回第一张卡片，空队列返回 null", () => {
+            expect(getNextQueueHead(["c1", "c2"])).toBe("c1");
+            expect(getNextQueueHead([])).toBeNull();
         });
     });
 });

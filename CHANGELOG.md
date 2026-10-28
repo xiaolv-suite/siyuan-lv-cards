@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.215.8 2026-10-29 · 单指触控点提取/读屏载荷构造与队列头节点提取解耦落地
+
+- **单指触控起始与结束点提取解耦（`core/review-gesture.ts`，TSK-08 持续深化）**：
+  - 提炼 `extractSingleTouchCoords`：纯函数安全提取单指触控坐标，对多指操作返回 null 杜绝误触；
+  - 提炼 `extractChangedTouchCoords`：安全提取首个触控变更点坐标；
+  - 在 `tests/review-gesture.spec.ts` 中新增 3 项单元测试；
+- **读屏播报对象构建与队列头节点安全提取解耦（`core/card-actions.ts`）**：
+  - 提炼 `createLiveAnnouncement`：纯函数标准化无障碍读屏实时播报载荷结构；
+  - 提炼 `getNextQueueHead`：纯函数安全提取出题队列头节点，自带空队列安全兜底；
+  - 在 `tests/card-actions.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2290 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.7 2026-10-29 · 快捷键评分值解析与延迟重现等待态推导解耦落地
 
 - **快捷键动作评分值解析解耦（`core/review-shortcuts.ts`，TSK-08 持续深化）**：

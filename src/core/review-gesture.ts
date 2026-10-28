@@ -97,4 +97,29 @@ export function mapSwipeActionToOutcome(action: ReviewSwipeAction): SwipeOutcome
     return null;
 }
 
+export interface TouchCoordinates {
+    x: number;
+    y: number;
+}
+
+/**
+ * 提取单指触控起始坐标（多指操作返回 null 防误触）
+ */
+export function extractSingleTouchCoords(e: { touches?: ArrayLike<{ clientX: number; clientY: number }> }): TouchCoordinates | null {
+    if (e.touches && e.touches.length === 1) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return null;
+}
+
+/**
+ * 提取触控结束位置坐标
+ */
+export function extractChangedTouchCoords(e: { changedTouches?: ArrayLike<{ clientX: number; clientY: number }> }): TouchCoordinates | null {
+    if (e.changedTouches && e.changedTouches.length > 0) {
+        return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    }
+    return null;
+}
+
 
