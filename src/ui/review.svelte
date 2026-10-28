@@ -22,7 +22,8 @@
     import { isLongReturn, returnCheck, type ReturnCheckFacts } from "@/core/return-check";
     import { avgSecPerCard, budgetLeftSec, estimateCompletable, estimateLeftover, isBudgetExpired } from "@/core/session-budget";
     import { nominateVariant } from "@/core/question-rotation";
-    import { buildChoiceOptions } from "@/core/choice-options";
+    import { assembleChoiceOptions, extractAnswerFromDomHtml } from "@/core/choice-options";
+    import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
     import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion } from "@/core/card-face";
     import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
@@ -800,21 +801,7 @@
         }
         try {
             const dom = await getBlockDOM(blockID);
-            const holder = document.createElement("div");
-            holder.innerHTML = dom;
-            const marks = extractMarkTexts(holder);
-            let text = "";
-            if (marks.length > 0) {
-                text = marks.join(" / ");
-            } else {
-                const rawText = (holder.textContent ?? "").trim();
-                const delimited = parseDelimitedQa(rawText);
-                if (delimited?.answer) {
-                    text = delimited.answer;
-                } else {
-                    text = rawText;
-                }
-            }
+            const text = extractAnswerFromDomHtml(dom);
             // 当前卡面可能在采样请求期间已刷新，优先保留新卡面的权威答案。
             const answer = answerCache.get(blockID) ?? text;
             answerCache.set(blockID, answer);
@@ -847,7 +834,7 @@
                     pool.push(text);
                 }
             }
-            const built = buildChoiceOptions(answer, pool);
+            const built = assembleChoiceOptions(answer, pool, shuffle);
             if (!built) {
                 // 没有可靠的干扰项时保持自由回忆路径；不使用“干扰项 1/2/3”
                 // 一类占位文本，以免把提示内容误当作知识。
@@ -855,8 +842,7 @@
                 choiceFallbackMode = "free-recall";
                 return;
             }
-            const options = shuffle(built);
-            choices = { options, answerIdx: options.indexOf(built[0]), picked: null };
+            choices = built;
             choiceFallbackMode = "none";
         } catch {
             if (seq === choiceRequestSeq && current?.cardID === cardID) {
@@ -1333,41 +1319,27 @@
     /** 完成页会话时长（544）：本页面挂载即会话起点，恢复会话也从恢复点起算 */
     let sessionStartedAt = Date.now();
     function sessionDurationText(): string {
-        const total = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 1000));
-        const m = Math.floor(total / 60);
-        const s = total % 60;
-        return `${m}:${String(s).padStart(2, "0")}`;
+        return formatSessionDuration(sessionStartedAt);
     }
 
     /** 空队列态（R53 §3.9）：无任何作答即完成 → 「该范围没有到期的卡」而非 0 值完成庆祝 */
     const emptyQueue = $derived(
-        sessionDone && sessionNew === 0 && sessionReview === 0 && sessionForget === 0 && sessionSkip === 0
+        isEmptyQueueSession(sessionDone, { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip })
     );
 
     /** 完成页今日目标进度（544）：本次会话有效评分 vs 每日复习目标 */
     function targetProgressText(): string {
-        const target = eff().dailyReviewTarget;
-        const done = sessionNew + sessionReview;
-        if (target <= 0) {
-            return "";
-        }
-        return t.review.doneTarget.replace("${a}", String(done)).replace("${b}", String(target));
+        return formatTargetProgress(sessionNew + sessionReview, eff().dailyReviewTarget, t.review.doneTarget);
     }
 
     /** 连击里程碑（374）：7/30/100/365 天完成页专属庆祝 */
     function streakMilestoneText(): string {
-        const streak = calcStreak(ctx.getRevlog());
-        return [365, 100, 30, 7].includes(streak) ? t.review.streakMilestone.replace("${n}", String(streak)) : "";
+        return formatStreakMilestone(calcStreak(ctx.getRevlog()), t.review.streakMilestone);
     }
 
     /** 每日一语（375）：按日期轮换的学习科学小贴士 */
     function dailyTip(): string {
-        if (!eff().dailyTipEnabled) {
-            return "";
-        }
-        const tips = [t.review.tip1, t.review.tip2, t.review.tip3, t.review.tip4, t.review.tip5];
-        const idx = Math.floor(Date.now() / 86400000) % tips.length;
-        return tips[idx];
+        return getDailyScienceTip([t.review.tip1, t.review.tip2, t.review.tip3, t.review.tip4, t.review.tip5], eff().dailyTipEnabled);
     }
 
     // —— 评分 / 跳过 / 屏蔽 ——

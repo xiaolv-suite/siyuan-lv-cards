@@ -1,3 +1,6 @@
+import { extractMarkTexts } from "./card-face";
+import { parseDelimitedQa } from "./delimited-qa";
+
 const INVISIBLE_RE = /[\u0000-\u001f\u007f-\u009f\u200b-\u200d\u2060\ufeff]/g;
 
 /**
@@ -45,3 +48,48 @@ export function buildChoiceOptions(answer: string, candidates: readonly string[]
     // flow. One or two distractors intentionally produce a 2/3-choice quiz.
     return distractors.length > 0 ? [normalizedAnswer, ...distractors] : null;
 }
+
+export interface GeneratedChoiceState {
+    options: string[];
+    answerIdx: number;
+    picked: number | null;
+}
+
+/**
+ * 组装并打乱选择题选项
+ */
+export function assembleChoiceOptions(
+    answer: string,
+    distractors: readonly string[],
+    shuffleFn: <T>(arr: T[]) => T[] = (a) => [...a]
+): GeneratedChoiceState | null {
+    const built = buildChoiceOptions(answer, distractors);
+    if (!built) return null;
+    const options = shuffleFn(built);
+    return {
+        options,
+        answerIdx: options.indexOf(built[0]),
+        picked: null,
+    };
+}
+
+/**
+ * 从 HTML 字符串中提取卡片答案文本（挖空集合 > 问答答案 > 纯文本）
+ */
+export function extractAnswerFromDomHtml(domHtml: string): string {
+    if (!domHtml) return "";
+    if (typeof document === "undefined") return "";
+    const holder = document.createElement("div");
+    holder.innerHTML = domHtml;
+    const marks = extractMarkTexts(holder);
+    if (marks.length > 0) {
+        return marks.join(" / ");
+    }
+    const rawText = (holder.textContent ?? "").trim();
+    const delimited = parseDelimitedQa(rawText);
+    if (delimited?.answer) {
+        return delimited.answer;
+    }
+    return rawText;
+}
+

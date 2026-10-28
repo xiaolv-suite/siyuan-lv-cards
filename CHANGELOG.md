@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.213.1 2026-10-28 · 完成态度量与选择题选项生成引擎解耦落地（-30+ 行）
+
+- **复习完成态指标与叙事计算引擎解耦（`core/completion-metrics.ts`，TSK-08 持续深化）**：
+  - 将会话结束屏（`ReviewDonePanel`）的会话耗时计时（`formatSessionDuration`）、每日复习目标进度文本（`formatTargetProgress`）、连击天数里程碑庆祝文案判定（`formatStreakMilestone`，7/30/100/365 天）、基于自然日模除轮换的学习科学每日贴士（`getDailyScienceTip`）以及零作答空队列状态判定（`isEmptyQueueSession`）抽离为独立纯核心模块 `src/core/completion-metrics.ts`；
+  - 配备专门的单元测试套件 `tests/completion-metrics.spec.ts`（9 项用例全面验证时长格式化、空队列判定、目标完成度文本、里程碑连击与科学贴士轮换）；
+- **选择题答案提取与选项组装引擎解耦（`core/choice-options.ts`）**：
+  - 将从块 DOM 中提取答案权威文本的逻辑（支持挖空标记、问答分隔符与纯文本回退）提炼为 `extractAnswerFromDomHtml`；
+  - 提供 `assembleChoiceOptions` 纯函数，支持传入自定义洗牌算法对正确答案与候选干扰项完成打乱组装，并精确定位正确答案索引与初始未作答状态；
+  - 在 `tests/choice-options.spec.ts` 中新增 6 项单测，覆盖选项组装、答案索引定位、干扰项不足降级与 DOM 文本提取规则，全测试套件扩展至 12 项用例全绿；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数由 2610 行进一步精简至 2582 行（净减 28 行，相较最初 3412 行累计削减 830 行代码）；
+  - 全库扩展至 282 个测试文件、2132 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.0 2026-10-28 · 复习历史栈管理与改期遮挡几何计算解耦里程碑（累积削减 800+ 行）
 
 - **复习撤销历史栈控制器解耦（`core/review-history.ts`，TSK-08 阶段性里程碑）**：
