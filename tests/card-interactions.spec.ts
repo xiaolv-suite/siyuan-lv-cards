@@ -3,6 +3,8 @@ import {
     handleCardContentClick,
     handleCardCanvasDblClick,
     togglePeekCard,
+    isOverlayTarget,
+    shouldRefreshOnPanelPointer,
 } from "@/core/card-interactions";
 
 describe("card-interactions 卡片内容点击、画板编辑与回看切换", () => {
@@ -89,6 +91,27 @@ describe("card-interactions 卡片内容点击、画板编辑与回看切换", (
             const res = togglePeekCard(null, null);
             expect(res.status).toBe("none");
             expect(res.nextPeek).toBeNull();
+        });
+    });
+
+    describe("isOverlayTarget", () => {
+        it("正确识别模态遮罩与二级工具菜单", () => {
+            const backdrop = document.createElement("div");
+            backdrop.className = "lv-modal-backdrop";
+            const inner = document.createElement("button");
+            backdrop.appendChild(inner);
+
+            expect(isOverlayTarget(inner)).toBe(true);
+            expect(isOverlayTarget(document.createElement("div"))).toBe(false);
+            expect(isOverlayTarget(null)).toBe(false);
+        });
+    });
+
+    describe("shouldRefreshOnPanelPointer", () => {
+        it("离开面板超过 15 秒返回 true", () => {
+            expect(shouldRefreshOnPanelPointer(1000, 17000, 15000)).toBe(true);
+            expect(shouldRefreshOnPanelPointer(1000, 12000, 15000)).toBe(false);
+            expect(shouldRefreshOnPanelPointer(0, 17000, 15000)).toBe(false);
         });
     });
 });

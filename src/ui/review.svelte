@@ -24,7 +24,7 @@
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
-    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata } from "@/core/card-face";
+    import { analyzeFaceRichness, extractMarkTexts, faceHintKeys, hasRichContent, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel } from "@/core/card-face";
     import { loadReliefChoices, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
@@ -35,7 +35,8 @@
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze } from "@/core/cloze-stepper";
-    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard } from "@/core/card-interactions";
+    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer } from "@/core/card-interactions";
+    import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, calculateTargetDueTimestamp } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
@@ -206,8 +207,7 @@
     let faceRich = $derived(cardHtml ? analyzeFaceRichness(cardHtml) : null);
     let faceHints = $derived(faceRich && hasRichContent(faceRich) ? faceHintKeys(faceRich) : []);
     function faceHintText(key: string): string {
-        const [, , name] = key.split(".");
-        return (t as any).aiFace?.hint?.[name] ?? key;
+        return resolveFaceHintLabel(key, (t as any).aiFace?.hint);
     }
     // 复习范围（M3·FR1）：all | deck:<id> | notebook:<id>
     // 初值语义：范围仅经命令/考试入口传入一次，运行时由用户切换；
@@ -380,9 +380,9 @@
 
     const throttledViewportChange = rafThrottle(() => {
         if (isDisposed || typeof window === "undefined" || !window.visualViewport) return;
-        const inset = Math.max(0, window.innerHeight - window.visualViewport.height);
-        keyboardInset = inset;
-        if (inset > 120 && document.activeElement && rootEl?.contains(document.activeElement)) {
+        const res = computeKeyboardViewportState(window.innerHeight, window.visualViewport.height);
+        keyboardInset = res.keyboardInset;
+        if (res.isKeyboardOpen && document.activeElement && rootEl?.contains(document.activeElement)) {
             (document.activeElement as HTMLElement).scrollIntoView?.({ block: "nearest", behavior: "smooth" });
         }
     });
@@ -1457,7 +1457,7 @@
         }
         resumePausedSession();
         const now = Date.now();
-        if (lastPanelPointer > 0 && now - lastPanelPointer >= 15000) {
+        if (shouldRefreshOnPanelPointer(lastPanelPointer, now)) {
             refreshCard();
         }
         lastPanelPointer = now;
@@ -1785,10 +1785,6 @@
         if (!showAnswer && current && faceReady) {
             revealAnswer();
         }
-    }
-
-    function isOverlayTarget(target: EventTarget | null): boolean {
-        return target instanceof Element && Boolean(target.closest(".lv-modal-backdrop, .lv-toolbar-more-scrim, .lv-toolbar-more-menu"));
     }
 
     onMount(() => {

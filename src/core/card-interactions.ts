@@ -72,3 +72,22 @@ export function togglePeekCard<T>(
     }
     return { nextPeek: null, status: "none" };
 }
+
+/**
+ * 判定点击目标是否属于模态遮罩或二级菜单覆盖层
+ */
+export function isOverlayTarget(target: EventTarget | null): boolean {
+    return target instanceof Element && Boolean(target.closest(".lv-modal-backdrop, .lv-toolbar-more-scrim, .lv-toolbar-more-menu"));
+}
+
+/**
+ * 应用内离开面板重入刷新判定（离开面板超过阈值时长时触发刷新）
+ */
+export function shouldRefreshOnPanelPointer(
+    lastPointerAt: number,
+    now = Date.now(),
+    thresholdMs = 15000
+): boolean {
+    return lastPointerAt > 0 && now - lastPointerAt >= thresholdMs;
+}
+

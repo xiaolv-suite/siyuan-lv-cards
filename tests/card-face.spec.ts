@@ -9,6 +9,7 @@ import {
     renderUnifiedCardFace,
     extractExpectedCardAnswer,
     parseCardAttrsMetadata,
+    resolveFaceHintLabel,
 } from "../src/core/card-face";
 
 // AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
@@ -273,6 +274,15 @@ describe("统一卡面渲染管线（renderUnifiedCardFace & formatMarkdownToSaf
             expect(meta.cardMemo).toBe("插件定制答案");
             expect(meta.expectedText).toBe("插件定制答案");
             expect(meta.occlusion).toEqual({ v: 1, rects: [] });
+        });
+    });
+
+    describe("resolveFaceHintLabel", () => {
+        it("正确根据键末段提取对应本地化文本", () => {
+            const i18n = { formula: "数学公式", image: "包含图片" };
+            expect(resolveFaceHintLabel("aiFace.hint.formula", i18n)).toBe("数学公式");
+            expect(resolveFaceHintLabel("aiFace.hint.image", i18n)).toBe("包含图片");
+            expect(resolveFaceHintLabel("aiFace.hint.code", i18n)).toBe("aiFace.hint.code");
         });
     });
 });

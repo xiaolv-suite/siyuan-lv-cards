@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.214.2 2026-10-29 · 视口键盘避让/面板重入刷新与特征文本解析解耦落地
+
+- **视口尺寸计算与软键盘避让器解耦（`core/viewport-keyboard.ts`，TSK-08 持续深化）**：
+  - 提炼 `computeKeyboardViewportState`：根据 `window.innerHeight` 与 `visualViewport.height` 差值精确计算软键盘开启状态与底部避让像素（`keyboardInset`）；
+  - 配备专门的单元测试套件 `tests/viewport-keyboard.spec.ts`（3 项用例全面验证阈值判定与负值防护）；
+- **遮罩层判定与离开面板重入刷新判定解耦（`core/card-interactions.ts`）**：
+  - 提炼 `isOverlayTarget`：自动识别模态弹窗遮罩、工具栏二级菜单或背景蒙层；
+  - 提炼 `shouldRefreshOnPanelPointer`：判定用户切回复习面板时是否已离开超过 15 秒并触发卡片静默重载；
+  - 在 `tests/card-interactions.spec.ts` 中新增 2 项单测，全套件达 12 项用例全部通过；
+- **富内容特征展示文本解析解耦（`core/card-face.ts`）**：
+  - 提炼 `resolveFaceHintLabel`：从 `aiFace.hint.<key>` 格式的键名自动解析多语言词条，消除主文件内部字符串分割逻辑；
+  - 在 `tests/card-face.spec.ts` 中新增 1 项单测，全套件达 22 项用例全部通过；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数降至 2342 行（相较最初 3412 行累计削减达 **1070 行代码**）；
+  - 全库扩展至 289 个测试文件、2201 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.214.1 2026-10-29 · 卡面交互解析与回看状态机解耦落地
 
 - **卡面内容点击与画板双击交互控制器解耦（`core/card-interactions.ts`，TSK-08 持续深化）**：
