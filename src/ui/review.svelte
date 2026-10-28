@@ -37,7 +37,6 @@
     import { enqueueDelayedRequeue, nextRequeueDelay, SHORT_REQUEUE_DELAY_MS, takeDueRequeues, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
-    import LvKbd from "./kit/LvKbd.svelte";
     import LvLive from "./kit/LvLive.svelte";
     import LvChip from "./kit/LvChip.svelte";
     import LvError from "./kit/LvError.svelte";
@@ -61,6 +60,8 @@
     import ReviewRescheduleModal from "./review/ReviewRescheduleModal.svelte";
     import ReviewToolbar from "./review/ReviewToolbar.svelte";
     import ReviewCountdownBanner from "./review/ReviewCountdownBanner.svelte";
+    import ReviewRatingBar from "./review/ReviewRatingBar.svelte";
+    import ReviewErrorTagBar from "./review/ReviewErrorTagBar.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -186,10 +187,6 @@
     let hintText = $state("");
     let hintLog: ReturnType<typeof logHint>[] = $state([]);
     // BJ-4：遗忘卡错误原因标注（评分后可选旁路动作；标签走 i18n errReasons 段）
-    const ERROR_REASON_IDS = [
-        "memory-blank", "concept-confusion", "condition-missed",
-        "step-error", "question-unclear", "source-outdated", "attention-lapse",
-    ] as const;
     let showErrTags = $state(false);
     let errTagCardID = $state("");
     let errTagged = $state(false);
@@ -2939,49 +2936,32 @@
             onRest={pauseSessionAndReturn}
             onContinue={() => (budgetMin = 0)}
         />
-        <div class="lv-actions" class:lv-actions-compact={eff().ratingDensity === "compact"}>
-            {#if !showAnswer}
-                {#if stepRevealedCount > 0}
-                    <div class="fn__flex" style="width: 100%; gap: var(--lv-sp-2)">
-                        <button class="b3-button lv-btn-primary fn__flex-1 lv-btn-wide" class:lv-btn-pressed={pressedKeyFeedback === " "} disabled={!faceReady} onclick={() => { if (!revealNextClozeOrAll(false)) revealAnswer(); }}>
-                            {t.review.clozeRevealNext ?? "揭晓下一空"}
-                            <span class="lv-btn-wide-kbd">Space</span>
-                        </button>
-                        <button class="b3-button b3-button--outline lv-btn-small-pill" title="全部揭晓（Shift+Space）" onclick={() => revealAnswer()}>
-                            {t.review.clozeRevealAll ?? "全部揭晓"}
-                        </button>
-                    </div>
-                {:else}
-                    <button class="b3-button lv-btn-primary lv-btn-wide" class:lv-btn-pressed={pressedKeyFeedback === " "} disabled={!faceReady} onclick={revealAnswer}>{t.review.showAnswer}<span class="lv-btn-wide-kbd">Space</span></button>
-                {/if}
-            {:else if eff().ratingStyle === "three"}
-                <button class="b3-button lv-btn-rate lv-b1" class:lv-btn-suggested={suggestedRating === 1} class:lv-btn-pressed={pressedKeyFeedback === "1"} disabled={actionBusy} onclick={() => rate(1)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.unknown}</span><LvKbd k="1" /></span><small>{dueText("1")}</small></button>
-                <button class="b3-button lv-btn-rate lv-b2" class:lv-btn-suggested={suggestedRating === 2} class:lv-btn-pressed={pressedKeyFeedback === "2"} disabled={actionBusy} onclick={() => rate(2)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.vague}</span><LvKbd k="2" /></span><small>{dueText("2")}</small></button>
-                <button class="b3-button lv-btn-rate lv-b3" class:lv-btn-suggested={suggestedRating === 3} class:lv-btn-pressed={pressedKeyFeedback === "3"} disabled={actionBusy} onclick={() => rate(3)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.know}</span><LvKbd k="3" /></span><small>{dueText("3")}</small></button>
-            {:else}
-                <button class="b3-button lv-btn-rate lv-b1" class:lv-btn-suggested={suggestedRating === 1} class:lv-btn-pressed={pressedKeyFeedback === "1"} disabled={actionBusy} onclick={() => rate(1)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.againBtn}</span><LvKbd k="1" /></span><small>{dueText("1")}</small></button>
-                <button class="b3-button lv-btn-rate lv-b2" class:lv-btn-suggested={suggestedRating === 2} class:lv-btn-pressed={pressedKeyFeedback === "2"} disabled={actionBusy} onclick={() => rate(2)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.hard}</span><LvKbd k="2" /></span><small>{dueText("2")}</small></button>
-                <button class="b3-button lv-btn-rate lv-b3" class:lv-btn-suggested={suggestedRating === 3} class:lv-btn-pressed={pressedKeyFeedback === "3"} disabled={actionBusy} onclick={() => rate(3)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.good}</span><LvKbd k="3" /></span><small>{dueText("3")}</small></button>
-                <button class="b3-button lv-btn-rate lv-b4" class:lv-btn-suggested={suggestedRating === 4} class:lv-btn-pressed={pressedKeyFeedback === "4"} disabled={actionBusy} onclick={() => rate(4)}><span class="lv-rate-top"><span class="lv-rate-label">{t.review.easy}</span><LvKbd k="4" /></span><small>{dueText("4")}</small></button>
-            {/if}
-        </div>
-    {/if}
+        <ReviewRatingBar
+            {showAnswer}
+            {stepRevealedCount}
+            {faceReady}
+            {pressedKeyFeedback}
+            ratingStyle={eff().ratingStyle}
+            {suggestedRating}
+            {actionBusy}
+            compact={eff().ratingDensity === "compact"}
+            {dueText}
+            {t}
+            onRevealAnswer={revealAnswer}
+            onRevealNextCloze={() => { if (!revealNextClozeOrAll(false)) revealAnswer(); }}
+            onRate={rate}
+        />
 
-    {#if showErrTags && !errTagged && ctx.tagErrorReason}
-        <!-- BJ-4：遗忘卡错误原因标注（旁路增强；点选后自动隐藏） -->
-        <div class="lv-err-tags">
-            <span class="ft__smaller ft__on-surface">{t.review.errTagPrompt}</span>
-            {#each ERROR_REASON_IDS as rid (rid)}
-                <button class="b3-button b3-button--small lv-err-tag" onclick={() => {
-                    ctx.tagErrorReason?.(errTagCardID, rid);
-                    errTagged = true;
-                    announce(`${t.review.errTagDone}: ${t.review.ko.errReasons[rid] ?? rid}`, "polite");
-                }}>
-                    {t.review.ko.errReasons[rid] ?? rid}
-                </button>
-            {/each}
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (showErrTags = false)} aria-label={t.review.skip}><LvIcon name="close" size={13} /></button>
-        </div>
+        <ReviewErrorTagBar
+            open={showErrTags && !errTagged && Boolean(ctx.tagErrorReason)}
+            {t}
+            onTagError={(rid) => {
+                ctx.tagErrorReason?.(errTagCardID, rid);
+                errTagged = true;
+                announce(`${t.review.errTagDone}: ${t.review.ko.errReasons[rid] ?? rid}`, "polite");
+            }}
+            onClose={() => (showErrTags = false)}
+        />
     {/if}
 
     <ReviewHelpAndPeek
@@ -3043,15 +3023,6 @@
             .lv-card {
                 min-height: 180px;
                 padding: calc(var(--lv-space-unit) * 12) calc(var(--lv-space-unit) * 11);
-            }
-
-            .lv-actions {
-                margin-top: 0;
-            }
-
-            .lv-btn-rate {
-                min-height: 60px;
-                padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
             }
         }
 
@@ -3439,16 +3410,6 @@
             .lv-tags { display: flex; gap: var(--lv-sp-1); }
         }
 
-        .lv-err-tags {
-            display: flex; flex-wrap: wrap; gap: calc(var(--lv-space-unit) * 3); align-items: center;
-            padding: var(--lv-sp-2) var(--lv-sp-3);
-            margin: 0 auto;
-            font-size: var(--lv-type-control-size);
-            background: var(--lv-color-surface);
-            border-radius: var(--b3-border-radius);
-        }
-        .lv-err-tag { opacity: .8; }
-
         .lv-card {
             flex: 1;
             box-sizing: border-box;
@@ -3813,153 +3774,6 @@
             padding: 0 calc(var(--lv-space-unit) * 2);
             box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
             animation: lv-pulse-glow 0.3s var(--lv-ease);
-        }
-
-        .lv-btn-pressed {
-            transform: scale(0.94) !important;
-            border-color: var(--lv-color-brand) !important;
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 35%, transparent) !important;
-            transition: all 0.1s var(--lv-ease) !important;
-        }
-
-        .lv-actions {
-            display: flex; gap: var(--lv-sp-3); justify-content: center;
-            max-width: 640px; width: 100%; margin: var(--lv-sp-2) auto 0;
-            padding-bottom: var(--lv-sp-2);
-            /* 紧凑密度（441）：评分按钮收窄高度与内边距 */
-            &.lv-actions-compact { gap: var(--lv-sp-2); .lv-btn-rate { max-width: 150px; padding: 10px 14px; min-height: 52px; } }
-            .lv-btn-wide {
-                flex: 1;
-                min-height: 46px;
-                border-radius: var(--lv-r-pill);
-                background: linear-gradient(135deg, var(--lv-brand, #E11D48) 0%, color-mix(in srgb, var(--lv-brand, #E11D48) 86%, black) 100%);
-                color: #FFFFFF !important;
-                font-weight: var(--lv-fw-semibold);
-                box-shadow: 0 4px 18px color-mix(in srgb, var(--lv-brand) 36%, transparent), var(--lv-inset-shine);
-                transition: transform var(--lv-dur-1) var(--lv-ease),
-                    box-shadow var(--lv-dur-2) var(--lv-ease),
-                    filter var(--lv-dur-1) var(--lv-ease);
-
-                &:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 24px color-mix(in srgb, var(--lv-brand) 48%, transparent);
-                }
-                &:active {
-                    transform: translateY(0.5px);
-                }
-
-                .lv-btn-wide-kbd {
-                    margin-left: calc(var(--lv-space-unit) * 6);
-                    padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
-                    border-radius: var(--lv-r-pill);
-                    background: rgba(255, 255, 255, 0.22);
-                    border: 1px solid rgba(255, 255, 255, 0.35);
-                    font-size: var(--lv-type-meta-size);
-                    font-weight: var(--lv-fw-semibold);
-                    color: #fff;
-                }
-            }
-            @keyframes lv-rating-reveal {
-                from {
-                    opacity: 0;
-                    transform: translate3d(0, 5px, 0);
-                }
-                to {
-                    opacity: 1;
-                    transform: translate3d(0, 0, 0);
-                }
-            }
-            .lv-btn-rate {
-                flex: 1;
-                max-width: 180px;
-                animation: lv-rating-reveal var(--lv-dur-2) var(--lv-ease);
-                /* R54 rating：高卡、左对齐、kbd 右置、间隔提示下沉、物理微阴影与按压弹性 */
-                display: flex; flex-direction: column; align-items: stretch; gap: 5px;
-                text-align: left;
-                border-radius: var(--lv-r-m);
-                border: 1px solid var(--lv-border);
-                padding: calc(var(--lv-space-unit) * 7) calc(var(--lv-space-unit) * 8 + var(--lv-space-hairline));
-                min-height: 80px;
-                background: var(--lv-color-surface);
-                box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
-                transition: transform var(--lv-dur-1) var(--lv-ease),
-                    background var(--lv-dur-1) var(--lv-ease),
-                    box-shadow var(--lv-dur-2) var(--lv-ease),
-                    border-color var(--lv-dur-1) var(--lv-ease),
-                    filter var(--lv-dur-1) var(--lv-ease);
-
-                &:hover {
-                    transform: translateY(-2px);
-                    box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
-                    border-color: var(--lv-border-strong);
-                }
-                &:active {
-                    transform: translateY(1px) scale(0.98);
-                    filter: brightness(0.96);
-                }
-
-                .lv-rate-top {
-                    display: flex; align-items: center; justify-content: space-between;
-                    gap: var(--lv-sp-2); font-weight: 600;
-                }
-                small { opacity: 0.7; font-size: 11px; font-variant-numeric: tabular-nums; }
-            }
-
-            // R52 动效纪律：评分条不做逐钮错峰；窄屏按原型折为 2×2
-            @media (max-width: 740px) {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                .lv-btn-rate { max-width: none; }
-            }
-            // R54 .rating button：白面微投影、ink 标签、muted 间隔，色相顶标线与语义微反馈
-            .lv-b1, .lv-b2, .lv-b3, .lv-b4 {
-                background: var(--lv-color-surface);
-                color: var(--lv-color-text);
-            }
-            .lv-b1 {
-                box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-danger) 70%, transparent), var(--lv-shadow-card);
-                &:hover {
-                    border-color: var(--lv-danger-border);
-                    background: color-mix(in srgb, var(--lv-color-danger) 6%, var(--lv-color-surface));
-                    box-shadow: inset 0 3px 0 0 var(--lv-color-danger), var(--lv-shadow-card-hover);
-                }
-                &:active {
-                    background: color-mix(in srgb, var(--lv-color-danger) 14%, var(--lv-color-surface));
-                }
-            }
-            .lv-b2 {
-                box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-warning) 70%, transparent), var(--lv-shadow-card);
-                &:hover {
-                    border-color: color-mix(in srgb, var(--lv-color-warning) 35%, transparent);
-                    background: color-mix(in srgb, var(--lv-color-warning) 6%, var(--lv-color-surface));
-                    box-shadow: inset 0 3px 0 0 var(--lv-color-warning), var(--lv-shadow-card-hover);
-                }
-                &:active {
-                    background: color-mix(in srgb, var(--lv-color-warning) 14%, var(--lv-color-surface));
-                }
-            }
-            .lv-b3 {
-                box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-brand) 70%, transparent), var(--lv-shadow-card);
-                &:hover {
-                    border-color: var(--lv-primary-border);
-                    background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
-                    box-shadow: inset 0 3px 0 0 var(--lv-color-brand), var(--lv-shadow-card-hover);
-                }
-                &:active {
-                    background: color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-color-surface));
-                }
-            }
-            .lv-b4 {
-                box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-success) 70%, transparent), var(--lv-shadow-card);
-                &:hover {
-                    border-color: color-mix(in srgb, var(--lv-color-success) 35%, transparent);
-                    background: color-mix(in srgb, var(--lv-color-success) 6%, var(--lv-color-surface));
-                    box-shadow: inset 0 3px 0 0 var(--lv-color-success), var(--lv-shadow-card-hover);
-                }
-                &:active {
-                    background: color-mix(in srgb, var(--lv-color-success) 14%, var(--lv-color-surface));
-                }
-            }
         }
     }
 </style>

@@ -19,9 +19,22 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.2** (2026-10-28), delivering ReviewCountdownBanner modularization and outline cloze filter in Manager. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.2) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.3** (2026-10-28), delivering ReviewRatingBar and ReviewErrorTagBar modularization (-180+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.3) for the package and publishing status.
 
-## What's New in v0.212.2
+## What's New in v0.212.3
+
+- **ReviewRatingBar Component Modularization (TSK-08)**:
+  - Extracted the bottom actions bar (`ReviewRatingBar.svelte`) into a dedicated subcomponent.
+  - Encapsulated question-state actions (Space reveal / step clozes / Shift+Space), answer-state rating buttons (three-grade / four-grade), suggested rating highlights, and physical key-pressed feedback.
+  - Added dedicated unit tests in `tests/review-rating-bar.spec.ts`.
+- **ReviewErrorTagBar Component Modularization**:
+  - Extracted error tagging chips into `ReviewErrorTagBar.svelte` with new constants in `src/core/error-tags.ts`.
+  - Reduced review template code by over 180 lines.
+  - Added dedicated unit tests in `tests/review-error-tag-bar.spec.ts`.
+- **Verification**:
+  - 2045 tests across 268 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+
+## Previous Update: v0.212.2
 
 - **ReviewCountdownBanner Component Modularization (TSK-08)**:
   - Extracted 25-minute Pomodoro alert and timeout notice into `ReviewCountdownBanner.svelte`.

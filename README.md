@@ -21,11 +21,25 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.212.2（2026-10-28）**，落地番茄限时组件解耦与管理器卡型大纲挖空过滤。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.2)。
+当前版本为 **v0.212.3（2026-10-28）**，落地底部评分条与错误原因标注条独立解耦（-180+ 行）。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.3)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 本次更新（v0.212.2）
+## 本次更新（v0.212.3）
+
+- **复习工作台底部评分条独立解耦（TSK-08 持续深化）**：
+  - 将复习界面内部的底部操作条（`ReviewRatingBar.svelte`）完整抽离为独立子组件；
+  - 组件内部自收敛未翻面态的主动作（Space 显示答案 / 逐步回忆揭晓下一空 / Shift+Space 全部揭晓）、已翻面态的三档自评（不认识/模糊/认识）与四档自评（重来/困难/良好/简单）、建议评分高亮（`lv-btn-suggested`）、物理按键反馈动效（`lv-btn-pressed`）及紧凑密度响应；
+  - 配备完整的独立单元测试套件 `tests/review-rating-bar.spec.ts`；
+- **遗忘卡错误原因标注条独立解耦（`ReviewErrorTagBar.svelte`）**：
+  - 新增核心模块 `src/core/error-tags.ts`，统一收敛 `ERROR_REASON_IDS` 定义；
+  - 将遗忘后旁路错误原因打标（`ReviewErrorTagBar.svelte`）独立化，自带 7 种认知失误类型标签渲染与无障碍状态播报；
+  - 复习主模板 `review.svelte` 代码行数再次净减 180+ 行，整体架构更加轻盈内聚；
+  - 配备专门的单元测试套件 `tests/review-error-tag-bar.spec.ts`；
+- **全量门禁与质量验证**：
+  - 全库扩展至 268 个测试文件、2045 项测试 100% 通过；E2E 靶场 18 项全部通过；构建与烟雾测试全绿。
+
+## 上一版本（v0.212.2）
 
 - **复习工作台番茄专注与限时到期提醒独立解耦（TSK-08 持续深化）**：
   - 将复习界面内部的 25 分钟番茄专注周期达成休息卡片与超时到点自评提醒（`budgetExpired` / `timeoutExpired`）完整剥离为独立子组件 `ReviewCountdownBanner.svelte`；
