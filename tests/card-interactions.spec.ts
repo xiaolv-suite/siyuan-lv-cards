@@ -6,6 +6,8 @@ import {
     isOverlayTarget,
     shouldRefreshOnPanelPointer,
     resolveEditorNavigationBlockId,
+    createZoomedImageState,
+    shouldRevealOnContainerClick,
 } from "@/core/card-interactions";
 
 describe("card-interactions 卡片内容点击、画板编辑与回看切换", () => {
@@ -129,6 +131,46 @@ describe("card-interactions 卡片内容点击、画板编辑与回看切换", (
         it("均为空时返回 null", () => {
             expect(resolveEditorNavigationBlockId(undefined, undefined)).toBeNull();
             expect(resolveEditorNavigationBlockId("", "")).toBeNull();
+        });
+    });
+
+    describe("createZoomedImageState", () => {
+        it("正确生成图片放大预览状态对象", () => {
+            expect(createZoomedImageState("https://example.com/img.png", "说明")).toEqual({
+                src: "https://example.com/img.png",
+                alt: "说明",
+            });
+            expect(createZoomedImageState("https://example.com/img.png")).toEqual({
+                src: "https://example.com/img.png",
+                alt: undefined,
+            });
+        });
+    });
+
+    describe("shouldRevealOnContainerClick", () => {
+        const base = {
+            hasModalsOpen: false,
+            target: document.createElement("div"),
+            showAnswer: false,
+            hasCurrent: true,
+            faceReady: true,
+        };
+
+        it("普通卡面在问题态且无模态窗时允许点击翻面", () => {
+            expect(shouldRevealOnContainerClick(base)).toBe(true);
+        });
+
+        it("已翻面或卡面未就绪时不触发", () => {
+            expect(shouldRevealOnContainerClick({ ...base, showAnswer: true })).toBe(false);
+            expect(shouldRevealOnContainerClick({ ...base, faceReady: false })).toBe(false);
+            expect(shouldRevealOnContainerClick({ ...base, hasCurrent: false })).toBe(false);
+        });
+
+        it("模态窗开启或点击按钮/输入控件时阻止翻面", () => {
+            expect(shouldRevealOnContainerClick({ ...base, hasModalsOpen: true })).toBe(false);
+
+            const btn = document.createElement("button");
+            expect(shouldRevealOnContainerClick({ ...base, target: btn })).toBe(false);
         });
     });
 });

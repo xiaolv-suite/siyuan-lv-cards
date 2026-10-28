@@ -11,6 +11,7 @@ import {
     shouldInvalidateCardDerivedState,
     createLastAnsweredSnapshot,
     sliceQueueAfterCurrent,
+    buildMemoAttributes,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -143,6 +144,14 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
             expect(sliceQueueAfterCurrent(queue, "c3")).toEqual([]);
             expect(sliceQueueAfterCurrent(queue, "not-found").map(c => c.cardID)).toEqual(["c1", "c2", "c3"]);
             expect(sliceQueueAfterCurrent(queue, undefined).map(c => c.cardID)).toEqual(["c1", "c2", "c3"]);
+        });
+    });
+
+    describe("buildMemoAttributes", () => {
+        it("正确去除首尾空白并包装为 memo 属性对象", () => {
+            expect(buildMemoAttributes("  助记重点提示  ")).toEqual({ memo: "助记重点提示" });
+            expect(buildMemoAttributes("")).toEqual({ memo: "" });
+            expect(buildMemoAttributes(null as any)).toEqual({ memo: "" });
         });
     });
 });

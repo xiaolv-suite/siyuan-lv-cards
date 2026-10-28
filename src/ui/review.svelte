@@ -18,7 +18,7 @@
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatRatingDueText } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes } from "@/core/card-actions";
     import { avgSecPerCard, budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate } from "@/core/session-budget";
     import { resolveHeadScopeLabel } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -30,12 +30,12 @@
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
-    import { resolveTouchSwipe, shouldIgnoreSwipeTarget, mapSwipeActionToOutcome } from "@/core/review-gesture";
+    import { resolveTouchSwipe, mapSwipeActionToOutcome } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
-    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId } from "@/core/card-interactions";
+    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, type ZoomedImageState } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
@@ -486,7 +486,7 @@
     let memoDraft = $state("");
     let memoSaving = $state(false);
     // 卡面大图全屏原图聚焦预览（Lightroom Zoom）
-    let zoomedImage = $state<{ src: string; alt?: string } | null>(null);
+    let zoomedImage = $state<ZoomedImageState | null>(null);
     let reversedRecall = $state(false);
     let stepRevealedCount = $state(0);
     let pressedKeyFeedback = $state<string | null>(null);
@@ -941,15 +941,15 @@
     async function saveCardMemo() {
         if (!current || memoSaving) return;
         const card = current;
-        const trimmed = memoDraft.trim();
+        const memoAttrs = buildMemoAttributes(memoDraft);
         memoSaving = true;
         try {
             if (siyuanApi.setBlockAttrs) {
-                await siyuanApi.setBlockAttrs(card.blockID, { memo: trimmed });
+                await siyuanApi.setBlockAttrs(card.blockID, memoAttrs);
             }
             if (isDisposed) return;
             if (current?.cardID === card.cardID) {
-                cardMemo = trimmed;
+                cardMemo = memoAttrs.memo;
                 showMemoEditor = false;
             }
             showMessage(t.review.memoSavedToast ?? "助记便签已保存，下次复习时将提醒你", 2500, "info");
@@ -1016,7 +1016,7 @@
     }
 
     function openZoomedImage(src: string, alt?: string) {
-        zoomedImage = { src, alt };
+        zoomedImage = createZoomedImageState(src, alt);
     }
 
     function revealNextClozeOrAll(forceAll = false): boolean {
@@ -1742,10 +1742,13 @@
     }
 
     function onContainerClick(e: MouseEvent) {
-        if (showPauseModal || showSessionOptionsModal || showMoreToolbar || isOverlayTarget(e.target) || shouldIgnoreSwipeTarget(e.target)) {
-            return;
-        }
-        if (!showAnswer && current && faceReady) {
+        if (shouldRevealOnContainerClick({
+            hasModalsOpen: Boolean(showPauseModal || showSessionOptionsModal || showMoreToolbar),
+            target: e.target,
+            showAnswer,
+            hasCurrent: Boolean(current),
+            faceReady,
+        })) {
             revealAnswer();
         }
     }

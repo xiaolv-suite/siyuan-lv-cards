@@ -152,4 +152,11 @@ export function sliceQueueAfterCurrent<T extends { cardID: string }>(
     return queue.slice(idx + 1);
 }
 
+/**
+ * 构造助记便签更新块属性对象
+ */
+export function buildMemoAttributes(memoText: string): { memo: string } {
+    return { memo: String(memoText ?? "").trim() };
+}
+
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.215.3 2026-10-29 · 容器点击翻面守卫与助记块属性构建解耦落地
+
+- **容器点击翻面守卫与大图预览状态构建解耦（`core/card-interactions.ts`，TSK-08 持续深化）**：
+  - 提炼 `shouldRevealOnContainerClick`：纯函数综合判定模态窗遮罩、表单控件防误触与卡片题面就绪状态；
+  - 提炼 `createZoomedImageState`：不可变纯函数构造大图预览状态对象；
+  - 在 `tests/card-interactions.spec.ts` 中新增单元测试；
+- **助记便签更新块属性构建解耦（`core/card-actions.ts`）**：
+  - 提炼 `buildMemoAttributes`：纯函数标准化助记便签去空白与块属性打包；
+  - 在 `tests/card-actions.spec.ts` 中新增单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2261 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.2 2026-10-29 · 触控手势动作映射与编辑器目标块解析解耦落地
 
 - **触控手势动作结果映射解耦（`core/review-gesture.ts`，TSK-08 持续深化）**：

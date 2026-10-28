@@ -3,6 +3,7 @@
  */
 
 import { handleClozeClick } from "./cloze-stepper";
+import { shouldIgnoreSwipeTarget } from "./review-gesture";
 
 export type CardContentClickResult =
     | { type: "zoom-image"; src: string; alt?: string }
@@ -99,5 +100,34 @@ export function resolveEditorNavigationBlockId(
     currentBlockId: string | undefined
 ): string | null {
     return canvasId || currentBlockId || null;
+}
+
+export interface ZoomedImageState {
+    src: string;
+    alt?: string;
+}
+
+/**
+ * 构造大图预览状态对象
+ */
+export function createZoomedImageState(src: string, alt?: string): ZoomedImageState {
+    return { src, alt };
+}
+
+export interface ContainerClickGuardParams {
+    hasModalsOpen: boolean;
+    target: EventTarget | null;
+    showAnswer: boolean;
+    hasCurrent: boolean;
+    faceReady: boolean;
+}
+
+/**
+ * 判定复习主面板容器点击是否应当触发翻面
+ */
+export function shouldRevealOnContainerClick(params: ContainerClickGuardParams): boolean {
+    if (params.hasModalsOpen) return false;
+    if (isOverlayTarget(params.target) || shouldIgnoreSwipeTarget(params.target)) return false;
+    return !params.showAnswer && params.hasCurrent && params.faceReady;
 }
 
