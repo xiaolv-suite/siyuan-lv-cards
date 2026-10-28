@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     enqueueDelayedRequeue,
     nextRequeueDelay,
     SHORT_REQUEUE_DELAY_MS,
     takeDueRequeues,
+    createDelayedRequeueScheduler,
+    type DelayedRequeue,
 } from "../src/core/delayed-requeue";
 
 describe("delayed requeue（会话内遗忘卡短期循环）", () => {
@@ -30,4 +32,46 @@ describe("delayed requeue（会话内遗忘卡短期循环）", () => {
         expect(enqueueDelayedRequeue([], "fallback", 0, Number.NaN)[0].dueAt).toBe(SHORT_REQUEUE_DELAY_MS);
         expect(enqueueDelayedRequeue([], "now", 100, -1)[0].dueAt).toBe(100);
     });
+
+    describe("createDelayedRequeueScheduler 调度器", () => {
+        it("空队列停止调度", () => {
+            let pending: DelayedRequeue<string>[] = [];
+            const onDue = vi.fn();
+            const scheduler = createDelayedRequeueScheduler({
+                onDue,
+                getPending: () => pending,
+                setPending: (p) => { pending = p; },
+            });
+            scheduler.schedule();
+            expect(onDue).not.toHaveBeenCalled();
+            scheduler.stop();
+        });
+
+        it("定时到期释放卡片并触发回调", () => {
+            vi.useFakeTimers();
+            try {
+                let pending: DelayedRequeue<string>[] = [
+                    { card: "card-x", dueAt: Date.now() + 50 },
+                ];
+                const onDue = vi.fn();
+                const scheduler = createDelayedRequeueScheduler({
+                    onDue,
+                    getPending: () => pending,
+                    setPending: (p) => { pending = p; },
+                });
+
+                scheduler.schedule();
+                expect(onDue).not.toHaveBeenCalled();
+
+                vi.advanceTimersByTime(60);
+                expect(onDue).toHaveBeenCalledWith(["card-x"]);
+                expect(pending.length).toBe(0);
+
+                scheduler.stop();
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+    });
 });
+

@@ -48,3 +48,90 @@ export function nextRequeueDelay(
     const nextAt = Math.min(...pending.map(item => item.dueAt));
     return Math.max(0, nextAt - now);
 }
+
+export interface RequeueSchedulerOptions<T> {
+    onDue: (dueCards: T[]) => void;
+    onTick?: (now: number) => void;
+    isLoading?: () => boolean;
+    getPending: () => readonly DelayedRequeue<T>[];
+    setPending: (next: DelayedRequeue<T>[]) => void;
+}
+
+export interface DelayedRequeueScheduler {
+    schedule: () => void;
+    releaseDue: () => void;
+    stop: () => void;
+}
+
+/**
+ * 延迟重考计时调度器：封装 setTimeout 与 1s 倒计时时钟驱动，并防御与异步拉取队列的数据竞态
+ */
+export function createDelayedRequeueScheduler<T>(
+    options: RequeueSchedulerOptions<T>
+): DelayedRequeueScheduler {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let clockTimer: ReturnType<typeof setInterval> | null = null;
+
+    function stop() {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        if (clockTimer) {
+            clearInterval(clockTimer);
+            clockTimer = null;
+        }
+    }
+
+    function schedule() {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        const pending = options.getPending();
+        if (pending.length === 0) {
+            if (clockTimer) {
+                clearInterval(clockTimer);
+                clockTimer = null;
+            }
+            return;
+        }
+        const now = Date.now();
+        options.onTick?.(now);
+        const delay = nextRequeueDelay(pending, now);
+        timer = setTimeout(() => {
+            timer = null;
+            releaseDue();
+        }, Math.max(0, delay ?? SHORT_REQUEUE_DELAY_MS));
+
+        if (!clockTimer) {
+            clockTimer = setInterval(() => {
+                options.onTick?.(Date.now());
+            }, 1000);
+        }
+    }
+
+    function releaseDue() {
+        if (options.isLoading?.()) {
+            timer = setTimeout(() => {
+                timer = null;
+                releaseDue();
+            }, 250);
+            return;
+        }
+        const now = Date.now();
+        const result = takeDueRequeues(options.getPending(), now);
+        options.setPending(result.pending);
+        if (result.due.length > 0) {
+            options.onDue(result.due);
+        }
+        schedule();
+    }
+
+    return {
+        schedule,
+        releaseDue,
+        stop,
+    };
+}
+

@@ -37,7 +37,7 @@
     import { stepNextCloze, handleClozeClick } from "@/core/cloze-stepper";
     import { computeReschedulePreview } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
-    import { enqueueDelayedRequeue, nextRequeueDelay, SHORT_REQUEUE_DELAY_MS, takeDueRequeues, type DelayedRequeue } from "@/core/delayed-requeue";
+    import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { nextHint, logHint, deriveHintLevels, availableLevels, type HintLevel, type HintLevelsInput } from "@/core/hint-ladder";
     import LvLive from "./kit/LvLive.svelte";
@@ -46,7 +46,7 @@
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { parseHPathToBreadcrumbs, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
-    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
     import { isSuperBlockHtml, extractSuperBlockTexts } from "@/core/card-face";
@@ -170,8 +170,6 @@
     let queue: QueueCard[] = $state([]);
     /** 评分 Again 后的本地延迟队列；不写入会话快照，也不参与内核调度。 */
     let pendingRequeues: DelayedRequeue<QueueCard>[] = $state([]);
-    let requeueTimer: ReturnType<typeof setTimeout> | null = null;
-    let requeueClockTimer: ReturnType<typeof setInterval> | null = null;
     let requeueNow = $state(Date.now());
     let reviewedIDs: string[] = $state([]);
     let current: QueueCard | null = $state(null);
@@ -251,72 +249,40 @@
     const requeueWaiting = $derived(!sessionDone && !current && pendingRequeues.length > 0 && !loading && !errorMsg);
     const requeueWaitSeconds = $derived(Math.max(0, Math.ceil((nextRequeueDelay(pendingRequeues, requeueNow) ?? 0) / 1000)));
 
-    function stopRequeueTimers() {
-        if (requeueTimer) {
-            clearTimeout(requeueTimer);
-            requeueTimer = null;
-        }
-        if (requeueClockTimer) {
-            clearInterval(requeueClockTimer);
-            requeueClockTimer = null;
-        }
-    }
-
-    function scheduleRequeueTimer() {
-        if (requeueTimer) {
-            clearTimeout(requeueTimer);
-            requeueTimer = null;
-        }
-        if (pendingRequeues.length === 0) {
-            if (requeueClockTimer) {
-                clearInterval(requeueClockTimer);
-                requeueClockTimer = null;
-            }
-            return;
-        }
-        requeueNow = Date.now();
-        const delay = nextRequeueDelay(pendingRequeues, requeueNow);
-        requeueTimer = setTimeout(() => {
-            requeueTimer = null;
-            releaseDueRequeues();
-        }, Math.max(0, delay ?? SHORT_REQUEUE_DELAY_MS));
-        if (!requeueClockTimer) {
-            requeueClockTimer = setInterval(() => {
-                requeueNow = Date.now();
-            }, 1000);
-        }
-    }
-
-    function releaseDueRequeues() {
-        // Do not race an in-flight kernel fetch. The timer is rescheduled by
-        // loadQueue's finally block after the fetched cards have been merged.
-        if (loading) {
-            requeueTimer = setTimeout(() => {
-                requeueTimer = null;
-                releaseDueRequeues();
-            }, 250);
-            return;
-        }
-        const result = takeDueRequeues(pendingRequeues, Date.now());
-        pendingRequeues = result.pending;
-        if (result.due.length > 0) {
-            queue = [...queue, ...result.due];
+    const requeueScheduler = createDelayedRequeueScheduler<QueueCard>({
+        getPending: () => pendingRequeues,
+        setPending: (next) => { pendingRequeues = next; },
+        onTick: (now) => { requeueNow = now; },
+        isLoading: () => loading,
+        onDue: (due) => {
+            queue = [...queue, ...due];
             sessionDone = false;
             if (!current && queue.length > 0) {
                 void setCurrent(queue[0]);
             }
-        }
-        scheduleRequeueTimer();
+        },
+    });
+
+    function stopRequeueTimers() {
+        requeueScheduler.stop();
+    }
+
+    function scheduleRequeueTimer() {
+        requeueScheduler.schedule();
+    }
+
+    function releaseDueRequeues() {
+        requeueScheduler.releaseDue();
     }
 
     function queueDelayedRequeue(card: QueueCard) {
         pendingRequeues = enqueueDelayedRequeue(pendingRequeues, { ...card, lvRequeue: 1 });
-        scheduleRequeueTimer();
+        requeueScheduler.schedule();
     }
 
     function clearPendingRequeues() {
         pendingRequeues = [];
-        stopRequeueTimers();
+        requeueScheduler.stop();
     }
 
     function changeScope() {
@@ -1691,40 +1657,13 @@
         // Enter/Space 保留控件自身行为（展开菜单、选择选项、点击按钮），避免触发后台评分。
         if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element && e.target.closest("button, select, a, [role='button']")) return;
 
-        // 交互式选择题键盘快捷键（A/B/C/D 或 1/2/3/4 或多选提交 Enter）
-        if (!showAnswer && interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2) {
-            if (interactiveQuiz.isMultiple && (e.key === "Enter" || e.key === " ") && selectedChoiceKeys.length > 0) {
-                e.preventDefault();
-                submitChoiceAnswer();
-                return;
-            }
-            const keyUpper = e.key.toUpperCase();
-            const matchedOpt = interactiveQuiz.options.find(o => o.key === keyUpper)
-                || (Number(e.key) >= 1 && Number(e.key) <= interactiveQuiz.options.length ? interactiveQuiz.options[Number(e.key) - 1] : null);
-            if (matchedOpt) {
-                e.preventDefault();
-                handleOptionPick(matchedOpt.key);
-                return;
-            }
-        }
-
-        // 交互式判断题键盘快捷键（T/1/Y 或 F/2/N）
-        if (!showAnswer && interactiveQuiz?.kind === "judge") {
-            const keyLower = e.key.toLowerCase();
-            if (keyLower === "t" || keyLower === "y" || e.key === "1") {
-                e.preventDefault();
-                handleJudgePick(true);
-                return;
-            } else if (keyLower === "f" || keyLower === "n" || e.key === "2") {
-                e.preventDefault();
-                handleJudgePick(false);
-                return;
-            }
-        }
-
-        if ((e.key === "r" || e.key === "R") && !showAnswer && current && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        // 交互式题型快捷键路由（A/B/C/D、1/2、T/F/Y/N 等）
+        const quizAct = resolveQuizKeyboardAction(e, interactiveQuiz, selectedChoiceKeys, showAnswer);
+        if (quizAct) {
             e.preventDefault();
-            reversedRecall = !reversedRecall;
+            if (quizAct.type === "submit-choice") submitChoiceAnswer();
+            else if (quizAct.type === "pick-option") handleOptionPick(quizAct.optionKey);
+            else if (quizAct.type === "pick-judge") handleJudgePick(quizAct.choice);
             return;
         }
 
@@ -1741,28 +1680,17 @@
 
         if (!action) return;
 
-        // 答案揭晓后连击空格或回车：极速采用推荐评分提交并切下一张
-        if (showAnswer && (e.key === " " || e.key === "Enter") && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
-            e.preventDefault();
-            const ratingToSubmit = (suggestedRating as any) ?? 3;
-            void rate(ratingToSubmit);
-            return;
-        }
-
-        if ((e.key === "z" || e.key === "Z") && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
-            e.preventDefault();
-            zenMode = !zenMode;
-            showMessage(zenMode ? "已开启沉浸专注模式 (按 z 退出)" : "已退出专注模式", 1500, "info");
-            return;
-        }
-
-        if (e.key === "*" && current) {
-            e.preventDefault();
-            toggleStarCurrent();
-            return;
-        }
-
         switch (action) {
+            case "toggle-reversed":
+                reversedRecall = !reversedRecall;
+                break;
+            case "toggle-zen":
+                zenMode = !zenMode;
+                showMessage(zenMode ? "已开启沉浸专注模式 (按 z 退出)" : "已退出专注模式", 1500, "info");
+                break;
+            case "toggle-star":
+                toggleStarCurrent();
+                break;
             case "close-peek":
                 peek = null;
                 returnFocus();
@@ -1782,7 +1710,7 @@
                 break;
             case "rate-default":
                 triggerKeyFeedback("3");
-                rate(3);
+                void rate((suggestedRating as any) ?? 3);
                 break;
             case "advance-hint":
                 advanceHint();

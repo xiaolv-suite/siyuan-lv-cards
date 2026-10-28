@@ -176,5 +176,18 @@ describe("review-shortcuts 键盘调度解析器", () => {
             expect(resolveReviewKeyAction({ key: "p" }, ctx)).toBe("undo");
             expect(resolveReviewKeyAction({ key: "q" }, ctx)).toBe("undo");
         });
+
+        it("r/z/* 快捷键触发翻转回忆、专注模式与星标切换", () => {
+            expect(resolveReviewKeyAction({ key: "r" }, baseContext({ showAnswer: false, hasCurrent: true }))).toBe("toggle-reversed");
+            expect(resolveReviewKeyAction({ key: "R" }, baseContext({ showAnswer: false, hasCurrent: true }))).toBe("toggle-reversed");
+            expect(resolveReviewKeyAction({ key: "r" }, baseContext({ showAnswer: true, hasCurrent: true }))).toBeNull();
+
+            expect(resolveReviewKeyAction({ key: "z" }, baseContext())).toBe("toggle-zen");
+            expect(resolveReviewKeyAction({ key: "Z" }, baseContext())).toBe("toggle-zen");
+            expect(resolveReviewKeyAction({ key: "z", ctrlKey: true }, baseContext())).toBeNull();
+
+            expect(resolveReviewKeyAction({ key: "*" }, baseContext({ hasCurrent: true }))).toBe("toggle-star");
+            expect(resolveReviewKeyAction({ key: "*" }, baseContext({ hasCurrent: false }))).toBeNull();
+        });
     });
 });

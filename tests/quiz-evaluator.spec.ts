@@ -3,7 +3,9 @@ import {
     evaluateChoiceQuiz,
     evaluateJudgeQuiz,
     evaluateFillQuiz,
+    resolveQuizKeyboardAction,
     type InteractiveOption,
+    type InteractiveQuizData,
 } from "@/core/quiz-interactive";
 
 describe("quiz-evaluator 交互式题型评分与反馈评估引擎", () => {
@@ -107,6 +109,63 @@ describe("quiz-evaluator 交互式题型评分与反馈评估引擎", () => {
         it("输入为空或期望为空返回 null", () => {
             expect(evaluateFillQuiz("", "测试")).toBeNull();
             expect(evaluateFillQuiz("测试", "   ")).toBeNull();
+        });
+    });
+
+    describe("resolveQuizKeyboardAction", () => {
+        const choiceQuiz: InteractiveQuizData = {
+            kind: "choice",
+            stem: "题目",
+            options: [
+                { key: "A", text: "选项A", isAnswer: true },
+                { key: "B", text: "选项B", isAnswer: false },
+                { key: "C", text: "选项C", isAnswer: false },
+            ],
+            isMultiple: false,
+            judgeAnswer: null,
+            fillExpected: "",
+            analysis: "",
+            hasInteractiveWidgets: true,
+        };
+
+        const multiChoiceQuiz: InteractiveQuizData = {
+            ...choiceQuiz,
+            isMultiple: true,
+        };
+
+        const judgeQuiz: InteractiveQuizData = {
+            kind: "judge",
+            stem: "题目",
+            options: [],
+            isMultiple: false,
+            judgeAnswer: true,
+            fillExpected: "",
+            analysis: "",
+            hasInteractiveWidgets: true,
+        };
+
+        it("单选选择题匹配字母与数字快捷键", () => {
+            expect(resolveQuizKeyboardAction({ key: "a" }, choiceQuiz, [], false)).toEqual({ type: "pick-option", optionKey: "A" });
+            expect(resolveQuizKeyboardAction({ key: "2" }, choiceQuiz, [], false)).toEqual({ type: "pick-option", optionKey: "B" });
+            expect(resolveQuizKeyboardAction({ key: "C" }, choiceQuiz, [], false)).toEqual({ type: "pick-option", optionKey: "C" });
+            expect(resolveQuizKeyboardAction({ key: "4" }, choiceQuiz, [], false)).toBeNull();
+        });
+
+        it("多选题有选项时按 Enter 触发提交", () => {
+            expect(resolveQuizKeyboardAction({ key: "Enter" }, multiChoiceQuiz, ["A"], false)).toEqual({ type: "submit-choice" });
+            expect(resolveQuizKeyboardAction({ key: "Enter" }, multiChoiceQuiz, [], false)).toBeNull();
+        });
+
+        it("判断题匹配 T/F/Y/N/1/2 快捷键", () => {
+            expect(resolveQuizKeyboardAction({ key: "t" }, judgeQuiz, [], false)).toEqual({ type: "pick-judge", choice: true });
+            expect(resolveQuizKeyboardAction({ key: "1" }, judgeQuiz, [], false)).toEqual({ type: "pick-judge", choice: true });
+            expect(resolveQuizKeyboardAction({ key: "f" }, judgeQuiz, [], false)).toEqual({ type: "pick-judge", choice: false });
+            expect(resolveQuizKeyboardAction({ key: "2" }, judgeQuiz, [], false)).toEqual({ type: "pick-judge", choice: false });
+        });
+
+        it("答案态或无题型返回 null", () => {
+            expect(resolveQuizKeyboardAction({ key: "a" }, choiceQuiz, [], true)).toBeNull();
+            expect(resolveQuizKeyboardAction({ key: "a" }, null, [], false)).toBeNull();
         });
     });
 });

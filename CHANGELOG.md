@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.213.3 2026-10-28 · 题型键盘路由与延迟重考调度器解耦落地（-70+ 行）
+
+- **交互题型快捷键路由解耦（`core/quiz-interactive.ts`，TSK-08 持续深化）**：
+  - 将单选题 A/B/C/D 与 1/2/3/4 数字键映射、多选题 Enter 键提交判定以及判断题 T/F/Y/N/1/2 键解析抽离为纯函数 `resolveQuizKeyboardAction`；
+  - 自动输出标准化动作（`submit-choice`、`pick-option`、`pick-judge`），统一了题型按键处理；
+  - 在 `tests/quiz-evaluator.spec.ts` 中新增 4 项单测，全套件达 16 项用例全部通过；
+- **全局快捷键动作扩展与统一调度（`core/review-shortcuts.ts`）**：
+  - 扩展 `resolveReviewKeyAction`，统一收敛 `r/R`（翻转回忆）、`z/Z`（专注模式切换）以及 `*`（星标卡片切换）按键调度；
+  - 在 `tests/review-shortcuts.spec.ts` 中新增单测，全套件达 19 项用例全部通过；
+- **延迟重考计时调度器解耦（`core/delayed-requeue.ts`）**：
+  - 抽离 `createDelayedRequeueScheduler`，封装 `setTimeout`、1 秒倒计时秒表时钟驱动以及与队列异步网络拉取的数据防竞态机制（`isLoading` 自动避让）；
+  - 移除了 `review.svelte` 内部的 `requeueTimer` / `requeueClockTimer` 原始计时器变量；
+  - 在 `tests/delayed-requeue.spec.ts` 中新增 FakeTimers 调度单测；
+- **主复习文件规模与工程指标**：
+  - 复习主模板 `review.svelte` 代码行数由 2546 行大幅精简至 2474 行（净减 72 行，相较最初 3412 行累计削减近 940 行代码）；
+  - 全库扩展至 283 个测试文件、2153 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；设计令牌审计达 97.0%；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.213.2 2026-10-28 · 复习队列排序管道与返场横幅计算解耦落地（-40+ 行）
 
 - **复习队列处理与排序管道解耦（`core/review-queue-pipeline.ts`，TSK-08 持续深化）**：

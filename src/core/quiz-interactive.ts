@@ -371,3 +371,45 @@ export function evaluateFillQuiz(
     };
 }
 
+export type QuizKeyboardAction =
+    | { type: "submit-choice" }
+    | { type: "pick-option"; optionKey: string }
+    | { type: "pick-judge"; choice: boolean }
+    | null;
+
+/**
+ * 交互式题型快捷键解析器（选择题 A/B/C/D 与数字键、多选提交回车、判断题 T/F/Y/N/1/2）
+ */
+export function resolveQuizKeyboardAction(
+    e: { key: string },
+    interactiveQuiz: InteractiveQuizData | null,
+    selectedChoiceKeys: readonly string[],
+    showAnswer: boolean
+): QuizKeyboardAction {
+    if (showAnswer || !interactiveQuiz) return null;
+
+    if (interactiveQuiz.kind === "choice" && interactiveQuiz.options.length >= 2) {
+        if (interactiveQuiz.isMultiple && (e.key === "Enter" || e.key === " ") && selectedChoiceKeys.length > 0) {
+            return { type: "submit-choice" };
+        }
+        const keyUpper = e.key.toUpperCase();
+        const matchedOpt = interactiveQuiz.options.find(o => o.key === keyUpper)
+            || (Number(e.key) >= 1 && Number(e.key) <= interactiveQuiz.options.length ? interactiveQuiz.options[Number(e.key) - 1] : null);
+        if (matchedOpt) {
+            return { type: "pick-option", optionKey: matchedOpt.key };
+        }
+    }
+
+    if (interactiveQuiz.kind === "judge") {
+        const keyLower = e.key.toLowerCase();
+        if (keyLower === "t" || keyLower === "y" || e.key === "1") {
+            return { type: "pick-judge", choice: true };
+        } else if (keyLower === "f" || keyLower === "n" || e.key === "2") {
+            return { type: "pick-judge", choice: false };
+        }
+    }
+
+    return null;
+}
+
+

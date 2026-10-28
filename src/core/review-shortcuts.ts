@@ -21,6 +21,9 @@ export type ReviewKeyAction =
     | "undo"
     | "dismiss"
     | "open-editor"
+    | "toggle-reversed"
+    | "toggle-zen"
+    | "toggle-star"
     | null;
 
 export interface ReviewShortcutContext {
@@ -158,6 +161,18 @@ export function resolveReviewKeyAction(
             return "toggle-memo";
         }
         return null;
+    }
+    if ((e.key === "r" || e.key === "R") && !ctx.showAnswer && ctx.hasCurrent) {
+        e.preventDefault?.();
+        return "toggle-reversed";
+    }
+    if ((e.key === "z" || e.key === "Z") && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault?.();
+        return "toggle-zen";
+    }
+    if (e.key === "*" && ctx.hasCurrent) {
+        e.preventDefault?.();
+        return "toggle-star";
     }
 
     // 9. 后续评分与撤销必须在答案揭晓后生效
