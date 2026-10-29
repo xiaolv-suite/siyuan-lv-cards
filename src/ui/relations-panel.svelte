@@ -164,13 +164,13 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
             transform: translateY(-1px);
             border-color: var(--lv-border-strong);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
     .lv-rel-tag {

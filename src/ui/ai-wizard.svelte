@@ -1037,31 +1037,31 @@
                                     {@html previewAnswerMap[i] ? rendered.answerHtml : rendered.questionHtml}
                                 </div>
                                 {#if scorecards[i]}
-                                    <!-- BU-13：八维度评分卡（可解释问题 + 修复建议；综合分仅审阅提示，不入库资格由「已接受」决定） -->
-                                    <div style="border-top: 1px solid var(--lv-border); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
-                                        <div class="lv-eyebrow">{t.aiScore.title} · {scorecards[i].composite}</div>
-                                        <div style="margin-top: calc(var(--lv-space-unit) * 3); display: flex; flex-direction: column; gap: 4px">
-                                            {#each scorecards[i].dimensions as dim (dim.key)}
-                                                <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); align-items: baseline">
-                                                    <span class="ft__smaller" style="min-width: 88px">{dimLabel(dim.key)}</span>
-                                                    {#if dim.level}
-                                                        <LvChip tone="default">{levelLabel(dim.level)}</LvChip>
-                                                    {/if}
-                                                    {#if dim.score > 0}
-                                                        <span class="ft__smaller" style="color: var(--lv-color-warning)">{noteText(dim.noteKey)}</span>
-                                                    {/if}
-                                                    {#if dim.suggestKey}
-                                                        <span class="ft__smaller ft__on-surface">{fixText(dim.suggestKey)}</span>
-                                                    {/if}
-                                                </div>
-                                            {/each}
+                                        <!-- BU-13：八维度评分卡（可解释问题 + 修复建议；综合分仅审阅提示，不入库资格由「已接受」决定） -->
+                                        <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
+                                            <div class="lv-eyebrow">{t.aiScore.title} · {scorecards[i].composite}</div>
+                                            <div style="margin-top: calc(var(--lv-space-unit) * 3); display: flex; flex-direction: column; gap: 4px">
+                                                {#each scorecards[i].dimensions as dim (dim.key)}
+                                                    <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); align-items: baseline">
+                                                        <span class="ft__smaller" style="min-width: 88px">{dimLabel(dim.key)}</span>
+                                                        {#if dim.level}
+                                                            <LvChip tone="default">{levelLabel(dim.level)}</LvChip>
+                                                        {/if}
+                                                        {#if dim.score > 0}
+                                                            <span class="ft__smaller" style="color: var(--lv-color-warning)">{noteText(dim.noteKey)}</span>
+                                                        {/if}
+                                                        {#if dim.suggestKey}
+                                                            <span class="ft__smaller ft__on-surface">{fixText(dim.suggestKey)}</span>
+                                                        {/if}
+                                                    </div>
+                                                {/each}
+                                            </div>
                                         </div>
-                                    </div>
-                                {/if}
-                                {#if scorecards[i]?.assertionReport}
-                                    {@const rep = scorecards[i].assertionReport}
-                                    <!-- BU-10 & docs/48：逐断言来源依据核验 -->
-                                    <div style="border-top: 1px solid var(--lv-border); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
+                                    {/if}
+                                    {#if scorecards[i]?.assertionReport}
+                                        {@const rep = scorecards[i].assertionReport}
+                                        <!-- BU-10 & docs/48：逐断言来源依据核验 -->
+                                        <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
                                         <div class="fn__flex between" style="align-items: center; margin-bottom: 8px">
                                             <div class="lv-eyebrow">{t.aiWizard.assertionTitle}</div>
                                             <span class="ft__smaller ft__on-surface">{t.aiWizard.sourceTrustScore}: <strong>{rep.sourceTrustScore}%</strong></span>
@@ -1176,14 +1176,19 @@
         display: flex;
         flex-direction: column;
         gap: var(--lv-sp-2);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-l);
+        padding: var(--lv-sp-4);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:hover {
-            transform: translateY(-1px);
+            transform: translateY(-1.5px);
             border-color: var(--lv-border-strong);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
 
@@ -1203,7 +1208,7 @@
         justify-content: flex-start;
     }
     /* 笔记本载入组：按钮 + 范围选择拼接成一行 */
-    .lv-wb-nb { display: flex; gap: 6px; }
+    .lv-wb-nb { display: flex; gap: var(--lv-sp-2); }
     .lv-wb-nb .lv-wb-load { flex: 1; min-width: 0; }
     .lv-wb-nb-select {
         width: 96px;
@@ -1216,7 +1221,7 @@
         box-sizing: border-box;
         vertical-align: middle;
     }
-    .lv-wb-chips { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 2); margin-top: 4px; }
+    .lv-wb-chips { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 2); margin-top: var(--lv-sp-1); }
     .lv-wb-chip {
         display: flex;
         align-items: center;
@@ -1264,8 +1269,8 @@
         text-align: center;
     }
     .lv-wb-empty-icon {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         border-radius: var(--lv-r-circle);
         display: flex;
         align-items: center;
@@ -1273,6 +1278,8 @@
         background: var(--lv-primary-soft);
         color: var(--lv-color-brand);
         font-size: var(--lv-type-title-size);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--lv-color-brand) 6%, transparent);
+        border: 1px solid var(--lv-primary-border);
     }
     .lv-wb-empty-text {
         font-size: var(--lv-type-control-size);
