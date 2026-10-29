@@ -890,6 +890,9 @@
             <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyVoice")}>
                 <LvIcon name="bell" size={13} /> <span>{t.settings.studyVoice ?? "语音朗读"}</span>
             </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-appearance")}>
+                <LvIcon name="image" size={13} /> <span>{t.settings.appearance ?? "外观卡面"}</span>
+            </button>
             <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-aiSection")}>
                 <LvIcon name="cards" size={13} /> <span>{t.settings.aiSection ?? "AI服务商"}</span>
             </button>
@@ -910,33 +913,6 @@
     {/if}
     {#if searchQuery.trim() && !Object.keys(SECTION_KEYWORDS).some(sectionMatches)}
         <div class="lv-notice" role="status">{t.settings.searchEmpty}</div>
-    {/if}
-    {#if sectionMatches("appearance")}
-    <div class="lv-notice" style="display: flex; gap: var(--lv-sp-4); align-items: center; flex-wrap: wrap">
-        <div style="flex: 1; min-width: 240px">
-            <div class="lv-eyebrow">{t.settings.previewTitle}</div>
-            <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewSub}</div>
-        </div>
-        <div class="lv-card2" style={`max-width: 340px; font-size: ${draft.cardFontScale || 1}em; flex: 1; padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);`}>
-            {#if draft.customCardCss}
-                {@html `<style>${draft.customCardCss}</style>`}
-            {/if}
-            <strong>{t.settings.previewQ}</strong>
-            <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewA}</div>
-            <div class="lv-settings-preview-rating" style="margin-top: var(--lv-sp-3); display: flex; gap: var(--lv-sp-1); flex-wrap: wrap;">
-                {#if draft.ratingStyle === "three"}
-                    <span class="lv-chip2 lv-chip2--warn">{t.review?.unknown ?? "不认识"}</span>
-                    <span class="lv-chip2 lv-chip2--default">{t.review?.vague ?? "模糊"}</span>
-                    <span class="lv-chip2 lv-chip2--primary">{t.review?.know ?? "认识"}</span>
-                {:else}
-                    <span class="lv-chip2 lv-chip2--warn">{t.review?.againBtn ?? "遗忘"}</span>
-                    <span class="lv-chip2 lv-chip2--default">{t.review?.hard ?? "困难"}</span>
-                    <span class="lv-chip2 lv-chip2--primary">{t.review?.good ?? "良好"}</span>
-                    <span class="lv-chip2 lv-chip2--primary">{t.review?.easy ?? "简单"}</span>
-                {/if}
-            </div>
-        </div>
-    </div>
     {/if}
     {#if sectionMatches("persona")}
     <LvSection id="sec-persona" title={t.settings.personaSection}>
@@ -1002,10 +978,10 @@
     <!-- 学习偏好四区（13-W10）：节奏与目标 / 评分与作答 / 朗读与音效 / 提醒与免打扰 -->
     {#if sectionMatches("studyRhythm")}
     <LvSection id="sec-studyRhythm" title={t.settings.studyRhythm}>
-        <LvRow label={t.settings.dailyNewTarget}>
+        <LvRow label={t.settings.dailyNewTarget} hint="推荐默认 10 张，设为 0 则不设每日目标">
             <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.dailyNewTarget} />
         </LvRow>
-        <LvRow label={t.settings.dailyReviewTarget}>
+        <LvRow label={t.settings.dailyReviewTarget} hint="推荐默认 20 张，设为 0 则不设每日目标">
             <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.dailyReviewTarget} />
         </LvRow>
         <LvRow label={t.settings.topbarDirectReview}>
@@ -1047,7 +1023,7 @@
         <LvRow label={t.settings.dailyTipEnabled} hint={t.settings.dailyTipHint}>
             <LvSwitch bind:checked={draft.dailyTipEnabled} />
         </LvRow>
-        <LvRow label={t.settings.leechThreshold}>
+        <LvRow label={t.settings.leechThreshold} hint="默认 8 次，达到该遗忘次数时标记为易混淆卡">
             <input class="b3-text-field fn__size-60" type="number" min="1" bind:value={draft.leechThreshold} />
         </LvRow>
     </LvSection>
@@ -1464,7 +1440,32 @@
     {/if}
 
     {#if sectionMatches("appearance")}
-    <LvSection title={t.settings.appearance}>
+    <LvSection id="sec-appearance" title={t.settings.appearance}>
+        <div class="lv-notice" style="display: flex; gap: var(--lv-sp-4); align-items: center; flex-wrap: wrap; margin-bottom: var(--lv-sp-3)">
+            <div style="flex: 1; min-width: 220px">
+                <div class="lv-eyebrow">{t.settings.previewTitle}</div>
+                <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewSub}</div>
+            </div>
+            <div class="lv-card2" style={`max-width: 340px; font-size: ${draft.cardFontScale || 1}em; flex: 1; padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);`}>
+                {#if draft.customCardCss}
+                    {@html `<style>${draft.customCardCss}</style>`}
+                {/if}
+                <strong>{t.settings.previewQ}</strong>
+                <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewA}</div>
+                <div class="lv-settings-preview-rating" style="margin-top: var(--lv-sp-3); display: flex; gap: var(--lv-sp-1); flex-wrap: wrap;">
+                    {#if draft.ratingStyle === "three"}
+                        <span class="lv-chip2 lv-chip2--warn">{t.review?.unknown ?? "不认识"}</span>
+                        <span class="lv-chip2 lv-chip2--default">{t.review?.vague ?? "模糊"}</span>
+                        <span class="lv-chip2 lv-chip2--primary">{t.review?.know ?? "认识"}</span>
+                    {:else}
+                        <span class="lv-chip2 lv-chip2--warn">{t.review?.againBtn ?? "遗忘"}</span>
+                        <span class="lv-chip2 lv-chip2--default">{t.review?.hard ?? "困难"}</span>
+                        <span class="lv-chip2 lv-chip2--primary">{t.review?.good ?? "良好"}</span>
+                        <span class="lv-chip2 lv-chip2--primary">{t.review?.easy ?? "简单"}</span>
+                    {/if}
+                </div>
+            </div>
+        </div>
         <LvRow label={t.settings.cardFontScale}>
             <LvSlider value={draft.cardFontScale} min={0.85} max={1.25} step={0.05} suffix="×" onchange={(v) => (draft.cardFontScale = v)} />
         </LvRow>
