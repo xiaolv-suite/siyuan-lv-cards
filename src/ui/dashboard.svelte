@@ -1969,7 +1969,7 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -1977,7 +1977,7 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
     .lv-first-use-steps span {
@@ -1991,7 +1991,8 @@
         color: var(--lv-color-brand);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-bold);
-        box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
+        border: 1px solid var(--lv-primary-border);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-hero-tags-group {
         display: inline-flex;
@@ -2089,7 +2090,7 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-l);
         background: var(--lv-color-surface);
-        box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         text-align: left;
         cursor: default;
         transition: transform var(--lv-dur-2) var(--lv-ease),
@@ -2099,14 +2100,14 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
-            box-shadow: 0 6px 18px -4px color-mix(in srgb, black 7%, transparent), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
 
         &.lv-today-deck--has-cards {
             border-color: color-mix(in srgb, var(--lv-color-brand) 18%, var(--lv-border));
             &:hover {
                 border-color: var(--lv-primary-border);
-                box-shadow: 0 8px 24px -4px color-mix(in srgb, var(--lv-color-brand) 14%, transparent), var(--lv-inset-shine);
+                box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
             }
         }
 
@@ -2139,6 +2140,11 @@
             align-items: center;
             gap: calc(var(--lv-space-unit) * 4);
             flex-shrink: 0;
+        }
+        .lv-today-deck-count {
+            font-size: var(--lv-type-meta-size);
+            color: var(--lv-color-text-muted);
+            font-variant-numeric: tabular-nums;
         }
         .lv-deck-quick-btn {
             border-radius: var(--lv-r-pill);
