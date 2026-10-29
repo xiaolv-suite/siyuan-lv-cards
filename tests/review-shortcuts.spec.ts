@@ -200,13 +200,19 @@ describe("review-shortcuts 键盘调度解析器", () => {
     });
 
     describe("shouldIgnoreReviewKeydown", () => {
-        it("修饰键、合成中、重复按键或已阻止事件均被忽略", () => {
+        it("除 Ctrl/Cmd+D 归档快捷键外，常规修饰键、合成中、重复按键或已阻止事件均被忽略", () => {
             expect(shouldIgnoreReviewKeydown({ defaultPrevented: true })).toBe(true);
             expect(shouldIgnoreReviewKeydown({ isComposing: true })).toBe(true);
-            expect(shouldIgnoreReviewKeydown({ ctrlKey: true })).toBe(true);
-            expect(shouldIgnoreReviewKeydown({ metaKey: true })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ ctrlKey: true, key: "c" })).toBe(true);
+            expect(shouldIgnoreReviewKeydown({ metaKey: true, key: "v" })).toBe(true);
             expect(shouldIgnoreReviewKeydown({ altKey: true })).toBe(true);
             expect(shouldIgnoreReviewKeydown({ repeat: true })).toBe(true);
+
+            // Ctrl+D / Cmd+D 作为一键解散归档卡片的快捷键，必须放行进入调度
+            expect(shouldIgnoreReviewKeydown({ ctrlKey: true, key: "d" })).toBe(false);
+            expect(shouldIgnoreReviewKeydown({ ctrlKey: true, key: "D" })).toBe(false);
+            expect(shouldIgnoreReviewKeydown({ metaKey: true, key: "d" })).toBe(false);
+            expect(shouldIgnoreReviewKeydown({ metaKey: true, key: "D" })).toBe(false);
         });
 
         it("点击按钮或链接元素上的空格与回车不被全局抢占", () => {

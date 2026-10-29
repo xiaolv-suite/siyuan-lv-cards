@@ -112,7 +112,7 @@ export const simpleDialog = (args: {
 }) => {
     const dialog = new Dialog({
         title: `<div class="lv-dialog-title-wrap">${args.title}</div>`,
-        content: `<div class="lv-cards-dialog-content dialog-content" style="display: flex; height: 100%;"/>`,
+        content: `<div class="lv-cards-dialog-content dialog-content" style="display: flex; height: 100%;"></div>`,
         width: args.width,
         height: args.height,
         destroyCallback: args.callback

@@ -213,7 +213,12 @@ export function shouldIgnoreReviewKeydown(e: {
     key?: string;
     target?: EventTarget | null;
 }): boolean {
-    if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) {
+    if (e.defaultPrevented || e.isComposing || e.altKey || e.repeat) {
+        return true;
+    }
+    // 允许 Ctrl+D / Cmd+D（解散/归档卡片），其他修饰键组合默认忽略
+    const isDismissShortcut = (e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D");
+    if ((e.ctrlKey || e.metaKey) && !isDismissShortcut) {
         return true;
     }
     if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element) {

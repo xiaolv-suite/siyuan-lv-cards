@@ -95,12 +95,15 @@
             onkeydown={(e: KeyboardEvent) => {
                 if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") {
                     e.preventDefault();
+                    e.stopPropagation();
                     wrapSelectionWithCloze();
                 } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && changed && !saving) {
                     e.preventDefault();
+                    e.stopPropagation();
                     save();
                 } else if (e.key === "Escape" && !saving) {
                     e.preventDefault();
+                    e.stopPropagation();
                     oncancel();
                 }
             }}

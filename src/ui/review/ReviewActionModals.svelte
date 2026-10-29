@@ -229,10 +229,10 @@
         onwheel={onLightboxWheel}
     >
         <div class="lv-lightbox-toolbar" onclick={(e) => e.stopPropagation()} tabindex="-1">
-            <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="缩小" onclick={() => (imgScale = Math.max(0.5, Math.round((imgScale - 0.2) * 100) / 100))}>−</button>
+            <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="缩小" aria-label="缩小图片" onclick={() => (imgScale = Math.max(0.5, Math.round((imgScale - 0.2) * 100) / 100))}>−</button>
             <span class="lv-lightbox-scale-num" title="双击图片还原">{Math.round(imgScale * 100)}%</span>
-            <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="放大" onclick={() => (imgScale = Math.min(4, Math.round((imgScale + 0.2) * 100) / 100))}>+</button>
-            <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--outline lv-lightbox-reset" onclick={onImageDblClick}>1:1</button>
+            <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--text" title="放大" aria-label="放大图片" onclick={() => (imgScale = Math.min(4, Math.round((imgScale + 0.2) * 100) / 100))}>+</button>
+            <button type="button" tabindex="-1" class="b3-button b3-button--small b3-button--outline lv-lightbox-reset" title="还原 1:1" aria-label="还原图片原始比例 1:1" onclick={onImageDblClick}>1:1</button>
             <button type="button" class="b3-button b3-button--small lv-img-lightbox-close" aria-label={cancelLabel} onclick={onCloseZoomedImage}><LvIcon name="close" size={14} /></button>
         </div>
 

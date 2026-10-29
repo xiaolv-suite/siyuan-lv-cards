@@ -237,6 +237,7 @@
                     onkeydown={(e) => {
                         if (template === "cloze" && (e.ctrlKey || e.metaKey) && (e.key === "h" || e.key === "H")) {
                             e.preventDefault();
+                            e.stopPropagation();
                             insertCloze();
                         }
                     }}

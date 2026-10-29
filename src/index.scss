@@ -1754,11 +1754,11 @@ body[data-theme-mode="dark"],
 
         .lv-choice-key-badge {
             background: var(--lv-color-success, #22c55e) !important;
-            color: #fff !important;
+            color: var(--lv-color-on-success, #fff) !important;
         }
         .lv-result-correct {
             background: var(--lv-color-success, #22c55e);
-            color: #fff;
+            color: var(--lv-color-on-success, #fff);
         }
     }
 
@@ -1769,11 +1769,11 @@ body[data-theme-mode="dark"],
 
         .lv-choice-key-badge {
             background: var(--lv-color-danger, #ef4444) !important;
-            color: #fff !important;
+            color: var(--lv-color-on-danger, #fff) !important;
         }
         .lv-result-wrong {
             background: var(--lv-color-danger, #ef4444);
-            color: #fff;
+            color: var(--lv-color-on-danger, #fff);
         }
     }
 }
@@ -1880,7 +1880,7 @@ body[data-theme-mode="dark"],
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
         background: var(--lv-color-success, #22c55e);
-        color: #fff;
+        color: var(--lv-color-on-success, #fff);
     }
 
     &.lv-judge-correct {
@@ -1889,7 +1889,7 @@ body[data-theme-mode="dark"],
         box-shadow: 0 0 0 1.5px var(--lv-color-success, #22c55e) !important;
         .lv-judge-circle-icon {
             background: var(--lv-color-success, #22c55e) !important;
-            color: #fff !important;
+            color: var(--lv-color-on-success, #fff) !important;
         }
     }
 
@@ -1899,7 +1899,7 @@ body[data-theme-mode="dark"],
         box-shadow: 0 0 0 1.5px var(--lv-color-danger, #ef4444) !important;
         .lv-judge-circle-icon {
             background: var(--lv-color-danger, #ef4444) !important;
-            color: #fff !important;
+            color: var(--lv-color-on-danger, #fff) !important;
         }
     }
 }
@@ -2083,6 +2083,13 @@ body[data-theme-mode="dark"],
         color: var(--lv-color-brand);
         background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
     }
+    &:active:not(:disabled) {
+        transform: scale(0.97);
+    }
+    &:focus-visible {
+        outline: 2px solid var(--lv-color-focus, var(--lv-color-brand));
+        outline-offset: 2px;
+    }
 }
 
 .lv-btn-mgr-doc {
@@ -2112,6 +2119,13 @@ body[data-theme-mode="dark"],
     &:hover {
         color: var(--lv-color-warning, #f59e0b);
         background: color-mix(in srgb, var(--lv-color-warning) 12%, transparent);
+    }
+    &:active {
+        transform: scale(0.92);
+    }
+    &:focus-visible {
+        outline: 2px solid var(--lv-color-focus, var(--lv-color-brand));
+        outline-offset: 2px;
     }
 }
 

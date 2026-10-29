@@ -213,7 +213,7 @@
             flex: 1;
             min-height: 46px;
             border-radius: var(--lv-r-pill);
-            background: linear-gradient(135deg, var(--lv-brand, #E11D48) 0%, color-mix(in srgb, var(--lv-brand, #E11D48) 86%, black) 100%);
+            background: linear-gradient(135deg, var(--lv-brand, #6366F1) 0%, color-mix(in srgb, var(--lv-brand, #6366F1) 86%, black) 100%);
             color: #FFFFFF !important;
             font-weight: var(--lv-fw-semibold);
             box-shadow: 0 4px 18px color-mix(in srgb, var(--lv-brand) 36%, transparent), var(--lv-inset-shine);

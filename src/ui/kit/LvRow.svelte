@@ -8,16 +8,16 @@
     } = $props();
 </script>
 
-<div class="lv-row2">
+<!-- AS-10：通过 label 包裹整行实现真正的无障碍名称隐式关联，点击行内标题可聚焦控件 -->
+<label class="lv-row2">
     <div class="lv-row2-label">
         <div class="lv-row2-name">{label}</div>
         {#if hint}<div class="ft__smaller ft__on-surface lv-row2-hint">{hint}</div>{/if}
     </div>
-    <!-- AS-10：label 包裹实现与行内控件的隐式关联（点击标签聚焦首个可标注控件；对按钮类无副作用） -->
-    <label class="lv-row2-control">
+    <div class="lv-row2-control">
         {@render children?.()}
-    </label>
-</div>
+    </div>
+</label>
 
 <style>
     .lv-row2 {

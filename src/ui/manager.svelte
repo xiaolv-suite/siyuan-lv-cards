@@ -116,6 +116,7 @@
     let deferredFilter = $state("");
     let filterDirty = $state(false);
     let filterTimer: ReturnType<typeof setTimeout> | null = null;
+    let starTogglingSet = $state<Set<string>>(new Set());
     $effect(() => {
         const dirty = filterDirty;
         const nextFilter = filterText;
@@ -384,6 +385,12 @@
         void onStatusChange();
     }
 
+    function applyCardTypeFilter(event: Event) {
+        cardTypeFilter = (event.currentTarget as HTMLSelectElement).value as typeof cardTypeFilter;
+        selected = [];
+        resetScrollPosition();
+    }
+
     function toggleLeechFilter() {
         leechOnly = !leechOnly;
         selected = [];
@@ -468,8 +475,8 @@
                 batchBusy = "remove";
                 batchError = "";
                 try {
-                    // 🧪 deckID 传空的跨集删除语义待 docs/18 实测
-                    await removeRiffCards("", blockIDs);
+                    const targetDeckID = deckScope?.id ?? "";
+                    await removeRiffCards(targetDeckID, blockIDs);
                     invalidateDueCache(); // AT-4：删卡改变到期数
                     selected = [];
                     showMessage(t.manager.batchDone.replace("${n}", String(count)), 2000, "info");
@@ -847,7 +854,7 @@
             <option value="review">{t.manager.statusReview}</option>
             <option value="due">{t.manager.statusDue}</option>
         </select>
-        <select class="b3-select lv-sort" bind:value={cardTypeFilter} title={t.manager.cardTypeFilter ?? "卡型"} aria-label={t.manager.cardTypeFilter ?? "卡型"}>
+        <select class="b3-select lv-sort" bind:value={cardTypeFilter} onchange={applyCardTypeFilter} title={t.manager.cardTypeFilter ?? "卡型"} aria-label={t.manager.cardTypeFilter ?? "卡型"}>
             <option value="all">{t.manager.cardTypeAll ?? "卡型：全部"}</option>
             <option value="outline-cloze">{t.manager.cardTypeOutlineCloze ?? "卡型：大纲挖空"}</option>
             <option value="superblock">{t.manager.cardTypeSuperBlock ?? "卡型：超级块"}</option>
@@ -918,7 +925,7 @@
     {#if showDeckModal}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="lv-modal-mask" onclick={() => (showDeckModal = false)} role="presentation"></div>
-        <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus>
+        <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus={{ onEscape: () => { showDeckModal = false; } }}>
             <div class="lv-deck-modal-head">
                 <span id="lv-deck-modal-title" style="font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size)">
                     {modalMode === "move" ? (t.manager.batchMoveDeck ?? "移动卡片至目标卡组") : (t.manager.batchAddDeck ?? "添加卡片至目标卡组")}
@@ -974,6 +981,13 @@
                 onaction={ctx.openOnboarding ? () => ctx.openOnboarding!() : undefined}
             />
         {/if}
+        {#if pageCount > 1}
+            <div class="lv-mgr-pager">
+                <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" disabled={page <= 1} onclick={() => goto(page - 1)}><LvIcon name="chevron-left" size={12} /> <span>{t.manager.prev}</span></button>
+                <span class="lv-pager">{page} / {pageCount}</span>
+                <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" disabled={page >= pageCount} onclick={() => goto(page + 1)}><span>{t.manager.next}</span> <LvIcon name="chevron-right" size={12} /></button>
+            </div>
+        {/if}
     {:else}
         <div class="lv-list" role="list" aria-label={t.manager.title}>
             {#each filteredBlocks as b, rowIndex (b.id)}
@@ -1028,10 +1042,19 @@
                             class="b3-button b3-button--small lv-btn-ghost lv-mgr-star-btn"
                             class:lv-btn-starred={(ctx.getStarredCardIDs?.() ?? []).includes(b.id)}
                             title={(ctx.getStarredCardIDs?.() ?? []).includes(b.id) ? "取消星标" : "加入星标重点"}
+                            aria-label={(ctx.getStarredCardIDs?.() ?? []).includes(b.id) ? "取消星标" : "加入星标重点"}
+                            aria-pressed={(ctx.getStarredCardIDs?.() ?? []).includes(b.id)}
+                            disabled={starTogglingSet.has(b.id)}
                             onclick={async (e) => {
                                 e.stopPropagation();
+                                if (starTogglingSet.has(b.id)) return;
                                 if (ctx.toggleStarCard) {
-                                    await ctx.toggleStarCard(b.id);
+                                    starTogglingSet.add(b.id);
+                                    try {
+                                        await ctx.toggleStarCard(b.id);
+                                    } finally {
+                                        starTogglingSet.delete(b.id);
+                                    }
                                 }
                             }}
                         >

@@ -597,6 +597,7 @@
     let userJudgeChoice = $state<boolean | null>(null);
     let suggestedRating = $state<number | null>(null);
     let zenMode = $state(false);
+    let answerRevealedAt = 0;
 
     function resetEphemeralQuiz() {
         const s = createInitialEphemeralQuizState();
@@ -917,6 +918,7 @@
         loadSeq++;
         contextRequestSeq++;
         showAnswer = false;
+        answerRevealedAt = 0;
         expectedText = "";
         typingInput = "";
         occl = null;
@@ -1109,8 +1111,10 @@
             },
             onExpire: (mode) => {
                 showAnswer = true;
+                answerRevealedAt = Date.now();
                 if (mode === "forget") {
                     timeoutExpired = true;
+                    suggestedRating = 1;
                 }
             },
         });
@@ -1463,6 +1467,9 @@
      * 焦点在面板内时事件会冒泡到 window 造成双触发（如 [ 开回看又立即关闭）。
      * 约定：容器通道处理焦点在面板内的按键；window 通道只处理面板外的。 */
     function onWindowKeydown(e: KeyboardEvent) {
+        if (!rootEl || !rootEl.isConnected || rootEl.offsetParent === null) {
+            return;
+        }
         if (isEventInsideContainer(rootEl, e.target)) {
             return;
         }
@@ -1522,6 +1529,9 @@
 
         const rating = resolveRatingFromShortcutAction(action);
         if (rating !== null) {
+            if (Date.now() - answerRevealedAt < 150) {
+                return;
+            }
             triggerKeyFeedback(String(rating));
             void rate(rating);
             return;
@@ -1556,8 +1566,12 @@
                 }
                 break;
             case "rate-default":
-                triggerKeyFeedback("3");
-                void rate((suggestedRating as any) ?? 3);
+                if (Date.now() - answerRevealedAt < 150) {
+                    return;
+                }
+                const defaultRate = (timeoutExpired && lastTimeoutMode === "forget") ? 1 : ((suggestedRating as any) ?? 3);
+                triggerKeyFeedback(String(defaultRate));
+                void rate(defaultRate);
                 break;
             case "advance-hint":
                 advanceHint();
@@ -1652,6 +1666,7 @@
     function revealAnswer() {
         if (!faceReady || showAnswer) return;
         showAnswer = true;
+        answerRevealedAt = Date.now();
         triggerHaptic(10);
     }
 
@@ -2276,14 +2291,14 @@
                 bottom: 0;
                 left: 0;
                 right: 0;
-                height: 20px;
+                height: 14px;
                 background: linear-gradient(to bottom, transparent, var(--lv-color-surface));
                 pointer-events: none;
-                margin-top: calc((calc(var(--lv-space-unit) * 10)) * -1);
+                margin-top: -14px;
                 display: block;
                 border-bottom-left-radius: var(--lv-r-dialog);
                 border-bottom-right-radius: var(--lv-r-dialog);
-                opacity: 0.9;
+                opacity: 0.6;
             }
 
             &.lv-anim-glow {

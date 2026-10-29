@@ -106,6 +106,8 @@ export function trapFocus(container: HTMLElement, opts: TrapOptions = {}): Focus
             return;
         }
         if (ke.key === "Escape") {
+            ke.preventDefault();
+            ke.stopPropagation();
             opts.onEscape?.();
             return;
         }
