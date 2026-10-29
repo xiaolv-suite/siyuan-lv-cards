@@ -700,6 +700,30 @@ body[data-theme-mode="dark"],
     }
 }
 
+// 移动端与触控屏最小触控目标保护（WCAG 2.5.5 / 2.5.8 Target Size >= 44px）
+@media (pointer: coarse) {
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+        .b3-button--small,
+        .lv-btn-tool,
+        .lv-chipbtn,
+        .b3-switch {
+            position: relative;
+            &::before {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                min-width: 44px;
+                min-height: 44px;
+                width: 100%;
+                height: 100%;
+                pointer-events: auto;
+            }
+        }
+    }
+}
+
 // 对话框内容区滚动条（R53 细滚动条口径，与页面一致）
 .lv-dialog .b3-dialog__content {
     scrollbar-width: thin;
@@ -1274,8 +1298,14 @@ body[data-theme-mode="dark"],
     font-size: var(--lv-type-body-size, 14px);
     line-height: var(--lv-lh-reading-loose, 1.8);
     overflow-wrap: anywhere;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 
-    p { margin: var(--lv-sp-2) 0; }
+    p {
+        margin: var(--lv-sp-2) 0;
+        max-width: 48em;
+    }
 
     .lv-mask-slot {
         display: inline-block;
@@ -1564,6 +1594,7 @@ body[data-theme-mode="dark"],
     .lv-palette-panel,
     .lv-drawer-panel,
     .lv-review-box,
+    .lv-btn-rate,
     :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card,
     .lv-badge,
