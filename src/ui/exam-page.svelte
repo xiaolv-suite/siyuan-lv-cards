@@ -461,7 +461,9 @@
         padding: calc(var(--lv-space-unit) * 9) calc(var(--lv-space-unit) * 10);
         margin-bottom: var(--lv-sp-3);
         border-radius: var(--lv-r-l);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -469,7 +471,7 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-border-strong);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
     .lv-plan-cram {
@@ -484,6 +486,7 @@
         display: flex; align-items: center; gap: var(--lv-sp-3);
         font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted);
         margin: var(--lv-sp-2) 0;
+        b { color: var(--lv-color-data); font-variant-numeric: tabular-nums; }
     }
     .lv-plan-advice {
         display: flex; flex-wrap: wrap; gap: calc(var(--lv-space-unit) * 2); align-items: baseline;
@@ -492,7 +495,7 @@
     .lv-plan-actions {
         gap: var(--lv-sp-1);
         flex-wrap: wrap;
-        border-top: 1px solid var(--lv-border);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         padding-top: var(--lv-sp-2);
         margin-top: var(--lv-sp-3);
     }
@@ -500,17 +503,22 @@
     .lv-editmask {
         position: fixed; inset: 0; z-index: var(--lv-z-host-overlay);
         background: color-mix(in srgb, black 38%, transparent);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
         display: flex; align-items: flex-start; justify-content: center;
         padding: var(--lv-sp-5);
+
+        @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
     }
     .lv-editcard {
         width: 520px;
         max-width: 94vw;
         margin-top: 6vh;
         border-radius: var(--lv-r-dialog);
-        box-shadow: var(--lv-shadow-float), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-3), var(--lv-inset-shine);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
         animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
     }
     .lv-form-error {

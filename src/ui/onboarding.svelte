@@ -202,11 +202,11 @@
     }
     .lv-ob-intro, .lv-ob-types {
         margin-bottom: var(--lv-sp-3);
-        padding: var(--lv-sp-3);
-        background: var(--lv-primary-softer);
-        border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-m);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        padding: var(--lv-sp-4);
+        background: var(--lv-primary-soft);
+        border: 1px solid var(--lv-primary-border);
+        border-radius: var(--lv-r-l);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
     }
     .lv-ob-intro strong, .lv-ob-types strong { display: block; margin-bottom: var(--lv-sp-1); }
@@ -218,6 +218,7 @@
         padding: var(--lv-sp-2) var(--lv-sp-3);
         border-left: 3px solid var(--lv-color-brand);
         background: var(--lv-color-canvas-subtle);
+        border-radius: 0 var(--lv-r-s) var(--lv-r-s) 0;
         font-size: var(--lv-type-control-size);
     }
     .lv-persona {
@@ -227,20 +228,20 @@
         border: 1px solid var(--lv-border);
         background: var(--lv-color-surface);
         text-align: left;
-        border-radius: var(--lv-r-m);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        border-radius: var(--lv-r-l);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: border-color var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
     }
     .lv-persona:hover {
         transform: translateY(-2px);
-        box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         border-color: var(--lv-border-strong);
     }
     .lv-persona-active {
         border-color: var(--lv-color-brand);
         background: var(--lv-primary-soft);
-        box-shadow: 0 0 0 1px var(--lv-color-brand), var(--lv-shadow-card);
+        box-shadow: 0 0 0 1.5px var(--lv-color-brand), var(--lv-shadow-1);
     }
     .lv-persona-name {
         font-weight: var(--lv-fw-semibold);

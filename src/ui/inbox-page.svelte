@@ -347,12 +347,16 @@
         padding: calc(var(--lv-space-unit) * 3) var(--lv-sp-3);
         border: 1px solid var(--lv-primary-border);
         border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-primary-soft) 85%, var(--lv-color-surface));
-        backdrop-filter: blur(10px) saturate(1.15);
-        -webkit-backdrop-filter: blur(10px) saturate(1.15);
-        box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+        background: var(--lv-primary-soft);
+        box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         margin-bottom: var(--lv-sp-3);
         animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
+
+        @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+            background: color-mix(in srgb, var(--lv-primary-soft) 85%, var(--lv-color-surface));
+            backdrop-filter: blur(10px) saturate(1.15);
+            -webkit-backdrop-filter: blur(10px) saturate(1.15);
+        }
     }
     .lv-list {
         display: flex;
@@ -364,18 +368,20 @@
         align-items: center;
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-3) var(--lv-sp-4);
-        /* R53 .panel 口径：纯 surface + 1px 派生描边，无静态阴影（阴影只给 hover） */
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-m);
+        border-radius: var(--lv-r-l);
+        box-shadow: var(--lv-shadow-1);
         transition: border-color var(--lv-dur-2) var(--lv-ease),
-            box-shadow var(--lv-dur-2) var(--lv-ease);
+            box-shadow var(--lv-dur-2) var(--lv-ease),
+            transform var(--lv-dur-1) var(--lv-ease);
         position: relative;
         cursor: default;
     }
     .lv-row:hover {
+        transform: translateY(-1px);
         border-color: var(--lv-border-strong);
-        box-shadow: var(--lv-shadow-1);
+        box-shadow: var(--lv-shadow-2);
     }
     .lv-row--selected {
         background: color-mix(in srgb, var(--lv-primary-soft) 40%, var(--lv-color-surface));

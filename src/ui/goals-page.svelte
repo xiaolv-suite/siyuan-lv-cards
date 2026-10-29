@@ -388,12 +388,12 @@
             font-size: var(--lv-type-caption-size);
             font-weight: var(--lv-fw-bold);
         }
-        .lv-step-done { color: var(--lv-color-brand); font-weight: 500; }
+        .lv-step-done { color: var(--lv-color-data); font-weight: var(--lv-fw-semibold); }
         .lv-step-num.lv-step-done {
-            background: var(--lv-color-brand);
-            border-color: var(--lv-color-brand);
+            background: var(--lv-color-data);
+            border-color: var(--lv-color-data);
             color: #FFFFFF;
-            box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
+            box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-data) 30%, transparent);
         }
     }
     .lv-goal-row {
@@ -402,7 +402,9 @@
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-4);
         border-radius: var(--lv-r-l);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -410,7 +412,7 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
     /* 窄屏：侧栏动作（优先级/删除）落到卡底横排，不再挤压主内容 */

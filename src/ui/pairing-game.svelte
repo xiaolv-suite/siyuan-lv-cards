@@ -242,19 +242,19 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         cursor: pointer;
         font-size: var(--lv-type-body-size);
         line-height: var(--lv-lh-meta);
         transition: border-color var(--lv-dur-1) var(--lv-ease),
-            background var(--lv-dur-1) var(--lv-ease),
+            background-color var(--lv-dur-1) var(--lv-ease),
             transform var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
             border-color: var(--lv-border-strong);
             transform: translateY(-1px);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
         &:active {
             transform: translateY(1px) scale(0.985);
@@ -264,7 +264,7 @@
         border-color: var(--lv-color-brand) !important;
         background: var(--lv-primary-soft) !important;
         color: var(--lv-color-brand);
-        box-shadow: 0 0 0 1px var(--lv-color-brand), var(--lv-shadow-card) !important;
+        box-shadow: 0 0 0 1.5px var(--lv-color-brand), var(--lv-shadow-1) !important;
     }
     .lv-pair-ans { color: var(--lv-color-text-muted); }
     .lv-pair-result { font-size: var(--lv-type-section-size); font-weight: 700; }
