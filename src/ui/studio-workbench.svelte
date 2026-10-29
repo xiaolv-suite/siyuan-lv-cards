@@ -356,9 +356,9 @@
     .lv-studio-tool[hidden] { display: none !important; }
     .lv-studio-tool { min-width: 0; }
     .lv-studio-heading { margin: 0 0 var(--lv-sp-4); }
-    .lv-studio-heading h2 { margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); font-size: 21px; line-height: var(--lv-lh-reading-tight); }
+    .lv-studio-heading h2 { margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); font-size: var(--lv-type-page-size); line-height: var(--lv-lh-reading-tight); }
     .lv-studio-heading p { margin: 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); line-height: 1.65; }
-    .lv-studio-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: var(--lv-sp-3); }
+    .lv-studio-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-3); margin-bottom: var(--lv-sp-3); }
     .lv-studio-modes {
         display: inline-flex;
         gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
@@ -387,7 +387,7 @@
         background: var(--lv-color-surface);
         color: var(--lv-color-brand);
         font-weight: var(--lv-fw-bold);
-        box-shadow: 0 2px 8px color-mix(in srgb, black 6%, transparent), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-studio-tools { display: flex; align-items: center; gap: var(--lv-sp-2); }
     .lv-studio-tools .b3-button { min-height: 34px; border-radius: var(--lv-r-pill); padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6); }
@@ -405,7 +405,7 @@
     }
     .lv-studio-replace-copy { flex: 1 1 220px; min-width: 0; }
     .lv-studio-replace p { margin: calc(var(--lv-space-unit) * 2) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.5; }
-    .lv-studio-error { margin: calc(var(--lv-space-unit) * 6) 0; padding: 10px 12px; border-left: 3px solid var(--lv-color-danger); background: var(--lv-color-surface); color: var(--lv-color-danger); overflow-wrap: anywhere; }
+    .lv-studio-error { margin: calc(var(--lv-space-unit) * 6) 0; padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-danger-border); border-left: 3px solid var(--lv-color-danger); border-radius: var(--lv-r-m); background: var(--lv-danger-soft); color: var(--lv-color-on-danger-soft); overflow-wrap: anywhere; }
     .lv-studio-loading { padding: calc(var(--lv-space-unit) * 9) 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); }
     @container lv-studio (max-width: 680px) {
         .lv-studio-toolbar { align-items: flex-start; flex-wrap: wrap; }

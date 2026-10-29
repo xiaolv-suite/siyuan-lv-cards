@@ -1651,9 +1651,8 @@
             position: sticky;
             bottom: 0;
             z-index: var(--lv-z-sticky, 100);
-            background: color-mix(in srgb, var(--lv-color-surface) 94%, transparent);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: var(--lv-color-surface);
+            box-shadow: var(--lv-shadow-2);
             margin: var(--lv-sp-4) calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1);
             padding: var(--lv-sp-3) var(--lv-sp-4);
             border-top: 1px solid var(--lv-border);
@@ -1661,6 +1660,12 @@
             align-items: center;
             justify-content: flex-end;
             gap: var(--lv-sp-2);
+
+            @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+                background: color-mix(in srgb, var(--lv-color-surface) 94%, transparent);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
         }
         .lv-settings-dirty-hint {
             display: inline-flex;
@@ -1682,15 +1687,19 @@
             position: sticky;
             top: 0;
             z-index: var(--lv-z-elevated, 2);
-            background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: var(--lv-color-surface);
             display: flex;
             gap: calc(var(--lv-space-unit) * 3);
             flex-wrap: wrap;
             margin: calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1) var(--lv-sp-3);
             padding: var(--lv-sp-2) var(--lv-sp-4);
             border-bottom: 1px solid var(--lv-border);
+
+            @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
+                background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+            }
         }
         .lv-settings-nav-chip {
             display: inline-flex;
@@ -1719,11 +1728,11 @@
             .b3-text-field {
                 border-radius: var(--lv-r-pill);
                 padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 8);
-                box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
+                box-shadow: var(--lv-shadow-1);
                 transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
                 &:focus {
                     border-color: var(--lv-color-brand);
-                    box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+                    box-shadow: var(--lv-focus-ring);
                 }
             }
         }

@@ -152,9 +152,9 @@
         margin: var(--lv-sp-1) 0;
         padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
         border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-warning, #f59e0b) 12%, var(--lv-color-surface));
-        border: 1px solid color-mix(in srgb, var(--lv-color-warning, #f59e0b) 28%, transparent);
-        color: var(--lv-color-warning, #d97706);
+        background: var(--lv-warn-soft);
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 28%, transparent);
+        color: var(--lv-color-on-warning-soft);
         line-height: var(--lv-lh-meta);
     }
     .lv-editor-head {

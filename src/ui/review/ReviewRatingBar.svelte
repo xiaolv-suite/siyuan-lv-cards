@@ -213,20 +213,25 @@
             flex: 1;
             min-height: 46px;
             border-radius: var(--lv-r-pill);
-            background: linear-gradient(135deg, var(--lv-brand, #6366F1) 0%, color-mix(in srgb, var(--lv-brand, #6366F1) 86%, black) 100%);
+            background: var(--lv-color-brand);
+            border: 1px solid transparent;
             color: #FFFFFF !important;
             font-weight: var(--lv-fw-semibold);
-            box-shadow: 0 4px 18px color-mix(in srgb, var(--lv-brand) 36%, transparent), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-1);
             transition: transform var(--lv-dur-1) var(--lv-ease),
                 box-shadow var(--lv-dur-2) var(--lv-ease),
+                background-color var(--lv-dur-1) var(--lv-ease),
                 filter var(--lv-dur-1) var(--lv-ease);
 
             &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 24px color-mix(in srgb, var(--lv-brand) 48%, transparent);
+                transform: translateY(-1.5px);
+                background: var(--lv-color-brand-strong);
+                box-shadow: var(--lv-shadow-2);
+                filter: brightness(1.05);
             }
             &:active {
-                transform: translateY(0.5px);
+                transform: translateY(0.5px) scale(0.985);
+                box-shadow: var(--lv-shadow-1);
             }
 
             .lv-btn-wide-kbd {
@@ -237,6 +242,7 @@
                 border: 1px solid rgba(255, 255, 255, 0.35);
                 font-size: var(--lv-type-meta-size);
                 font-weight: var(--lv-fw-semibold);
+                font-variant-numeric: tabular-nums;
                 color: #fff;
             }
         }
@@ -244,7 +250,7 @@
         @keyframes lv-rating-reveal {
             from {
                 opacity: 0;
-                transform: translate3d(0, 5px, 0);
+                transform: translate3d(0, 4px, 0);
             }
             to {
                 opacity: 1;
@@ -266,7 +272,7 @@
             padding: calc(var(--lv-space-unit) * 7) calc(var(--lv-space-unit) * 8 + var(--lv-space-hairline));
             min-height: 80px;
             background: var(--lv-color-surface);
-            box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-1);
             transition: transform var(--lv-dur-1) var(--lv-ease),
                 background var(--lv-dur-1) var(--lv-ease),
                 box-shadow var(--lv-dur-2) var(--lv-ease),
@@ -275,12 +281,11 @@
 
             &:hover {
                 transform: translateY(-2px);
-                box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+                box-shadow: var(--lv-shadow-2);
                 border-color: var(--lv-border-strong);
             }
             &:active {
-                transform: translateY(1px) scale(0.98);
-                filter: brightness(0.96);
+                transform: translateY(0.5px) scale(0.985);
             }
 
             .lv-rate-top {
@@ -291,7 +296,7 @@
                 font-weight: var(--lv-fw-semibold);
             }
             small {
-                opacity: 0.7;
+                opacity: 0.72;
                 font-size: var(--lv-type-meta-size);
                 font-variant-numeric: tabular-nums;
             }
@@ -313,44 +318,40 @@
             color: var(--lv-color-text);
         }
         .lv-b1 {
-            box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-danger) 70%, transparent), var(--lv-shadow-card);
             &:hover {
                 border-color: var(--lv-danger-border);
-                background: color-mix(in srgb, var(--lv-color-danger) 6%, var(--lv-color-surface));
-                box-shadow: inset 0 3px 0 0 var(--lv-color-danger), var(--lv-shadow-card-hover);
+                background: var(--lv-danger-soft);
+                color: var(--lv-color-on-danger-soft);
             }
             &:active {
                 background: color-mix(in srgb, var(--lv-color-danger) 14%, var(--lv-color-surface));
             }
         }
         .lv-b2 {
-            box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-warning) 70%, transparent), var(--lv-shadow-card);
             &:hover {
-                border-color: color-mix(in srgb, var(--lv-color-warning) 35%, transparent);
-                background: color-mix(in srgb, var(--lv-color-warning) 6%, var(--lv-color-surface));
-                box-shadow: inset 0 3px 0 0 var(--lv-color-warning), var(--lv-shadow-card-hover);
+                border-color: color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
+                background: var(--lv-warn-soft);
+                color: var(--lv-color-on-warning-soft);
             }
             &:active {
                 background: color-mix(in srgb, var(--lv-color-warning) 14%, var(--lv-color-surface));
             }
         }
         .lv-b3 {
-            box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-brand) 70%, transparent), var(--lv-shadow-card);
             &:hover {
                 border-color: var(--lv-primary-border);
-                background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
-                box-shadow: inset 0 3px 0 0 var(--lv-color-brand), var(--lv-shadow-card-hover);
+                background: var(--lv-primary-soft);
+                color: var(--lv-color-on-brand-soft);
             }
             &:active {
                 background: color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-color-surface));
             }
         }
         .lv-b4 {
-            box-shadow: inset 0 2.5px 0 0 color-mix(in srgb, var(--lv-color-success) 70%, transparent), var(--lv-shadow-card);
             &:hover {
-                border-color: color-mix(in srgb, var(--lv-color-success) 35%, transparent);
-                background: color-mix(in srgb, var(--lv-color-success) 6%, var(--lv-color-surface));
-                box-shadow: inset 0 3px 0 0 var(--lv-color-success), var(--lv-shadow-card-hover);
+                border-color: color-mix(in srgb, var(--lv-color-success) 30%, transparent);
+                background: var(--lv-good-soft);
+                color: var(--lv-color-on-success-soft);
             }
             &:active {
                 background: color-mix(in srgb, var(--lv-color-success) 14%, var(--lv-color-surface));

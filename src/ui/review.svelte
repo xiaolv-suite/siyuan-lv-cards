@@ -2328,11 +2328,11 @@
             min-height: 280px;
             @media (max-width: 740px) { padding: calc(var(--lv-space-unit) * 9) calc(var(--lv-space-unit) * 8); }
             position: relative;
-            background: linear-gradient(180deg, color-mix(in srgb, var(--lv-color-brand) 2.5%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 80px);
-            box-shadow: 0 16px 36px -6px color-mix(in srgb, black 8%, transparent), 0 4px 16px color-mix(in srgb, black 4%, transparent), var(--lv-inset-shine);
+            background: var(--lv-color-surface);
+            box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
             transition: box-shadow var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease);
 
-            &:hover { box-shadow: 0 20px 40px -6px color-mix(in srgb, black 12%, transparent), var(--lv-inset-shine); }
+            &:hover { box-shadow: var(--lv-shadow-2), var(--lv-inset-shine); }
 
             // 超长卡面底部柔和滚动指示羽化（防突兀截断）
             &::after {

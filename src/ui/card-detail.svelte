@@ -486,7 +486,6 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 7%, transparent);
-        box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
         margin-bottom: var(--lv-sp-4);
     }
     .lv-facet {
@@ -509,7 +508,7 @@
         background: var(--lv-color-surface);
         color: var(--lv-color-brand);
         font-weight: var(--lv-fw-bold);
-        box-shadow: 0 2px 8px color-mix(in srgb, black 6%, transparent), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-hist-list { max-height: 320px; overflow: auto; }
 
@@ -524,7 +523,6 @@
         font-size: var(--lv-type-control-size);
         line-height: var(--lv-lh-reading);
         background: var(--lv-color-canvas);
-        box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
     }
     .lv-diff-row {
         white-space: pre-wrap;

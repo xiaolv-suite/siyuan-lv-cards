@@ -340,9 +340,9 @@
         margin: var(--lv-sp-2) 0;
         padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-warning, #f59e0b) 12%, var(--lv-color-surface));
-        border: 1px solid color-mix(in srgb, var(--lv-color-warning, #f59e0b) 28%, transparent);
-        color: var(--lv-color-warning, #d97706);
+        background: var(--lv-warn-soft);
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 28%, transparent);
+        color: var(--lv-color-on-warning-soft);
         font-size: var(--lv-type-control-size);
         line-height: var(--lv-lh-meta);
     }
@@ -450,8 +450,8 @@
         padding: calc(var(--lv-space-unit) * 12);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-dialog);
-        background: linear-gradient(180deg, color-mix(in srgb, var(--lv-brand) 3%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 60px);
-        box-shadow: 0 4px 16px -2px color-mix(in srgb, black 6%, transparent), 0 1px 3px color-mix(in srgb, black 3%, transparent), var(--lv-inset-shine);
+        background: var(--lv-color-surface);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         display: flex;
         flex-direction: column;
         justify-content: center;

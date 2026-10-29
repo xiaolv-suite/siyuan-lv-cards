@@ -752,7 +752,7 @@
         background: var(--lv-primary-soft);
         color: var(--lv-color-brand);
         font-weight: var(--lv-fw-heading);
-        box-shadow: inset 0 0 0 1px var(--lv-primary-border);
+        border: 1px solid var(--lv-primary-border);
 
         &::before {
             content: "";
@@ -841,7 +841,6 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
         background: var(--lv-color-canvas);
-        box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-normal);
@@ -851,7 +850,7 @@
     .lv-r54-search:not(:disabled):hover {
         border-color: var(--lv-primary-border);
         background: var(--lv-color-surface);
-        box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-r54-search:disabled { cursor: not-allowed; opacity: .62; }
     .lv-r54-search kbd {

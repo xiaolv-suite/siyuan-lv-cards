@@ -166,9 +166,9 @@
         background: transparent;
     }
     .lv-palette input:focus-visible {
-        outline: 2px solid var(--lv-color-brand);
-        outline-offset: -2px;
-        box-shadow: inset 0 0 0 1px var(--lv-color-brand);
+        outline: none;
+        border-color: var(--lv-color-brand);
+        box-shadow: var(--lv-focus-ring);
     }
     .lv-palette-body {
         max-height: 320px;
@@ -210,8 +210,8 @@
     .lv-palette-sel,
     .lv-palette-sel:hover {
         background: var(--lv-primary-soft);
-        color: var(--lv-color-brand);
-        box-shadow: inset 2px 0 0 var(--lv-color-brand);
+        color: var(--lv-color-on-brand-soft);
+        border-left: 2px solid var(--lv-color-brand);
     }
     .lv-palette-label { min-width: 0; flex: 1; overflow-wrap: anywhere; }
     .lv-palette-hint { min-width: 0; max-width: 40%; font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; white-space: normal; text-align: right; }

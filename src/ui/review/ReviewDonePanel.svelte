@@ -180,7 +180,7 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-l);
-        box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         padding: var(--lv-sp-5);
         text-align: left;
     }
@@ -200,18 +200,19 @@
         border-radius: var(--lv-r-pill);
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
+        font-variant-numeric: tabular-nums;
         background: var(--lv-primary-soft);
-        color: var(--lv-color-brand);
+        color: var(--lv-color-on-brand-soft);
         border: 1px solid var(--lv-primary-border);
     }
     .lv-done-retention-bubble.lv-ret-high {
         background: var(--lv-good-soft);
-        color: var(--lv-color-success);
+        color: var(--lv-color-on-success-soft);
         border-color: color-mix(in srgb, var(--lv-color-success) 30%, transparent);
     }
     .lv-done-retention-bubble.lv-ret-mid {
         background: var(--lv-warn-soft);
-        color: var(--lv-color-warning);
+        color: var(--lv-color-on-warning-soft);
         border-color: color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
     }
     .lv-done-check {
@@ -224,8 +225,8 @@
         font-size: var(--lv-type-title-size);
         flex: none;
         background: var(--lv-good-soft);
-        color: var(--lv-color-success);
-        box-shadow: 0 0 0 4px color-mix(in srgb, var(--lv-color-success) 14%, transparent);
+        color: var(--lv-color-on-success-soft);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-success) 14%, transparent);
     }
     .lv-done-title {
         font-size: var(--lv-type-display-size);
@@ -258,6 +259,7 @@
     }
     .lv-done-stat .lv-hero-num {
         font-size: var(--lv-type-display-size);
+        font-variant-numeric: tabular-nums;
     }
     .lv-done-stat p {
         margin: 0;

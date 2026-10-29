@@ -82,12 +82,16 @@
         gap: calc(var(--lv-space-unit) * 3);
         padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
-        background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
+        background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
-        box-shadow: 0 4px 20px color-mix(in srgb, black 12%, transparent), var(--lv-inset-shine);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         pointer-events: auto;
+
+        @supports (backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px)) {
+            background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
     }
     .lv-zen-island-sep {
         width: 1px;
@@ -120,7 +124,7 @@
         cursor: not-allowed;
     }
     .lv-zen-tool-btn.lv-zen-starred {
-        color: #f59e0b;
+        color: var(--lv-color-warning);
     }
     .lv-zen-exit-btn {
         display: inline-flex;

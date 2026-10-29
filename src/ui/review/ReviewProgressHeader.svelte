@@ -185,20 +185,17 @@
         height: 6px;
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-        box-shadow: inset 0 1px 2px color-mix(in srgb, black 6%, transparent);
         overflow: hidden;
         display: flex;
         margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 4);
         .lv-progress-seg {
             height: 100%;
             border-radius: var(--lv-r-pill);
-            background: linear-gradient(90deg, var(--lv-color-brand), color-mix(in srgb, var(--lv-color-brand) 75%, var(--lv-color-success)));
+            background: var(--lv-color-brand);
             transition: width var(--lv-dur-3) var(--lv-ease);
-            box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
         }
         .lv-progress-seg--forget {
             background: var(--lv-color-danger);
-            box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-danger) 30%, transparent);
         }
     }
     .lv-timeout {

@@ -1262,13 +1262,13 @@
         border: 1px solid var(--lv-border);
         background: var(--lv-color-surface);
         box-sizing: border-box;
-        box-shadow: inset 0 1px 2px color-mix(in srgb, black 3%, transparent);
+        box-shadow: var(--lv-shadow-1);
         transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
         &:focus-visible,
         &:focus {
             outline: none;
             border-color: var(--lv-color-brand);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+            box-shadow: var(--lv-focus-ring);
         }
     }
     .lv-pager { font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
@@ -1284,7 +1284,7 @@
         width: min(440px, 92vw);
         padding: var(--lv-sp-4);
         border-radius: var(--lv-r-dialog);
-        box-shadow: var(--lv-shadow-float), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-3), var(--lv-inset-shine);
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
@@ -1308,13 +1308,17 @@
         gap: var(--lv-sp-2);
         border: 1px solid var(--lv-primary-border);
         border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-primary-soft) 85%, var(--lv-color-surface));
-        backdrop-filter: blur(10px) saturate(1.15);
-        -webkit-backdrop-filter: blur(10px) saturate(1.15);
-        box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+        background: var(--lv-primary-soft);
+        box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         padding: calc(var(--lv-space-unit) * 3) var(--lv-sp-3);
         margin-bottom: var(--lv-sp-2);
         animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
+
+        @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+            background: color-mix(in srgb, var(--lv-primary-soft) 85%, var(--lv-color-surface));
+            backdrop-filter: blur(10px) saturate(1.15);
+            -webkit-backdrop-filter: blur(10px) saturate(1.15);
+        }
     }
     .lv-batch-error {
         color: var(--lv-color-danger);
@@ -1352,7 +1356,7 @@
             text-align: center;
             text-align-last: center;
             vertical-align: middle;
-            box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+            box-shadow: var(--lv-shadow-1);
             cursor: pointer;
             transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 

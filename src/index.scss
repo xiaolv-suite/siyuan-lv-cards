@@ -5,26 +5,28 @@
 // =============================================================
 
 :root {
-    // 颜色语义层：方案 A 经典长春花紫/暖金生态调色板（Palette Independence 自洽美学）
-    --lv-brand: #6366F1; /* 经典长春花紫 */
-    --lv-brand-hover: #4F46E5;
-    --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 12%, transparent);
-    --lv-accent-gold: #F59E0B; /* 温暖星光金 */
-    --lv-color-brand: #6366F1;
+    // 颜色语义层：R54 唯一规范基线调色板（浅色质感纸面工作台，全量派生自语义令牌）
+    --lv-brand: #5E59CB; /* 经典长春花紫 / 品牌主色 */
+    --lv-brand-hover: #504ABD;
+    --lv-brand-soft: #EEECFB;
+    --lv-accent-gold: #945A17; /* 温暖星光金 / 警示暖色 */
+    --lv-color-brand: #5E59CB;
+    --lv-color-brand-strong: #504ABD;
     --lv-color-on-brand: #FFFFFF;
-    --lv-color-text: #0F172A;
-    --lv-color-text-muted: #475569;
-    --lv-color-canvas: #F8FAFC;
-    --lv-color-canvas-subtle: #F1F5F9;
+    --lv-color-text: #2C2B3E;
+    --lv-color-text-muted: #6C6A7F;
+    --lv-color-canvas: #F7F7FC;
+    --lv-color-canvas-subtle: #F1F1F9;
     --lv-color-surface: #FFFFFF;
-    --lv-color-surface-subtle: #F1F5F9;
-    --lv-color-danger: #EF4444;
-    --lv-color-warning: #F59E0B;
-    --lv-color-success: #10B981;
+    --lv-color-surface-subtle: #F1F1F9;
+    --lv-color-surface-raised: #FFFFFF;
+    --lv-color-danger: #C0394B;
+    --lv-color-warning: #945A17;
+    --lv-color-success: #2E7D5B;
     --lv-color-on-danger: #FFFFFF;
     --lv-color-on-success: #FFFFFF;
     --lv-color-on-warning: #FFFFFF;
-    --lv-surface-hover: rgba(15, 23, 42, 0.04);
+    --lv-surface-hover: rgba(44, 43, 62, 0.04);
 
     // 类型档位：组件默认组合与字号清单见 docs/47。
     --lv-type-caption-size: 10px;
@@ -152,35 +154,38 @@
     --lv-card-padding: var(--lv-space-10);
     --lv-card-max: 880px;
 
-    // 语义派生面
-    --lv-primary-soft: color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
-    --lv-primary-softer: color-mix(in srgb, var(--lv-color-brand) 5%, transparent);
-    --lv-primary-border: color-mix(in srgb, var(--lv-color-brand) 32%, transparent);
-    --lv-danger-soft: color-mix(in srgb, var(--lv-color-danger) 10%, transparent);
-    --lv-danger-border: color-mix(in srgb, var(--lv-color-danger) 32%, transparent);
-    --lv-warn-soft: color-mix(in srgb, var(--lv-color-warning) 12%, transparent);
-    --lv-good-soft: color-mix(in srgb, var(--lv-color-success) 12%, transparent);
-    --lv-border: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-    --lv-border-strong: color-mix(in srgb, var(--lv-color-text) 14%, transparent);
+    // 语义派生面（R54 原型对齐，高对比度保证）
+    --lv-primary-soft: #EEECFB;
+    --lv-primary-softer: color-mix(in srgb, var(--lv-color-brand) 6%, transparent);
+    --lv-primary-border: color-mix(in srgb, var(--lv-color-brand) 24%, transparent);
+    --lv-color-on-brand-soft: #4F4799;
+    --lv-danger-soft: #FCF0F1;
+    --lv-danger-border: color-mix(in srgb, var(--lv-color-danger) 24%, transparent);
+    --lv-color-on-danger-soft: #A34151;
+    --lv-warn-soft: #FFF0D4;
+    --lv-color-on-warning-soft: #855318;
+    --lv-good-soft: #EDF6F1;
+    --lv-color-on-success-soft: #32654D;
+    --lv-border: #E6E5F0;
+    --lv-border-strong: #D0CFDF;
 
-    // 表面与海拔（微环境光渐变多层投影，亮暗主题通用）
-    --lv-shadow-1: 0 1px 2px color-mix(in srgb, black 4%, transparent),
-        0 2px 8px color-mix(in srgb, black 3%, transparent);
-    --lv-shadow-2: 0 2px 6px color-mix(in srgb, black 5%, transparent),
-        0 14px 36px color-mix(in srgb, black 7%, transparent);
-    --lv-shadow-card: 0 1px 3px color-mix(in srgb, black 5%, transparent),
-        0 4px 16px -2px color-mix(in srgb, black 4%, transparent);
-    --lv-shadow-card-hover: 0 4px 12px color-mix(in srgb, black 6%, transparent),
-        0 16px 32px -4px color-mix(in srgb, black 8%, transparent);
-    --lv-shadow-float: 0 16px 40px -8px color-mix(in srgb, black 14%, transparent),
-        0 4px 12px color-mix(in srgb, black 6%, transparent);
-    --lv-inset-shine: inset 0 1px 0 color-mix(in srgb, white 40%, transparent),
-        inset 0 0 0 1px color-mix(in srgb, white 6%, transparent);
-    --lv-glass: color-mix(in srgb, var(--lv-color-canvas) 80%, transparent);
-    --lv-focus-ring: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 32%, transparent);
-    --lv-shadow-review-card: 0 2px 8px color-mix(in srgb, black 4%, transparent),
-        0 16px 40px -6px color-mix(in srgb, black 8%, transparent);
-    --lv-shadow-dialog-scrim: 0 16px 60px color-mix(in srgb, black 14%, transparent);
+    // 表面与海拔（严格收敛为三档统一中性漫反射阴影，方向与距离统一向下扩散，明暗双主题通用）
+    // Elevation 1：基础静态卡片 / 面板
+    --lv-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    // Elevation 2：可交互卡片悬浮 / 工具栏 / 下拉
+    --lv-shadow-2: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.05);
+    // Elevation 3：浮层 / 弹窗 / 抽屉 / Toast
+    --lv-shadow-3: 0 16px 40px -8px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+    // 别名兼容，统一映射到 Elevation 1/2/3
+    --lv-shadow-card: var(--lv-shadow-1);
+    --lv-shadow-card-hover: var(--lv-shadow-2);
+    --lv-shadow-float: var(--lv-shadow-3);
+    --lv-shadow-review-card: var(--lv-shadow-1);
+    --lv-shadow-dialog-scrim: 0 16px 60px rgba(0, 0, 0, 0.25);
+    --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --lv-glass: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
+    --lv-focus-ring: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 28%, transparent);
 
     // 层级按宿主遮罩、复习局部面板和抽屉三个上下文命名。
     --lv-z-base: 0;
@@ -200,28 +205,41 @@
 :root[data-theme-mode="dark"],
 body[data-theme-mode="dark"],
 .theme--dark {
-    --lv-brand: #818CF8; /* 柔和长春花紫 */
-    --lv-brand-hover: #6366F1;
-    --lv-brand-soft: color-mix(in srgb, var(--lv-brand) 18%, transparent);
+    --lv-brand: #B5AFFF; /* 柔和长春花紫 */
+    --lv-brand-hover: #C3BEFF;
+    --lv-brand-soft: #343046;
     --lv-accent-gold: #FBBF24;
-    --lv-color-brand: #818CF8;
-    --lv-color-on-brand: #FFFFFF;
-    --lv-color-text: #F8FAFC;
-    --lv-color-text-muted: #94A3B8;
-    --lv-color-canvas: #090D16;
-    --lv-color-canvas-subtle: #0F1626;
-    --lv-color-surface: #141C2E;
-    --lv-color-surface-subtle: #1A243B;
+    --lv-color-brand: #B5AFFF;
+    --lv-color-brand-strong: #C3BEFF;
+    --lv-color-on-brand: #181820;
+    --lv-color-text: #F0EEF8;
+    --lv-color-text-muted: #B2AEC4;
+    --lv-color-canvas: #181820;
+    --lv-color-canvas-subtle: #2A2936;
+    --lv-color-surface: #22222D;
+    --lv-color-surface-subtle: #2A2936;
+    --lv-color-surface-raised: #292835;
     --lv-color-danger: #F87171;
     --lv-color-warning: #FBBF24;
-    --lv-color-success: #34D399;
-    --lv-color-on-danger: #090D16;
-    --lv-color-on-success: #090D16;
-    --lv-color-on-warning: #090D16;
-    --lv-surface-hover: rgba(255, 255, 255, 0.07);
-    --lv-border: rgba(255, 255, 255, 0.10);
-    --lv-border-strong: rgba(255, 255, 255, 0.20);
-    --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --lv-color-success: #6EE7B7;
+    --lv-color-on-danger: #181820;
+    --lv-color-on-success: #181820;
+    --lv-color-on-warning: #181820;
+    --lv-surface-hover: rgba(255, 255, 255, 0.05);
+    --lv-border: #393744;
+    --lv-border-strong: #4E4B5E;
+    --lv-primary-soft: #343046;
+    --lv-primary-softer: rgba(181, 175, 255, 0.08);
+    --lv-primary-border: rgba(181, 175, 255, 0.28);
+    --lv-color-on-brand-soft: #D0C9FF;
+    --lv-warn-soft: #3B3126;
+    --lv-color-on-warning-soft: #F4C78A;
+    --lv-good-soft: #28382F;
+    --lv-color-on-success-soft: #A0D9BB;
+    --lv-danger-soft: #402B33;
+    --lv-color-on-danger-soft: #FFADB9;
+    --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --lv-glass: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -405,25 +423,22 @@ body[data-theme-mode="dark"],
     }
 }
 
-// 迷你进度条（统计卡/目标）
+// 迷你进度条（统计卡/目标）——清除拟物内阴影与渐变，纯平清晰
 .lv-mini-track {
     height: 5px;
     border-radius: var(--lv-r-pill);
     background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-    box-shadow: inset 0 1px 2px color-mix(in srgb, black 6%, transparent);
     overflow: hidden;
 
     .lv-mini-fill {
         height: 100%;
         border-radius: var(--lv-r-pill);
-        background: linear-gradient(90deg, var(--lv-color-brand),
-                color-mix(in srgb, var(--lv-color-brand) 65%, var(--lv-color-warning)));
-        box-shadow: 0 1px 4px color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
+        background: var(--lv-color-brand);
         transition: width var(--lv-dur-3) var(--lv-ease);
     }
 }
 
-// 入场动画（评分条错峰/完成态徽章），仅在允许动态时启用
+// 入场动画（无意义弹跳已移除，仅保留透明度与微位移）
 @media (prefers-reduced-motion: no-preference) {
     @keyframes lv-rise {
         from { opacity: 0; transform: translateY(6px); }
@@ -431,19 +446,18 @@ body[data-theme-mode="dark"],
     }
 
     @keyframes lv-pop {
-        0% { opacity: 0; transform: scale(0.6); }
-        60% { transform: scale(1.08); }
-        100% { opacity: 1; transform: scale(1); }
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
     }
 
-    // R52 docs/15 §6：辉光脉冲默认关闭——揭晓反馈为 240ms 淡入+上浮（Mochi 式「答案抵达」，只动 transform/opacity）
+    // R52 docs/15 §6：辉光脉冲默认关闭——揭晓反馈为 240ms 淡入+微上浮（Mochi 式「答案抵达」，只动 transform/opacity）
     @keyframes lv-glow {
-        0% { opacity: 0.35; transform: translateY(6px); }
+        0% { opacity: 0.4; transform: translateY(4px); }
         100% { opacity: 1; transform: translateY(0); }
     }
 
     .lv-anim-rise { animation: lv-rise var(--lv-dur-2) var(--lv-ease) both; }
-    .lv-anim-pop { animation: lv-pop var(--lv-dur-3) var(--lv-ease) both; }
+    .lv-anim-pop { animation: lv-pop var(--lv-dur-2) var(--lv-ease) both; }
     .lv-anim-glow { animation: lv-glow var(--lv-dur-3) var(--lv-ease) both; }
 }
 
@@ -485,27 +499,27 @@ body[data-theme-mode="dark"],
     background: var(--lv-color-brand);
 }
 
-// 主操作按钮：长春花紫专属质感 + 悬浮抬升 + 漫反射微发光
+// 主操作按钮：R54 唯一规范纯平面品牌底色 + 悬停微提 + Elevation 1/2（彻底清理渐变与厚重彩影）
 .lv-btn-primary {
     position: relative;
-    overflow: hidden;
-    background: linear-gradient(135deg, var(--lv-brand, #6366F1) 0%, var(--lv-brand-hover, #4F46E5) 100%) !important;
+    background: var(--lv-color-brand) !important;
     color: #FFFFFF !important;
     font-weight: var(--lv-fw-semibold);
-    border: none !important;
+    border: 1px solid transparent !important;
     border-radius: var(--lv-r-control);
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--lv-brand) 30%, transparent);
+    box-shadow: var(--lv-shadow-1);
     transition: transform var(--lv-dur-1) var(--lv-ease),
-        box-shadow var(--lv-dur-2) var(--lv-ease), filter var(--lv-dur-1) var(--lv-ease);
+        box-shadow var(--lv-dur-2) var(--lv-ease), filter var(--lv-dur-1) var(--lv-ease), background-color var(--lv-dur-1) var(--lv-ease);
 
     &:hover:not(:disabled) {
         transform: translateY(-1.5px);
-        box-shadow: 0 6px 20px color-mix(in srgb, var(--lv-brand) 42%, transparent);
-        filter: brightness(1.08);
+        background: var(--lv-color-brand-strong) !important;
+        box-shadow: var(--lv-shadow-2);
+        filter: brightness(1.05);
     }
     &:active:not(:disabled) {
         transform: translateY(0.5px) scale(0.985);
-        box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-brand) 22%, transparent);
+        box-shadow: var(--lv-shadow-1);
     }
 }
 
@@ -1056,7 +1070,7 @@ body[data-theme-mode="dark"],
     }
 }
 
-// T01 今日行动 hero（R53 .hero）：Bento 高阶便当盒质感、左侧品牌色重点竖线、微渐变底座
+// T01 今日行动 hero（R54 原型规范）：纯平柔和工作面、统一 1px 细微边界、温润留白与自然层次
 .lv-hero {
     position: relative;
     overflow: hidden;
@@ -1068,10 +1082,9 @@ body[data-theme-mode="dark"],
     padding: calc(var(--lv-space-unit) * 15);
     margin-bottom: var(--lv-sp-5);
     border: 1px solid var(--lv-border);
-    border-left: 4px solid var(--lv-brand);
     border-radius: var(--lv-r-l);
-    background: linear-gradient(145deg, color-mix(in srgb, var(--lv-brand) 5%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 100%);
-    box-shadow: 0 2px 8px color-mix(in srgb, black 3%, transparent), 0 12px 28px -6px color-mix(in srgb, black 6%, transparent), var(--lv-inset-shine);
+    background: var(--lv-primary-soft);
+    box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
     max-width: 100%;
 
     .lv-hero-text {
@@ -1300,7 +1313,7 @@ body[data-theme-mode="dark"],
         line-height: var(--lv-lh-tight);
         border-radius: var(--lv-r-circle);
         background: var(--lv-color-brand);
-        color: var(--lv-color-on-brand, #fff);
+        color: var(--lv-color-on-brand);
         margin-right: calc(var(--lv-space-unit) * 2);
         padding: 0 calc(var(--lv-space-unit) * 1);
         vertical-align: 1px;
@@ -1308,7 +1321,7 @@ body[data-theme-mode="dark"],
 
     .lv-card-answer-divider {
         height: 1px;
-        background: linear-gradient(90deg, transparent, var(--lv-primary-border), transparent);
+        background: var(--lv-border);
         margin: var(--lv-sp-4) 0 var(--lv-sp-3);
     }
 
@@ -1748,32 +1761,32 @@ body[data-theme-mode="dark"],
     }
 
     &.lv-choice-correct {
-        border-color: var(--lv-color-success, #22c55e) !important;
-        background: color-mix(in srgb, var(--lv-color-success, #22c55e) 12%, var(--lv-color-surface)) !important;
-        box-shadow: 0 0 0 1.5px var(--lv-color-success, #22c55e), var(--lv-shadow-card) !important;
+        border-color: var(--lv-color-success) !important;
+        background: color-mix(in srgb, var(--lv-color-success) 12%, var(--lv-color-surface)) !important;
+        box-shadow: 0 0 0 1.5px var(--lv-color-success), var(--lv-shadow-card) !important;
 
         .lv-choice-key-badge {
-            background: var(--lv-color-success, #22c55e) !important;
-            color: var(--lv-color-on-success, #fff) !important;
+            background: var(--lv-color-success) !important;
+            color: var(--lv-color-on-success) !important;
         }
         .lv-result-correct {
-            background: var(--lv-color-success, #22c55e);
-            color: var(--lv-color-on-success, #fff);
+            background: var(--lv-color-success);
+            color: var(--lv-color-on-success);
         }
     }
 
     &.lv-choice-wrong {
-        border-color: var(--lv-color-danger, #ef4444) !important;
-        background: color-mix(in srgb, var(--lv-color-danger, #ef4444) 10%, var(--lv-color-surface)) !important;
-        box-shadow: 0 0 0 1.5px var(--lv-color-danger, #ef4444) !important;
+        border-color: var(--lv-color-danger) !important;
+        background: color-mix(in srgb, var(--lv-color-danger) 10%, var(--lv-color-surface)) !important;
+        box-shadow: 0 0 0 1.5px var(--lv-color-danger) !important;
 
         .lv-choice-key-badge {
-            background: var(--lv-color-danger, #ef4444) !important;
-            color: var(--lv-color-on-danger, #fff) !important;
+            background: var(--lv-color-danger) !important;
+            color: var(--lv-color-on-danger) !important;
         }
         .lv-result-wrong {
-            background: var(--lv-color-danger, #ef4444);
-            color: var(--lv-color-on-danger, #fff);
+            background: var(--lv-color-danger);
+            color: var(--lv-color-on-danger);
         }
     }
 }
@@ -1814,12 +1827,12 @@ body[data-theme-mode="dark"],
     }
 
     &.lv-judge-btn--true:hover:not(:disabled) {
-        border-color: var(--lv-color-success, #22c55e);
-        background: color-mix(in srgb, var(--lv-color-success, #22c55e) 8%, var(--lv-color-surface));
+        border-color: var(--lv-color-success);
+        background: color-mix(in srgb, var(--lv-color-success) 8%, var(--lv-color-surface));
     }
     &.lv-judge-btn--false:hover:not(:disabled) {
-        border-color: var(--lv-color-danger, #ef4444);
-        background: color-mix(in srgb, var(--lv-color-danger, #ef4444) 8%, var(--lv-color-surface));
+        border-color: var(--lv-color-danger);
+        background: color-mix(in srgb, var(--lv-color-danger) 8%, var(--lv-color-surface));
     }
 
     .lv-judge-circle-icon {
@@ -1879,27 +1892,27 @@ body[data-theme-mode="dark"],
         border-radius: var(--lv-r-pill);
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
-        background: var(--lv-color-success, #22c55e);
-        color: var(--lv-color-on-success, #fff);
+        background: var(--lv-color-success);
+        color: var(--lv-color-on-success);
     }
 
     &.lv-judge-correct {
-        border-color: var(--lv-color-success, #22c55e) !important;
-        background: color-mix(in srgb, var(--lv-color-success, #22c55e) 12%, var(--lv-color-surface)) !important;
-        box-shadow: 0 0 0 1.5px var(--lv-color-success, #22c55e) !important;
+        border-color: var(--lv-color-success) !important;
+        background: color-mix(in srgb, var(--lv-color-success) 12%, var(--lv-color-surface)) !important;
+        box-shadow: 0 0 0 1.5px var(--lv-color-success) !important;
         .lv-judge-circle-icon {
-            background: var(--lv-color-success, #22c55e) !important;
-            color: var(--lv-color-on-success, #fff) !important;
+            background: var(--lv-color-success) !important;
+            color: var(--lv-color-on-success) !important;
         }
     }
 
     &.lv-judge-wrong {
-        border-color: var(--lv-color-danger, #ef4444) !important;
-        background: color-mix(in srgb, var(--lv-color-danger, #ef4444) 10%, var(--lv-color-surface)) !important;
-        box-shadow: 0 0 0 1.5px var(--lv-color-danger, #ef4444) !important;
+        border-color: var(--lv-color-danger) !important;
+        background: color-mix(in srgb, var(--lv-color-danger) 10%, var(--lv-color-surface)) !important;
+        box-shadow: 0 0 0 1.5px var(--lv-color-danger) !important;
         .lv-judge-circle-icon {
-            background: var(--lv-color-danger, #ef4444) !important;
-            color: var(--lv-color-on-danger, #fff) !important;
+            background: var(--lv-color-danger) !important;
+            color: var(--lv-color-on-danger) !important;
         }
     }
 }
@@ -2102,7 +2115,7 @@ body[data-theme-mode="dark"],
 
 .lv-tool-btn.lv-btn-starred,
 .lv-mgr-star-btn.lv-btn-starred {
-    color: var(--lv-color-warning, #f59e0b) !important;
+    color: var(--lv-color-warning) !important;
     border-color: color-mix(in srgb, var(--lv-color-warning) 45%, transparent) !important;
     background: color-mix(in srgb, var(--lv-color-warning) 12%, var(--lv-color-surface)) !important;
 
@@ -2117,7 +2130,7 @@ body[data-theme-mode="dark"],
     color: var(--lv-color-text-muted);
     border-radius: var(--lv-r-pill);
     &:hover {
-        color: var(--lv-color-warning, #f59e0b);
+        color: var(--lv-color-warning);
         background: color-mix(in srgb, var(--lv-color-warning) 12%, transparent);
     }
     &:active {
@@ -2144,9 +2157,9 @@ body[data-theme-mode="dark"],
     margin-left: var(--lv-sp-2);
 
     &.lv-quiz-high {
-        background: color-mix(in srgb, var(--lv-color-success, #22c55e) 12%, var(--lv-color-surface));
-        border-color: color-mix(in srgb, var(--lv-color-success, #22c55e) 35%, transparent);
-        color: var(--lv-color-success, #22c55e);
+        background: color-mix(in srgb, var(--lv-color-success) 12%, var(--lv-color-surface));
+        border-color: color-mix(in srgb, var(--lv-color-success) 35%, transparent);
+        color: var(--lv-color-success);
     }
     &.lv-quiz-mid {
         background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-color-surface));
@@ -2190,13 +2203,17 @@ body[data-theme-mode="dark"],
     gap: calc(var(--lv-space-unit) * 2);
     padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3);
     border-radius: var(--lv-r-pill);
-    background: color-mix(in srgb, var(--lv-color-surface) 85%, transparent);
-    backdrop-filter: blur(12px) saturate(1.15);
-    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    background: var(--lv-color-surface);
     border: 1px solid var(--lv-border);
-    box-shadow: 0 4px 16px -2px color-mix(in srgb, black 12%, transparent), var(--lv-inset-shine);
+    box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
     opacity: 0.72;
     transition: opacity var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease);
+
+    @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+        background: color-mix(in srgb, var(--lv-color-surface) 85%, transparent);
+        backdrop-filter: blur(12px) saturate(1.15);
+        -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    }
 
     &:hover {
         opacity: 1;
@@ -2224,7 +2241,7 @@ body[data-theme-mode="dark"],
             background: color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
         }
         &.lv-zen-starred {
-            color: var(--lv-color-warning, #f59e0b) !important;
+            color: var(--lv-color-warning) !important;
             svg { fill: currentColor; }
         }
     }

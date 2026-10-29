@@ -923,8 +923,8 @@
                     <g transform="rotate(12 145 115)">
                         <rect x="93" y="47" width="93" height="129" rx="14" fill="var(--lv-color-surface)" stroke="currentColor" stroke-opacity=".14"/>
                         <path d="M110 69h39M110 79h24" stroke="currentColor" opacity=".2" stroke-width="5" stroke-linecap="round"/>
-                        <circle cx="139" cy="125" r="25" fill="var(--lv-color-warning, #f6c779)"/>
-                        <path d="M130 124l6 6 12-14" stroke="var(--lv-color-on-warning, #8c5818)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="139" cy="125" r="25" fill="var(--lv-color-warning)"/>
+                        <path d="M130 124l6 6 12-14" stroke="var(--lv-color-on-warning)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                     </g>
                     <g transform="rotate(-12 86 128)">
                         <rect x="40" y="73" width="91" height="125" rx="14" fill="var(--lv-color-surface)" stroke="currentColor" stroke-opacity=".18"/>
@@ -933,7 +933,7 @@
                         <path d="M57 151h41M57 163h27" stroke="currentColor" opacity=".2" stroke-width="5" stroke-linecap="round"/>
                     </g>
                     <path d="M180 33v14M173 40h14M30 62v10M25 67h10" stroke="currentColor" opacity=".55" stroke-width="3" stroke-linecap="round"/>
-                    <circle cx="172" cy="190" r="5" fill="var(--lv-color-warning, #f6c779)"/>
+                    <circle cx="172" cy="190" r="5" fill="var(--lv-color-warning)"/>
                     <path d="M28 165c-11-16-6-25 4-30 9 15 5 23-4 30z" fill="currentColor" opacity=".22"/>
                 </svg>
             </div>
@@ -1658,15 +1658,15 @@
             display: grid;
             place-items: center;
             flex-shrink: 0;
-            background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
+            background: var(--lv-primary-soft);
             color: var(--lv-color-brand);
-            border: 1px solid color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
-            box-shadow: 0 1px 3px color-mix(in srgb, black 4%, transparent);
+            border: 1px solid var(--lv-primary-border);
+            box-shadow: var(--lv-shadow-1);
         }
-        .lv-feature-badge--manage { background: color-mix(in srgb, #6366F1 10%, var(--lv-color-surface)); color: #6366F1; border-color: rgba(99, 102, 241, 0.22); }
-        .lv-feature-badge--studio { background: color-mix(in srgb, #EC4899 10%, var(--lv-color-surface)); color: #EC4899; border-color: rgba(236, 72, 153, 0.22); }
-        .lv-feature-badge--practice { background: color-mix(in srgb, #10B981 10%, var(--lv-color-surface)); color: #10B981; border-color: rgba(16, 185, 129, 0.22); }
-        .lv-feature-badge--exam { background: color-mix(in srgb, #F59E0B 10%, var(--lv-color-surface)); color: #F59E0B; border-color: rgba(245, 158, 11, 0.22); }
+        .lv-feature-badge--manage { background: var(--lv-primary-soft); color: var(--lv-color-brand); border-color: var(--lv-primary-border); }
+        .lv-feature-badge--studio { background: var(--lv-danger-soft); color: var(--lv-color-danger); border-color: var(--lv-danger-border); }
+        .lv-feature-badge--practice { background: var(--lv-good-soft); color: var(--lv-color-success); border-color: color-mix(in srgb, var(--lv-color-success) 30%, transparent); }
+        .lv-feature-badge--exam { background: var(--lv-warn-soft); color: var(--lv-color-warning); border-color: color-mix(in srgb, var(--lv-color-warning) 30%, transparent); }
 
         .lv-feature-content {
             flex: 1;
@@ -1735,7 +1735,7 @@
     .lv-today-week-head h2 { font-size: var(--lv-type-label-size); line-height: 1.5; font-weight: var(--lv-fw-heading); margin: 0; }
     .lv-today-week-range { color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); font-variant-numeric: tabular-nums; }
     
-    // 汲取自参考图：暖橙连击高光卡片
+    // R54 原型对齐：温和暖色连击卡片（去除过时亮橙大渐变与厚重彩影，保持质感与专注）
     .lv-streak-card {
         display: flex;
         align-items: center;
@@ -1744,30 +1744,30 @@
         padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7 + var(--lv-space-hairline));
         margin: calc(var(--lv-space-unit) * 5) 0 calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-m);
-        background: linear-gradient(135deg, #FF9431 0%, #FFA83E 50%, #FFB954 100%);
-        color: #FFFFFF;
-        box-shadow: 0 6px 18px -3px rgba(255, 148, 49, 0.38), 0 2px 6px rgba(255, 148, 49, 0.18);
+        background: var(--lv-warn-soft);
+        color: var(--lv-color-on-warning-soft);
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 24%, transparent);
+        box-shadow: var(--lv-shadow-1);
         position: relative;
         overflow: hidden;
         transition: transform var(--lv-dur-2) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 24px -4px rgba(255, 148, 49, 0.48);
+            transform: translateY(-1.5px);
+            box-shadow: var(--lv-shadow-2);
+            border-color: color-mix(in srgb, var(--lv-color-warning) 36%, transparent);
         }
 
         .lv-streak-icon-box {
             width: 36px;
             height: 36px;
             border-radius: var(--lv-r-circle);
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: color-mix(in srgb, var(--lv-color-warning) 16%, transparent);
             display: grid;
             place-items: center;
-            color: #FFFFFF;
+            color: var(--lv-color-on-warning-soft);
             flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            box-shadow: none;
         }
 
         .lv-streak-details {
@@ -1781,7 +1781,8 @@
         .lv-streak-eyebrow {
             font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-medium);
-            opacity: 0.92;
+            color: var(--lv-color-on-warning-soft);
+            opacity: 0.88;
             letter-spacing: 0.04em;
         }
 
@@ -1791,25 +1792,24 @@
             line-height: 1.2;
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.02em;
+            color: var(--lv-color-on-warning-soft);
         }
 
         .lv-streak-unit {
             font-size: var(--lv-type-control-size);
             font-weight: var(--lv-fw-medium);
-            opacity: 0.9;
+            opacity: 0.88;
         }
 
         .lv-streak-badge {
-            background: rgba(255, 255, 255, 0.28);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: color-mix(in srgb, var(--lv-color-warning) 18%, transparent);
+            border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
             padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
             border-radius: var(--lv-r-pill);
             font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-bold);
             letter-spacing: 0.02em;
-            color: #FFFFFF;
+            color: var(--lv-color-on-warning-soft);
             white-space: nowrap;
         }
     }

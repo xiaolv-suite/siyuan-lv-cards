@@ -169,9 +169,9 @@
             box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:not(.lv-cal-off):hover {
-            transform: translateY(-2px) scale(1.04);
+            transform: translateY(-1.5px);
             border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2);
             z-index: var(--lv-z-card-control);
         }
     }
@@ -187,9 +187,9 @@
     button.lv-cal-day[aria-pressed="true"] {
         border-color: var(--lv-color-brand);
         background: color-mix(in srgb, var(--lv-color-brand) 18%, var(--lv-color-surface));
-        box-shadow: inset 0 0 0 2px var(--lv-color-brand), 0 4px 12px color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
+        box-shadow: 0 0 0 1.5px var(--lv-color-brand), var(--lv-shadow-1);
     }
-    .lv-cal-day b { font-size: var(--lv-type-control-size); color: var(--lv-color-text); font-weight: var(--lv-fw-semibold); }
+    .lv-cal-day b { font-size: var(--lv-type-control-size); color: var(--lv-color-text); font-weight: var(--lv-fw-semibold); font-variant-numeric: tabular-nums; }
     .lv-cal-off { border-color: transparent; background: transparent; }
     .lv-cal-day.past1 { background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-color-surface)); }
     .lv-cal-day.past2 { background: color-mix(in srgb, var(--lv-color-brand) 26%, var(--lv-color-surface)); }
@@ -197,7 +197,7 @@
     .lv-cal-day.past2 b, .lv-cal-day.past3 b { color: var(--lv-color-brand); }
     .lv-cal-day.today {
         border: 2px solid var(--lv-color-brand);
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 25%, transparent), var(--lv-inset-shine);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 25%, transparent);
     }
     .lv-cal-day.future1 { background: color-mix(in srgb, var(--lv-color-warning) 14%, var(--lv-color-surface)); }
     .lv-cal-day.future2 { background: color-mix(in srgb, var(--lv-color-warning) 26%, var(--lv-color-surface)); }

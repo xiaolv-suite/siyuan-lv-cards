@@ -473,9 +473,9 @@
         }
     }
     .lv-plan-cram {
-        border-color: color-mix(in srgb, var(--lv-color-danger) 45%, transparent);
-        background: linear-gradient(135deg, color-mix(in srgb, var(--lv-color-danger) 7%, var(--lv-color-surface)), var(--lv-color-surface));
-        box-shadow: 0 6px 20px -3px color-mix(in srgb, var(--lv-color-danger) 22%, transparent), var(--lv-inset-shine);
+        border-color: var(--lv-danger-border);
+        background: var(--lv-danger-soft);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-plan-head { align-items: center; gap: var(--lv-sp-2); margin-bottom: calc(var(--lv-space-unit) * 3); }
     .lv-plan-name { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size); letter-spacing: -0.01em; }
