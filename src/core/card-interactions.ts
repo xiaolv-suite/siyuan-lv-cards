@@ -141,3 +141,13 @@ export function isEventInsideContainer(
     return Boolean(container && target instanceof Node && container.contains(target));
 }
 
+/**
+ * 焦点归还到复习根容器或卡片元素
+ */
+export function focusReviewRootOrCard(
+    rootEl: HTMLElement | null | undefined,
+    cardEl: HTMLElement | null | undefined
+): void {
+    (rootEl ?? cardEl)?.focus?.();
+}
+

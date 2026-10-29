@@ -166,6 +166,20 @@ export function isCardActionBusy(submitting: boolean, rescheduleBusy: boolean, d
     return submitting || rescheduleBusy || dismissBusy;
 }
 
+/**
+ * 判定当前卡片是否允许执行评分操作
+ */
+export function canRateCurrentCard(
+    hasCurrent: boolean,
+    isPaused: boolean,
+    showAnswer: boolean,
+    force: boolean,
+    isBusy: boolean
+): boolean {
+    if (!hasCurrent || isPaused || isBusy) return false;
+    return showAnswer || force;
+}
+
 export interface LiveAnnouncement {
     msg: string;
     tone: "polite" | "assertive";

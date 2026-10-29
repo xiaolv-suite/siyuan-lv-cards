@@ -19,3 +19,10 @@ export function triggerHaptic(
     }
     return false;
 }
+
+/**
+ * 获取评分按键对应的触感微震波形（1级遗忘为强反馈双击波形，其余为轻量微震）
+ */
+export function getRatingHapticPattern(rating: number): number | number[] {
+    return rating === 1 ? [15, 30, 15] : 12;
+}

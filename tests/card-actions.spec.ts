@@ -15,6 +15,7 @@ import {
     isCardActionBusy,
     createLiveAnnouncement,
     getNextQueueHead,
+    canRateCurrentCard,
 } from "@/core/card-actions";
 
 describe("card-actions 卡片交互与视图调整纯函数", () => {
@@ -183,6 +184,20 @@ describe("card-actions 卡片交互与视图调整纯函数", () => {
         it("非空队列返回第一张卡片，空队列返回 null", () => {
             expect(getNextQueueHead(["c1", "c2"])).toBe("c1");
             expect(getNextQueueHead([])).toBeNull();
+        });
+    });
+
+    describe("canRateCurrentCard", () => {
+        it("已亮出答案或强制评分时允许评分", () => {
+            expect(canRateCurrentCard(true, false, true, false, false)).toBe(true);
+            expect(canRateCurrentCard(true, false, false, true, false)).toBe(true);
+        });
+
+        it("无当前卡片、会话暂停、操作忙碌或问题态未强制时不允许评分", () => {
+            expect(canRateCurrentCard(false, false, true, false, false)).toBe(false);
+            expect(canRateCurrentCard(true, true, true, false, false)).toBe(false);
+            expect(canRateCurrentCard(true, false, true, false, true)).toBe(false);
+            expect(canRateCurrentCard(true, false, false, false, false)).toBe(false);
         });
     });
 });

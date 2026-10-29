@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     handleCardContentClick,
     handleCardCanvasDblClick,
@@ -9,6 +9,7 @@ import {
     createZoomedImageState,
     shouldRevealOnContainerClick,
     isEventInsideContainer,
+    focusReviewRootOrCard,
 } from "@/core/card-interactions";
 
 describe("card-interactions 卡片内容点击、画板编辑与回看切换", () => {
@@ -192,6 +193,22 @@ describe("card-interactions 卡片内容点击、画板编辑与回看切换", (
             expect(isEventInsideContainer(container, external)).toBe(false);
             expect(isEventInsideContainer(container, null)).toBe(false);
             expect(isEventInsideContainer(null, external)).toBe(false);
+        });
+    });
+
+    describe("focusReviewRootOrCard", () => {
+        it("优先对 rootEl 聚焦，rootEl 为空时回退到 cardEl", () => {
+            const root = { focus: vi.fn() };
+            const card = { focus: vi.fn() };
+
+            focusReviewRootOrCard(root as any, card as any);
+            expect(root.focus).toHaveBeenCalledTimes(1);
+            expect(card.focus).not.toHaveBeenCalled();
+
+            focusReviewRootOrCard(null, card as any);
+            expect(card.focus).toHaveBeenCalledTimes(1);
+
+            expect(() => focusReviewRootOrCard(null, null)).not.toThrow();
         });
     });
 });

@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.216.2 2026-10-29 · 评分前置条件校验/评级触感波形与焦点控制器解耦落地
+
+- **卡片可评分判定与评级触感波形解耦（`core/card-actions.ts` & `core/haptic.ts`，TSK-08 持续深化）**：
+  - 提炼 `canRateCurrentCard`：纯函数集中校验题面存在、会话非暂停、题面答案态与非忙碌状态；
+  - 提炼 `getRatingHapticPattern`：纯函数标准化评级 1（遗忘）三次确认波形与 2-4 级轻触波形；
+  - 在 `tests/card-actions.spec.ts` 与 `tests/haptic.spec.ts` 中新增单元测试；
+- **复习面板根容器/卡片聚焦控制器解耦（`core/card-interactions.ts`）**：
+  - 提炼 `focusReviewRootOrCard`：纯函数标准化归还焦点至复习根元素或卡片主体；
+  - 在 `tests/card-interactions.spec.ts` 中新增单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2309 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.216.1 2026-10-29 · 容器事件边界判定与重置会话载荷构建解耦落地
 
 - **容器内部事件判定统一（`core/card-interactions.ts`，TSK-08 持续深化）**：

@@ -18,7 +18,7 @@
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, createResetSessionProgress, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatNextDueByRating } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead, canRateCurrentCard } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel, normalizeScopeKey } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -35,7 +35,7 @@
     import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
-    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, isEventInsideContainer, type ZoomedImageState } from "@/core/card-interactions";
+    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, isEventInsideContainer, focusReviewRootOrCard, type ZoomedImageState } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
@@ -45,7 +45,7 @@
     import LvLive from "./kit/LvLive.svelte";
     import LvError from "./kit/LvError.svelte";
     import { friendlyError } from "@/api/errors";
-    import { triggerHaptic } from "@/core/haptic";
+    import { triggerHaptic, getRatingHapticPattern } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
     import { resolveCardBreadcrumbsFromRows, buildHPathQuerySql, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, createInitialEphemeralQuizState, type InteractiveQuizData } from "@/core/quiz-interactive";
@@ -1196,10 +1196,10 @@
     }
 
     async function rate(rating: Rating, force = false) {
-        if (!current || sessionPaused || (!showAnswer && !force) || submitting || rescheduleBusy) {
+        if (!canRateCurrentCard(Boolean(current), sessionPaused, showAnswer, force, actionBusy)) {
             return;
         }
-        triggerHaptic(rating === 1 ? [15, 30, 15] : 12);
+        triggerHaptic(getRatingHapticPattern(rating));
         recovery = null; // BI-9：已开始评分=隐式选择继续原场
         submitting = true;
         pushHistory();
@@ -1258,7 +1258,7 @@
     }
 
     async function skip() {
-        if (!current || sessionPaused || submitting || rescheduleBusy) {
+        if (!current || sessionPaused || actionBusy) {
             return;
         }
         recovery = null; // BI-9：同评分——有动作即隐式续场
@@ -1344,7 +1344,7 @@
 
     /** 浮层关闭后焦点归还卡面（429）：键盘流不因开过关浮层而丢焦 */
     function returnFocus() {
-        (rootEl ?? cardEl)?.focus?.();
+        focusReviewRootOrCard(rootEl, cardEl);
     }
 
     function togglePeek() {

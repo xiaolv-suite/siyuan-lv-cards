@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { triggerHaptic } from "../src/core/haptic";
+import { triggerHaptic, getRatingHapticPattern } from "../src/core/haptic";
 
 describe("haptic feedback (Web Vibration API)", () => {
     const originalNavigator = globalThis.navigator;
@@ -67,5 +67,17 @@ describe("haptic feedback (Web Vibration API)", () => {
         });
 
         expect(triggerHaptic()).toBe(false);
+    });
+
+    describe("getRatingHapticPattern", () => {
+        it("评级 1（遗忘）返回三次确认双击波形", () => {
+            expect(getRatingHapticPattern(1)).toEqual([15, 30, 15]);
+        });
+
+        it("其他评级（2, 3, 4）返回普通 12ms 微震", () => {
+            expect(getRatingHapticPattern(2)).toBe(12);
+            expect(getRatingHapticPattern(3)).toBe(12);
+            expect(getRatingHapticPattern(4)).toBe(12);
+        });
     });
 });
