@@ -1,166 +1,208 @@
-<div align="center">
+# Lv Cards
+### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-# Lv Cards (Beta) · 小驴闪卡（内测版）
+**Current Version: v0.218.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
-**Turn your notes into long-term knowledge you can actually use.**
+**Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
-The full-lifecycle flashcard learning platform for SiYuan — local-first, native FSRS scheduling, auditable AI assistance
+Built on SiYuan's native FSRS algorithm · Block-level bi-directional context tracing · Multi-modal interactive recall · R54 Modern Design System · Auditable, governed AI assistance
 
-中文 ｜ [English](./README.en.md)
+---
 
-[![Release](https://img.shields.io/github/v/release/ai68298100/siyuan-lv-cards)](https://github.com/ai68298100/siyuan-lv-cards/releases/latest)
-[![CI](https://github.com/ai68298100/siyuan-lv-cards/actions/workflows/ci.yml/badge.svg)](https://github.com/ai68298100/siyuan-lv-cards/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![SiYuan >= 3.8.0](https://img.shields.io/badge/SiYuan-%3E%3D%203.8.0-blue)](https://b3log.org/siyuan/)
+## 🎯 What Problem Does This Solve?
 
-![Lv Cards preview](preview.png)
+Knowledge workers and students often struggle with three universal learning pains: **"notes are forgotten once written, cards are made but abandoned, and backlog reviews accumulate like an insurmountable debt."**
 
-</div>
+Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间隔重复 (Free Spaced Repetition Scheduler)** as the single source of truth. It establishes a complete, closed-loop learning journey: from ambient reading material capture and atomic authoring, to multi-sensory active recall testing, leech card quarantine, and loss-free cross-platform export.
 
-> **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
+---
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.217.0** (2026-10-29), delivering quality hardening, critical bug fixes, accessibility enhancements, and large-library scalability optimizations. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.217.0) for the package and publishing status.
+## ⚡ Core Feature List
 
-## What's New in v0.217.0 (2026-10-29)
+### 1. In-Depth Note Authoring & Bi-Directional Tracing
+* **Native Block-Level Tracing**: Cards are strongly tied to SiYuan's underlying `block_id`. The card header displays an interactive breadcrumb trail, allowing one-click navigation back to the original source note.
+* **Context Slide-Out Drawer**: Encountering doubt during review? Press a shortcut or click to slide out a drawer revealing the 2 preceding and 2 succeeding blocks of the source note—clarifying context without leaving the review flow.
+* **Highlight Cloze & Heading Tree Masking**: Highlight key text with `==` to instantly generate cloze cards. Supports multi-level heading tree clozes and sequential cloze reveals.
+* **SuperBlock Structured QA**: The first block acts as the question, with nested child blocks serving as multi-point answers—physically masked until reveal to prevent spoiler leaks.
+* **Bi-Directional Memo Synchronization**: Jot down personal mnemonic cues or insights during review; memos automatically sync back to the original block attribute.
 
-- **Critical Bug Fixes**:
-  - Fixed rating submission deadlock and requeue exception handling in `ui/review.svelte`.
-  - Fixed `undo` (`p`/`q`) shortcut to respond directly on question-face without forcing flip to answer.
-  - Corrected review accuracy and retention formula in `core/review-queue-pipeline.ts` and `ReviewDonePanel.svelte`.
-  - Fixed reschedule target timestamp timezone drift in `core/reschedule-preview.ts`.
-  - Fixed scoped `dueCache` query routing in `api/due-shared.ts`.
-  - Cleaned up Anki import temporary SQLite directory upon close in `api/anki-host.ts`.
-  - Fixed `isSuspended` rollover across calendar days.
-- **UI & Accessibility Improvements**:
-  - Scoped `.lv-drawer` inside design token inheritance in `index.scss`.
-  - Calibrated dark mode WCAG AA 4.5:1 contrast and resolved missing design tokens.
-  - Implemented WAI-ARIA modal dialog focus trapping via Svelte action `use:trapFocus`.
-  - Cleaned up nested interactive buttons in `ReviewCardBreadcrumbs.svelte`.
-- **Large-Library Performance Optimizations**:
-  - Eliminated redundant deep cloning passes during review rating in `index.ts`.
-  - Reduced `knownCards` lookup complexity from $O(N)$ to $O(1)$ with `WeakMap` set caching in `core/revlog.ts`.
-  - Added adaptive candidate window pre-truncation before SQLite quality queries in `ui/review.svelte`.
-  - Pre-cached stripped plain text and decoupled derived sets in `ui/manager.svelte`.
-- **Quality Gates**:
-  - 2315 tests across 289 test suites 100% passing; 0 TypeScript errors; 0 Svelte diagnostics; distribution smoke tests green.
+### 2. Scientific Retention Review & Multi-Modal Recall
+* **Native FSRS Algorithm**: Built directly upon SiYuan's native FSRS-5 algorithm. Replaces crude SM-2 multipliers by accurately fitting memory retention curves.
+* **4-Level Hint Ladder**: Staggered assistance when stuck (press `h`): Recall Target $\to$ Core Keywords $\to$ Context Clues $\to$ Full Answer. Eliminates binary pass/fail frustration.
+* **Same-Session Requeue**: Cards rated as *Again* are seamlessly reintroduced minutes later within the same session for immediate reinforcement.
+* **LCS Dynamic-Programming Typing Verification**: Type answers on keyboard with character-level diff highlighting via Longest Common Subsequence (LCS) algorithm.
+* **Real-Deck Distractor Choice Practice**: Dynamically extracts genuine candidate answers from other cards in the same deck to form multiple-choice drills, gracefully falling back to free recall when distractors are sparse.
+* **Image Occlusion & Excalidraw Canvas Integration**: Mask regions on diagrams and schematics. Direct 1-click jump into SiYuan's native Excalidraw whiteboard editor.
+* **Local Web Speech TTS**: 100% offline speech synthesis for hands-free audio listening and pronunciation drills.
 
-<details>
-<summary>📜 View Historical Release Notes (v0.216.3 and earlier)</summary>
+### 3. Asset Governance, Pace Control & Interoperability
+* **Leech Card Quarantine & Remediation**: Automatically tags and warns cards failing past the lapse threshold (default 8 lapses), guiding users to break down complex cards.
+* **7 Cognitive Error Reason Tags**: Categorize lapses on the fly (concept confusion, misread question, unfamiliar material, defective card) for targeted remediation.
+* **Session Budget & Pomodoro Timer**: Set 15/25/30 minute study budgets. Gentle completion alerts prevent cognitive exhaustion.
+* **Exam Sprint (Cram Mode)**: Review cards ahead of schedule for upcoming exams without corrupting your daily FSRS schedule.
+* **Future 30-Day Load Forecast Calendar**: Visualizes predicted review peaks over the next 7 to 30 days.
+* **Open Ecosystem**: Local parsing and import of Anki (`.apkg`) packages, bi-directional lossless sync with Obsidian Spaced Repetition (SR) Markdown, and `.lvcards` structured bundle sharing.
 
-### v0.216.3 (2026-10-29)
-- **Queue Exclusion & Active Session Filtering Decoupled (`core/review-queue-pipeline.ts`)**: Extracted `combineExcludedCardIDs`, `filterActiveSessionCards`, and `mergeQualityExcludedCardIDs`.
-- **Countdown Resume Guard Decoupled (`core/review-countdown.ts`)**: Extracted `shouldRestartCountdownOnResume`.
-- **Verification**: 289 test files, 2314 tests passing.
+### 4. R54 Modern Design System & Dual-Tone Order
+* **Two-Layer Floating Architecture**: Subtle tinted canvas (`#F7F7FA`) anchoring pure white floating cards (`#FFFFFF`) with a 2.5% lightness delta and multi-layer downward soft diffuse shadows (Elevation 1/2/3).
+* **Two-Color Semantic Separation**: Periwinkle Purple (`#5E59CB`) governs interactive actions and navigation; Cyan Sky Blue (`#0284C7`) exclusively governs positive performance metrics, streaks, review counts, and retention rates.
+* **Dark Contrast Accent Card**: The streak card adopts a deep periwinkle-tinted near-black tone (`#171723`, lightness 12%) with high-contrast text to introduce rhythm.
+* **4× Extreme Typography Contrast Ratio**: Key numbers scale to 44px (`--lv-type-display-hero`) in tabular numerals, creating a 4.0× visual contrast against 11px auxiliary captions.
+* **Touch Target & Line Width Protection**: Automatic touch expansion ($\ge 44\text{px} \times 44\text{px}$) on coarse pointer devices and 48em maximum line-width protection for CJK reading comfort.
 
-### v0.216.2 (2026-10-29)
-- **CanRate Guard & Rating Haptics (`core/card-actions.ts` & `core/haptic.ts`)**: Extracted `canRateCurrentCard` and `getRatingHapticPattern` for unified rating pre-check and vibration patterns.
-- **Review Root Focus Controller (`core/card-interactions.ts`)**: Extracted `focusReviewRootOrCard` for standardized focus restoration.
+---
 
-### v0.216.1 (2026-10-29)
-- **Container Event Boundary Guard (`core/card-interactions.ts`)**: Extracted `isEventInsideContainer` for unified container target detection.
-- **Reset Session Progress Payload (`core/session-state.ts`)**: Extracted `createResetSessionProgress` for normalized state reset.
+## 📥 Installation
 
-### v0.216.0 Milestone (2026-10-29)
-- **Card Face Ready & Scope Normalization (`core/card-face.ts` & `core/scope-preset.ts`)**: Extracted `isCardFaceReady` and `normalizeScopeKey`.
-- **HPath Query SQL Builder (`core/review-breadcrumbs.ts`)**: Extracted `buildHPathQuerySql` with SQL injection defense.
-- **Verification**: Over 2300 unit tests passing.
+### Method 1: SiYuan Official Bazaar (Recommended)
+1. In SiYuan, navigate to: **Settings → Bazaar → Plugins**;
+2. Search for `小驴闪卡` or `siyuan-lv-cards`;
+3. Click "Install" and enable the plugin.
 
-### v0.215.0 Milestone (2026-10-29)
-- **Queue Slicing & Last Answered Snapshot (`core/card-actions.ts`)**: Extracted `createLastAnsweredSnapshot` and `sliceQueueAfterCurrent`.
-- **I18n Path Resolution (`core/return-check.ts`)**: Safe nested path dictionary reading.
+### Method 2: Manual Package Import
+1. Download the latest `package.zip` from [GitHub Releases](https://github.com/ai68298100/siyuan-lv-cards/releases/latest);
+2. In SiYuan, open: **Settings → Bazaar → Downloaded → Import Package**;
+3. Select the downloaded `package.zip` and enable the plugin.
 
-### v0.214.0 Milestone (2026-10-29)
-- **Main Review Component Lines Reduced from 3412 to 2342 Lines (-1070 lines)**.
-- **8 Dedicated Subcomponents Extracted**: `ReviewReadyDashboard`, `ReviewToolbar`, `ReviewRatingBar`, `ReviewErrorTagBar`, `ReviewCountdownBanner`, `ReviewRescheduleModal`, `ReviewSessionPrefs`, `ReviewContextDrawer`.
+---
 
-### v0.212.4 (2026-10-28)
-- **ReviewReadyDashboard Component Modularization (`ReviewReadyDashboard.svelte`)**: Scope quick-switch pill, quality exclusion alerts, bento grid (cram, authoring, deck management).
+## 🚀 Quick Start (3 Steps)
 
-### v0.211.0 Milestone (2026-10-28)
-- **Two-tier Progressive Learning Scheduling (SuperMemo philosophy)**: `shouldBypassFsrs` protocol separating raw extracts from FSRS, `Ctrl+D` dismiss archive.
-- **SuperBlock Flashcards 100% Aligned**: First block as question, remaining blocks as answer with answer-side masking.
-- **SVG / Excalidraw Canvas Direct Editing**: Double-click canvas to zoom into native Protyle editor.
-- **Design Token Coverage Reached 97.4%**.
+```text
+[ Select Note Text ] ──(== Cloze / Block Menu)──> [ Press Alt+K to Review ] ──(Space to Reveal / 1-4 Rating)──> [ Native FSRS Scheduling ]
+```
 
-> For complete historical release notes, please see [CHANGELOG.md](./CHANGELOG.md).
-</details>
+1. **Step 1: Notes as Cards**
+   * Highlight key terms in any SiYuan document and type `==` to make a cloze card (e.g., `Paris is the capital of ==France==`);
+   * Or click the icon to the left of any block and select **"Add to Deck"**.
+2. **Step 2: Enter Focus Review**
+   * Press **`Alt+K`** (or click the topbar icon). If you have cards due today, the immersive review workbench launches immediately.
+3. **Step 3: Active Recall & Rating**
+   * Recall the hidden answer, then press **Space** to reveal;
+   * Rate your recall using number keys:
+     * **`1` (Again)**: Complete lapse; requeues card for same-session practice;
+     * **`2` (Hard)**: Recalled with effort;
+     * **`3` (Good)**: Normal, correct recall;
+     * **`4` (Easy)**: Instant, effortless recall;
+   * Native FSRS calculates the optimal next review interval automatically.
 
-## 📸 Screenshots
+---
 
-| Overview — pick up where you left off | Review — recall first, check, then grade |
-|---|---|
-| ![Overview](./asset/screenshots/overview.png) | ![Review](./asset/screenshots/review.png) |
-| **Manager** — back to content, with source & history | **Rating bar** — 4-button grading with interval preview |
-| ![Manager](./asset/screenshots/manager.png) | ![Rating](./asset/screenshots/review-rating.png) |
+## 🧭 Main Workspace Panels
 
-## ✨ Features
+| Workspace Panel | Purpose & Capabilities |
+| :--- | :--- |
+| **Today's Action (Today)** | Daily launchpad: Displays cards due today, goal ring, dark streak card, weekly activity grid, deck quick access, and dormant uncarded knowledge block discovery. |
+| **Card Library (Library)** | Full-library search, status filters (New/Review/Due), card-type filters (QA/Cloze/SuperBlock), starred flags, batch add/move/delete, and CSV/Obsidian export. |
+| **Card Detail Drawer** | Slides out from any card: Content preview & real-time markdown editing, source block jump with diff comparison, review history log, version snapshots, knowledge objects (KO), and relation graphs. |
+| **Authoring Studio (Studio)** | **Manual Authoring**: QA/Cloze/SuperBlock templates with live card face rendering;<br>**AI Wizard**: Material import, preflight consent modal, academic prompt templates, per-candidate vetting, and flashcard quality gates;<br>**Repair Drill**: Interactive tutorial teaching how to repair ambiguous cards. |
+| **Learning & Calendar** | **Recap**: 7-day trend charts and recent logs;<br>**Goals**: Exam target dates and daily quotas;<br>**Calendar**: Monthly heatmaps, future 30-day forecast load calendar, and date-level drilldowns. |
+| **Recovery Center** | Consolidates interrupted review sessions, pending inbox items, unfinished AI jobs, and suspended cards with 1-click restore. |
 
-| Module | Highlights & Purpose |
-|---|---|
-| 🃏 **Active Recall & FSRS** | Native FSRS scheduling with next-due preview · source-context preview & drawer · hierarchical breadcrumbs · hint ladder (4 levels) · forgotten-card short loop requeue · undo · session resume |
-| ✍️ **Deep Note Authoring** | Block-level card creation (multi-select) · cloze deletion (`==`) · outline tree cloze · SuperBlock Q/A · syntax scanner (`term :: definition`) · AI batch generation with 12 prompt templates |
-| 🎯 **Interactive Question Types** | Type-in grading with LCS character diff · TTS dictation & read-aloud · local distractor multiple-choice & true/false · image & canvas occlusion · double-click SVG/Excalidraw canvas editing · mixed rotation |
-| ⏱️ **Flow & Anti-Fatigue** | Session duration budget with countdown HUD · 25-minute Pomodoro alert · timeout modes · 4-branch interruption recovery · long-return checkup & load relief choices |
-| 🗂 **Card Management & Debt Governance** | Paged browsing with multi-filter · 4-facet detail drawer (content/source/history/diagnostics) · leech warning & debt queue · private memo notes · one-click dismiss (`Ctrl+D`) & archive |
-| 📊 **Stats & Goal Tracking** | Study calendar with load forecast · deck dashboard with due/retention ranking · retention & interval curves · streak celebration · automated weekly review report |
-| 🛡 **Auditable AI** | Works offline or without AI · 4-gate safety chain (zero-token preflight, prompt injection sandbox, context budget truncation, emergency kill-switch) · manual card-by-card approval |
-| 📦 **Ecosystem & Data Mobility** | Seamless Lv ecosystem bridge (Speed Switch, Checkin, Glean, Contacts) · two-way Obsidian SR import/export with deck mapping · Anki `.apkg` import · full CSV/JSON log export |
+---
 
-## 🚀 Install
+## ⚙️ Settings Reference (Defaults & Impact)
 
-SiYuan ≥ 3.8.0. Desktop is the core experience; mobile and browser are narrow-screen adapted (390px structural walkthrough recorded), while the full Android SiYuan host matrix remains pending.
+| Category | Option | Label | Default | Description & Impact |
+| :--- | :--- | :--- | :---: | :--- |
+| **Modules** | Core Module Toggles | `Stats` / `Review` / `Library` / `Inbox` / `Goals` / `Exam` / `Maintenance` / `XP` | All Enabled | Controls navigation visibility without deleting data. Deep links display friendly enable cards. |
+| **Rhythm** | Daily New Target | `Daily New Target` | **10** | Quota of new cards introduced per day. Set to `0` for unlimited. |
+| **Rhythm** | Daily Review Target | `Daily Review Target` | **20** | Goal used to calculate the completion ring. Set to `0` for unlimited. |
+| **Rhythm** | Direct Review on Topbar Click | `Direct Review on Click` | **Enabled** | When cards are due, left-clicking the topbar icon opens review directly; otherwise opens Hub. |
+| **Rhythm** | Random Review Order | `Random Order` | **Disabled** | Shuffles the review queue. When disabled, cards appear in logical document sequence. |
+| **Rhythm** | Sibling Card Dispersal | `Bury Siblings` | **Enabled** | Delays brother/sister cards from the same block to prevent consecutive spoilers. |
+| **Grading** | Rating Mode | `Rating Style` | **Four-Button** | Choose between `Four-Button` (Again/Hard/Good/Easy) or `Three-Button` (Again/Hard/Good). |
+| **Grading** | Timeout Action | `Timeout Mode` | **Off** | Options: `Off`, `Auto Reveal`, `Auto Again`. Ideal for timed mock exams. |
+| **Grading** | Timeout Seconds | `Answer Time Limit` | **60s** | Per-card active recall countdown timer (range 5s ~ 3600s). |
+| **Grading** | Leech Threshold | `Leech Threshold` | **8** | Flags cards as leeches when total lapses reach this number. |
+| **Speech** | Text-to-Speech (TTS) | `TTS Speech` | **Disabled** | Automatically speaks the answer on flip using local system voices. |
+| **Appearance** | Card Font Scale | `Card Font Scale` | **1.0×** | Scaler (0.85× ~ 1.25×) with live in-situ card preview in settings. |
+| **Appearance** | Custom Card CSS | `Custom Card CSS` | Empty | User-defined CSS injected directly into the card reading viewport. |
+| **Appearance** | Rating Density | `Rating Density` | **Cozy** | Toggles between cozy and compact rating button heights. |
+| **Appearance** | Heatmap Span | `Heatmap Span` | **26 Weeks** | Span of weeks displayed in dashboard heatmap (17 / 26 / 52 weeks). |
+| **AI Provider** | Provider Mode | `AI Mode` | **SiYuan Native** | Choose between `SiYuan Native AI`, `Custom Endpoint`, or `Disabled`. |
+| **AI Provider** | API Endpoint | `API Endpoint` | Empty | Custom OpenAI-compatible endpoint URL (e.g. DeepSeek, Ollama). |
+| **AI Provider** | Connectivity Test | `Test AI Connection` | — | Sends test ping and displays status code and response diagnostics. |
+| **AI Provider** | Prompt Template | `System Prompt` | **Academic QA** | Select built-in academic distillation templates or enter custom prompt. |
+| **AI Provider** | Emergency Killswitch | `Emergency Killswitch` | **Active** | 1-click pause and revoke for pending AI requests; local cards unaffected. |
+| **AI Provider** | Monthly Token Budget | `Monthly Token Cap` | **Disabled** | Sets hard token ceiling; halts outbound generation when exceeded. |
 
-1. Download `package.zip` from the [latest release](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) (do **not** unzip)
-2. SiYuan → Settings → Marketplace → Download → "Import package" → pick the zip
-3. Enable "Lv Cards (Beta)" under Downloaded
+---
 
-## ⌨️ Quick start
+## ⌨️ Shortcut Reference
 
-1. Select a block → block icon → **Add to deck**
-2. Press **Ctrl+K** for the command palette, or click the **donkey badge** in the top bar
-3. In review: **Space** flips, **1-4** rates, `?` shows all shortcuts
+All shortcuts can be customized in SiYuan under **Settings → Shortcuts**:
 
-## 📚 Docs
+### 1. Global & Navigation Shortcuts
+* **`Alt+K`**: **Open Command Palette** (search actions, jump to pages, quick operations)
+* **`Space`**: Start review or continue active session (on Today dashboard)
+* **`==`**: Wrap highlighted selection into cloze card (in editor)
 
-Full design docs in [docs/](./docs/README.md) (Chinese). The [R54 interactive prototype](./docs/prototypes/lv-cards-r54.html) is the single source of truth for UI structure, visual language, copy, interaction states, and responsive breakpoints; compare implementation evidence in the [R54 acceptance ledger](./docs/45-R54实现对照与验收台账.md) and component APIs in the [component catalogue](./docs/46-组件目录与状态契约.md). [R53 design spec](./docs/42-UI设计规范-R53.md) is retained as a historical reference. See also [product positioning](./docs/41-竞品调研与定位强化.md) · [user guide](./docs/21-用户上手指南.md) · [FAQ](./docs/20-FAQ与故障排查.md) · [privacy](./docs/PRIVACY.md). For development, see [CONTRIBUTING](./CONTRIBUTING.md); report bugs through [Issues](https://github.com/ai68298100/siyuan-lv-cards/issues) and security problems through [SECURITY](./SECURITY.md).
+### 2. Review Workbench Shortcuts
+* **`Space`**: **Reveal answer** / Reveal next cloze segment
+* **`Shift+Space`**: Reveal all cloze segments at once
+* **`1`**: Rate **Again** (lapse)
+* **`2`**: Rate **Hard**
+* **`3`**: Rate **Good**
+* **`4`**: Rate **Easy** (in 4-button mode)
+* **`Ctrl+Z` / `⌘+Z`**: **Undo last rating** (rolls back queue, counters, and returns to previous card)
+* **`Ctrl+O` / `⌘+O`**: **Jump to source** (opens original note block in SiYuan editor)
+* **`Ctrl+E` / `⌘+E`**: Edit card text inline on the review card
+* **`Ctrl+K` / `⌘+K` / `F`**: Open quick reschedule modal (postpone target date)
+* **`Ctrl+D` / `⌘+D`**: Dismiss / archive current card immediately
+* **`h`**: Advance Hint Ladder (Target $\to$ Keyword $\to$ Context $\to$ Answer)
+* **`Esc`**: Pause review and safely return to Today (session state preserved)
 
-## 🗺 Roadmap
+### 3. Library & List Shortcuts
+* **`↑` / `↓`**: Navigate and highlight card rows
+* **`Enter`**: Open detail drawer for highlighted card
+* **`Delete`**: Prompt to delete highlighted card
+* **`Esc`**: Close card detail drawer or cancel batch selection
 
-| Priority | Item | Status |
-|---|---|---|
-| P0 | ⌘K command palette | ✅ v0.206.3 |
-| P0 | Learning calendar & load forecast | ✅ v0.206.4 |
-| P1 | Weekly report | ✅ v0.206.7 |
-| P1 | Deck dashboard | ✅ v0.206.8 |
-| P1 | Share pack (deck-level Obsidian SR export) | ✅ v0.206.9 |
-| P2 | 390px narrow-screen structural walkthrough | ✅ v0.206.10 |
-| P1 | Starline UI overhaul (page heads / complete states / micro-motion / narrow screen / review polish) | ✅ v0.208.0 |
-| P2 | Full Android SiYuan host matrix | Pending |
-| P2 | Templates & fields | Deferred |
+---
 
-## 🤝 Lv Ecosystem Plugins
+## ❓ Frequently Asked Questions (FAQ)
 
-Each plugin in the Lv series is standalone and can be used independently or in concert:
+### Q1: I misrated a card by accident. How do I undo?
+* **Answer**: Press **`Ctrl+Z` (or `⌘+Z` on Mac)** or click the "Undo" button. The previous card is immediately restored to your screen, counter statistics roll back, and your session resumes seamlessly. Note that because SiYuan's native kernel API does not provide a rating cancellation endpoint, re-rating will apply your corrected score.
 
-| Plugin | Brief Description | GitHub Repo |
-|---|---|---|
-| [Lv Speed Switch](https://github.com/ai68298100/siyuan-speed-switch) | Unified workspace navigation and context platform connecting tabs, snippets, and workspaces. | [ai68298100/siyuan-speed-switch](https://github.com/ai68298100/siyuan-speed-switch) |
-| [Lv Checkin](https://github.com/ai68298100/siyuan-checkin) | Local-first habit and goal check-in workbench with statistics, reminders, and note linking. | [ai68298100/siyuan-checkin](https://github.com/ai68298100/siyuan-checkin) |
-| [Lv Contacts](https://github.com/ai68298100/siyuan-contacts) | Contact and relationship management in SiYuan with organization groups and birthday reminders. | [ai68298100/siyuan-contacts](https://github.com/ai68298100/siyuan-contacts) |
-| [Lv Glean](https://github.com/ai68298100/siyuan-glean) | Web clipper and inbox organizer with read-later triage and progressive extraction. | [ai68298100/siyuan-glean](https://github.com/ai68298100/siyuan-glean) |
-| [Lv Exam (Beta)](https://github.com/ai68298100/siyuan-exam) | Exam preparation workbench supporting question bank import, practice, recitation, and mock exams. | [ai68298100/siyuan-exam](https://github.com/ai68298100/siyuan-exam) |
-| [Lv Home (Beta)](https://github.com/ai68298100/siyuan-home) | Household and family inventory, member records, warranties, and expiration tracking. | [ai68298100/siyuan-home](https://github.com/ai68298100/siyuan-home) |
-| [Lv Cards (Beta)](https://github.com/ai68298100/siyuan-lv-cards) | Full-lifecycle flashcard memory engine with native FSRS scheduling and auditable AI. | [ai68298100/siyuan-lv-cards](https://github.com/ai68298100/siyuan-lv-cards) |
-| [Lv Common (Beta)](https://github.com/ai68298100/xiaolv-common) | Fast insertion of reusable text, templates, code snippets, and variable expansion. | [ai68298100/xiaolv-common](https://github.com/ai68298100/xiaolv-common) |
+### Q2: If I switch computers or reinstall SiYuan, will my cards and logs survive?
+* **Answer**: Yes, completely. Lv Cards is **local-first**:
+  1. Card scheduling data is stored directly in SiYuan's native `riff` database and synchronizes alongside your notebooks;
+  2. Plugin settings, review logs, and goals live in `data/storage/petal/siyuan-lv-cards/` within your workspace;
+  3. When moving devices, syncing your workspace directory automatically restores all data. You can also export a full JSON backup under **Settings → Data & Backup**.
 
-QQ Group: **871707735**
+### Q3: Why does "Pairing Game" say "Not enough cards"?
+* **Answer**: The pairing game requires at least 4 cloze pairs. The engine first looks for cards due today; if you have finished all due cards, it gracefully falls back to pulling random cloze cards from your entire library. If your library contains zero cloze cards (`==cloze==`), author a few cloze cards first to play.
 
-## 🙏 Credits
+---
 
-- Built on [plugin-sample-vite-svelte](https://github.com/siyuan-note/plugin-sample-vite-svelte)
-- Scheduling: SiYuan kernel's native [go-fsrs](https://github.com/open-spaced-repetition/go-fsrs)
-- Research: Anki, Obsidian Spaced Repetition, RemNote, Mochi, Quizlet, Knowt, and SiYuan community plugins — see [docs/41](./docs/41-竞品调研与定位强化.md)
+## 🔒 Data Storage & Privacy
 
-## License
+> **Zero Telemetry · Zero Tracking · No Private Cloud · Absolute Data Ownership**
 
-[MIT](./LICENSE) © ai68298100
+Lv Cards contains zero third-party analytics or telemetry SDKs. Aside from explicit outbound AI generation requests you actively confirm, **all functionality runs completely offline in your local environment**.
+
+### Local Data Files (stored in `data/storage/petal/siyuan-lv-cards/`):
+* `settings.json`: User preferences, module toggles, and algorithm options.
+* `revlog.json`: Local review history logs (timestamps, card IDs, ratings, duration).
+* `exam-plans.json`: Sprint goals, target scopes, and review quotas.
+* `learning-goals.json`: Personal learning goals and progress records.
+* `inbox.json`: Unprocessed material blocks in the inbox queue.
+* `source-health.json`: Block validity checks and source fingerprint history.
+* `ai-deny-list.json`: Outbound AI blacklists and whitelists.
+* `ai-killswitch.json`: Emergency killswitch state and safety event audit logs.
+
+---
+
+## 💻 Compatibility & Environment
+
+* **Minimum SiYuan Version**: **$\ge 3.8.4$**
+* **Supported Platforms**: Windows, macOS (Intel & Apple Silicon), Linux, iOS, iPadOS, Android, HarmonyOS, Docker Web
+* **Responsive Layouts**: Designed for 1280px+ desktop workstations, tablet splits, and 320px~390px mobile screens with touch target expansion ($\ge 44\text{px}$).
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](./LICENSE). Open source and community-driven.
