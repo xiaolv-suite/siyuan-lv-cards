@@ -39,7 +39,7 @@ describe("ReviewDonePanel 复习完成面板组件", () => {
             menuManager: "卡片管理",
         },
         sessionNew: 5,
-        sessionReview: 15,
+        sessionReview: 13,
         sessionForget: 2,
         sessionSkip: 1,
         sessionQuizTotal: 10,

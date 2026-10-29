@@ -17,10 +17,13 @@
     --lv-color-canvas: #F8FAFC;
     --lv-color-canvas-subtle: #F1F5F9;
     --lv-color-surface: #FFFFFF;
+    --lv-color-surface-subtle: #F1F5F9;
     --lv-color-danger: #EF4444;
     --lv-color-warning: #F59E0B;
     --lv-color-success: #10B981;
     --lv-color-on-danger: #FFFFFF;
+    --lv-color-on-success: #FFFFFF;
+    --lv-color-on-warning: #FFFFFF;
     --lv-surface-hover: rgba(15, 23, 42, 0.04);
 
     // 类型档位：组件默认组合与字号清单见 docs/47。
@@ -56,6 +59,7 @@
     --lv-type-micro-size: 9px;
     --lv-type-body-sm-size: 14px;
     --lv-type-label-size: 15px;
+    --lv-type-title-md-size: 17px;
     --lv-type-title-lg-size: 17px;
     --lv-type-section-lg-size: 19px;
     --lv-type-page-size: 22px;
@@ -207,10 +211,13 @@ body[data-theme-mode="dark"],
     --lv-color-canvas: #090D16;
     --lv-color-canvas-subtle: #0F1626;
     --lv-color-surface: #141C2E;
+    --lv-color-surface-subtle: #1A243B;
     --lv-color-danger: #F87171;
     --lv-color-warning: #FBBF24;
     --lv-color-success: #34D399;
     --lv-color-on-danger: #090D16;
+    --lv-color-on-success: #090D16;
+    --lv-color-on-warning: #090D16;
     --lv-surface-hover: rgba(255, 255, 255, 0.07);
     --lv-border: rgba(255, 255, 255, 0.10);
     --lv-border-strong: rgba(255, 255, 255, 0.20);
@@ -519,7 +526,7 @@ body[data-theme-mode="dark"],
 // 小驴闪卡 · 局部思源变量重定向别名（彻底脱离思源外部主题干扰，实现完全自治）
 // 在小驴闪卡核心作用域内覆盖 --b3-* 别名，使底层 legacy 组件与思源类名自然继承小驴设计系统
 // ============================================================
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) {
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
     --b3-theme-background: var(--lv-color-canvas);
     --b3-theme-background-light: var(--lv-color-canvas-subtle);
     --b3-theme-surface: var(--lv-color-surface);
@@ -540,7 +547,7 @@ body[data-theme-mode="dark"],
 
 // 插件全部作用域表单控件质感系统（R54 原型规范）：
 // 统一白面底色、1px 细微边界、10px 现代圆角、平滑光晕聚焦与按压反馈
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) {
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
     .b3-text-field,
     .b3-select {
         border: 1px solid var(--lv-border);
@@ -648,7 +655,7 @@ body[data-theme-mode="dark"],
 // 插件界面按钮语义基线（R52：主色只给核心动作）——思源 .b3-button 基类是实心主色，
 // 在插件页面/中心/对话框内统一回到白面中性；主动作必须显式挂 .lv-btn-primary。
 // :not 白名单 = 宿主已有语义档 + 插件自有语义类（ghost/主色/挑战软色/soft）。
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) {
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
     .b3-button:not(.b3-button--outline):not(.b3-button--text):not(.b3-button--cancel):not(.lv-btn-primary):not(.lv-btn-ghost):not(.lv-chal-btn):not(.lv-btn-soft) {
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
@@ -668,7 +675,8 @@ body[data-theme-mode="dark"],
 .lv-dialog,
 .lv-peek-body,
 .lv-review,
-.lv-aiwiz {
+.lv-aiwiz,
+.lv-drawer {
     .b3-button:not(:disabled):not(.lv-btn-rate):not(.lv-btn-primary):active { transform: translateY(0.5px) scale(0.985); }
     .b3-button:disabled {
         opacity: 0.55;
@@ -995,7 +1003,7 @@ body[data-theme-mode="dark"],
 }
 
 // 焦点环（必须严格作用于小驴闪卡核心作用域内，绝不外溢至思源正文编辑器与标题区）
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :focus-visible {
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :focus-visible {
     outline: none;
     box-shadow: var(--lv-focus-ring);
 }
@@ -1219,7 +1227,7 @@ body[data-theme-mode="dark"],
     background: color-mix(in srgb, black 38%, transparent);
     backdrop-filter: blur(8px) saturate(1.15);
     -webkit-backdrop-filter: blur(8px) saturate(1.15);
-    z-index: var(--lv-z-host-overlay, 100);
+    z-index: var(--lv-z-modal-backdrop, 1000);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1543,7 +1551,7 @@ body[data-theme-mode="dark"],
     .lv-palette-panel,
     .lv-drawer-panel,
     .lv-review-box,
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :is(.b3-button, .b3-text-field, .b3-select),
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card,
     .lv-badge,
     .lv-chip,
@@ -2243,7 +2251,7 @@ body[data-theme-mode="dark"],
     .lv-card2,
     .lv-modal-content,
     .lv-palette-panel,
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :is(.b3-button, .b3-text-field, .b3-select),
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card {
         border: 1px solid var(--lv-color-text);
     }
@@ -2256,7 +2264,7 @@ body[data-theme-mode="dark"],
         font-weight: var(--lv-fw-bold);
     }
 
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :where(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :where(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
         outline: 3px solid var(--lv-color-brand);
         outline-offset: 2px;
     }

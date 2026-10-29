@@ -42,4 +42,9 @@ describe("suspend-today（今天不学，M3·FR5）", () => {
         unsuspend(d, "c1"); // 幂等：不在册无操作
         expect(d.cardIDs).toEqual(["c2"]);
     });
+
+    it("isSuspended 跨天未滚日时自动判定为非挂起状态", () => {
+        const yesterday = { date: "2020-01-01", cardIDs: ["c1", "c2"] };
+        expect(isSuspended(yesterday, "c1")).toBe(false);
+    });
 });

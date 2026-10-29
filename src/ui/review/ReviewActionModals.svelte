@@ -112,15 +112,15 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onClosePause}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.pauseTitle ?? "暂停这场复习"} tabindex="-1" onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.pauseTitle ?? "暂停这场复习"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
-                <span style="font-weight: var(--lv-fw-semibold); font-size: 16px">{t.review?.pauseTitle ?? "暂停这场复习"}</span>
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)">{t.review?.pauseTitle ?? "暂停这场复习"}</span>
                 <div class="fn__flex-1"></div>
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={cancelLabel} onclick={onClosePause}><LvIcon name="close" size={13} /></button>
             </div>
             <div style="padding: var(--lv-sp-3) 0">
                 <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review?.pauseDesc ?? "当前范围、进度与本场偏好已安全保留。"}</p>
-                <div style="margin-top: var(--lv-sp-2); font-size: 12px; color: var(--lv-color-brand)">
+                <div style="margin-top: var(--lv-sp-2); font-size: var(--lv-type-control-size); color: var(--lv-color-brand)">
                     {t.review?.doneConfirm ?? "已正式评分"}: <strong>{reviewedCount}</strong> · {t.review?.skipNotRated ?? "跳过"}: <strong>{skippedCount}</strong>
                 </div>
             </div>
@@ -136,9 +136,9 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseSessionOptions}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.sessionOptionsTitle ?? "本场偏好"} tabindex="-1" onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.sessionOptionsTitle ?? "本场偏好"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
-                <span style="font-weight: var(--lv-fw-semibold); font-size: 16px">{t.review?.sessionOptionsTitle ?? "本场偏好与出题形态"}</span>
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)">{t.review?.sessionOptionsTitle ?? "本场偏好与出题形态"}</span>
                 <div class="fn__flex-1"></div>
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={cancelLabel} onclick={onCloseSessionOptions}><LvIcon name="close" size={13} /></button>
             </div>
@@ -165,9 +165,9 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseMemoEditor}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.memoModalTitle ?? "助记便签"} tabindex="-1" onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.memoModalTitle ?? "助记便签"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
-                <span style="font-weight: var(--lv-fw-semibold); font-size: 16px"><LvIcon name="lightbulb" size={17} /> {t.review?.memoModalTitle ?? "给未来的自己留助记线索"}</span>
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="lightbulb" size={17} /> {t.review?.memoModalTitle ?? "给未来的自己留助记线索"}</span>
                 <div class="fn__flex-1"></div>
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={memoSaving} aria-label={cancelLabel} onclick={onCloseMemoEditor}><LvIcon name="close" size={13} /></button>
             </div>
@@ -197,9 +197,9 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseRetireModal}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出卡组"} tabindex="-1" onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出卡组"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
-                <span style="font-weight: var(--lv-fw-semibold); font-size: 16px"><LvIcon name="ban" size={17} /> {t.review?.retireCardTitle ?? "移出复习卡组"}</span>
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="ban" size={17} /> {t.review?.retireCardTitle ?? "移出复习卡组"}</span>
                 <div class="fn__flex-1"></div>
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy} aria-label={cancelLabel} onclick={onCloseRetireModal}><LvIcon name="close" size={13} /></button>
             </div>

@@ -334,6 +334,9 @@ const todayDate = () => localDate(Date.now());
 
 function cloneStore<T>(value: T): T {
     try {
+        if (typeof structuredClone === "function") return structuredClone(value);
+    } catch { /* fall through to JSON clone */ }
+    try {
         return JSON.parse(JSON.stringify(value)) as T;
     } catch {
         return value;
@@ -370,8 +373,6 @@ export default class LvCardsPlugin extends Plugin {
     private persistedCostLedgerSnapshot: CostLedgerData | null = null;
     private persistedAIJobsSnapshot: AIJobsData | null = null;
     private persistedAIDenyListSnapshot: DenyListData | null = null;
-    /** Revlog optimistic-write rollback snapshot/version. */
-    private revlogPendingSnapshot: RevlogData | null = null;
     private revlogMutationVersion = 0;
     /** Last revlog snapshot confirmed by persistence; failed overlapping writes
      * must never roll back to another unconfirmed optimistic snapshot. */
@@ -2395,8 +2396,8 @@ export default class LvCardsPlugin extends Plugin {
     };
 
     private appendRevlog(entry: Omit<RevlogEntry, "ts"> & { ts?: number }) {
-        if (!this.revlogPendingSnapshot) {
-            this.revlogPendingSnapshot = normalizeRevlog(cloneStore(this.revlog));
+        if (!this.persistedRevlogSnapshot) {
+            this.persistedRevlogSnapshot = cloneStore(this.revlog);
         }
         this.revlogMutationVersion += 1;
         const today = todayDate();
@@ -2446,15 +2447,13 @@ export default class LvCardsPlugin extends Plugin {
         }
         // AQ-4：重试与失败记录统一由 persist 队列承担。若最终失败，
         // 只有在写入期间没有产生新评分时才恢复快照，避免覆盖更新的运行态。
-        const snapshot = this.revlogPendingSnapshot;
         const version = this.revlogMutationVersion;
-        this.revlogPendingSnapshot = null;
         const next = cloneStore(this.revlog);
         this.persist.save(REVLOG_DATA, next).then(() => {
-            this.persistedRevlogSnapshot = cloneStore(next);
+            this.persistedRevlogSnapshot = next;
         }).catch(() => {
             if (version === this.revlogMutationVersion) {
-                this.revlog = cloneStore(this.persistedRevlogSnapshot ?? snapshot ?? next);
+                this.revlog = cloneStore(this.persistedRevlogSnapshot ?? next);
                 this.refreshDueBadge();
                 this.showStorageFail();
             }

@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { addRiffCards, getBlockAttrs, getRiffDueCards, sqlQuery } = vi.hoisted(() => ({
-    addRiffCards: vi.fn(),
-    getBlockAttrs: vi.fn(),
-    getRiffDueCards: vi.fn(),
-    sqlQuery: vi.fn(),
-}));
+const { addRiffCards, getBlockAttrs, getRiffDueCards, getRiffDueCardsForScope, sqlQuery } = vi.hoisted(() => {
+    const getRiffDueCards = vi.fn();
+    return {
+        addRiffCards: vi.fn(),
+        getBlockAttrs: vi.fn(),
+        getRiffDueCards,
+        getRiffDueCardsForScope: vi.fn(async (scope, rev) => getRiffDueCards(scope, rev)),
+        sqlQuery: vi.fn(),
+    };
+});
 
 vi.mock("../src/api/riff", () => ({
     addRiffCards,
     getRiffDueCards,
+    getRiffDueCardsForScope,
 }));
 
 vi.mock("../src/api/siyuan", () => ({

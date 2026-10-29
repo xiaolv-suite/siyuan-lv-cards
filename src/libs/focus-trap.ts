@@ -49,6 +49,7 @@ export interface TrapOptions {
 
 export interface FocusTrap {
     release: () => void;
+    destroy: () => void;
     focusInitial: () => boolean;
     getFocusables: () => HTMLElement[];
 }
@@ -129,19 +130,21 @@ export function trapFocus(container: HTMLElement, opts: TrapOptions = {}): Focus
 
     container.addEventListener("keydown", onKeydown, true);
     let released = false;
+    const release = () => {
+        if (released) {
+            return;
+        }
+        released = true;
+        container.removeEventListener("keydown", onKeydown, true);
+        if (restoreOnRelease && prevFocus && document.contains(prevFocus)) {
+            try {
+                prevFocus.focus({ preventScroll: true });
+            } catch { /* 归还旁路 */ }
+        }
+    };
     return {
-        release: () => {
-            if (released) {
-                return;
-            }
-            released = true;
-            container.removeEventListener("keydown", onKeydown, true);
-            if (restoreOnRelease && prevFocus && document.contains(prevFocus)) {
-                try {
-                    prevFocus.focus({ preventScroll: true });
-                } catch { /* 归还旁路 */ }
-            }
-        },
+        release,
+        destroy: release,
         focusInitial,
         getFocusables: focusables,
     };

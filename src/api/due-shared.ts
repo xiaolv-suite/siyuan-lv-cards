@@ -4,14 +4,14 @@
  * 保持直连不经缓存。条目按 scope key（""=全部卡包，"deck:x"，"notebook:y"，"tree:z"）隔离。
  * 失效时机（invalidate）：appendRevlog（插件/原生评分漏斗）、cards-created、改期（batchSetRiffCardsDueTime）。
  */
-import { addRiffCards as kernelAddRiffCards, getRiffDueCards, type RiffDueCardsData } from "./riff";
+import { addRiffCards as kernelAddRiffCards, getRiffDueCardsForScope, type RiffDueCardsData } from "./riff";
 import { createDueCache } from "../libs/due-cache";
 import { getBlockAttrs, SQL_QUERY_CHUNK_SIZE, SQL_QUERY_CONCURRENCY, sqlQuery } from "./siyuan";
 import { hasQuestionMediaContent, validateFlashcardMarkdown } from "../core/flashcard-quality";
 import { validateCardEntries, type CardEntryDecision } from "../core/card-entry-gate";
 import { mapChunksOrdered } from "../core/query-chunks";
 
-export const dueCache = createDueCache<RiffDueCardsData>({ fetcher: key => getRiffDueCards(key) });
+export const dueCache = createDueCache<RiffDueCardsData>({ fetcher: key => getRiffDueCardsForScope(key) });
 
 /** 今日到期总数（全部卡包）：badge/提醒走共享缓存，与总览等并发读取合并为一次内核请求 */
 export const cachedDueCount = async (): Promise<number> => {

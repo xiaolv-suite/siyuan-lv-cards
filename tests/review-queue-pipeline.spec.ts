@@ -70,15 +70,24 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             expect(acc).toBe(80);
         });
 
-        it("无交互题型时按新学+复习扣减遗忘数统计命中率", () => {
+        it("无交互题型时按新学+复习 vs 总作答数统计命中率", () => {
             const acc = calculateReviewAccuracy({
-                newCount: 5,
-                reviewCount: 5,
+                newCount: 4,
+                reviewCount: 4,
                 forgetCount: 2,
                 quizTotal: 0,
                 quizCorrect: 0,
             });
-            expect(acc).toBe(80); // (10-2)/10 = 80%
+            expect(acc).toBe(80); // (4+4)/(4+4+2) = 80%
+
+            const allForget = calculateReviewAccuracy({
+                newCount: 0,
+                reviewCount: 0,
+                forgetCount: 10,
+                quizTotal: 0,
+                quizCorrect: 0,
+            });
+            expect(allForget).toBe(0); // 0/10 = 0%
         });
 
         it("无任何作答返回 100", () => {
@@ -134,10 +143,16 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             expect(res).toEqual(["c1", "c2", "c3"]);
         });
 
-        it("filterActiveSessionCards 过滤已跳过和今日不学的卡片", () => {
-            const cards = [{ cardID: "c1" }, { cardID: "c2" }, { cardID: "c3" }];
-            const res = filterActiveSessionCards(cards, id => id === "c1", ["c2"]);
-            expect(res).toEqual([{ cardID: "c3" }]);
+        it("filterActiveSessionCards 过滤已跳过和今日不学的卡片（支持 cardID 与 blockID 判定）", () => {
+            const cards = [
+                { cardID: "c1", blockID: "b1" },
+                { cardID: "c2", blockID: "b2" },
+                { cardID: "c3", blockID: "b3" },
+                { cardID: "c4", blockID: "b4" },
+            ];
+            // c1 命中了 cardID 挂起，b2 命中了 blockID 挂起，c3 命中了跳过
+            const res = filterActiveSessionCards(cards, id => id === "c1" || id === "b2", ["c3"]);
+            expect(res).toEqual([{ cardID: "c4", blockID: "b4" }]);
         });
 
         it("mergeQualityExcludedCardIDs 正确提取并合并有效 invalid 卡片 ID", () => {

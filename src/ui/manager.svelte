@@ -4,7 +4,8 @@
     import { getRiffCards, getRiffCardsByBlockIDs, getRiffDecks, createRiffDeck, removeRiffCards, resetRiffCards, type SearchBlock, type RiffDeck } from "@/api/riff";
     import { addRiffCards, invalidateDueCache } from "@/api/due-shared";
     import { friendlyError } from "@/api/errors";
-import { confirmDialog } from "@/libs/dialog";
+    import { confirmDialog } from "@/libs/dialog";
+    import { trapFocus } from "@/libs/focus-trap";
     import { parseManagerView } from "@/core/settings";
     import { srExportLine, composeSrExport } from "@/core/obsidian-import";
     import CardDetail from "./card-detail.svelte";
@@ -156,16 +157,40 @@ import { confirmDialog } from "@/libs/dialog";
     // svelte-ignore state_referenced_locally -- Hub creates a fresh Manager for each deck route.
     let deckScope = $state(ctx.deckScope ?? null);
 
+    function stripHtml(html: string): string {
+        if (!html) return "";
+        return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+    }
+
+    const plainTextCache = new Map<string, string>();
+    function getPlainText(id: string, html: string): string {
+        let cached = plainTextCache.get(id);
+        if (cached === undefined) {
+            cached = stripHtml(html);
+            plainTextCache.set(id, cached);
+        }
+        return cached;
+    }
+
+    let leechBlockIDSet = $derived.by(() => {
+        if (!leechOnly) return null;
+        return new Set(ctx.getLeechCards().map(l => l.blockID));
+    });
+
+    let starredIDSet = $derived.by(() => {
+        if (!starredOnly) return null;
+        return new Set(ctx.getStarredCardIDs?.() ?? []);
+    });
+
     let filteredBlocks = $derived(
         (() => {
-            let arr = blocks.filter(b => !deferredFilter || stripHtml(b.content).toLowerCase().includes(deferredFilter.toLowerCase()));
-            if (leechOnly) {
-                const leechSet = new Set(ctx.getLeechCards().map(l => l.blockID));
-                arr = arr.filter(b => leechSet.has(b.id));
+            const lowerFilter = deferredFilter ? deferredFilter.toLowerCase() : "";
+            let arr = blocks.filter(b => !lowerFilter || getPlainText(b.id, b.content).toLowerCase().includes(lowerFilter));
+            if (leechOnly && leechBlockIDSet) {
+                arr = arr.filter(b => leechBlockIDSet.has(b.id));
             }
-            if (starredOnly) {
-                const starredSet = new Set(ctx.getStarredCardIDs?.() ?? []);
-                arr = arr.filter(b => starredSet.has(b.id));
+            if (starredOnly && starredIDSet) {
+                arr = arr.filter(b => starredIDSet.has(b.id));
             }
             if (statusFilter === "new") {
                 arr = arr.filter(b => ctx.isNewBlock(b.id));
@@ -183,7 +208,7 @@ import { confirmDialog } from "@/libs/dialog";
                 return [...arr].sort((a, b) => ((a.hPath as string) ?? "").localeCompare((b.hPath as string) ?? ""));
             }
             if (sortMode === "content") {
-                return [...arr].sort((a, b) => stripHtml(a.content).localeCompare(stripHtml(b.content)));
+                return [...arr].sort((a, b) => getPlainText(a.id, a.content).localeCompare(getPlainText(b.id, b.content)));
             }
             if (sortMode === "lapses") {
                 // 遗忘次数降序（272）：烂卡优先（使用响应式派生表，避免每次比较重复扫表）
@@ -192,11 +217,6 @@ import { confirmDialog } from "@/libs/dialog";
             return arr;
         })()
     );
-
-    function stripHtml(html: string): string {
-        if (!html) return "";
-        return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
-    }
 
     async function load() {
         // AR-6：快速分页/刷新并发时只接受最后一次响应
@@ -221,6 +241,7 @@ import { confirmDialog } from "@/libs/dialog";
             blocks = (cards.blocks ?? []).filter(b => {
                 if (!b.id || seen.has(b.id)) return false;
                 seen.add(b.id);
+                plainTextCache.set(b.id, stripHtml(b.content));
                 return true;
             });
             selected = [];
@@ -897,12 +918,12 @@ import { confirmDialog } from "@/libs/dialog";
     {#if showDeckModal}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="lv-modal-mask" onclick={() => (showDeckModal = false)} role="presentation"></div>
-        <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title">
+        <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus>
             <div class="lv-deck-modal-head">
                 <span id="lv-deck-modal-title" style="font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size)">
                     {modalMode === "move" ? (t.manager.batchMoveDeck ?? "移动卡片至目标卡组") : (t.manager.batchAddDeck ?? "添加卡片至目标卡组")}
                 </span>
-                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (showDeckModal = false)}><LvIcon name="close" size={13} /></button>
+                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={t.common?.close ?? "关闭"} onclick={() => (showDeckModal = false)}><LvIcon name="close" size={13} /></button>
             </div>
             <p class="ft__smaller ft__on-surface" style="margin: var(--lv-sp-2) 0">
                 {modalMode === "move"

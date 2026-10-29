@@ -47,6 +47,14 @@ export function openSqliteFile(bytes: Uint8Array): { adapter: SqliteAdapter; clo
         adapter: { all: (sql, params = []) => db.prepare(sql).all(...(params as never[])) },
         close: () => {
             try { db.close(); } catch { /* 尽力而为 */ }
+            try {
+                if (typeof fsMod.unlinkSync === "function" && fsMod.existsSync(file)) {
+                    fsMod.unlinkSync(file);
+                }
+                if (typeof fsMod.rmdirSync === "function" && fsMod.existsSync(dir)) {
+                    fsMod.rmdirSync(dir);
+                }
+            } catch { /* 尽力而为清理临时文件 */ }
         },
     };
 }

@@ -780,11 +780,19 @@
             let cards = data.cards ?? [];
             // 「今天不学」+ 本场已跳过的卡本地过滤（内核调度不受影响，AJ9）
             cards = filterActiveSessionCards(cards, ctx.isSuspendedToday, sessionSkipped);
+            // 自适应候选窗口：当到期卡量大且设置了每批上限时，对首批候选进行质量排查即可，避免全库千张卡阻塞首卡加载
+            const bl = eff().batchLimit ?? 0;
+            const scopedCandidate = (scopeKey === "new" || scopeKey === "old")
+                ? cards.filter(c => (scopeKey === "new") === (c.state === 0))
+                : cards;
+            const candidateLimit = bl > 0 ? Math.min(scopedCandidate.length, Math.max(50, bl * 3)) : scopedCandidate.length;
+            const candidateCards = candidateLimit < scopedCandidate.length ? scopedCandidate.slice(0, candidateLimit) : scopedCandidate;
+
             // 先验证源块的最终 Markdown，避免没有有效挖空标记的历史坏卡在问题态直接露出答案。
             // 此处只从本场展示队列排除；不评分、不跳过、不修改真实 due。
-            if (cards.length > 0 && typeof siyuanApi.sqlQuery === "function") {
+            if (candidateCards.length > 0 && typeof siyuanApi.sqlQuery === "function") {
                 const quality = await filterReviewQueueByQuality(
-                    cards,
+                    candidateCards,
                     siyuanApi.sqlQuery,
                     getBlockAttrs,
                     parseOcclusion
@@ -795,6 +803,8 @@
                     qualityExcludedCardIDs = mergeQualityExcludedCardIDs(qualityExcludedCardIDs, quality.invalid);
                     announce(t.review.qualityExcluded.replace("${n}", String(qualityExcludedCardIDs.length)), "polite");
                 }
+            } else {
+                cards = candidateCards;
             }
             // 管道处理：范围筛选、批次截断、同源兄弟卡防剧透推迟与排序
             queue = applyQueuePipeline(cards, {
@@ -1204,14 +1214,14 @@
         submitting = true;
         pushHistory();
         let writeSucceeded = false;
-        // 会话强化重现卡（M3）：仅本地翻牌推进，不重复评内核、不计 revlog（调度不变）
-        if (current.lvRequeue) {
-            playSfx(rating);
-            await next();
-            submitting = false;
-            return;
-        }
         try {
+            // 会话强化重现卡（M3）：仅本地翻牌推进，不重复评内核、不计 revlog（调度不变）
+            if (current.lvRequeue) {
+                writeSucceeded = true;
+                playSfx(rating);
+                await next();
+                return;
+            }
             const wasNew = isCardNew(ctx.getRevlog(), current.cardID);
             playSfx(rating);
             await reviewRiffCard(current.deckID, current.cardID, rating, reviewedIDs);

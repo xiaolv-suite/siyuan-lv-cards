@@ -21,25 +21,39 @@
 
 小驴闪卡（内测版）的定位是**思源笔记里的全生命周期记忆引擎**：让笔记里每一段值得记的内容，都能可回源地变成卡片，用内核原生 FSRS 排期，用可审计的 AI 提效；数据本地优先，方便带走。
 
-当前版本为 **v0.216.3（2026-10-29）**，包含完整的全生命周期闪卡记忆体系。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.216.3)。
+当前版本为 **v0.217.0（2026-10-29）**，包含完整的全生命周期闪卡记忆体系。安装包与发布状态见 [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.217.0)。
 
 [下载最新版](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) · [提交问题](https://github.com/ai68298100/siyuan-lv-cards/issues/new/choose) · [贡献指南](./CONTRIBUTING.md)
 
-## 最新版本更新（v0.216.3 · 2026-10-29）
+## 最新版本更新（v0.217.0 · 2026-10-29）
 
-- **出题队列排除合并与活跃卡片过滤解耦（`core/review-queue-pipeline.ts`，TSK-08 持续深化）**：
-  - 提炼 `combineExcludedCardIDs`：标准化合并已复习与质量异常排除卡片集合；
-  - 提炼 `filterActiveSessionCards`：使用 Set 将跳过和今日不学卡片的过滤优化至 O(1) 复杂度；
-  - 提炼 `mergeQualityExcludedCardIDs`：安全合并新识别的质量异常卡片；
-  - 在 `tests/review-queue-pipeline.spec.ts` 中新增 3 项单元测试；
-- **会话恢复重启倒计时前置判定解耦（`core/review-countdown.ts`）**：
-  - 提炼 `shouldRestartCountdownOnResume`：纯函数统一校验问题态与题面就绪；
-  - 在 `tests/review-countdown.spec.ts` 中新增 2 项单元测试；
-- **主复习文件规模与工程指标**：
-  - 全库扩展至 289 个测试文件、2314 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+- **高危缺陷根治**：
+  - 修复复习提交流锁保护与重现卡异常穿透，杜绝工作台被锁死；
+  - 修复 `undo`（`p`/`q`）快捷键在问题态失效的交互直觉违背，无需翻面即可即时撤销；
+  - 修正命中率与留存率统计公式，消除遗忘卡重复扣除及全盘遗忘时误判 100% 满分的严重计算 BUG；
+  - 修复快速改期时区偏移，杜绝东八区凌晨改期退回前一天的时钟漂移；
+  - 修复内核范围查询穿透错误与 Anki 导入临时 SQLite 文件磁盘泄漏；
+  - 修复今日不学（Suspend Today）跨天未滚转问题。
+- **UI 与无障碍改善**：
+  - 全局抽屉 `.lv-drawer` 纳入设计令牌重置体系；
+  - 补齐设计令牌并重构暗色模式状态色徽标反差，满足 WCAG AA 4.5:1 对比度标准；
+  - 规范模态弹窗 z-index 层级，引入原生 Svelte Action 焦点陷阱（`use:trapFocus`）；
+  - 修复面包屑非法 HTML 嵌套结构。
+- **大库性能与伸缩性优化**：
+  - 消除复习评分时 2 万条学习记录的多重深拷贝与无效规范化运算，优先采用 V8 原生 `structuredClone`；
+  - `knownCards` 检索复杂度由 $O(N)$ 优化至 $O(1)$，通过 `WeakMap` 维护 `Set<string>` 内存缓存；
+  - 复习出题队列质量检测引入自适应候选窗口预截断，大幅缩短大卡组首卡加载延迟；
+  - 卡片管理台预缓存纯文本摘要，消除排序比较中的高频正则开销。
+- **工程验证指标**：
+  - 全库扩展至 289 个测试文件、2315 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
 
 <details>
-<summary>📜 点击展开查看历史版本更新记录（v0.216.2 及更早版本）</summary>
+<summary>📜 点击展开查看历史版本更新记录（v0.216.3 及更早版本）</summary>
+
+### v0.216.3（2026-10-29）
+- **队列排除卡片合并与活跃卡片过滤解耦（`core/review-queue-pipeline.ts`）**：提炼 `combineExcludedCardIDs`、`filterActiveSessionCards` 与 `mergeQualityExcludedCardIDs`，使用 Set 将跳过和今日不学卡片的过滤优化至 O(1) 级别。
+- **会话恢复重启倒计时前置判定解耦（`core/review-countdown.ts`）**：提炼 `shouldRestartCountdownOnResume` 纯函数统一校验问题态与题面就绪。
+- **验证**：289 个测试文件、2314 项测试 100% 通过。
 
 ### v0.216.2（2026-10-29）
 - **卡片可评分判定与评级触感波形解耦（`core/card-actions.ts` & `core/haptic.ts`）**：提炼 `canRateCurrentCard` 集中校验题面存在、会话非暂停、题面答案态与非忙碌状态；提炼 `getRatingHapticPattern` 标准化遗忘（强确认波形）与轻触波形。

@@ -175,10 +175,14 @@ describe("review-shortcuts 键盘调度解析器", () => {
             expect(resolveReviewKeyAction({ key: "4" }, ctx)).toBeNull();
         });
 
-        it("p 或 q 触发撤销操作", () => {
-            const ctx = baseContext({ showAnswer: true });
-            expect(resolveReviewKeyAction({ key: "p" }, ctx)).toBe("undo");
-            expect(resolveReviewKeyAction({ key: "q" }, ctx)).toBe("undo");
+        it("p 或 q 在有上一张作答记录时触发撤销操作（问题态与答案态均可）", () => {
+            const ctxAnswer = baseContext({ showAnswer: true, hasLastAnswered: true });
+            expect(resolveReviewKeyAction({ key: "p" }, ctxAnswer)).toBe("undo");
+            expect(resolveReviewKeyAction({ key: "q" }, ctxAnswer)).toBe("undo");
+
+            const ctxQuestion = baseContext({ showAnswer: false, hasLastAnswered: true });
+            expect(resolveReviewKeyAction({ key: "p" }, ctxQuestion)).toBe("undo");
+            expect(resolveReviewKeyAction({ key: "q" }, ctxQuestion)).toBe("undo");
         });
 
         it("r/z/* 快捷键触发翻转回忆、专注模式与星标切换", () => {

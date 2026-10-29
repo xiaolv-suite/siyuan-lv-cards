@@ -175,7 +175,11 @@ export function resolveReviewKeyAction(
         return "toggle-star";
     }
 
-    // 9. 后续评分与撤销必须在答案揭晓后生效
+    if (e.key === "p" || e.key === "q") {
+        return ctx.hasLastAnswered ? "undo" : null;
+    }
+
+    // 9. 后续评分必须在答案揭晓后生效
     if (!ctx.showAnswer) {
         return null;
     }
@@ -190,11 +194,6 @@ export function resolveReviewKeyAction(
         if (e.key === "2" || e.key === "ArrowDown") return "rate-2";
         if (e.key === "3" || e.key === "ArrowRight") return "rate-3";
         if (e.key === "4" || e.key === "ArrowUp") return "rate-4";
-    }
-
-    // 11. p / q: 撤销上一张评分
-    if (e.key === "p" || e.key === "q") {
-        return "undo";
     }
 
     return null;

@@ -52,8 +52,10 @@ function dayStatWellFormed(v: unknown): v is DayStat {
 
 /** 卡是否已有有效评分历史（AQ-21）：明细优先（多数命中可早退），截断卡再查 knownCards。
  * AT-5：entries 线性扫描以 WeakMap 缓存按数组身份失效——appendRevlog 高频调用从 O(n) 降到 O(1)
- * 缓存命中（缓存键=数组引用，slice/重建/merge 后自动失效重算一次）。 */
+ * 缓存命中（缓存键=数组引用，slice/重建/merge 后自动失效重算一次）。
+ * knownCards 同样通过 WeakMap 维护 Set<string> 缓存，避免多达 2 万条卡片时的 O(N) 线性扫描。 */
 const historyCache = new WeakMap<RevlogEntry[], Set<string>>();
+const knownCardsCache = new WeakMap<string[], Set<string>>();
 
 function knownSetOf(entries: RevlogEntry[]): Set<string> {
     let set = historyCache.get(entries);
@@ -69,11 +71,23 @@ function knownSetOf(entries: RevlogEntry[]): Set<string> {
     return set;
 }
 
+function knownCardsSetOf(knownCards: string[]): Set<string> {
+    let set = knownCardsCache.get(knownCards);
+    if (!set) {
+        set = new Set<string>(knownCards);
+        knownCardsCache.set(knownCards, set);
+    }
+    return set;
+}
+
 function cardHasHistory(entries: RevlogEntry[], knownCards: string[] | undefined, cardID: string): boolean {
     if (knownSetOf(entries).has(cardID)) {
         return true;
     }
-    return knownCards !== undefined && knownCards.includes(cardID);
+    if (!knownCards || knownCards.length === 0) {
+        return false;
+    }
+    return knownCardsSetOf(knownCards).has(cardID);
 }
 
 export function emptyRevlog(): RevlogData {
@@ -160,8 +174,10 @@ export function appendRevlog(data: RevlogData, entry: RevlogEntry): void {
             if (!data.knownCards) {
                 data.knownCards = [];
             }
-            if (data.knownCards.length < KNOWN_CARDS_MAX && !data.knownCards.includes(entry.cardID)) {
+            const knownSet = knownCardsSetOf(data.knownCards);
+            if (data.knownCards.length < KNOWN_CARDS_MAX && !knownSet.has(entry.cardID)) {
                 data.knownCards.push(entry.cardID);
+                knownSet.add(entry.cardID);
             }
             // AT-5：新卡同步进缓存集合，保持 O(1) 首评判定（同数组引用下缓存继续有效）
             historyCache.get(data.entries)?.add(entry.cardID);

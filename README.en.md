@@ -19,23 +19,38 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.216.3** (2026-10-29), delivering queue exclusion combining, active session card filtering, and countdown resume guard decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.216.3) for the package and publishing status.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.217.0** (2026-10-29), delivering quality hardening, critical bug fixes, accessibility enhancements, and large-library scalability optimizations. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.217.0) for the package and publishing status.
 
-## What's New in v0.216.3 (2026-10-29)
+## What's New in v0.217.0 (2026-10-29)
 
-- **Queue Exclusion & Active Session Filtering Decoupled (`core/review-queue-pipeline.ts`, TSK-08)**:
-  - Extracted `combineExcludedCardIDs`: unified merging and deduplication of reviewed and quality-excluded card IDs.
-  - Extracted `filterActiveSessionCards`: $O(1)$ set-based filtering for skipped and suspended cards.
-  - Extracted `mergeQualityExcludedCardIDs`: safe accumulation of invalid card IDs.
-  - Added 3 unit tests in `tests/review-queue-pipeline.spec.ts`.
-- **Countdown Resume Guard Decoupled (`core/review-countdown.ts`)**:
-  - Extracted `shouldRestartCountdownOnResume`: pure function verifying question-side and face-ready conditions before restarting timers.
-  - Added 2 unit tests in `tests/review-countdown.spec.ts`.
+- **Critical Bug Fixes**:
+  - Fixed rating submission deadlock and requeue exception handling in `ui/review.svelte`.
+  - Fixed `undo` (`p`/`q`) shortcut to respond directly on question-face without forcing flip to answer.
+  - Corrected review accuracy and retention formula in `core/review-queue-pipeline.ts` and `ReviewDonePanel.svelte`.
+  - Fixed reschedule target timestamp timezone drift in `core/reschedule-preview.ts`.
+  - Fixed scoped `dueCache` query routing in `api/due-shared.ts`.
+  - Cleaned up Anki import temporary SQLite directory upon close in `api/anki-host.ts`.
+  - Fixed `isSuspended` rollover across calendar days.
+- **UI & Accessibility Improvements**:
+  - Scoped `.lv-drawer` inside design token inheritance in `index.scss`.
+  - Calibrated dark mode WCAG AA 4.5:1 contrast and resolved missing design tokens.
+  - Implemented WAI-ARIA modal dialog focus trapping via Svelte action `use:trapFocus`.
+  - Cleaned up nested interactive buttons in `ReviewCardBreadcrumbs.svelte`.
+- **Large-Library Performance Optimizations**:
+  - Eliminated redundant deep cloning passes during review rating in `index.ts`.
+  - Reduced `knownCards` lookup complexity from $O(N)$ to $O(1)$ with `WeakMap` set caching in `core/revlog.ts`.
+  - Added adaptive candidate window pre-truncation before SQLite quality queries in `ui/review.svelte`.
+  - Pre-cached stripped plain text and decoupled derived sets in `ui/manager.svelte`.
 - **Quality Gates**:
-  - 2314 tests across 289 test suites 100% passing; 0 TypeScript errors; 0 Svelte diagnostics; distribution smoke tests green.
+  - 2315 tests across 289 test suites 100% passing; 0 TypeScript errors; 0 Svelte diagnostics; distribution smoke tests green.
 
 <details>
-<summary>📜 View Historical Release Notes (v0.216.2 and earlier)</summary>
+<summary>📜 View Historical Release Notes (v0.216.3 and earlier)</summary>
+
+### v0.216.3 (2026-10-29)
+- **Queue Exclusion & Active Session Filtering Decoupled (`core/review-queue-pipeline.ts`)**: Extracted `combineExcludedCardIDs`, `filterActiveSessionCards`, and `mergeQualityExcludedCardIDs`.
+- **Countdown Resume Guard Decoupled (`core/review-countdown.ts`)**: Extracted `shouldRestartCountdownOnResume`.
+- **Verification**: 289 test files, 2314 tests passing.
 
 ### v0.216.2 (2026-10-29)
 - **CanRate Guard & Rating Haptics (`core/card-actions.ts` & `core/haptic.ts`)**: Extracted `canRateCurrentCard` and `getRatingHapticPattern` for unified rating pre-check and vibration patterns.

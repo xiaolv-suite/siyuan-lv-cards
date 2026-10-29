@@ -77,10 +77,10 @@ export function calculateReviewAccuracy(session: {
     if (session.quizTotal > 0) {
         return Math.round((session.quizCorrect / session.quizTotal) * 100);
     }
-    const totalRated = session.newCount + session.reviewCount;
-    if (totalRated > 0) {
-        const passed = Math.max(0, totalRated - session.forgetCount);
-        return Math.round((passed / totalRated) * 100);
+    const total = session.newCount + session.reviewCount + session.forgetCount;
+    if (total > 0) {
+        const passed = session.newCount + session.reviewCount;
+        return Math.round((passed / total) * 100);
     }
     return 100;
 }
@@ -132,13 +132,13 @@ export function combineExcludedCardIDs(
 /**
  * 本地过滤当前会话已跳过或被用户标记为今天不学的卡片
  */
-export function filterActiveSessionCards<T extends { cardID: string }>(
+export function filterActiveSessionCards<T extends { cardID: string; blockID?: string }>(
     cards: readonly T[],
     isSuspended: (id: string) => boolean,
     skippedIDs: readonly string[]
 ): T[] {
     const skipSet = new Set(skippedIDs);
-    return cards.filter(c => !isSuspended(c.cardID) && !skipSet.has(c.cardID));
+    return cards.filter(c => !isSuspended(c.cardID) && (!c.blockID || !isSuspended(c.blockID)) && !skipSet.has(c.cardID));
 }
 
 /**

@@ -54,10 +54,10 @@
         onCramStarred: () => void;
     } = $props();
 
-    const totalAnswered = $derived(sessionNew + sessionReview);
+    const totalAnswered = $derived(sessionNew + sessionReview + sessionForget);
     const retentionRate = $derived(
         totalAnswered > 0
-            ? Math.round(Math.max(0, totalAnswered - sessionForget) / totalAnswered * 100)
+            ? Math.round(((sessionNew + sessionReview) / totalAnswered) * 100)
             : 0
     );
     const quizAccuracy = $derived(

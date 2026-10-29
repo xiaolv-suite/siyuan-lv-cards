@@ -35,6 +35,9 @@ export function rollDateIfNeeded(data: SuspendTodayData): boolean {
 }
 
 export function isSuspended(data: SuspendTodayData, cardID: string): boolean {
+    if (!cardID || data.date !== localDate(Date.now())) {
+        return false;
+    }
     return data.cardIDs.includes(cardID);
 }
 

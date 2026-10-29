@@ -58,6 +58,19 @@ export function computeReschedulePreview(
 }
 
 /**
+ * 将本地 Date 对象格式化为思源 14 位日期时间戳（YYYYMMDDHHmmss）
+ */
+export function formatLocalDateToDueString(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const date = String(d.getDate()).padStart(2, "0");
+    const h = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    const s = String(d.getSeconds()).padStart(2, "0");
+    return `${y}${m}${date}${h}${min}${s}`;
+}
+
+/**
  * 计算改期 14 位目标时间戳（若 retryDue 存在且匹配则优先使用，否则推算当前时间 + days 天）
  */
 export function calculateTargetDueTimestamp(
@@ -68,7 +81,8 @@ export function calculateTargetDueTimestamp(
     if (retryDue) {
         return retryDue;
     }
-    return new Date(now + days * 86400000).toISOString().replace(/[-:T]/g, "").slice(0, 14);
+    const targetDate = new Date(now + days * 86400000);
+    return formatLocalDateToDueString(targetDate);
 }
 
 export interface RescheduleRequest {

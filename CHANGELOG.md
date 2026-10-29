@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.217.0 2026-10-29 · 质量加固、高危逻辑缺陷修复、无障碍体系与大库性能优化里程碑
+
+- **高危逻辑缺陷修复（阶段一）**：
+  - **复习提交流锁保护（`ui/review.svelte`）**：将重现卡（requeue）分支移入 `try..finally` 保护域，杜绝异常时 `submitting` 锁死复习工作台；
+  - **快捷键撤销心流对齐（`core/review-shortcuts.ts`）**：解除 `undo`（`p`/`q`）受必须翻面答案态的错误约束，允许在下一张卡问题态直接撤销上一张评分；
+  - **准确率与留存率公式校准（`core/review-queue-pipeline.ts` & `ui/review/ReviewDonePanel.svelte`）**：消除 `forgetCount` 重复双重扣除与全盘遗忘时被除数为 0 误判 100% 满分命中率的极端 BUG；
+  - **快速改期时区漂移纠正（`core/reschedule-preview.ts`）**：改期目标时间戳从 UTC 格式对齐为本地日历时区，杜绝东八区凌晨改期退回前一天的时区偏移；
+  - **内核范围缓存穿透兜底（`api/due-shared.ts`）**：缓存 fetcher 委托至 `getRiffDueCardsForScope`，彻底解决 `notebook:`/`doc:` 前缀请求导致内核报 `deck not found` 错误；
+  - **Anki 导入临时文件清理（`api/anki-host.ts`）**：在 `openSqliteFile` 的 `close()` 中增加自动删除临时文件与解压目录逻辑，彻底根治操作系统临时目录积累垃圾文件；
+  - **今日不学日期滚转与匹配（`core/suspend-today.ts` & `core/review-queue-pipeline.ts`）**：增加跨天判定，使昨日挂起卡片跨日自动解除，并统一按 `cardID` 与 `blockID` 兼容匹配；
+- **UI 一致性、设计体系与无障碍改善（阶段二）**：
+  - **抽屉全局样式作用域挂载（`index.scss`）**：将 `.lv-drawer` 纳入根设计令牌重置选择器，确保卡片详情/关系链等抽屉内控件完美继承设计体系；
+  - **WCAG AA 4.5:1 对比度与设计令牌补齐（`index.scss`）**：补齐 `--lv-color-surface-subtle` 等缺失变量；在暗色模式下引入 `--lv-color-on-danger` 与 `--lv-color-on-success`，消除浅色徽标上的纯白文字对比度反转；
+  - **模态弹窗层级与焦点陷阱（`libs/focus-trap.ts` & `ui/review/ReviewActionModals.svelte`）**：升级 `trapFocus` 为原生 Svelte Action（`use:trapFocus`），修复遮罩 z-index 层级，将 Tab 键焦点严格限制在弹窗内；
+  - **HTML5 语义合规（`ui/review/ReviewCardBreadcrumbs.svelte`）**：将面包屑外层非法嵌套的 `<button>` 规范重构为 `<div>` 容器，消除了交互事件冲突与读屏器解析异常；
+- **性能瓶颈突破与运行时优化（阶段三）**：
+  - **消除评分时多重深拷贝（`index.ts`）**：移除评分关键路径中重复的快照深度克隆与 `normalizeRevlog` 冗余运算，`cloneStore` 优先采用 V8 原生 `structuredClone`；
+  - **knownCards 检索复杂度 O(N) → O(1)（`core/revlog.ts`）**：通过 `WeakMap` 维护 `Set<string>` 内存索引，彻底消除大库（20,000 条）首评判断与去重时的数万次线性扫描；
+  - **复习队列候选窗口预截断（`ui/review.svelte`）**：设置自适应候选窗口，在保证批次上限与兄弟卡防剧透的前提下，仅对首批卡片发起 SQLite 质量检测，大幅缩短首卡加载延迟；
+  - **卡片管理台排序与筛选优化（`ui/manager.svelte`）**：预缓存纯文本摘要，消除排序比较中高频正则执行；将疑难卡与星标卡片独立为响应式派生集合；
+- **文档体系全面升级**：
+  - 彻底重构中英文 `README.md` 与 `README.en.md`，建立 8 大核心功能全景目录，并将历史 45+ 个版本更新收纳进折叠标签 `<details>`，保持首页精炼直观；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2315 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.216.3 2026-10-29 · 排除卡片合并/活跃卡片过滤与恢复倒计时条件解耦落地
 
 - **队列排除卡片合并与活跃卡片过滤解耦（`core/review-queue-pipeline.ts`，TSK-08 持续深化）**：
