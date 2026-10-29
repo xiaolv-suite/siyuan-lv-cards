@@ -495,10 +495,17 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
-        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
+        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+        white-space: nowrap;
+        text-align: center;
+
+        @media (max-width: 400px) {
+            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 3);
+            font-size: var(--lv-type-meta-size);
+        }
     }
     .lv-facet:hover:not(.lv-facet-active) {
         color: var(--lv-color-text);

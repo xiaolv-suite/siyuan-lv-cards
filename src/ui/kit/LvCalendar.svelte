@@ -85,15 +85,22 @@
             {/each}
         </div>
         <div class="lv-cal-legend">
-            <span class="hint">{labels.few ?? ""}</span>
-            <span style="display:flex;gap:3px">
-                {#each [1, 2, 3] as lvl (lvl)}
-                    <span class={`lv-cal-sw past${lvl}`}></span>
-                {/each}
-                <span class="lv-cal-sw future2"></span>
-            </span>
-            <span class="hint">{labels.many ?? ""}</span>
-            <span class="hint" style="margin-left: auto">{labels.note ?? ""}</span>
+            <div class="lv-cal-legend-group">
+                <span class="hint">{labels.few ?? ""}</span>
+                <span class="lv-cal-sw-row">
+                    {#each [1, 2, 3] as lvl (lvl)}
+                        <span class={`lv-cal-sw past${lvl}`}></span>
+                    {/each}
+                </span>
+                <span class="hint">{labels.many ?? ""}</span>
+            </div>
+            {#if forecast.length > 0}
+                <div class="lv-cal-legend-group lv-cal-legend-group--future">
+                    <span class="lv-cal-sw future2"></span>
+                    <span class="hint">{labels.forecastTitle ?? "未来到期"}</span>
+                </div>
+            {/if}
+            <span class="hint lv-cal-legend-note">{labels.note ?? ""}</span>
         </div>
         {#if forecast.length > 0}
             <div class="divider"></div>
@@ -205,13 +212,30 @@
     .lv-cal-legend {
         display: flex;
         align-items: center;
-        gap: calc(var(--lv-space-unit) * 4);
+        gap: var(--lv-sp-2);
         margin-top: calc(var(--lv-space-unit) * 6);
         flex-wrap: wrap;
     }
+    .lv-cal-legend-group {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--lv-space-unit) * 2);
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
+        border-radius: var(--lv-r-pill);
+        background: color-mix(in srgb, var(--lv-color-canvas) 80%, var(--lv-color-surface));
+        border: 1px solid var(--lv-border);
+    }
+    .lv-cal-sw-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .lv-cal-legend-note {
+        margin-left: auto;
+    }
     .lv-cal-sw {
-        width: 14px;
-        height: 14px;
+        width: 13px;
+        height: 13px;
         border-radius: var(--lv-r-xs);
         display: inline-block;
         border: 1px solid var(--lv-border);

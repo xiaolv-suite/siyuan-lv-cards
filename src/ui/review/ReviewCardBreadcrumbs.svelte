@@ -86,7 +86,7 @@
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 1);
-        max-width: 100%;
+        max-width: clamp(200px, 44vw, 440px);
         padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
@@ -94,7 +94,8 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-meta-size);
         margin-bottom: var(--lv-sp-3);
-        box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+        margin-right: var(--lv-sp-4);
+        box-shadow: var(--lv-shadow-1);
         transition: background var(--lv-dur-1) var(--lv-ease),
             color var(--lv-dur-1) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease);
@@ -115,6 +116,7 @@
             align-items: center;
             gap: calc(var(--lv-space-unit) * 2);
             overflow: hidden;
+            min-width: 0;
 
             &:hover {
                 color: var(--lv-color-brand);
@@ -126,6 +128,8 @@
             flex-shrink: 0;
             color: var(--lv-color-brand);
             opacity: 0.85;
+            display: inline-flex;
+            align-items: center;
         }
         .lv-breadcrumb-text {
             overflow: hidden;
@@ -134,6 +138,13 @@
             display: inline-flex;
             align-items: center;
             gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
+            min-width: 0;
+        }
+        .lv-breadcrumb-node {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 150px;
         }
         .lv-breadcrumb-sep {
             opacity: 0.4;

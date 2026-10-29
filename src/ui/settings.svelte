@@ -1689,7 +1689,7 @@
             z-index: var(--lv-z-elevated, 2);
             background: var(--lv-color-surface);
             display: flex;
-            gap: calc(var(--lv-space-unit) * 3);
+            gap: var(--lv-sp-2);
             flex-wrap: wrap;
             margin: calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1) var(--lv-sp-3);
             padding: var(--lv-sp-2) var(--lv-sp-4);
