@@ -20,11 +20,11 @@
     import { formatNextDueByRating } from "@/core/due-format";
     import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
-    import { resolveHeadScopeLabel } from "@/core/scope-preset";
+    import { resolveHeadScopeLabel, normalizeScopeKey } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray, recordChoicePick, addDistractorToPool } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
-    import { analyzeFaceRichness, extractMarkTexts, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing, deriveFaceHints } from "@/core/card-face";
+    import { analyzeFaceRichness, extractMarkTexts, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing, deriveFaceHints, isCardFaceReady } from "@/core/card-face";
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
@@ -47,7 +47,7 @@
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
-    import { resolveCardBreadcrumbsFromRows, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
+    import { resolveCardBreadcrumbsFromRows, buildHPathQuerySql, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, createInitialEphemeralQuizState, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
     import { buildDismissAttrs } from "@/core/incremental-learning";
@@ -202,7 +202,7 @@
     /** AS-3：卡面加载失败占位（区别于队列级 errorMsg——队列保持可用，占位可重试） */
     let faceError = $state("");
     // 卡面尚未加载时不允许提前翻面，避免空卡面进入评分流程。
-    const faceReady = $derived(Boolean(cardHtml) && !faceError);
+    const faceReady = $derived(isCardFaceReady(cardHtml, faceError));
     /** AS-3：富内容特征提示（随卡面派生） */
     let faceRich = $derived(cardHtml ? analyzeFaceRichness(cardHtml) : null);
     let faceHints = $derived(deriveFaceHints(faceRich));
@@ -213,7 +213,7 @@
     // 初值语义：范围仅经命令/考试入口传入一次，运行时由用户切换；
     // 空串/未知的持久化范围归一为 all（否则 select 空白、下拉无选中项）
     // svelte-ignore state_referenced_locally
-    let scopeKey = $state(initialScope || "all");
+    let scopeKey = $state(normalizeScopeKey(initialScope));
     // svelte-ignore state_referenced_locally
     let cramActive = $state(initialCram === true);
     let decks: RiffDeck[] = $state([]);
@@ -660,7 +660,7 @@
             // 汲取自闪卡小助手 ZY：查询卡片所属文档路径与知识语境
             try {
                 if (siyuanApi.sqlQuery) {
-                    const rows = await siyuanApi.sqlQuery(`SELECT hpath FROM blocks WHERE id = '${blockID.replace(/'/g, "''")}' LIMIT 1`);
+                    const rows = await siyuanApi.sqlQuery(buildHPathQuerySql(blockID));
                     if (seq === loadSeq) {
                         const pathRes = resolveCardBreadcrumbsFromRows(blockID, rows);
                         currentHPath = pathRes.currentHPath;

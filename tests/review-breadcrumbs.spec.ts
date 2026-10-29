@@ -5,6 +5,7 @@ import {
     truncateBreadcrumbTitle,
     formatHPathDisplay,
     resolveCardBreadcrumbsFromRows,
+    buildHPathQuerySql,
 } from "../src/core/review-breadcrumbs";
 import enJson from "../public/i18n/en.json";
 import zhJson from "../public/i18n/zh-CN.json";
@@ -139,6 +140,14 @@ describe("BX-11: Review Context Breadcrumbs (复习来源层级面包屑)", () =
         it("空行记录或无 hpath 字段安全降级", () => {
             expect(resolveCardBreadcrumbsFromRows("c1", [])).toEqual({ currentHPath: "", currentBreadcrumbs: null });
             expect(resolveCardBreadcrumbsFromRows("c1", null)).toEqual({ currentHPath: "", currentBreadcrumbs: null });
+        });
+    });
+
+    describe("buildHPathQuerySql", () => {
+        it("正确生成标准 SQL 且对单引号安全转义", () => {
+            expect(buildHPathQuerySql("20261028-block-1")).toBe("SELECT hpath FROM blocks WHERE id = '20261028-block-1' LIMIT 1");
+            expect(buildHPathQuerySql("block'with'quote")).toBe("SELECT hpath FROM blocks WHERE id = 'block''with''quote' LIMIT 1");
+            expect(buildHPathQuerySql("")).toBe("SELECT hpath FROM blocks WHERE id = '' LIMIT 1");
         });
     });
 });

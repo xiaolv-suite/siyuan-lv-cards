@@ -12,6 +12,7 @@ import {
     resolveFaceHintLabel,
     hasSvgOrCanvasDrawing,
     deriveFaceHints,
+    isCardFaceReady,
 } from "../src/core/card-face";
 
 // AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
@@ -312,6 +313,19 @@ describe("统一卡面渲染管线（renderUnifiedCardFace & formatMarkdownToSaf
             expect(deriveFaceHints(plainFace())).toEqual([]);
             expect(deriveFaceHints(null)).toEqual([]);
             expect(deriveFaceHints(undefined)).toEqual([]);
+        });
+    });
+
+    describe("isCardFaceReady", () => {
+        it("卡面 HTML 存在且无加载错误时返回 true", () => {
+            expect(isCardFaceReady("<p>正常卡面</p>", "")).toBe(true);
+        });
+
+        it("卡面为空串、null、undefined 或存在错误时返回 false", () => {
+            expect(isCardFaceReady("", "")).toBe(false);
+            expect(isCardFaceReady(null, "")).toBe(false);
+            expect(isCardFaceReady(undefined, "")).toBe(false);
+            expect(isCardFaceReady("<p>卡面</p>", "加载失败")).toBe(false);
         });
     });
 });

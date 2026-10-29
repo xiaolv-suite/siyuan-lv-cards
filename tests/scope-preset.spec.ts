@@ -6,6 +6,7 @@ import {
     hasActiveFilter,
     sanitizeFilterRule,
     resolveHeadScopeLabel,
+    normalizeScopeKey,
 } from "../src/core/scope-preset";
 import type {
     ScopeFilterRule,
@@ -151,6 +152,20 @@ describe("scope-preset (BX-3 范围预设三层合成与复习进度保护引擎
             expect(resolveHeadScopeLabel("deck:deck-2", undefined, decks, notebooks, i18nScope)).toBe("英语二");
             expect(resolveHeadScopeLabel("notebook:nb-1", undefined, decks, notebooks, i18nScope)).toBe("数学笔记本");
             expect(resolveHeadScopeLabel("all", undefined, decks, notebooks, i18nScope)).toBe("全库闪卡");
+        });
+    });
+
+    describe("normalizeScopeKey", () => {
+        it("正常保留有效 scopeKey 并去除多余空白", () => {
+            expect(normalizeScopeKey("deck:123")).toBe("deck:123");
+            expect(normalizeScopeKey("  notebook:456  ")).toBe("notebook:456");
+        });
+
+        it("未传、空串或仅空白时归一化为 all", () => {
+            expect(normalizeScopeKey("")).toBe("all");
+            expect(normalizeScopeKey("   ")).toBe("all");
+            expect(normalizeScopeKey(null)).toBe("all");
+            expect(normalizeScopeKey(undefined)).toBe("all");
         });
     });
 });

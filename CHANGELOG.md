@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.216.0 2026-10-29 · 卡面就绪判定/范围规范化与路径查询SQL构造解耦里程碑
+
+- **卡面就绪判定与范围键规范化解耦（`core/card-face.ts` & `core/scope-preset.ts`，TSK-08 持续深化）**：
+  - 提炼 `isCardFaceReady`：纯函数标准化判断卡面就绪状态（题面非空且无错误）；
+  - 提炼 `normalizeScopeKey`：纯函数统一范围键规范化逻辑（默认兜底 `all` 并去除首尾空白）；
+  - 在 `tests/card-face.spec.ts` 与 `tests/scope-preset.spec.ts` 中新增单元测试；
+- **所属文档路径查询 SQL 构造解耦（`core/review-breadcrumbs.ts`）**：
+  - 提炼 `buildHPathQuerySql`：纯函数生成标准 SQL 语句，内置单引号转义防注入；
+  - 在 `tests/review-breadcrumbs.spec.ts` 中新增单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、**2301 项测试 100% 通过（突破 2300 项测试里程碑）**；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.215.9 2026-10-29 · 特征提示推导/评级到期格式化与阶梯指示推导解耦落地
 
 - **富内容特征提示推导解耦（`core/card-face.ts`，TSK-08 持续深化）**：

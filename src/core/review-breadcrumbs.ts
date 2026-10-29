@@ -221,4 +221,12 @@ export function resolveCardBreadcrumbsFromRows(
     };
 }
 
+/**
+ * 构造按块 ID 查询所属文档 hpath 的 SQL 语句（防止单引号注入）
+ */
+export function buildHPathQuerySql(blockID: string): string {
+    const safeID = String(blockID ?? "").replace(/'/g, "''");
+    return `SELECT hpath FROM blocks WHERE id = '${safeID}' LIMIT 1`;
+}
+
 

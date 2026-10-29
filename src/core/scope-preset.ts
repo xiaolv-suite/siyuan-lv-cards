@@ -251,3 +251,10 @@ export function resolveHeadScopeLabel(
     return i18nScope.scopeAll ?? "全部";
 }
 
+/**
+ * 规范化复习范围键（未提供或为空串时规范化为 "all"）
+ */
+export function normalizeScopeKey(scopeKey: string | null | undefined): string {
+    return String(scopeKey || "").trim() || "all";
+}
+
