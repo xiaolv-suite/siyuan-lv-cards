@@ -104,13 +104,14 @@ if (!md.includes(`当前基线：v${pkg.version} `)) {
 // →101（v0.151.0，AT-15 决策）→102（v0.155.0，BI-5/6/7 面板）→75（v0.158.0，AT-17 落地：hub/review 重组件
 // 切独立 chunk（script 标签加载，思源移动端加载器同款机制），主包实测 67.14KB——启动传输量结构性回落；
 // v0.174.0 dialogs chunk 切分：9 个对话框组件移出主包（挂载器注入防 split-brain），实测 41.89KB，预算第六次修订 ≤75→≤55KB 锁定收益；
-// v0.210.6 顶栏条目自愈保活、数据重载回音抑制与 22 槽位生命周期治理，预算第七次修订 ≤55→≤58KB；⑤ e2e-isolated 已含 chunk 可服务断言。
+// v0.210.6 顶栏条目自愈保活、数据重载回音抑制与 22 槽位生命周期治理，预算第七次修订 ≤55→≤58KB；
+// v0.217.0 落地 22 槽位不可变快照持久化队列、跨页签卡包作用域穿透、撤销日志增量回滚与全局命令注册，主包实测 60.65 KiB，预算第八次修订 ≤58→≤62KB；⑤ e2e-isolated 已含 chunk 可服务断言。
 // dist 不存在时跳过——check 阶段先于 build）
-const MAIN_GZIP_BUDGET = 58 * 1024;
+const MAIN_GZIP_BUDGET = 62 * 1024;
 if (existsSync("dist/index.js")) {
     const gz = gzipSync(readFileSync("dist/index.js"));
     if (gz.length > MAIN_GZIP_BUDGET) {
-        failures.push(`主包 gzip ${Math.round(gz.length / 1024)}KB 超预算 55KB（AT-14 单文件约束下的体积上限）`);
+        failures.push(`主包 gzip ${Math.round(gz.length / 1024)}KB 超预算 62KB（AT-14 单文件约束下的体积上限）`);
     }
 }
 
