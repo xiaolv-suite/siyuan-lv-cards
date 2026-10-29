@@ -29,6 +29,7 @@
         flex-wrap: wrap;
         border-radius: var(--lv-r-m);
         padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 7);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-error2-icon {
         color: var(--lv-color-danger);
@@ -37,8 +38,9 @@
         flex-shrink: 0;
     }
     .lv-error2-msg {
-        color: var(--lv-color-danger);
+        color: var(--lv-color-on-danger-soft);
         font-size: var(--lv-type-body-size);
+        line-height: var(--lv-lh-body);
         word-break: break-all;
         flex: 1;
         min-width: 200px;
@@ -50,11 +52,17 @@
         border-radius: var(--lv-r-pill);
         padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
         font-size: var(--lv-type-control-size);
+        font-weight: var(--lv-fw-semibold);
         border-color: var(--lv-danger-border);
         color: var(--lv-color-danger);
         background: var(--lv-color-surface);
+        box-shadow: var(--lv-shadow-1);
+        transition: transform var(--lv-dur-1) var(--lv-ease), background-color var(--lv-dur-1) var(--lv-ease);
+
         &:hover {
+            transform: translateY(-1px);
             background: color-mix(in srgb, var(--lv-color-danger) 10%, var(--lv-color-surface));
+            box-shadow: var(--lv-shadow-2);
         }
     }
 </style>

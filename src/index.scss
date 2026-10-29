@@ -638,7 +638,7 @@ body[data-theme-mode="dark"],
         &:focus {
             outline: none;
             border-color: var(--lv-color-brand);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+            box-shadow: var(--lv-focus-ring);
         }
 
         &[aria-invalid="true"] {
@@ -686,14 +686,25 @@ body[data-theme-mode="dark"],
     }
 
     .b3-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--lv-space-unit) * 3);
         border-radius: var(--lv-r-control);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
+        vertical-align: middle;
         transition: background var(--lv-dur-1) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
             transform var(--lv-dur-1) var(--lv-ease);
+
+        svg {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
 
         &:focus-visible {
             outline: none;
@@ -866,7 +877,16 @@ body[data-theme-mode="dark"],
         border-radius: var(--lv-r-s) var(--lv-r-s) 0 0;
         position: relative;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--lv-space-unit) * 3);
         transition: color var(--lv-dur-2) var(--lv-ease), background-color var(--lv-dur-2) var(--lv-ease);
+
+        svg {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
 
         &:hover {
             color: var(--lv-color-text);

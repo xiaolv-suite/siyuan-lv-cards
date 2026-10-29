@@ -10,7 +10,8 @@
 </script>
 
 <div class="lv-card2 lv-empty">
-    <div class="lv-empty-icon" aria-hidden="true"><LvIcon name={icon} size={24} /></div>
+    <!-- 规律六：圆润体积感的情感化点缀，颜色取主题色三档明度，不干扰信息读取 -->
+    <div class="lv-empty-icon" aria-hidden="true"><LvIcon name={icon} size={26} /></div>
     <div class="lv-empty-text">{text}</div>
     {#if actionLabel && onaction}
         <button class="b3-button b3-button--outline lv-empty-btn" onclick={onaction}>
@@ -25,31 +26,52 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--lv-sp-2);
-        padding: var(--lv-sp-5);
+        gap: var(--lv-sp-3);
+        padding: clamp(var(--lv-sp-5), 5vw, calc(var(--lv-space-unit) * 18));
         text-align: center;
         color: var(--lv-color-text-muted);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-card-radius);
     }
     .lv-empty-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: var(--lv-r-circle);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: var(--lv-r-l);
+        display: grid;
+        place-items: center;
         background: var(--lv-primary-soft);
         color: var(--lv-color-brand);
-        box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 16%, transparent);
+        box-shadow: 0 0 0 6px color-mix(in srgb, var(--lv-color-brand) 6%, transparent),
+            0 4px 16px -2px color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
         border: 1px solid var(--lv-primary-border);
+        margin-bottom: var(--lv-sp-1);
     }
-    .lv-empty-text { font-size: var(--lv-type-body-size); }
+    .lv-empty-text {
+        font-size: var(--lv-type-body-size);
+        color: var(--lv-color-text);
+        font-weight: var(--lv-fw-medium);
+        max-width: 360px;
+        line-height: var(--lv-lh-body);
+    }
     .lv-empty-btn {
         display: inline-flex;
         align-items: center;
-        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
+        gap: calc(var(--lv-space-unit) * 2);
         border-radius: var(--lv-r-pill);
-        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 7);
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 8);
         font-size: var(--lv-type-control-size);
-        margin-top: calc(var(--lv-space-unit) * 2);
+        font-weight: var(--lv-fw-semibold);
+        margin-top: var(--lv-sp-1);
+        box-shadow: var(--lv-shadow-1);
+        transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+
+        &:hover {
+            transform: translateY(-1.5px);
+            box-shadow: var(--lv-shadow-2);
+        }
+        &:active {
+            transform: translateY(0.5px) scale(0.985);
+        }
     }
 </style>
