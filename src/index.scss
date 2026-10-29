@@ -6,27 +6,38 @@
 
 :root {
     // 颜色语义层：R54 唯一规范基线调色板（浅色质感纸面工作台，全量派生自语义令牌）
-    --lv-brand: #5E59CB; /* 经典长春花紫 / 品牌主色 */
+    --lv-brand: #5E59CB; /* 经典长春花紫 / 品牌操作主色 (HSL 243°, 54%, 58%) */
     --lv-brand-hover: #504ABD;
     --lv-brand-soft: #EEECFB;
     --lv-accent-gold: #945A17; /* 温暖星光金 / 警示暖色 */
     --lv-color-brand: #5E59CB;
     --lv-color-brand-strong: #504ABD;
     --lv-color-on-brand: #FFFFFF;
-    --lv-color-text: #2C2B3E;
-    --lv-color-text-muted: #6C6A7F;
-    --lv-color-canvas: #F7F7FC;
-    --lv-color-canvas-subtle: #F1F1F9;
-    --lv-color-surface: #FFFFFF;
-    --lv-color-surface-subtle: #F1F1F9;
+    --lv-color-text: #272635; /* 标题与正文近黑（融入微弱紫相，非死黑，明度18%） */
+    --lv-color-text-muted: #6C6A7B; /* 辅助文字（对比度超 5:1） */
+    --lv-color-canvas: #F7F7FA; /* 极浅同族底色：HSL(243°, 4%, 97.5%)，与卡片明度差2.5% */
+    --lv-color-canvas-subtle: #F1F1F8;
+    --lv-color-surface: #FFFFFF; /* 纯白内容卡片 */
+    --lv-color-surface-subtle: #F1F1F8;
     --lv-color-surface-raised: #FFFFFF;
+    --lv-color-surface-accent-dark: #171723; /* 深色对比重音卡片：明度12%近黑带紫相 */
+    --lv-color-on-accent-dark: #FFFFFF;
+    --lv-color-on-accent-dark-muted: #A1A0B5;
+
+    // 两色分工：从主题色(243°)顺时针偏移28°派生的【数据语义色】(215°天青碧水蓝)
+    // 专属负责成绩、连续天数、热力、留存率等正向数据展示，绝不与交互操作主色混用
+    --lv-color-data: #0284C7;
+    --lv-data-soft: #E0F2FE;
+    --lv-color-on-data-soft: #0369A1;
+    --lv-data-border: rgba(2, 132, 199, 0.25);
+
     --lv-color-danger: #C0394B;
     --lv-color-warning: #945A17;
     --lv-color-success: #2E7D5B;
     --lv-color-on-danger: #FFFFFF;
     --lv-color-on-success: #FFFFFF;
     --lv-color-on-warning: #FFFFFF;
-    --lv-surface-hover: rgba(44, 43, 62, 0.04);
+    --lv-surface-hover: rgba(39, 38, 53, 0.04);
 
     // 类型档位：组件默认组合与字号清单见 docs/47。
     --lv-type-caption-size: 10px;
@@ -57,6 +68,9 @@
     --lv-type-hero-line: 1.35;
     --lv-type-hero-weight: 600;
     --lv-type-hero-lg-size: 32px;
+    // 视觉层级深化：主数据极大字号（与 11px 辅助字形成 4 倍尺寸落差，字重 600，tabular-nums）
+    --lv-type-display-hero: 44px;
+    --lv-type-display-hero-line: 1.15;
     // 页面/指标中的几何字号特例：保留原值，避免迁移时发生视觉跳变。
     --lv-type-micro-size: 9px;
     --lv-type-body-sm-size: 14px;
@@ -68,27 +82,27 @@
     --lv-type-metric-size: 29px;
     --lv-type-fluid-size: 0.9em;
 
-    // 行高以用途分档；固定像素行高仅用于与控件高度对齐。
+    // 行高以用途分档；中文正文不加字距，行高严格控制在 1:1.6 到 1:1.75
     --lv-lh-tight: 1;
     --lv-lh-icon: 1.1;
     --lv-lh-title: 1.35;
-    --lv-lh-body: 1.4;
+    --lv-lh-body: 1.6;
     --lv-lh-reading-tight: 1.45;
     --lv-lh-meta: 1.5;
-    --lv-lh-reading: 1.6;
-    --lv-lh-reading-loose: 1.95;
+    --lv-lh-reading: 1.7;
+    --lv-lh-reading-loose: 1.75;
     --lv-lh-relaxed: 1.7;
     --lv-lh-loose: 1.8;
     --lv-lh-control: 15px;
     --lv-lh-control-lg: 20px;
 
-    // 字重沿用思源当前使用的 400/500/550/600/650/700 六档。
+    // 中文字重严格三档：常规 400、中黑 500、半粗 600
     --lv-fw-normal: 400;
     --lv-fw-medium: 500;
-    --lv-fw-emphasis: 550;
+    --lv-fw-emphasis: 500;
     --lv-fw-semibold: 600;
-    --lv-fw-heading: 650;
-    --lv-fw-bold: 700;
+    --lv-fw-heading: 600;
+    --lv-fw-bold: 600;
 
     // 2px 基础栅格；常用语义间距由 --lv-sp-* 提供，奇数像素作光学校准。
     --lv-space-unit: 2px;
@@ -106,26 +120,28 @@
     --lv-space-11: calc(var(--lv-space-unit) * 11);
     --lv-space-12: calc(var(--lv-space-unit) * 12);
 
-    // 缓动与时长：流体物理减速曲线（Apple HIG / Linear 惯例，自然且高性能）
+    // 缓动与时长：非对称进出曲线（进入偏快偏缓出 160ms，退出更快更干脆 100ms）
     --lv-ease: cubic-bezier(0.16, 1, 0.3, 1);
-    --lv-dur-1: 120ms;
-    --lv-dur-2: 180ms;
-    --lv-dur-3: 240ms;
+    --lv-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+    --lv-ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
+    --lv-dur-1: 100ms;
+    --lv-dur-2: 160ms;
+    --lv-dur-3: 200ms;
     --lv-dur-shimmer: 1200ms;
 
-    // 圆角语义档：细线、标签、控件、卡片、弹窗和胶囊/圆形。
+    // 形态语言：大圆角配胶囊控件，圆角随容器层级递减（R_inner = max(0, R_outer - Padding)）
     --lv-r-track: 2px;
     --lv-r-optical: 3px;
     --lv-r-xs: 4px;
-    --lv-r-tag: 5px;
-    --lv-r-compact: 6px;
-    --lv-r-s: 8px;
-    --lv-r-notice: 9px;
-    --lv-r-control: 10px;
-    --lv-r-m: 12px;
-    --lv-r-l: 16px;
-    --lv-r-dialog: 20px;
-    --lv-r-pill: 999px;
+    --lv-r-tag: 6px;
+    --lv-r-compact: 8px;
+    --lv-r-s: 10px;
+    --lv-r-notice: 12px;
+    --lv-r-control: 12px;
+    --lv-r-m: 14px;
+    --lv-r-l: 20px; /* 大卡片外圆角 20px */
+    --lv-r-dialog: 24px; /* 弹窗外圆角 24px */
+    --lv-r-pill: 999px; /* 胶囊圆角 */
     --lv-r-circle: 50%;
     --lv-sp-1: var(--lv-space-2);
     --lv-sp-2: var(--lv-space-4);
@@ -157,25 +173,25 @@
     // 语义派生面（R54 原型对齐，高对比度保证）
     --lv-primary-soft: #EEECFB;
     --lv-primary-softer: color-mix(in srgb, var(--lv-color-brand) 6%, transparent);
-    --lv-primary-border: color-mix(in srgb, var(--lv-color-brand) 24%, transparent);
+    --lv-primary-border: color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
     --lv-color-on-brand-soft: #4F4799;
     --lv-danger-soft: #FCF0F1;
-    --lv-danger-border: color-mix(in srgb, var(--lv-color-danger) 24%, transparent);
+    --lv-danger-border: color-mix(in srgb, var(--lv-color-danger) 20%, transparent);
     --lv-color-on-danger-soft: #A34151;
     --lv-warn-soft: #FFF0D4;
     --lv-color-on-warning-soft: #855318;
     --lv-good-soft: #EDF6F1;
     --lv-color-on-success-soft: #32654D;
-    --lv-border: #E6E5F0;
-    --lv-border-strong: #D0CFDF;
+    --lv-border: #E8E7F0;
+    --lv-border-strong: #D2D0E0;
 
-    // 表面与海拔（严格收敛为三档统一中性漫反射阴影，方向与距离统一向下扩散，明暗双主题通用）
-    // Elevation 1：基础静态卡片 / 面板
-    --lv-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    // 表面与海拔：多层叠加漫反射阴影（近距小模糊 + 远距大模糊，统一向下光源）
+    // Elevation 1：内容卡片近距轻柔托底，白卡浮起感
+    --lv-shadow-1: 0 1px 2px rgba(39, 38, 53, 0.03), 0 4px 16px -2px rgba(39, 38, 53, 0.05);
     // Elevation 2：可交互卡片悬浮 / 工具栏 / 下拉
-    --lv-shadow-2: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.05);
+    --lv-shadow-2: 0 2px 6px rgba(39, 38, 53, 0.04), 0 12px 32px -4px rgba(39, 38, 53, 0.08);
     // Elevation 3：浮层 / 弹窗 / 抽屉 / Toast
-    --lv-shadow-3: 0 16px 40px -8px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+    --lv-shadow-3: 0 16px 48px -8px rgba(39, 38, 53, 0.14), 0 4px 16px rgba(39, 38, 53, 0.04);
 
     // 别名兼容，统一映射到 Elevation 1/2/3
     --lv-shadow-card: var(--lv-shadow-1);
@@ -183,7 +199,7 @@
     --lv-shadow-float: var(--lv-shadow-3);
     --lv-shadow-review-card: var(--lv-shadow-1);
     --lv-shadow-dialog-scrim: 0 16px 60px rgba(0, 0, 0, 0.25);
-    --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.7);
     --lv-glass: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
     --lv-focus-ring: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 28%, transparent);
 
@@ -214,11 +230,21 @@ body[data-theme-mode="dark"],
     --lv-color-on-brand: #181820;
     --lv-color-text: #F0EEF8;
     --lv-color-text-muted: #B2AEC4;
-    --lv-color-canvas: #181820;
-    --lv-color-canvas-subtle: #2A2936;
-    --lv-color-surface: #22222D;
-    --lv-color-surface-subtle: #2A2936;
-    --lv-color-surface-raised: #292835;
+    --lv-color-canvas: #15151E;
+    --lv-color-canvas-subtle: #1E1E2A;
+    --lv-color-surface: #20202C;
+    --lv-color-surface-subtle: #272736;
+    --lv-color-surface-raised: #292837;
+    --lv-color-surface-accent-dark: #101017;
+    --lv-color-on-accent-dark: #F0EEF8;
+    --lv-color-on-accent-dark-muted: #9F9CAD;
+
+    // 两色分工：深色下的【数据语义色】(明耀天青水蓝)
+    --lv-color-data: #38BDF8;
+    --lv-data-soft: #0C2B42;
+    --lv-color-on-data-soft: #7DD3FC;
+    --lv-data-border: rgba(56, 189, 248, 0.3);
+
     --lv-color-danger: #F87171;
     --lv-color-warning: #FBBF24;
     --lv-color-success: #6EE7B7;
@@ -226,8 +252,8 @@ body[data-theme-mode="dark"],
     --lv-color-on-success: #181820;
     --lv-color-on-warning: #181820;
     --lv-surface-hover: rgba(255, 255, 255, 0.05);
-    --lv-border: #393744;
-    --lv-border-strong: #4E4B5E;
+    --lv-border: #353443;
+    --lv-border-strong: #48465B;
     --lv-primary-soft: #343046;
     --lv-primary-softer: rgba(181, 175, 255, 0.08);
     --lv-primary-border: rgba(181, 175, 255, 0.28);
@@ -403,6 +429,36 @@ body[data-theme-mode="dark"],
     transform: translateY(-2px);
     box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
     border-color: var(--lv-border-strong);
+}
+
+// 深色对比重音卡片（节奏重音：明度 12% 接近黑带微弱紫相，配纯白文字与品牌/数据色点缀）
+.lv-card-accent-dark {
+    background: var(--lv-color-surface-accent-dark);
+    color: var(--lv-color-on-accent-dark);
+    border: 1px solid color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
+    border-radius: var(--lv-card-radius);
+    padding: var(--lv-card-padding);
+    min-width: 0;
+    box-shadow: 0 4px 20px -2px rgba(23, 23, 35, 0.35), 0 2px 6px rgba(23, 23, 35, 0.2);
+    position: relative;
+    overflow: hidden;
+
+    h1, h2, h3, h4, strong {
+        color: var(--lv-color-on-accent-dark);
+    }
+    p, small, span.muted {
+        color: var(--lv-color-on-accent-dark-muted);
+    }
+}
+
+// 数据语义展示数字：与操作主色明确分工，专用于连续、成绩、热力
+.lv-data-num {
+    font-size: var(--lv-type-display-hero);
+    line-height: var(--lv-type-display-hero-line);
+    font-weight: var(--lv-fw-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--lv-color-data);
+    letter-spacing: -0.03em;
 }
 
 // 可交互卡片通用类（平滑上浮与微凹按压）

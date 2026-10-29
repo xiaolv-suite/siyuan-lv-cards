@@ -201,14 +201,14 @@
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
         font-variant-numeric: tabular-nums;
-        background: var(--lv-primary-soft);
-        color: var(--lv-color-on-brand-soft);
-        border: 1px solid var(--lv-primary-border);
+        background: var(--lv-data-soft);
+        color: var(--lv-color-on-data-soft);
+        border: 1px solid var(--lv-data-border);
     }
     .lv-done-retention-bubble.lv-ret-high {
-        background: var(--lv-good-soft);
-        color: var(--lv-color-on-success-soft);
-        border-color: color-mix(in srgb, var(--lv-color-success) 30%, transparent);
+        background: var(--lv-data-soft);
+        color: var(--lv-color-data);
+        border-color: var(--lv-data-border);
     }
     .lv-done-retention-bubble.lv-ret-mid {
         background: var(--lv-warn-soft);
@@ -256,10 +256,19 @@
     .lv-done-stat .lv-done-stat-label {
         font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
+        letter-spacing: 0.02em;
     }
     .lv-done-stat .lv-hero-num {
-        font-size: var(--lv-type-display-size);
+        font-size: var(--lv-type-display-hero);
+        line-height: var(--lv-type-display-hero-line);
+        font-weight: var(--lv-fw-semibold);
         font-variant-numeric: tabular-nums;
+        color: var(--lv-color-text);
+        letter-spacing: -0.03em;
+        margin: calc(var(--lv-space-unit) * 1) 0;
+    }
+    .lv-done-stat:first-child .lv-hero-num {
+        color: var(--lv-color-data);
     }
     .lv-done-stat p {
         margin: 0;

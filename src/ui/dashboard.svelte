@@ -969,7 +969,7 @@
                     detail={targets.review > 0 ? `目标达成率 ${targetPct()}%` : t.dashboard.dueCountDetail}
                     value={todayReview}
                     denom={targets.review > 0 ? String(targets.review) : ""}
-                    tone="primary"
+                    tone="data"
                     progress={targetPct()}
                     spark={studySpark()}
                 />
@@ -1735,7 +1735,7 @@
     .lv-today-week-head h2 { font-size: var(--lv-type-label-size); line-height: 1.5; font-weight: var(--lv-fw-heading); margin: 0; }
     .lv-today-week-range { color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); font-variant-numeric: tabular-nums; }
     
-    // R54 原型对齐：温和暖色连击卡片（去除过时亮橙大渐变与厚重彩影，保持质感与专注）
+    // 规律五：重点对比重音块（Dark Contrast Accent Block）——带主题色相近黑(明度12%)，形成呼吸节奏重音
     .lv-streak-card {
         display: flex;
         align-items: center;
@@ -1744,28 +1744,28 @@
         padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7 + var(--lv-space-hairline));
         margin: calc(var(--lv-space-unit) * 5) 0 calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-m);
-        background: var(--lv-warn-soft);
-        color: var(--lv-color-on-warning-soft);
-        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 24%, transparent);
-        box-shadow: var(--lv-shadow-1);
+        background: var(--lv-color-surface-accent-dark);
+        color: var(--lv-color-on-accent-dark);
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+        box-shadow: 0 4px 18px -2px rgba(23, 23, 35, 0.28);
         position: relative;
         overflow: hidden;
         transition: transform var(--lv-dur-2) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:hover {
             transform: translateY(-1.5px);
-            box-shadow: var(--lv-shadow-2);
-            border-color: color-mix(in srgb, var(--lv-color-warning) 36%, transparent);
+            box-shadow: 0 8px 24px -3px rgba(23, 23, 35, 0.38);
+            border-color: color-mix(in srgb, var(--lv-color-data) 36%, transparent);
         }
 
         .lv-streak-icon-box {
             width: 36px;
             height: 36px;
             border-radius: var(--lv-r-circle);
-            background: color-mix(in srgb, var(--lv-color-warning) 16%, transparent);
+            background: color-mix(in srgb, var(--lv-color-data) 20%, transparent);
             display: grid;
             place-items: center;
-            color: var(--lv-color-on-warning-soft);
+            color: var(--lv-color-data);
             flex-shrink: 0;
             box-shadow: none;
         }
@@ -1781,40 +1781,40 @@
         .lv-streak-eyebrow {
             font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-medium);
-            color: var(--lv-color-on-warning-soft);
-            opacity: 0.88;
+            color: var(--lv-color-on-accent-dark-muted);
             letter-spacing: 0.04em;
         }
 
         .lv-streak-count {
-            font-size: var(--lv-type-section-size);
-            font-weight: 800;
-            line-height: 1.2;
+            font-size: var(--lv-type-display-size);
+            font-weight: var(--lv-fw-bold);
+            line-height: 1.15;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.02em;
-            color: var(--lv-color-on-warning-soft);
+            letter-spacing: -0.03em;
+            color: var(--lv-color-data);
         }
 
         .lv-streak-unit {
             font-size: var(--lv-type-control-size);
-            font-weight: var(--lv-fw-medium);
-            opacity: 0.88;
+            font-weight: var(--lv-fw-normal);
+            color: var(--lv-color-on-accent-dark-muted);
+            margin-left: 2px;
         }
 
         .lv-streak-badge {
-            background: color-mix(in srgb, var(--lv-color-warning) 18%, transparent);
-            border: 1px solid color-mix(in srgb, var(--lv-color-warning) 30%, transparent);
+            background: color-mix(in srgb, var(--lv-color-data) 18%, transparent);
+            border: 1px solid var(--lv-data-border);
             padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
             border-radius: var(--lv-r-pill);
             font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-bold);
             letter-spacing: 0.02em;
-            color: var(--lv-color-on-warning-soft);
+            color: var(--lv-color-data);
             white-space: nowrap;
         }
     }
 
-    // 汲取自参考图：Days Logged In 纵向圆润签到胶囊排
+    // 形态语言：周签到胶囊排，嵌套圆角按层级递减，底色微差表达层级
     .lv-today-week-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1828,8 +1828,8 @@
         flex-direction: column;
         gap: calc(var(--lv-space-unit) * 3);
         padding: calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
-        border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-canvas) 60%, var(--lv-color-surface));
+        border-radius: var(--lv-r-s);
+        background: color-mix(in srgb, var(--lv-color-canvas) 70%, var(--lv-color-surface));
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-caption-size);

@@ -1364,7 +1364,7 @@
             &:focus {
                 outline: none;
                 border-color: var(--lv-color-brand);
-                box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+                box-shadow: var(--lv-focus-ring);
             }
 
             option {

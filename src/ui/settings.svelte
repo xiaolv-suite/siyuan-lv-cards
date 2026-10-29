@@ -1745,7 +1745,7 @@
             border: 1px solid var(--lv-border);
             border-radius: var(--lv-r-m);
             background: var(--lv-color-surface);
-            box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
             padding: var(--lv-sp-3);
             .lv-st-head, .lv-st-row { gap: var(--lv-sp-3); align-items: center; padding: calc(var(--lv-space-unit) * 1) 0; }
             .lv-st-head { border-bottom: 1px solid var(--lv-border); padding-bottom: var(--lv-sp-1); font-weight: var(--lv-fw-semibold); }
@@ -1761,14 +1761,14 @@
             background: var(--lv-color-surface);
             text-align: left;
             border-radius: var(--lv-r-m);
-            box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
             transition: border-color var(--lv-dur-2) var(--lv-ease),
                 transform var(--lv-dur-2) var(--lv-ease),
                 box-shadow var(--lv-dur-2) var(--lv-ease);
 
             &:hover {
                 transform: translateY(-2px);
-                box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+                box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
                 border-color: var(--lv-border-strong);
             }
 
@@ -1776,7 +1776,7 @@
                 cursor: default;
                 &:hover {
                     transform: none;
-                    box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+                    box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
                     border-color: var(--lv-border);
                 }
             }

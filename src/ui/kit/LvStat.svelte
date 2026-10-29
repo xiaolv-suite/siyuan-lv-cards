@@ -8,8 +8,8 @@
         detail?: string;
         /** 分母（如目标值），空则不显示 */
         denom?: string;
-        /** 语义色点 */
-        tone?: "primary" | "error" | "warn" | "neutral";
+        /** 语义色点：primary(操作主色), data(数据语义色青蓝), error(危险), warn(警示), neutral(中性) */
+        tone?: "primary" | "data" | "error" | "warn" | "neutral";
         /** 0-100，<0 不渲染进度条 */
         progress?: number;
         /** 数字滚动动画（reduced-motion 时直落） */
@@ -24,6 +24,7 @@
 
     const toneColor = {
         primary: "var(--lv-color-brand)",
+        data: "var(--lv-color-data)",
         error: "var(--lv-color-danger)",
         warn: "var(--lv-color-warning)",
         neutral: "var(--lv-color-text-muted)",
@@ -73,7 +74,7 @@
     const isZero = $derived(display === 0 || display === "0");
 </script>
 
-<div class="lv-card2 lv-stat" class:lv-stat--has-progress={progress >= 0}>
+<div class="lv-card2 lv-stat" class:lv-stat--has-progress={progress >= 0} class:lv-stat--tone-data={tone === "data"}>
     <div class="lv-stat-top">
         <div class="lv-stat-label">
             <span class="lv-stat-dot" style={`background: ${toneColor[tone]}`}></span>{label}
@@ -165,6 +166,7 @@
         line-height: var(--lv-lh-meta);
     }
     .lv-stat .lv-stat-progress { margin-top: var(--lv-sp-2); }
+    .lv-stat--tone-data .lv-hero-num { color: var(--lv-color-data); }
     .lv-stat .lv-stat-spark {
         display: block;
         margin-top: calc(var(--lv-space-unit) * 3);
