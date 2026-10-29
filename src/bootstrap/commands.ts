@@ -14,7 +14,9 @@ export interface CommandHost {
     i18n: Record<string, any>;
     openDashboard: (tab?: string) => void;
     openReview: (options?: { scope?: string }) => void;
+    openManager?: () => void;
     openQuickCard: () => void;
+    openAIWizard?: () => void;
     openRepairDrill: () => void;
     openPalette: () => void;
     copyDiagnostics: () => Promise<void>;
@@ -28,8 +30,10 @@ export interface CommandHost {
 
 export const REGISTERED_COMMAND_KEYS = [
     "openDashboard",
+    "openManager",
     "startReview",
     "quickCard",
+    "openAIWizard",
     "drill",
     "palette",
     "openExam",
@@ -50,21 +54,33 @@ export type RegisteredCommandKey = typeof REGISTERED_COMMAND_KEYS[number];
 export function registerPluginCommands(host: CommandHost): void {
     host.addCommand({
         langKey: "openDashboard",
-        langText: host.i18n.cmdOpenDashboard,
+        langText: host.i18n.cmdOpenDashboard ?? host.i18n.menuDashboard ?? "打开闪卡中心",
         hotkey: "",
         callback: () => host.openDashboard(),
     });
     host.addCommand({
+        langKey: "openManager",
+        langText: host.i18n.cmdOpenManager ?? host.i18n.menuManager ?? "打开闪卡管理器",
+        hotkey: "",
+        callback: () => (host.openManager ? host.openManager() : host.openDashboard("manage")),
+    });
+    host.addCommand({
         langKey: "startReview",
-        langText: host.i18n.cmdStartReview,
+        langText: host.i18n.cmdStartReview ?? host.i18n.menuReview ?? "开始复习",
         hotkey: "",
         callback: () => host.openReview(),
     });
     host.addCommand({
         langKey: "quickCard",
-        langText: host.i18n.cmdQuickCard,
+        langText: host.i18n.cmdQuickCard ?? host.i18n.menuQuickCard ?? "快速制卡",
         hotkey: "",
         callback: () => host.openQuickCard(),
+    });
+    host.addCommand({
+        langKey: "openAIWizard",
+        langText: host.i18n.cmdOpenAIWizard ?? host.i18n.menuAICard ?? "AI 制卡向导",
+        hotkey: "",
+        callback: () => (host.openAIWizard ? host.openAIWizard() : host.openDashboard("authoring")),
     });
     // T10 修卡演练（docs/13 §12）：独立样例入口
     host.addCommand({

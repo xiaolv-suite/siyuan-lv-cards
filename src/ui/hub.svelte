@@ -571,19 +571,27 @@
                     {:else}
                         <div role="status" aria-busy="true" style="padding: var(--lv-sp-5); color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size)">{i18n.dashboard.loading}</div>
                     {/if}
-                {:else if active === "inbox" && inbox}
-                    {#if InboxComp}
+                {:else if active === "inbox"}
+                    {#if inbox && InboxComp}
                         <InboxComp i18n={i18n} inbox={{ ...inbox, makeCards: prepareInboxCards }} />
-                    {:else if inboxError}
+                    {:else if inbox && inboxError}
                         <div style="padding: var(--lv-sp-5); color: var(--lv-color-danger); font-size: var(--lv-type-body-size)">
                             <div style="margin-bottom: calc(var(--lv-space-unit) * 4)">{inboxError}</div>
                             <button class="b3-button b3-button--outline" onclick={ensureInbox}>{i18n.dashboard.refresh}</button>
                         </div>
-                    {:else}
+                    {:else if inbox}
                         <div role="status" aria-busy="true" style="padding: var(--lv-sp-5); color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size)">{i18n.dashboard.loading}</div>
+                    {:else}
+                        <div style="padding: var(--lv-sp-5); text-align: center;">
+                            <div class="lv-card2" style="max-width: 480px; margin: 40px auto; padding: var(--lv-sp-5)">
+                                <div style="font-size: var(--lv-type-title-size); font-weight: var(--lv-fw-bold); margin-bottom: var(--lv-sp-2)">{i18n.hubTabInbox ?? "材料收件箱"}</div>
+                                <p style="color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); margin-bottom: var(--lv-sp-4)">材料收件箱模块当前已停用。</p>
+                                <button class="b3-button lv-btn-primary" onclick={openFullSettings}>{i18n.hubSettingsOpen ?? "打开设置开启模块"}</button>
+                            </div>
+                        </div>
                     {/if}
-                {:else if exam}
-                    {#if ExamComp}
+                {:else if active === "exam"}
+                    {#if exam && ExamComp}
                         <ExamComp
                             i18n={i18n}
                             plans={plans}
@@ -596,13 +604,21 @@
                             getRevlog={exam.getRevlog}
                             getDailyCap={exam.getDailyCap}
                         />
-                    {:else if examError}
+                    {:else if exam && examError}
                         <div style="padding: var(--lv-sp-5); color: var(--lv-color-danger); font-size: var(--lv-type-body-size)">
                             <div style="margin-bottom: calc(var(--lv-space-unit) * 4)">{examError}</div>
                             <button class="b3-button b3-button--outline" onclick={ensureExam}>{i18n.dashboard.refresh}</button>
                         </div>
-                    {:else}
+                    {:else if exam}
                         <div role="status" aria-busy="true" style="padding: var(--lv-sp-5); color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size)">{i18n.dashboard.loading}</div>
+                    {:else}
+                        <div style="padding: var(--lv-sp-5); text-align: center;">
+                            <div class="lv-card2" style="max-width: 480px; margin: 40px auto; padding: var(--lv-sp-5)">
+                                <div style="font-size: var(--lv-type-title-size); font-weight: var(--lv-fw-bold); margin-bottom: var(--lv-sp-2)">{i18n.hubTabExam ?? "考试冲刺"}</div>
+                                <p style="color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); margin-bottom: var(--lv-sp-4)">考试计划模块当前已停用。</p>
+                                <button class="b3-button lv-btn-primary" onclick={openFullSettings}>{i18n.hubSettingsOpen ?? "打开设置开启模块"}</button>
+                            </div>
+                        </div>
                     {/if}
                 {:else if active === "recovery"}
                     <RecoveryComp

@@ -706,7 +706,13 @@
         void (async () => {
             try {
                 const target = (await getRiffCardsByBlockIDs([targetID])).blocks?.find(b => b.id === targetID);
-                if (!cancelled && seq === detailRequestSeq && target) openDetail(target);
+                if (!cancelled && seq === detailRequestSeq) {
+                    if (target) {
+                        openDetail(target);
+                    } else {
+                        showMessage(t.manager?.cardNotFound ?? "未找到对应卡片，可能已被移出卡组", 2500, "info");
+                    }
+                }
             } catch {
                 // 定点详情失败不影响管理器列表；列表错误仍由本次 load 负责呈现。
             } finally {
@@ -715,6 +721,28 @@
         })();
         return () => { cancelled = true; };
     });
+
+    async function handleCardDetailSaved(blockID: string) {
+        if (!blockID) return;
+        // 详情编辑成功后：即时更新本地 detail 与 blocks 列表项，杜绝关抽屉后看到旧内容的感知脱节
+        if (ctx.blockContent) {
+            try {
+                const latestMd = await ctx.blockContent(blockID);
+                if (latestMd !== null) {
+                    if (detail && detail.id === blockID) {
+                        detail = { ...detail, content: latestMd };
+                    }
+                    const targetIdx = blocks.findIndex(b => b.id === blockID);
+                    if (targetIdx >= 0) {
+                        blocks[targetIdx] = { ...blocks[targetIdx], content: latestMd };
+                    }
+                }
+            } catch {
+                // 非致命刷新
+            }
+        }
+        await ctx.onCardContentSaved?.(blockID);
+    }
 
     function openDoc(block: SearchBlock) {
         const rootId = (block.rootID as string) || block.id;
@@ -1198,7 +1226,7 @@
             load: () => ctx.blockContent!(detail!.id),
             save: (md) => ctx.saveBlockContent!(detail!.id, md),
         } : undefined}
-        onSaved={ctx.onCardContentSaved}
+        onSaved={handleCardDetailSaved}
     />
     {/key}
 {/if}

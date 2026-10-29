@@ -583,7 +583,10 @@
 
     function openCanvasInEditor(canvasId?: string) {
         const id = resolveEditorNavigationBlockId(canvasId, current?.blockID);
-        if (!id) return;
+        if (!id) {
+            showMessage(t.review?.sourceNotFound ?? "原笔记块不存在或已被删除", 2500, "info");
+            return;
+        }
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
         openTab({ app: ctx.app, doc: { id, zoomIn: true } });
     }
@@ -1391,7 +1394,10 @@
 
     function openInEditor() {
         const id = resolveEditorNavigationBlockId(undefined, current?.blockID);
-        if (!id) return;
+        if (!id) {
+            showMessage(t.review?.sourceNotFound ?? "原笔记块不存在或已被删除", 2500, "info");
+            return;
+        }
         openTab({ app: ctx.app, doc: { id, zoomIn: true } });
     }
 

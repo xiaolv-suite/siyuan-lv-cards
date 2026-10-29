@@ -2,6 +2,7 @@
     import { onDestroy } from "svelte";
     import { scale } from "svelte/transition";
     import { dueCache } from "@/api/due-shared";
+    import { getRiffCards } from "@/api/riff";
     import { getBlockDOM } from "@/api/siyuan";
     import { extractMarkTexts, MARK_SELECTOR } from "@/core/card-face";
     import LvEmpty from "./kit/LvEmpty.svelte";
@@ -101,7 +102,33 @@
                 }
             }
             if (found.length < 4) {
-                if (failedCards > 0) {
+                // 闭环保障：到期卡不足 4 张时平滑回退读取卡库中已有卡片，支持用户在无到期时随时练习
+                try {
+                    const fallbackCards = await getRiffCards("", 1, 20);
+                    for (const b of fallbackCards.blocks ?? []) {
+                        if (found.length >= 8) break;
+                        if (found.some(f => f.cardID === b.id)) continue;
+                        try {
+                            const html = await getBlockDOM(b.id);
+                            if (disposed || generation !== loadGeneration) return;
+                            const holder = document.createElement("div");
+                            holder.innerHTML = html;
+                            const marks = extractMarkTexts(holder);
+                            if (marks.length === 0) continue;
+                            holder.querySelectorAll(MARK_SELECTOR).forEach(m => m.replaceWith(document.createTextNode("____")));
+                            const prompt = (holder.textContent ?? "").trim().replace(/\s+/g, " ");
+                            if (prompt.length < 4) continue;
+                            found.push({ cardID: b.id, prompt, answer: marks.join(" / ") });
+                        } catch {
+                            // 跳过单卡读取失败
+                        }
+                    }
+                } catch {
+                    // 非致命 fallback
+                }
+            }
+            if (found.length < 4) {
+                if (failedCards > 0 && found.length === 0) {
                     errorMsg = t.pairing.loadFailed;
                     phase = "error";
                     return;
