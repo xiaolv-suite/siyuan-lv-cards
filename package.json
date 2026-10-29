@@ -16,7 +16,7 @@
     "dev:app": "cross-env NODE_ENV=development VITE_SOURCEMAP=inline VITE_BUILD_TARGET=app vite build --watch",
     "dev:kernel": "cross-env NODE_ENV=development VITE_SOURCEMAP=inline VITE_BUILD_TARGET=kernel vite build --watch",
     "check": "run-s check:types check:svelte check:versions",
-    "test": "vitest run",
+    "test": "cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" vitest run",
     "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "check:svelte": "svelte-check --tsconfig ./tsconfig.json",
     "check:versions": "node scripts/check-versions.mjs",

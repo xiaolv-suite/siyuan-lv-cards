@@ -19,482 +19,56 @@ The full-lifecycle flashcard learning platform for SiYuan — local-first, nativ
 
 > **Note**: The primary README and all design docs are in Chinese. This page covers the essentials; see [docs/](./docs/README.md) for full design material.
 
-Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.212.4** (2026-10-28), delivering ReviewReadyDashboard component modularization (-360+ lines). See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.212.4) for the package and publishing status.
-
-## What's New in v0.212.4
-
-- **ReviewReadyDashboard Component Modularization (TSK-08)**:
-  - Extracted the Review Ready Bento Hub (`ReviewReadyDashboard.svelte`) into a dedicated subcomponent.
-  - Encapsulated scope quick-switch pill, quality exclusion alerts, three-card bento grid (advance cram, card authoring, deck management), and bottom bar navigation.
-  - Reduced review template code by nearly 370 lines.
-  - Added dedicated unit tests in `tests/review-ready-dashboard.spec.ts`.
-- **Verification**:
-  - 2048 tests across 269 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.212.3
-
-- **ReviewRatingBar Component Modularization (TSK-08)**:
-  - Extracted the bottom actions bar (`ReviewRatingBar.svelte`) into a dedicated subcomponent.
-  - Encapsulated question-state actions (Space reveal / step clozes / Shift+Space), answer-state rating buttons (three-grade / four-grade), suggested rating highlights, and physical key-pressed feedback.
-  - Added dedicated unit tests in `tests/review-rating-bar.spec.ts`.
-- **ReviewErrorTagBar Component Modularization**:
-  - Extracted error tagging chips into `ReviewErrorTagBar.svelte` with new constants in `src/core/error-tags.ts`.
-  - Reduced review template code by over 180 lines.
-  - Added dedicated unit tests in `tests/review-error-tag-bar.spec.ts`.
-- **Verification**:
-  - 2045 tests across 268 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.212.2
-
-- **ReviewCountdownBanner Component Modularization (TSK-08)**:
-  - Extracted 25-minute Pomodoro alert and timeout notice into `ReviewCountdownBanner.svelte`.
-  - Self-contained icons, rest guidance, and pause/continue callbacks.
-  - Reduced review template code by over 40 lines.
-  - Added dedicated unit tests in `tests/review-countdown-banner.spec.ts`.
-- **Outline Cloze Filter in Card Manager**:
-  - Added `cardTypeFilter` dropdown in manager toolbar to filter outline cloze and superblock cards.
-  - Added dedicated unit tests in `tests/manager-card-type-filter.spec.ts`.
-- **Verification**:
-  - 2038 tests across 266 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.212.1
-
-- **ReviewToolbar Component Modularization (TSK-08)**:
-  - Extracted the review toolbar and more-actions popover menu into `ReviewToolbar.svelte`.
-  - Self-contained scope picker, session purpose, font scale adjustment, stars, issues, pauses, undo, skip, and keyboard Escape handling.
-  - Reduced review template code by over 150 lines.
-  - Added dedicated unit tests in `tests/review-toolbar.spec.ts`.
-- **Verification**:
-  - 2035 tests across 264 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.212.0
-
-- **Dormant Knowledge Intake to Extract Inbox (Productivity Loop)**:
-  - Connected the dormant highlight scanner directly with the Extract Inbox, enabling one-click bulk intake of uncarded highlighted notes into the inbox for progressive distillation.
-  - Added dedicated unit tests in `tests/dormant-to-inbox.spec.ts`.
-- **ReviewRescheduleModal Component Modularization (TSK-08)**:
-  - Extracted fast reschedule inline panel (`showReschedule` / `rescheduleDays`) into `ReviewRescheduleModal.svelte`.
-  - Self-contained input validation, due date timestamp preview, error handling, and scoped styles.
-  - Reduced review template code by over 40 lines.
-  - Added dedicated unit tests in `tests/review-reschedule-modal.spec.ts`.
-- **Verification**:
-  - 2032 tests across 263 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.9
-
-- **ReviewSessionPrefs Component Modularization (TSK-08)**:
-  - Extracted session preference panel (`prefsOpen` / `.lv-prefs`) into `ReviewSessionPrefs.svelte`.
-  - Self-contained grading scale switching (three/four), reverse order, mixed mode rotation, timeout mode, and session time budget adjustments.
-  - Reduced review template code by over 80 lines.
-  - Added dedicated unit tests in `tests/review-session-prefs.spec.ts`.
-- **Verification**:
-  - 2026 tests across 261 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.8
-
-- **ReviewContextDrawer Component Modularization (TSK-08)**:
-  - Extracted source document context drawer (`ctxOpen` / `ctxBlocks`) into `ReviewContextDrawer.svelte`.
-  - Encapsulated skeleton loading animations, contextual blocks rendering, and current card block highlighting.
-  - Reduced review template code by over 80 lines.
-  - Added dedicated unit tests in `tests/review-context-drawer.spec.ts`.
-- **Verification**:
-  - 2021 tests across 260 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.7
-
-- **ReviewHelpAndPeek Component Modularization (TSK-08)**:
-  - Extracted keyboard shortcuts help modal (`helpOpen`) and previous card review peek overlay (`peek`) into `ReviewHelpAndPeek.svelte`.
-  - Self-contained accessibility focus trapping, two-column responsive grid, and read-only card face masking.
-  - Reduced review template code by over 100 lines.
-  - Added dedicated unit tests in `tests/review-help-and-peek.spec.ts`.
-- **Verification**:
-  - 2016 tests across 259 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.6
-
-- **Outline Cloze Node Review (Inspired by KMind Zen)**:
-  - Preserves hierarchical outline tree context in `NodeList` / `NodeListItem` cards, masking target leaf/child nodes while keeping parent scaffold visible.
-  - Added dedicated `<LvIcon name="list" size={14} /> Outline Cloze` badge.
-- **Dormant Knowledge Discovery Engine (Inspired by Network Lens)**:
-  - Added `src/core/dormant-knowledge.ts` to automatically detect highlighted blocks (`==...==`) that have not yet been enrolled into any flashcard deck.
-  - Added "Awaken Dormant Knowledge" recommendation card in the Dashboard todo section with one-click intake to Inbox or QuickCard.
-  - Added dedicated unit tests in `tests/dormant-knowledge.spec.ts`.
-- **Verification**:
-  - 2014 tests across 258 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.5
-
-- **One-Click Daily Review Task Copy in Dashboard (Task Horizon Integration)**:
-  - Added a dedicated "Copy Task" Bento action in the Dashboard hero section to copy today's FSRS review workload task (`- [ ] / - [x]`) directly to the clipboard.
-  - Seamlessly pasteable into daily journal notes or Task Horizon task boards.
-- **Card Source Breadcrumb Parent Path Hiding**:
-  - Added level toggle in `review.svelte` breadcrumbs to hide verbose parent hierarchies and show only the leaf core document title, aligning with SiYuan's clean card presentation. Full hierarchy remains accessible via tooltip and context drawer.
-  - Added dedicated unit tests in `tests/daily-task-and-breadcrumbs.spec.ts`.
-- **Verification**:
-  - 2010 tests across 257 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.4
-
-- **Native Editor Shortcut 'e' / 'E' (Issue #20 Closure)**:
-  - Added review shortcut support for `e` / `E` to immediately zoom into the current card block within SiYuan's native editor.
-  - Verified and closed Issue #20 on GitHub.
-- **Task Horizon Daily Review Micro-Task Export (Issue #19 Collaboration)**:
-  - Added `daily-task-export` capability to `src/api/external-bridge.ts`, exposing `generateDailyTaskMarkdown(options)` to generate `- [ ] / - [x]` task items for Task Horizon and task management plugins.
-  - Added unit tests in `tests/external-bridge.spec.ts`.
-- **Verification**:
-  - 2006 tests across 256 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.3
-
-- **Form Controls & Select Dropdown Text Centering Alignment**:
-  - Fixed vertical text misalignment in Flashcard Manager `.lv-sort` pill dropdowns (default sort, status filters).
-  - Cleaned up conflicting min-height and padding overrides, enforcing `line-height: var(--lv-lh-control-lg); text-align-last: center;` for centered text presentation matching adjacent chip buttons.
-  - Aligned review scope dropdowns (`.lv-scope`), search input (`.lv-filter`), AI notebook selectors, and Kit components (`LvSelect` / `LvInput`).
-  - Added dedicated style verification suite `tests/select-and-input-alignment.spec.ts`.
-- **Verification**:
-  - 2004 tests across 256 test suites 100% passing; 18/18 isolated E2E tests passing; 97.2% design token coverage; production build and smoke tests green.
-
-## Previous Update: v0.211.2
-
-- **22-Store Batch Loader Modularization (TSK-07)**:
-  - Extracted `src/bootstrap/storage-loader.ts` to manage concurrent batch loading, fault-tolerant store resilience, field normalizations, and rollback snapshot baselines.
-  - Eliminated 100+ lines from `src/index.ts`.
-  - Added dedicated test suite `tests/storage-loader.spec.ts`.
-- **Verification**:
-  - 2000 tests across 255 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.1
-
-- **Tab Registrars Modularization & Index Slimming (TSK-07)**:
-  - Extracted `src/bootstrap/tab-registrars.ts` to manage dashboard and review tab lifecycles and domain contexts.
-  - Reduced `src/index.ts` from 196 KB to 148 KB, eliminating 700+ lines of assembly boilerplate.
-  - Added dedicated test suite `tests/tab-registrars.spec.ts`.
-- **Verification**:
-  - 1998 tests across 254 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.211.0
-
-- **Dialog Openers Lifecycle Decoupling (TSK-07)**:
-  - Extracted `src/bootstrap/dialog-openers.ts` to unify modal dialog argument assembly for repair drill, challenge mode, pairing game, and occlusion editor.
-  - Added dedicated test suite `tests/dialog-openers.spec.ts`.
-- **Milestone v0.211.0 Overview**:
-  - Two-tier incremental learning scheduler decoupling (raw extracts bypass FSRS, `Alt+E` lineage capture, `Ctrl+D` dismiss archiving).
-  - 100% native SuperBlock flashcard alignment (1st block question, rest answers with masking and QuickCard template).
-  - SVG/Excalidraw canvas direct editing and double-click navigation.
-  - Modularized Review workbench components (`ReviewDonePanel`, `ReviewZenIsland`, `ReviewInteractiveQuiz`, `ReviewActionModals`).
-  - Design tokens reached 97.4% coverage (100% in padding, margin, border-radius, z-index, gap, transition).
-- **Verification**:
-  - 1996 tests across 253 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.99
-
-- **ReviewActionModals Component Modularization (TSK-08)**:
-  - Extracted pause modal, session options modal, memo editor modal, retire modal, and image lightbox into `ReviewActionModals.svelte`.
-  - Encapsulated lightbox zoom and pan micro-states within the modal component, reducing review template size by over 150 lines.
-  - Added dedicated test suite `tests/review-action-modals.spec.ts`.
-- **Verification**:
-  - 1992 tests across 252 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.98
-
-- **QuickCard Studio SuperBlock Template**:
-  - Added "SuperBlock format" template option in `quick-card.svelte`, generating standard `{{{col ... }}}` multi-block flashcards.
-  - Live card preview renders question and answer sections accordingly.
-- **CardDetail Drawer SuperBlock Polish**:
-  - Added SuperBlock badge and two-tier structured preview in `card-detail.svelte`.
-- **Verification**:
-  - 1987 tests across 251 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.97
-
-- **ReviewInteractiveQuiz Component Modularization (TSK-08)**:
-  - Extracted multiple-choice, true/false judge, instant fill typing, and answer analysis cards into `ReviewInteractiveQuiz.svelte`.
-  - Added dedicated test suite `tests/review-interactive-quiz.spec.ts`.
-- **Design Tokens Reached 97.4% Coverage (TSK-09)**:
-  - 100% full coverage achieved across padding, margin, border-radius, z-index, gap, and transition.
-- **Verification**:
-  - 1986 tests across 251 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.96
-
-- **SuperBlock Flashcard Question-Answer Recognition & Masking**:
-  - Aligned with native SiYuan SuperBlock card spec: 1st sub-block is front question, 2nd and subsequent sub-blocks are back answer.
-  - Question stage hides answer blocks behind an elegant mask placeholder to prevent answer spoiler; answer stage reveals full content with clean section dividers.
-  - Expected typing text precisely extracts from answer blocks.
-- **SVG / Excalidraw Canvas Native Editing**:
-  - Added dedicated "Edit Canvas" Bento toolbar capsule when canvas elements are detected.
-  - Double-clicking canvas elements in review cards navigates directly into SiYuan's native Protyle editor for live canvas modification.
-- **Native & Community Flashcard Deep Research**:
-  - Published `docs/51-原生闪卡与社区插件深度调研与全功能对齐方案.md`, formalizing full alignment with native Riff/FSRS, ZY Flashcard breadcrumbs/undo, RemNote concept cards, Anki sibling burial/hint ladders, and SuperMemo incremental learning.
-- **Verification**:
-  - 1982 tests across 250 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.95
-
-- **TopbarController Modularization & Lifecycle Decoupling**:
-  - Extracted `src/bootstrap/topbar-controller.ts` to manage topbar self-healing DOM reconnection, context menu binding, due badge native title tooltips, and exam milestone notifications.
-  - Reduced `LvCardsPlugin` state footprint by cleaning up private timers and DOM handles into `topbarController.destroy()`.
-  - Added dedicated test suite `tests/topbar-controller.spec.ts`.
-- **Verification**:
-  - 1972 tests across 248 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.94
-
-- **Multi-Level Parent Document Tree Self-Healing Creation**:
-  - Implemented `ensureParentDocsExist` in `createDocWithMd` to auto-construct missing parent documents when creating deep-nested paths (e.g. `/小驴闪卡/AI 制卡/YYYY-MM-DD`).
-  - Completely eliminates the `kernel error (code=-1): document metadata is not ready` blocker in SiYuan v3.8.9-beta.2+.
-  - Upgraded `appendBlock` transport to official `/api/block/appendBlock` with fallback.
-- **Verification**:
-  - 1968 tests across 247 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.93
-
-- **Fixed "document metadata is not ready" in AI Card Generation (SiYuan v3.8.9-beta.2+ Compatibility)**:
-  - Fixed the fatal `kernel error (code=-1): document metadata is not ready` during AI candidate card enrollment.
-  - Automatically prepends root slash `/` in `createDocWithMd` to prevent relative path parsing failures.
-  - Implemented exponential backoff auto-retry across `createDocWithMd`, `appendBlock`, and `addRiffCards` to guarantee 100% creation success even during cold starts.
-- **Review Workbench Component Decoupling (TSK-08)**:
-  - Extracted the completed session screen into a dedicated component `ReviewDonePanel.svelte`.
-  - Extracted the Zen focus toolbar island into `ReviewZenIsland.svelte`.
-- **Core Entry Modularization (TSK-07)**:
-  - Decoupled weekly report service and data export managers into `src/features/`.
-  - Extracted 22-slot persistent store key constants into `src/bootstrap/storage-keys.ts`.
-- **Verification**:
-  - 1968 tests across 247 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.92
-
-- **Incremental Learning & Two-Tier Scheduler Decoupling (Issue #19 Directive)**:
-  - Physical isolation between raw extracts (`custom-lv-card-type: "extract"`) and FSRS scheduler; extracts bypass FSRS until atomic QA/cloze cards are generated.
-  - External bridge (`external-bridge`) supports `receiveExtract` for seamless `Alt+E` dispatch with automatic source backlinks `> 来源：((sourceBlockId "title"))`.
-  - Added Dismiss archiving action with `Ctrl+D` / `⌘D` global shortcut, tagging `custom-lv-dismissed: "true"` to permanently archive extracted cards without disturbing reviews.
-- **Minimum Information Quality Guard**:
-  - Soft Bento bubble suggestion when card length > 250 chars or cloze count > 3 in quick-card studio and card editor.
-- **Design Tokens Polish (79.2% -> 92.2%)**:
-  - `z-index` reached 100% tokenization with semantic layers; eliminated modal clipping risks.
-- **Verification**:
-  - 1961 tests across 244 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.91
-
-- **Review Workbench Bento Polish**:
-  - Upgraded queue recovery, pause resume, and return breadcrumb buttons in `review.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.
-  - Added vector glyph to interactive fill submit action.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.90
-
-- **Content Lifecycle & Deck Picker Bento Polish**:
-  - Upgraded Open Lifecycle, Repair, Next Action, and Transition buttons in `lifecycle-panel.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.
-  - Added vector refresh icon and `.lv-btn-tool` styling to retry action in `deck-picker.svelte`.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.89
-
-- **Relations & Knowledge Object Panels Bento Polish**:
-  - Upgraded Add Relation, Revise Fact, and Remove Instance actions in `relations-panel.svelte` and `ko-panel.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs (`plus`, `edit`, `close`).
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.88
-
-- **Marker Cards & Capture Inbox Bento Polish**:
-  - Upgraded Select All / Deselect All and Cancel actions in `marker-cards.svelte` to `.lv-btn-tool` Bento capsules with vector glyphs.
-  - Fixed missing `LvIcon` component import in `marker-cards.svelte`.
-  - Added vector icons to Select All and Retry actions in `inbox-page.svelte`.
-- **E2E Isolated Harness Hardening**:
-  - Fixed cold-kernel path level initialization race by standardizing on root doc `/riff` with a 5-step progressive retry, ensuring 18/18 E2E tests pass reliably.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.87
-
-- **Onboarding Wizard & Occlusion Editor Bento Polish**:
-  - Upgraded Back, Sample Creation, Help Guide, and Finish actions in `onboarding.svelte` to `.lv-btn-tool` capsules with vector glyphs.
-  - Upgraded Undo, Clear, and Image Retry buttons in `occlusion-editor.svelte` to Bento tools with vector icons (`chevron-left`, `trash`, `refresh`).
-  - Removed unused `LvKbd` imports in `onboarding.svelte` for 0-warning compilation hygiene.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.86
-
-- **Settings Data Migration & Backup Bento Actions**:
-  - Upgraded Anki connection test, Anki `.apkg` import, `.lvcards` package import, and Obsidian SR import buttons to `.lv-btn-tool` Bento capsules with vector glyphs.
-  - Standardized Persona import/export, data snapshot export, Flashcard V2 check, and log clearance actions.
-- **Challenge Mode Ergonomic Polish**:
-  - Upgraded retry, stop, rating, and finish actions in `challenge-mode.svelte` with Bento vector icons.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.85
-
-- **AI Wizard Preview & Import Bento Standardization**:
-  - Upgraded candidate card preview toggles in the AI Wizard to `.lv-btn-tool` capsules with `<LvIcon name="eye" size={12} />`.
-  - Added vector glyphs to candidate navigation and the commit button.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.84
-
-- **Bento Vector Standardization across Learning & Goals**:
-  - Upgraded action buttons across the Learning page (Return Today, View Plans, Open Exam, Refresh Calendar) with `.lv-btn-tool` rounded Bento pills and vector icons.
-  - Enabled direct "New Goal" button in embedded Learning plan views.
-  - Standardized resume actions in the Exam page and form buttons in the Goals page.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.83
-
-- **Card Detail Drawer Bento Action Polish**:
-  - Upgraded version comparison, diff generation, and retry buttons in `card-detail.svelte` to `.lv-btn-tool` capsules with monochromatic vector icons (`swap`, `refresh`, `chevron-up/down`).
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.82
-
-- **Card Studio Preview Action Vectorization**:
-  - Upgraded the card preview toggle button ("Show Answer" / "Back to Front") in `quick-card.svelte` to a `.lv-btn-tool` Bento capsule with `<LvIcon name="eye" size={13} />`.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.81
-
-- **Deck Scope Banner Bento Styling**:
-  - Upgraded the deck filter status bar at the top of the Card Manager to a frosted Bento surface (`--lv-primary-soft`) with inner bevel shine.
-  - Upgraded the clear-filter action to a `.lv-btn-tool` capsule with a monochromatic `<LvIcon name="close" size={12} />`.
-- **Select-All Vector Action Enhancement**:
-  - Standardized the Select All / Deselect All button with a clean checkmark icon and Bento pill layout.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.80
-
-- **Active Deck Luminescence & Card Count Polish**:
-  - Injected `.lv-today-deck--has-cards` visual highlights and soft glow states for decks containing active cards.
-- **Card Manager Vector Arrow Standardization**:
-  - Replaced legacy text `›` characters in card rows with `<LvIcon name="chevron-right" size={12} />`.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.79
-
-- **Feature Matrix Bento Tags**:
-  - Added quick capability tags to the 4 core workspace cards (Search/Batch, Cloze Ctrl+H/AI, Match/Speed, Exam Countdown/Cram), making workflow capabilities obvious at a glance.
-- **Compact Metric Strip**:
-  - Streamlined the daily metrics row to reduce vertical footprint by 40%, letting primary workspaces take center stage.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.78
-
-- **Zero Due Badge Graceful Hiding**:
-  - Hides the distracting "0" badge in the sidebar when all reviews are complete, displaying badge counts only when actionable cards exist.
-- **Universal New Card Flow**:
-  - Upgraded sidebar CTA label to "New Flashcard", reflecting support for cloze, Q&A, and AI synthesis.
-- **Strict Theme Style Isolation for Primary Buttons**:
-  - Enforced `!important` color and gradient locks on `.lv-btn-primary` to block external dark-green theme overrides.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.77
-
-- **Feature Matrix Bento Grid for Dashboard**:
-  - Direct 2x2 Bento workspace navigation on the home page: Card Library, Card Studio (Ctrl+H / AI), Practice & Challenges (Pairing / Speed), and Exam Plans.
-  - Eliminates the cognitive fatigue of wondering "what can this plugin do and where do I start?".
-- **Dual Action Pathways in Hero**:
-  - In addition to standard recommendations, provides dedicated "Free Review" and "Create Cards" launch capsules when there are no scheduled due cards.
-- **Smart Empty Deck Collapsing**:
-  - Automatically groups 0-card empty decks into a collapsible bar, highlighting active decks with due cards.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.76
-
-- **Bento Vector Badge Standardization for Maintenance Page**:
-  - Upgraded debt row action buttons (Suspend/Resume, Add to Repair, Acknowledge Source Health, Open Source, Edit Card) with `.lv-btn-tool` rounded Bento pills and monochromatic vector icons.
-  - Added vector icons to the Batch Repair Preview and Last Repair Rollback bars.
-- **Responsive Layout Protection**:
-  - Enhanced flex-wrap and responsive spacing in `.lv-maint-row` to prevent button overflowing or clipping on mobile viewports.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.75
-
-- **Responsive Dual-Column Shortcut Help Overlay**:
-  - Upgraded the shortcut help overlay (`?`) with a 2-column responsive grid, eliminating vertical scrolling across 16+ shortcut guides.
-  - Added self-referencing `?` toggle documentation and refined tactile keyboard badge styles.
-- **Bento Vector Styling for Recovery Center**:
-  - Standardized action buttons (AI Job Resume, Open Inbox, Open Maintenance) with monochromatic vector icons and rounded Bento pills.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.74
-
-- **Capture Inbox Live Search & Filter**:
-  - Added a search filter bar to the inbox actions header, supporting instant fuzzy filtering of extracted card material by text content and block IDs.
-- **Bento Vector Action Bar for Inbox**:
-  - Upgraded batch actions (Stage, Select, Dismiss, Make Cards, Undo, Restore, Remove) with monochromatic vector icons and rounded Bento pills (`.lv-btn-tool`).
-  - Upgraded row "Open Source" buttons with `<LvIcon name="eye" size={12} />`.
-- **Verification**:
-  - 1949 tests across 243 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.73
-
-- **Settings Category Anchor Rail (Sticky Settings Rail)**:
-  - Added a horizontal Bento chip rail under the settings search box (Rhythm, Answer, Voice, AI Providers, Import/Export, Backup).
-  - Enables smooth scrolling to any target section, eliminating cognitive fatigue across complex configurations.
-- **Component Capability**:
-  - `LvSection.svelte` now accepts an optional `id` prop for precise layout anchoring.
-- **Verification**:
-  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.72
-
-- **Split Diff Layout for Card Editor**:
-  - Upgraded `card-editor.svelte` with a responsive two-column grid in wide viewports (left for live editing, right for instant diff inspection).
-  - Eliminates vertical scrolling between edits and visual changes, while naturally reflowing into vertical stacking on narrow devices.
-- **Verification**:
-  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.71
-
-- **Zen Mode Floating Action Island**:
-  - Upgraded the Zen exit button into a sleek, frosted glass floating pill bar (`.lv-zen-island`).
-  - Allows in-place font scale adjustments (`A- / A+`), card starring (`⭐`), and quick memo editing (`💡`) without breaking focus or leaving Zen Mode.
-- **Pairing Game Match Pop & Fade Animation**:
-  - Matching cards now exhibit an elegant `scale(1.04)` spring pop and smooth fade-out upon successful connection.
-- **Verification**:
-  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.70
-
-- **Phase S2 Core Interaction Delivery**:
-  - Single-choice and judgment quiz options now feature a 100ms answer feedback cadence, providing immediate tactile response before smoothly revealing the explanation.
-  - Added a dedicated "Sprint Review" launch button on the Dashboard exam banner.
-  - Enhanced Done screen next actions to allow immediate starred card drill even when no cards were skipped or forgotten.
-- **Verification**:
-  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.69
-
-- **Editor Style Isolation & Focus-Visible Containment**:
-  - Identified and fixed an unscoped `:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); }` global rule from legacy stylesheets.
-  - Confined all focus-ring and high-contrast border styles strictly within `:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz) :focus-visible`, eliminating any outline leakage onto native document titles or paragraphs.
-- **Verification**:
-  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
-
-## Previous Update: v0.210.68
-
-- **Full Scheme A Indigo / Amber Palette Deployment**:
-  - Replaced legacy red branding with modern Periwinkle Indigo (`#6366F1`, dark `#818CF8`) and warm amber gold (`#F59E0B`), harmonizing with the Lv ecosystem aesthetic.
-  - Aligned primary CTA buttons (`+ Manual Card`, `Start Review`) to unified glowing purple gradients, eliminating external teal/green clashes.
-  - Restructured deck lists: empty deck buttons now use calm neutral slate borders instead of misleading red alert outlines.
-- **Verification**:
-  - 1948 tests across 242 test suites 100% passing; 18/18 isolated E2E tests passing; production build and smoke tests green.
+Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by SiYuan's native FSRS algorithm with optional, auditable AI assistance. The current version is **v0.216.3** (2026-10-29), delivering queue exclusion combining, active session card filtering, and countdown resume guard decoupling. See [GitHub Release](https://github.com/ai68298100/siyuan-lv-cards/releases/tag/v0.216.3) for the package and publishing status.
+
+## What's New in v0.216.3 (2026-10-29)
+
+- **Queue Exclusion & Active Session Filtering Decoupled (`core/review-queue-pipeline.ts`, TSK-08)**:
+  - Extracted `combineExcludedCardIDs`: unified merging and deduplication of reviewed and quality-excluded card IDs.
+  - Extracted `filterActiveSessionCards`: $O(1)$ set-based filtering for skipped and suspended cards.
+  - Extracted `mergeQualityExcludedCardIDs`: safe accumulation of invalid card IDs.
+  - Added 3 unit tests in `tests/review-queue-pipeline.spec.ts`.
+- **Countdown Resume Guard Decoupled (`core/review-countdown.ts`)**:
+  - Extracted `shouldRestartCountdownOnResume`: pure function verifying question-side and face-ready conditions before restarting timers.
+  - Added 2 unit tests in `tests/review-countdown.spec.ts`.
+- **Quality Gates**:
+  - 2314 tests across 289 test suites 100% passing; 0 TypeScript errors; 0 Svelte diagnostics; distribution smoke tests green.
+
+<details>
+<summary>📜 View Historical Release Notes (v0.216.2 and earlier)</summary>
+
+### v0.216.2 (2026-10-29)
+- **CanRate Guard & Rating Haptics (`core/card-actions.ts` & `core/haptic.ts`)**: Extracted `canRateCurrentCard` and `getRatingHapticPattern` for unified rating pre-check and vibration patterns.
+- **Review Root Focus Controller (`core/card-interactions.ts`)**: Extracted `focusReviewRootOrCard` for standardized focus restoration.
+
+### v0.216.1 (2026-10-29)
+- **Container Event Boundary Guard (`core/card-interactions.ts`)**: Extracted `isEventInsideContainer` for unified container target detection.
+- **Reset Session Progress Payload (`core/session-state.ts`)**: Extracted `createResetSessionProgress` for normalized state reset.
+
+### v0.216.0 Milestone (2026-10-29)
+- **Card Face Ready & Scope Normalization (`core/card-face.ts` & `core/scope-preset.ts`)**: Extracted `isCardFaceReady` and `normalizeScopeKey`.
+- **HPath Query SQL Builder (`core/review-breadcrumbs.ts`)**: Extracted `buildHPathQuerySql` with SQL injection defense.
+- **Verification**: Over 2300 unit tests passing.
+
+### v0.215.0 Milestone (2026-10-29)
+- **Queue Slicing & Last Answered Snapshot (`core/card-actions.ts`)**: Extracted `createLastAnsweredSnapshot` and `sliceQueueAfterCurrent`.
+- **I18n Path Resolution (`core/return-check.ts`)**: Safe nested path dictionary reading.
+
+### v0.214.0 Milestone (2026-10-29)
+- **Main Review Component Lines Reduced from 3412 to 2342 Lines (-1070 lines)**.
+- **8 Dedicated Subcomponents Extracted**: `ReviewReadyDashboard`, `ReviewToolbar`, `ReviewRatingBar`, `ReviewErrorTagBar`, `ReviewCountdownBanner`, `ReviewRescheduleModal`, `ReviewSessionPrefs`, `ReviewContextDrawer`.
+
+### v0.212.4 (2026-10-28)
+- **ReviewReadyDashboard Component Modularization (`ReviewReadyDashboard.svelte`)**: Scope quick-switch pill, quality exclusion alerts, bento grid (cram, authoring, deck management).
+
+### v0.211.0 Milestone (2026-10-28)
+- **Two-tier Progressive Learning Scheduling (SuperMemo philosophy)**: `shouldBypassFsrs` protocol separating raw extracts from FSRS, `Ctrl+D` dismiss archive.
+- **SuperBlock Flashcards 100% Aligned**: First block as question, remaining blocks as answer with answer-side masking.
+- **SVG / Excalidraw Canvas Direct Editing**: Double-click canvas to zoom into native Protyle editor.
+- **Design Token Coverage Reached 97.4%**.
 
 > For complete historical release notes, please see [CHANGELOG.md](./CHANGELOG.md).
+</details>
 
 ## 📸 Screenshots
 
@@ -506,18 +80,16 @@ Lv Cards turns blocks worth remembering into traceable flashcards, scheduled by 
 
 ## ✨ Features
 
-| Module | Highlights |
+| Module | Highlights & Purpose |
 |---|---|
-| 🃏 **Review** | 4/3-button rating with interval preview · source-context preview · hint ladder · forgotten-card batch re-queue · undo · type-in grading (LCS diff) · dictation (TTS) · multiple choice · image occlusion · mixed question-type rotation · timeout mode · session resume |
-| ✍️ **Create** | Block cards (multi-select) · cloze from selection · quick Q/A · marker scanning · AI batch generation (12-template prompt registry + provider fallback) · occlusion editor · manual editing with pre-save diff |
-| 🧭 **Learning journey** | Material inbox → authoring workbench · learning goals (three-step chain + daily budget) · content lifecycle panel · entry context · wrap-up reasons · recovery banner · next-step suggestions |
-| 📊 **Stats & diagnostics** | Heatmap · **study calendar with load forecast** · **deck dashboard** (per-deck due/retention/leech ranking) · streak · retention curve · capability share · error reasons · AI batch quality |
-| 🗂 **Manage** | Paged browsing with search & filters · card detail drawer (content/source/learning record/issues — four facets + version tracking) · batch operations · export CSV / Obsidian SR · maintenance debt queue |
-| 🎓 **Exam** | Daily targets from deadline · cram mode · post-exam report |
-| 📦 **Share & migrate** | Obsidian SR import/export with deck mapping & fingerprint dedup · Anki `.apkg` import when the desktop host provides `node:sqlite` and `node:zlib` · deck-level share pack export · JSON/CSV review log export & import |
-| ⌨ **⌘K palette** | Actions + navigation, keyboard-first access to every entry point |
-| 📅 **Weekly report** | Auto-write last week's review summary to a SiYuan document (opt-in) |
-| 🛡 **AI safety** | Preflight checks · prompt-injection isolation · context budget planner · emergency kill switch |
+| 🃏 **Active Recall & FSRS** | Native FSRS scheduling with next-due preview · source-context preview & drawer · hierarchical breadcrumbs · hint ladder (4 levels) · forgotten-card short loop requeue · undo · session resume |
+| ✍️ **Deep Note Authoring** | Block-level card creation (multi-select) · cloze deletion (`==`) · outline tree cloze · SuperBlock Q/A · syntax scanner (`term :: definition`) · AI batch generation with 12 prompt templates |
+| 🎯 **Interactive Question Types** | Type-in grading with LCS character diff · TTS dictation & read-aloud · local distractor multiple-choice & true/false · image & canvas occlusion · double-click SVG/Excalidraw canvas editing · mixed rotation |
+| ⏱️ **Flow & Anti-Fatigue** | Session duration budget with countdown HUD · 25-minute Pomodoro alert · timeout modes · 4-branch interruption recovery · long-return checkup & load relief choices |
+| 🗂 **Card Management & Debt Governance** | Paged browsing with multi-filter · 4-facet detail drawer (content/source/history/diagnostics) · leech warning & debt queue · private memo notes · one-click dismiss (`Ctrl+D`) & archive |
+| 📊 **Stats & Goal Tracking** | Study calendar with load forecast · deck dashboard with due/retention ranking · retention & interval curves · streak celebration · automated weekly review report |
+| 🛡 **Auditable AI** | Works offline or without AI · 4-gate safety chain (zero-token preflight, prompt injection sandbox, context budget truncation, emergency kill-switch) · manual card-by-card approval |
+| 📦 **Ecosystem & Data Mobility** | Seamless Lv ecosystem bridge (Speed Switch, Checkin, Glean, Contacts) · two-way Obsidian SR import/export with deck mapping · Anki `.apkg` import · full CSV/JSON log export |
 
 ## 🚀 Install
 
@@ -550,6 +122,23 @@ Full design docs in [docs/](./docs/README.md) (Chinese). The [R54 interactive pr
 | P1 | Starline UI overhaul (page heads / complete states / micro-motion / narrow screen / review polish) | ✅ v0.208.0 |
 | P2 | Full Android SiYuan host matrix | Pending |
 | P2 | Templates & fields | Deferred |
+
+## 🤝 Lv Ecosystem Plugins
+
+Each plugin in the Lv series is standalone and can be used independently or in concert:
+
+| Plugin | Brief Description | GitHub Repo |
+|---|---|---|
+| [Lv Speed Switch](https://github.com/ai68298100/siyuan-speed-switch) | Unified workspace navigation and context platform connecting tabs, snippets, and workspaces. | [ai68298100/siyuan-speed-switch](https://github.com/ai68298100/siyuan-speed-switch) |
+| [Lv Checkin](https://github.com/ai68298100/siyuan-checkin) | Local-first habit and goal check-in workbench with statistics, reminders, and note linking. | [ai68298100/siyuan-checkin](https://github.com/ai68298100/siyuan-checkin) |
+| [Lv Contacts](https://github.com/ai68298100/siyuan-contacts) | Contact and relationship management in SiYuan with organization groups and birthday reminders. | [ai68298100/siyuan-contacts](https://github.com/ai68298100/siyuan-contacts) |
+| [Lv Glean](https://github.com/ai68298100/siyuan-glean) | Web clipper and inbox organizer with read-later triage and progressive extraction. | [ai68298100/siyuan-glean](https://github.com/ai68298100/siyuan-glean) |
+| [Lv Exam (Beta)](https://github.com/ai68298100/siyuan-exam) | Exam preparation workbench supporting question bank import, practice, recitation, and mock exams. | [ai68298100/siyuan-exam](https://github.com/ai68298100/siyuan-exam) |
+| [Lv Home (Beta)](https://github.com/ai68298100/siyuan-home) | Household and family inventory, member records, warranties, and expiration tracking. | [ai68298100/siyuan-home](https://github.com/ai68298100/siyuan-home) |
+| [Lv Cards (Beta)](https://github.com/ai68298100/siyuan-lv-cards) | Full-lifecycle flashcard memory engine with native FSRS scheduling and auditable AI. | [ai68298100/siyuan-lv-cards](https://github.com/ai68298100/siyuan-lv-cards) |
+| [Lv Common (Beta)](https://github.com/ai68298100/xiaolv-common) | Fast insertion of reusable text, templates, code snippets, and variable expansion. | [ai68298100/xiaolv-common](https://github.com/ai68298100/xiaolv-common) |
+
+QQ Group: **871707735**
 
 ## 🙏 Credits
 
