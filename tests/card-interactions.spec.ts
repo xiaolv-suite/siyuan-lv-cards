@@ -8,6 +8,7 @@ import {
     resolveEditorNavigationBlockId,
     createZoomedImageState,
     shouldRevealOnContainerClick,
+    isEventInsideContainer,
 } from "@/core/card-interactions";
 
 describe("card-interactions 卡片内容点击、画板编辑与回看切换", () => {
@@ -171,6 +172,26 @@ describe("card-interactions 卡片内容点击、画板编辑与回看切换", (
 
             const btn = document.createElement("button");
             expect(shouldRevealOnContainerClick({ ...base, target: btn })).toBe(false);
+        });
+    });
+
+    describe("isEventInsideContainer", () => {
+        it("目标为容器子节点时返回 true", () => {
+            const container = document.createElement("div");
+            const child = document.createElement("span");
+            container.appendChild(child);
+
+            expect(isEventInsideContainer(container, child)).toBe(true);
+            expect(isEventInsideContainer(container, container)).toBe(true);
+        });
+
+        it("目标为外部节点、空或非 Node 时返回 false", () => {
+            const container = document.createElement("div");
+            const external = document.createElement("span");
+
+            expect(isEventInsideContainer(container, external)).toBe(false);
+            expect(isEventInsideContainer(container, null)).toBe(false);
+            expect(isEventInsideContainer(null, external)).toBe(false);
         });
     });
 });

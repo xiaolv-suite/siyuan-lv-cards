@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.216.1 2026-10-29 · 容器事件边界判定与重置会话载荷构建解耦落地
+
+- **容器内部事件判定统一（`core/card-interactions.ts`，TSK-08 持续深化）**：
+  - 提炼 `isEventInsideContainer`：纯函数标准化判断目标是否为指定容器（如复习根面板）或其子 Node 节点；
+  - 统一 `onWindowKeydown`、`onPanelPointerDown` 与快捷键调度上下文中的容器范围检测；
+  - 在 `tests/card-interactions.spec.ts` 中新增 2 项单元测试；
+- **清空重置会话进度载荷构建解耦（`core/session-state.ts`）**：
+  - 提炼 `createResetSessionProgress`：纯函数标准化清空场景的已复习、已跳过卡片数组与计数器结构；
+  - 在 `recoveryAct("end")` 中接入，消除了组件层残留的计数器直接实例化；
+  - 在 `tests/session-state.spec.ts` 中新增单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2304 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.216.0 2026-10-29 · 卡面就绪判定/范围规范化与路径查询SQL构造解耦里程碑
 
 - **卡面就绪判定与范围键规范化解耦（`core/card-face.ts` & `core/scope-preset.ts`，TSK-08 持续深化）**：

@@ -168,4 +168,21 @@ export function recordSessionEndReason(
     return null;
 }
 
+export interface ResetSessionProgress {
+    reviewedIDs: string[];
+    skippedIDs: string[];
+    counters: SessionState["counters"];
+}
+
+/**
+ * 构造用于清空重置的会话进度对象
+ */
+export function createResetSessionProgress(): ResetSessionProgress {
+    return {
+        reviewedIDs: [],
+        skippedIDs: [],
+        counters: { new: 0, review: 0, forget: 0, skip: 0 },
+    };
+}
+
 

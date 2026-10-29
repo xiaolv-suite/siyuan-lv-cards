@@ -131,3 +131,13 @@ export function shouldRevealOnContainerClick(params: ContainerClickGuardParams):
     return !params.showAnswer && params.hasCurrent && params.faceReady;
 }
 
+/**
+ * 判定事件触发目标是否位于指定容器元素内部
+ */
+export function isEventInsideContainer(
+    container: HTMLElement | null | undefined,
+    target: EventTarget | null | undefined
+): boolean {
+    return Boolean(container && target instanceof Node && container.contains(target));
+}
+

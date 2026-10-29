@@ -15,10 +15,10 @@
     import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, shouldRestartTimeoutOnOverrides, type SessionVariantOption } from "@/core/session-prefs";
-    import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, type EndReason } from "@/core/session-state";
+    import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, createResetSessionProgress, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatNextDueByRating } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, createEmptySessionCounters, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel, normalizeScopeKey } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -35,7 +35,7 @@
     import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
-    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, type ZoomedImageState } from "@/core/card-interactions";
+    import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, isEventInsideContainer, type ZoomedImageState } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
@@ -1414,7 +1414,7 @@
      * 以「离开面板 ≥15s 后重新点入」为编辑返回信号，节流刷新当前卡 */
     let lastPanelPointer = 0;
     function onPanelPointerDown(e: PointerEvent) {
-        if (!current || !(e.target instanceof Node) || !rootEl?.contains(e.target)) {
+        if (!current || !isEventInsideContainer(rootEl, e.target)) {
             return;
         }
         resumePausedSession();
@@ -1453,7 +1453,7 @@
      * 焦点在面板内时事件会冒泡到 window 造成双触发（如 [ 开回看又立即关闭）。
      * 约定：容器通道处理焦点在面板内的按键；window 通道只处理面板外的。 */
     function onWindowKeydown(e: KeyboardEvent) {
-        if (rootEl && e.target instanceof Node && rootEl.contains(e.target)) {
+        if (isEventInsideContainer(rootEl, e.target)) {
             return;
         }
         onKeydown(e);
@@ -1505,7 +1505,7 @@
             hasCurrent: Boolean(current),
             hasLastAnswered: Boolean(lastAnswered),
             ratingStyle: eff().ratingStyle,
-            isTargetInsideRoot: Boolean(rootEl && e.target instanceof Node && rootEl.contains(e.target)),
+            isTargetInsideRoot: isEventInsideContainer(rootEl, e.target),
         });
 
         if (!action) return;
@@ -1615,13 +1615,13 @@
         // not offer an undo that would restore cards from that discarded run.
         history = [];
         clearPendingRequeues();
-        reviewedIDs = [];
-        sessionSkipped = [];
-        const empty = createEmptySessionCounters();
-        sessionNew = empty.new;
-        sessionReview = empty.review;
-        sessionForget = empty.forget;
-        sessionSkip = empty.skip;
+        const resetProgress = createResetSessionProgress();
+        reviewedIDs = resetProgress.reviewedIDs;
+        sessionSkipped = resetProgress.skippedIDs;
+        sessionNew = resetProgress.counters.new;
+        sessionReview = resetProgress.counters.review;
+        sessionForget = resetProgress.counters.forget;
+        sessionSkip = resetProgress.counters.skip;
         loadQueue();
     }
 

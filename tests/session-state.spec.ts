@@ -9,6 +9,7 @@ import {
     createSessionSnapshot,
     restoreSessionProgress,
     recordSessionEndReason,
+    createResetSessionProgress,
     END_REASONS,
 } from "../src/core/session-state";
 
@@ -144,6 +145,16 @@ describe("session-state BI-8：收工原因", () => {
 
         it("无会话状态返回 null", () => {
             expect(recordSessionEndReason(null, "manual", () => {})).toBeNull();
+        });
+    });
+
+    describe("createResetSessionProgress", () => {
+        it("正确生成清空状态的会话进度载荷", () => {
+            expect(createResetSessionProgress()).toEqual({
+                reviewedIDs: [],
+                skippedIDs: [],
+                counters: { new: 0, review: 0, forget: 0, skip: 0 },
+            });
         });
     });
 });
