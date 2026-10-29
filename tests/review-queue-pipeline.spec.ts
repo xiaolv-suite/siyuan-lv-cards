@@ -4,6 +4,9 @@ import {
     calculateReviewAccuracy,
     toggleCardStar,
     formatStarToggleFeedback,
+    combineExcludedCardIDs,
+    filterActiveSessionCards,
+    mergeQualityExcludedCardIDs,
     type QueuePipelineCard,
 } from "@/core/review-queue-pipeline";
 
@@ -122,6 +125,24 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             expect(fb.message).toBe("已取消星标");
             expect(fb.toastDuration).toBe(1500);
             expect(fb.hapticPattern).toBeUndefined();
+        });
+    });
+
+    describe("combineExcludedCardIDs & filterActiveSessionCards & mergeQualityExcludedCardIDs", () => {
+        it("combineExcludedCardIDs 合并并去重排除卡片 ID", () => {
+            const res = combineExcludedCardIDs(["c1", "c2"], ["c2", "c3"]);
+            expect(res).toEqual(["c1", "c2", "c3"]);
+        });
+
+        it("filterActiveSessionCards 过滤已跳过和今日不学的卡片", () => {
+            const cards = [{ cardID: "c1" }, { cardID: "c2" }, { cardID: "c3" }];
+            const res = filterActiveSessionCards(cards, id => id === "c1", ["c2"]);
+            expect(res).toEqual([{ cardID: "c3" }]);
+        });
+
+        it("mergeQualityExcludedCardIDs 正确提取并合并有效 invalid 卡片 ID", () => {
+            const res = mergeQualityExcludedCardIDs(["q1"], [{ cardID: "q2" }, { cardID: undefined }, { cardID: "q1" }]);
+            expect(res).toEqual(["q1", "q2"]);
         });
     });
 });

@@ -118,3 +118,36 @@ export function formatStarToggleFeedback(isStarred: boolean): StarToggleFeedback
         hapticPattern: isStarred ? 15 : undefined,
     };
 }
+
+/**
+ * 合并内核复习排除卡片 ID 集合（已评分 + 结构质量排除）
+ */
+export function combineExcludedCardIDs(
+    reviewedIDs: readonly string[],
+    qualityExcludedIDs: readonly string[]
+): string[] {
+    return [...new Set([...reviewedIDs, ...qualityExcludedIDs])];
+}
+
+/**
+ * 本地过滤当前会话已跳过或被用户标记为今天不学的卡片
+ */
+export function filterActiveSessionCards<T extends { cardID: string }>(
+    cards: readonly T[],
+    isSuspended: (id: string) => boolean,
+    skippedIDs: readonly string[]
+): T[] {
+    const skipSet = new Set(skippedIDs);
+    return cards.filter(c => !isSuspended(c.cardID) && !skipSet.has(c.cardID));
+}
+
+/**
+ * 合并新发现的质量不合规卡片 ID
+ */
+export function mergeQualityExcludedCardIDs(
+    currentExcluded: readonly string[],
+    newInvalid: readonly { cardID?: string }[]
+): string[] {
+    const validNewIds = newInvalid.map(item => item.cardID).filter((id): id is string => Boolean(id));
+    return [...new Set([...currentExcluded, ...validNewIds])];
+}

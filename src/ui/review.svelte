@@ -28,12 +28,12 @@
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
     import { deriveReturnBanner } from "@/core/return-triage";
-    import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback } from "@/core/review-queue-pipeline";
+    import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback, combineExcludedCardIDs, filterActiveSessionCards, mergeQualityExcludedCardIDs } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, mapSwipeActionToOutcome, extractSingleTouchCoords, extractChangedTouchCoords } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction } from "@/core/review-shortcuts";
-    import { createReviewCountdown, formatCountdown, isCountdownEligible, type ReviewCountdownController } from "@/core/review-countdown";
+    import { createReviewCountdown, formatCountdown, isCountdownEligible, shouldRestartCountdownOnResume, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, isEventInsideContainer, focusReviewRootOrCard, type ZoomedImageState } from "@/core/card-interactions";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
@@ -473,7 +473,7 @@
         if (!sessionPaused) return;
         sessionPaused = false;
         scheduleRequeueTimer();
-        if (!showAnswer && faceReady) restartTimeout(pausedTimeoutSeconds);
+        if (shouldRestartCountdownOnResume(showAnswer, faceReady)) restartTimeout(pausedTimeoutSeconds);
         pausedTimeoutSeconds = undefined;
     }
 
@@ -549,7 +549,7 @@
             sessionModalWasOpen = false;
             if (sessionPaused) return;
             returnFocus();
-            if (!showAnswer && faceReady) restartTimeout(sessionModalTimeoutSeconds);
+            if (shouldRestartCountdownOnResume(showAnswer, faceReady)) restartTimeout(sessionModalTimeoutSeconds);
             sessionModalTimeoutSeconds = undefined;
         }
     });
@@ -772,14 +772,14 @@
         loading = true;
         errorMsg = "";
         try {
-            const kernelReviewedIDs = [...new Set([...reviewedIDs, ...qualityExcludedCardIDs])];
+            const kernelReviewedIDs = combineExcludedCardIDs(reviewedIDs, qualityExcludedCardIDs);
             const data = await getRiffDueCardsForScope(scopeKey, kernelReviewedIDs);
             if (seq !== queueSeq) {
                 return; // 旧响应：不改队列、卡面、计数或计时器
             }
             let cards = data.cards ?? [];
             // 「今天不学」+ 本场已跳过的卡本地过滤（内核调度不受影响，AJ9）
-            cards = cards.filter(c => !ctx.isSuspendedToday(c.cardID) && !sessionSkipped.includes(c.cardID));
+            cards = filterActiveSessionCards(cards, ctx.isSuspendedToday, sessionSkipped);
             // 先验证源块的最终 Markdown，避免没有有效挖空标记的历史坏卡在问题态直接露出答案。
             // 此处只从本场展示队列排除；不评分、不跳过、不修改真实 due。
             if (cards.length > 0 && typeof siyuanApi.sqlQuery === "function") {
@@ -792,7 +792,7 @@
                 if (seq !== queueSeq) return;
                 cards = quality.valid;
                 if (quality.invalid.length > 0) {
-                    qualityExcludedCardIDs = [...new Set([...qualityExcludedCardIDs, ...quality.invalid.map(item => item.cardID).filter(Boolean)])];
+                    qualityExcludedCardIDs = mergeQualityExcludedCardIDs(qualityExcludedCardIDs, quality.invalid);
                     announce(t.review.qualityExcluded.replace("${n}", String(qualityExcludedCardIDs.length)), "polite");
                 }
             }

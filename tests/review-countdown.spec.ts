@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createReviewCountdown, formatCountdown, isCountdownEligible } from "../src/core/review-countdown";
+import { createReviewCountdown, formatCountdown, isCountdownEligible, shouldRestartCountdownOnResume } from "../src/core/review-countdown";
 
 describe("review-countdown 复习倒计时控制器（AR-7 壁钟校准）", () => {
     describe("formatCountdown 文本格式化", () => {
@@ -154,6 +154,18 @@ describe("review-countdown 复习倒计时控制器（AR-7 壁钟校准）", () 
             expect(isCountdownEligible({ ...base, sessionPaused: true })).toBe(false);
             expect(isCountdownEligible({ ...base, showPauseModal: true })).toBe(false);
             expect(isCountdownEligible({ ...base, showSessionOptionsModal: true })).toBe(false);
+        });
+    });
+
+    describe("shouldRestartCountdownOnResume", () => {
+        it("问题态且卡面就绪时返回 true", () => {
+            expect(shouldRestartCountdownOnResume(false, true)).toBe(true);
+        });
+
+        it("已翻面或卡面未就绪时返回 false", () => {
+            expect(shouldRestartCountdownOnResume(true, true)).toBe(false);
+            expect(shouldRestartCountdownOnResume(false, false)).toBe(false);
+            expect(shouldRestartCountdownOnResume(true, false)).toBe(false);
         });
     });
 });

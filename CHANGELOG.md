@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.216.3 2026-10-29 · 排除卡片合并/活跃卡片过滤与恢复倒计时条件解耦落地
+
+- **队列排除卡片合并与活跃卡片过滤解耦（`core/review-queue-pipeline.ts`，TSK-08 持续深化）**：
+  - 提炼 `combineExcludedCardIDs`：标准化合并已复习与质量排除卡片集合；
+  - 提炼 `filterActiveSessionCards`：使用 Set 将跳过和今日不学卡片的过滤优化至 O(1) 级别；
+  - 提炼 `mergeQualityExcludedCardIDs`：安全合并新识别的质量异常卡片；
+  - 在 `tests/review-queue-pipeline.spec.ts` 中新增 3 项单元测试；
+- **会话恢复重启倒计时前置判定解耦（`core/review-countdown.ts`）**：
+  - 提炼 `shouldRestartCountdownOnResume`：纯函数统一校验问题态与题面就绪；
+  - 在 `tests/review-countdown.spec.ts` 中新增 2 项单元测试；
+- **主复习文件规模与工程指标**：
+  - 全库扩展至 289 个测试文件、2314 项测试 100% 通过；TypeScript 类型检查 0 错误；Svelte 诊断 0 错误 0 警告；构建与发布包 smoke-dist 全部通过。
+
+
 ## v0.216.2 2026-10-29 · 评分前置条件校验/评级触感波形与焦点控制器解耦落地
 
 - **卡片可评分判定与评级触感波形解耦（`core/card-actions.ts` & `core/haptic.ts`，TSK-08 持续深化）**：

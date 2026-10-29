@@ -80,6 +80,13 @@ export function isCountdownEligible(params: CountdownStartEligibilityParams): bo
 }
 
 /**
+ * 判定会话恢复或模态窗口关闭时是否满足重启倒计时条件
+ */
+export function shouldRestartCountdownOnResume(showAnswer: boolean, faceReady: boolean): boolean {
+    return !showAnswer && faceReady;
+}
+
+/**
  * 创建全功能复习倒计时状态机控制器
  */
 export function createReviewCountdown(options: ReviewCountdownOptions): ReviewCountdownController {
