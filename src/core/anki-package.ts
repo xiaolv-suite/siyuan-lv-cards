@@ -237,18 +237,19 @@ export function parseAnkiPackage(pkgBytes: Uint8Array, openSqlite: (dbBytes: Uin
 
     // notes
     const notes: AnkiNote[] = [];
+    const guidByNoteId = new Map<string, string>();
     try {
         for (const row of db.all("SELECT id, guid, mid, mod, tags, flds FROM notes") as Record<string, unknown>[]) {
             const r = mapNoteRow(row, knownModelIds);
             if (r.note) notes.push(r.note);
+            if (row.id !== undefined && row.guid !== undefined) {
+                guidByNoteId.set(str(row.id), str(row.guid));
+            }
             issuesIn(r);
         }
     } catch (e) {
         issues.push(`notes 表读取失败：${e instanceof Error ? e.message : String(e)}`);
     }
-    const guidByNoteId = new Map(
-        (db.all("SELECT id, guid FROM notes") as Record<string, unknown>[]).map(r => [str(r.id), str(r.guid)]),
-    );
 
     // cards
     const cards: AnkiCard[] = [];

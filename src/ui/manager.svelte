@@ -1297,6 +1297,7 @@
         z-index: var(--lv-z-review-peek);
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: var(--lv-sp-2);
         border: 1px solid var(--lv-primary-border);
         border-radius: var(--lv-r-m);

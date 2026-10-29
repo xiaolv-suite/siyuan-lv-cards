@@ -144,9 +144,15 @@
                     }
                 }
                 positionOverlay();
-                // 图片/画布加载完成后尺寸才稳定，再校一次；窗口缩放经帧率节流同步
-                image.addEventListener("load", throttledPositionOverlay);
-                window.addEventListener("resize", throttledPositionOverlay);
+                // 图片/画布加载完成后尺寸才稳定，再校一次；窗口缩放经帧率节流同步（防多次重试重复监听）
+                if (image) {
+                    image.removeEventListener("load", throttledPositionOverlay);
+                    image.addEventListener("load", throttledPositionOverlay);
+                }
+                if (!resizeListening) {
+                    window.addEventListener("resize", throttledPositionOverlay);
+                    resizeListening = true;
+                }
             }
         } catch (e: any) {
             if (!disposed && seq === loadSeq) errorMsg = e?.message ?? String(e);
@@ -155,6 +161,7 @@
         }
     }
 
+    let resizeListening = false;
     onMount(loadPreview);
 
     onMount(() => {
@@ -179,7 +186,10 @@
             image.removeEventListener("load", throttledPositionOverlay);
             image = null;
         }
-        window.removeEventListener("resize", throttledPositionOverlay);
+        if (resizeListening) {
+            window.removeEventListener("resize", throttledPositionOverlay);
+            resizeListening = false;
+        }
     });
 
     async function save() {

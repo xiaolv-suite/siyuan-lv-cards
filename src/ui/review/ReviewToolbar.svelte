@@ -576,4 +576,10 @@
             .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
         }
     }
+    @container (max-width: 740px) {
+        .lv-head-tools {
+            .lv-tool-btn-label { display: none; }
+            .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
+        }
+    }
 </style>

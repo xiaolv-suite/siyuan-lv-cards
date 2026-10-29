@@ -601,6 +601,13 @@
     let suggestedRating = $state<number | null>(null);
     let zenMode = $state(false);
     let answerRevealedAt = 0;
+    let autoSubmitTimer: ReturnType<typeof setTimeout> | null = null;
+    function clearAutoSubmitTimer() {
+        if (autoSubmitTimer) {
+            clearTimeout(autoSubmitTimer);
+            autoSubmitTimer = null;
+        }
+    }
 
     function resetEphemeralQuiz() {
         const s = createInitialEphemeralQuizState();
@@ -917,6 +924,11 @@
     /** 切卡和撤销共用清理，防止上一张的倒计时、答案与异步响应污染新卡。 */
     function resetCardState() {
         stopTimeout();
+        clearAutoSubmitTimer();
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+            activeUtterance = null;
+        }
         choiceRequestSeq++;
         loadSeq++;
         contextRequestSeq++;
@@ -1689,7 +1701,9 @@
         selectedChoiceKeys = res.nextKeys;
         triggerHaptic(res.hapticStrength);
         if (res.shouldAutoSubmit) {
-            setTimeout(() => {
+            clearAutoSubmitTimer();
+            autoSubmitTimer = setTimeout(() => {
+                autoSubmitTimer = null;
                 if (!showAnswer) {
                     submitChoiceAnswer();
                 }
@@ -1716,7 +1730,9 @@
         if (!faceReady || showAnswer || !interactiveQuiz) return;
         userJudgeChoice = val;
         triggerHaptic(10);
-        setTimeout(() => {
+        clearAutoSubmitTimer();
+        autoSubmitTimer = setTimeout(() => {
+            autoSubmitTimer = null;
             if (!showAnswer) {
                 const res = evaluateJudgeQuiz(val, interactiveQuiz.judgeAnswer);
                 if (res) {
@@ -1851,6 +1867,7 @@
     onDestroy(() => {
         isDisposed = true;
         throttledViewportChange.cancel();
+        clearAutoSubmitTimer();
         stopTimeout(); // AJ7：销毁时清理倒计时，防止泄漏
         stopRequeueTimers();
         if (typeof window !== "undefined" && window.visualViewport) {
@@ -2232,6 +2249,7 @@
 
 <style lang="scss">
     .lv-review {
+        container-type: inline-size;
         height: 100%;
         min-height: 0;
         min-width: 0;

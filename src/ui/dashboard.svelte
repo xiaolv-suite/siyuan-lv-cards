@@ -118,10 +118,13 @@
     let dormantCount = $state(0);
     let dormantCandidates = $state<DormantKnowledgeCandidate[]>([]);
     let dormantAwakening = $state(false);
+    let dormantSeq = 0;
 
     async function scanDormantKnowledge() {
+        const seq = ++dormantSeq;
         try {
             const rows = await sqlQuery("SELECT id, markdown, ial FROM blocks WHERE markdown LIKE '%==%==' AND ial NOT LIKE '%custom-riff-decks%' LIMIT 20");
+            if (seq !== dormantSeq) return;
             if (Array.isArray(rows)) {
                 const mapped = rows.map((r: any) => ({
                     id: String(r.id ?? ""),
@@ -129,12 +132,15 @@
                     ial: String(r.ial ?? ""),
                 }));
                 const candidates = findDormantKnowledgeBlocks(mapped, 10);
+                if (seq !== dormantSeq) return;
                 dormantCandidates = candidates;
                 dormantCount = candidates.length;
             }
         } catch {
-            dormantCandidates = [];
-            dormantCount = 0;
+            if (seq === dormantSeq) {
+                dormantCandidates = [];
+                dormantCount = 0;
+            }
         }
     }
 

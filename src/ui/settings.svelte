@@ -4,6 +4,7 @@
     import { MODULE_DEFS } from "@/core/modules";
     import { PERSONA_PRESETS, type PersonaPreset } from "@/core/personas";
     import { confirmDialog, confirmDialogBool } from "@/libs/dialog";
+    import { trapFocus } from "@/libs/focus-trap";
     import type { LvCardsSettings } from "@/core/settings";
     import LvSection from "./kit/LvSection.svelte";
     import LvRow from "./kit/LvRow.svelte";
@@ -834,9 +835,11 @@
             saveBusy = false;
         }
     }
+
+    const isDirty = $derived(JSON.stringify(draft) !== JSON.stringify(ctx.settings));
 </script>
 
-<div class="lv-settings b3-typography">
+<div class="lv-settings b3-typography" use:trapFocus={{ onEscape: requestClose }}>
 
     <!-- T09 三件套（docs/40）：搜索定位 + 本地样例预览（虚构内容，不触真实卡片） -->
     <div class="lv-searchbar">
@@ -1563,7 +1566,13 @@
     {#if saveError}
         <div class="lv-notice lv-notice--warn" role="alert" style="margin-bottom: var(--lv-sp-2)">{saveError}</div>
     {/if}
-    <div class="b3-dialog__action">
+    <div class="b3-dialog__action lv-settings-sticky-footer">
+        {#if isDirty}
+            <span class="lv-settings-dirty-hint ft__smaller ft__on-surface">
+                <span class="lv-dot-warn"></span>
+                <span>{t.settings.unsavedTitle ?? "有未保存的更改"}</span>
+            </span>
+        {/if}
         <button class="b3-button b3-button--cancel" disabled={saveBusy} onclick={requestClose}>{window.siyuan.languages.cancel}</button>
         <div class="fn__space"></div>
         <button class="b3-button lv-btn-primary" disabled={saveBusy} onclick={save}>{saveBusy ? "…" : window.siyuan.languages.confirm}</button>
@@ -1583,6 +1592,36 @@
         box-sizing: border-box;
         max-width: 720px;
         margin: 0 auto;
+
+        .lv-settings-sticky-footer {
+            position: sticky;
+            bottom: 0;
+            z-index: var(--lv-z-sticky, 100);
+            background: color-mix(in srgb, var(--lv-color-surface) 94%, transparent);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            margin: var(--lv-sp-4) calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1);
+            padding: var(--lv-sp-3) var(--lv-sp-4);
+            border-top: 1px solid var(--lv-border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: var(--lv-sp-2);
+        }
+        .lv-settings-dirty-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
+            margin-right: auto;
+            color: var(--lv-color-warning);
+        }
+        .lv-dot-warn {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--lv-color-warning);
+            display: inline-block;
+        }
 
         .b3-dialog__action { justify-content: flex-end; }
         .lv-settings-nav-rail {
