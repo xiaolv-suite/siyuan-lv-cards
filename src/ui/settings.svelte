@@ -34,6 +34,7 @@
     // Obsidian SR 导入（v0.202.0）：块级解析 → 计划（去重/剥 tag）→ 一卡一段落落库 → 按序对位
     import { planObsidianImport, composeObsidianImportMarkdown, deckNameFor, groupByDeckHint, partitionByLedger, normalizeObLedger, mergeObLedger, type ObLedgerEntry } from "@/core/obsidian-import";
     import { getBridgeSafely, type CheckinBridgeApi, type CheckinItem } from "@/libs/ecosystem-bridge-kit";
+    import { aiChat } from "@/api/ai";
 
     export interface SettingsCtx {
         i18n: any;
@@ -581,6 +582,33 @@
         }
     }
 
+    let aiTestingBusy = $state(false);
+    let aiTestResult = $state<{ ok: boolean; msg: string } | null>(null);
+
+    async function testCustomAi() {
+        if (aiTestingBusy || !draft.aiEndpoint) return;
+        aiTestingBusy = true;
+        aiTestResult = null;
+        try {
+            await aiChat(
+                {
+                    mode: "custom",
+                    endpoint: draft.aiEndpoint,
+                    apiKey: draft.aiKey,
+                    model: draft.aiModel || "gpt-4o-mini",
+                },
+                "You are an AI connection tester.",
+                "ping",
+                { timeoutMs: 10000 }
+            );
+            aiTestResult = { ok: true, msg: "连接成功：服务商响应正常" };
+        } catch (e: any) {
+            aiTestResult = { ok: false, msg: `连接失败: ${e?.message ?? String(e)}` };
+        } finally {
+            aiTestingBusy = false;
+        }
+    }
+
     let saveBusy = $state(false);
     let saveError = $state("");
 
@@ -847,6 +875,12 @@
     </div>
     {#if !searchQuery.trim() && sectionScope !== "imports"}
         <nav class="lv-settings-nav-rail" aria-label="设置快速导航">
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-persona")}>
+                <LvIcon name="target" size={13} /> <span>{t.settings.personaSection ?? "学习画像"}</span>
+            </button>
+            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-modules")}>
+                <LvIcon name="cards" size={13} /> <span>{t.settings.modules ?? "功能模块"}</span>
+            </button>
             <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyRhythm")}>
                 <LvIcon name="timer" size={13} /> <span>{t.settings.studyRhythm ?? "学习节奏"}</span>
             </button>
@@ -905,7 +939,7 @@
     </div>
     {/if}
     {#if sectionMatches("persona")}
-    <LvSection title={t.settings.personaSection}>
+    <LvSection id="sec-persona" title={t.settings.personaSection}>
         <div class="fn__flex fn__flex-wrap lv-personas">
             {#each PERSONA_PRESETS as p (p.id)}
                 <button
@@ -917,7 +951,7 @@
                     <div class="ft__smaller ft__on-surface">{t[p.descKey]}</div>
                 </button>
             {/each}
-            <div class="lv-persona" class:lv-persona-active={draft.persona === "custom"}>
+            <div class="lv-persona lv-persona--custom" class:lv-persona-active={draft.persona === "custom"}>
                 <div class="lv-persona-name">{t.personaCustom}</div>
                 <div class="ft__smaller ft__on-surface">{t.personaCustom_desc}</div>
             </div>
@@ -937,7 +971,7 @@
     {/if}
 
     {#if sectionMatches("modules")}
-    <LvSection title={t.settings.modules}>
+    <LvSection id="sec-modules" title={t.settings.modules}>
         <!-- BI-14：界面模式（simple=隐藏考试/维护等高级入口；纯显示控制，不删配置） -->
         <LvRow label={t.settings.uiModeLabel} hint={t.settings.uiModeHint}>
             {#snippet children()}
@@ -1225,6 +1259,26 @@
             </LvRow>
             <LvRow label={t.settings.aiKey} hint={t.settings.aiKeyHint}>
                 <LvInput bind:value={draft.aiKey} type="password" width="200px" />
+            </LvRow>
+            <LvRow label="连通性测试" hint="向当前配置的自定义服务商端点发送测试消息以验证可用性">
+                {#snippet children()}
+                    <div class="fn__flex" style="gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap">
+                        <button
+                            type="button"
+                            class="b3-button b3-button--outline lv-btn-tool"
+                            disabled={aiTestingBusy || !draft.aiEndpoint}
+                            onclick={testCustomAi}
+                        >
+                            <LvIcon name="zap" size={13} />
+                            <span>{aiTestingBusy ? "测试中…" : "测试 AI 连接"}</span>
+                        </button>
+                        {#if aiTestResult}
+                            <span class="ft__smaller" style={aiTestResult.ok ? "color: var(--lv-color-success)" : "color: var(--lv-color-danger)"}>
+                                {aiTestResult.msg}
+                            </span>
+                        {/if}
+                    </div>
+                {/snippet}
             </LvRow>
             <LvRow label={t.settings.aiFallbackEndpoint} hint={t.settings.aiFallbackHint}>
                 <LvInput bind:value={draft.aiFallbackEndpoint} placeholder="https://backup.example.com/v1" width="200px" />
@@ -1625,11 +1679,17 @@
 
         .b3-dialog__action { justify-content: flex-end; }
         .lv-settings-nav-rail {
+            position: sticky;
+            top: 0;
+            z-index: var(--lv-z-elevated, 2);
+            background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             gap: calc(var(--lv-space-unit) * 3);
             flex-wrap: wrap;
-            margin-bottom: var(--lv-sp-3);
-            padding-bottom: var(--lv-sp-2);
+            margin: calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1) var(--lv-sp-3);
+            padding: var(--lv-sp-2) var(--lv-sp-4);
             border-bottom: 1px solid var(--lv-border);
         }
         .lv-settings-nav-chip {
@@ -1701,6 +1761,15 @@
                 transform: translateY(-2px);
                 box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
                 border-color: var(--lv-border-strong);
+            }
+
+            &.lv-persona--custom {
+                cursor: default;
+                &:hover {
+                    transform: none;
+                    box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+                    border-color: var(--lv-border);
+                }
             }
         }
         .lv-persona-active {
