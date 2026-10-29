@@ -264,9 +264,9 @@
     .lv-section-heading span, .lv-learning-calendar-foot, .lv-learning-entry-list span, .lv-learning-trend-list small { color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-learning-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lv-sp-2); }
     .lv-learning-trend-list, .lv-learning-entry-list { list-style: none; padding: 0; margin: var(--lv-sp-3) 0 0; }
-    .lv-learning-trend-list li, .lv-learning-entry-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); min-height: 38px; border-top: 1px solid var(--lv-border); }
+    .lv-learning-trend-list li, .lv-learning-entry-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); min-height: 38px; border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
     .lv-learning-trend-list li { justify-content: flex-start; }
-    .lv-learning-trend-list strong { min-width: 26px; text-align: right; }
+    .lv-learning-trend-list strong { min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lv-color-data); }
     .lv-learning-entry-list li > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
     .lv-learning-entry-list strong { font-size: var(--lv-type-body-size); }
     .lv-link-button {
@@ -281,7 +281,7 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 2);
         cursor: pointer;
-        box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+        box-shadow: var(--lv-shadow-1);
         transition: all var(--lv-dur-1) var(--lv-ease);
         &:hover {
             border-color: var(--lv-primary-border);

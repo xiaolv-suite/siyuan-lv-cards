@@ -1876,10 +1876,10 @@
         }
 
         &.lv-today-week-day-active i {
-            background: var(--lv-color-brand) !important;
+            background: var(--lv-color-data) !important;
             color: #FFFFFF !important;
             font-weight: var(--lv-fw-bold);
-            box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 36%, transparent);
+            box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-data) 36%, transparent);
             outline: none !important;
         }
 
@@ -1888,12 +1888,12 @@
         }
     }
     .lv-today-week-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); font-size: var(--lv-type-control-size); }
-    .lv-today-week-summary strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .lv-today-week-summary strong { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--lv-color-data); }
     .lv-today-week-summary small { color: var(--lv-color-text-muted); font-size: 10px; font-weight: var(--lv-fw-normal); }
     .lv-today-week-note {
         margin-top: auto;
         padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
-        border-radius: var(--lv-r-m);
+        border-radius: var(--lv-r-s);
         background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
         color: var(--lv-color-text-muted);
         border: 1px solid color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-border));

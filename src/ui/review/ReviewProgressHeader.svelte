@@ -170,15 +170,15 @@
     }
     .lv-progress {
         font-size: var(--lv-type-control-size);
-        color: var(--lv-color-text);
-        background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
-        border: 1px solid var(--lv-primary-border);
+        color: var(--lv-color-on-data-soft);
+        background: var(--lv-data-soft);
+        border: 1px solid var(--lv-data-border);
         border-radius: var(--lv-r-pill);
         padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
         font-weight: var(--lv-fw-semibold);
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
-        box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent);
+        box-shadow: var(--lv-shadow-1);
     }
     .lv-progress-bar {
         width: 100%;
@@ -191,7 +191,7 @@
         .lv-progress-seg {
             height: 100%;
             border-radius: var(--lv-r-pill);
-            background: var(--lv-color-brand);
+            background: var(--lv-color-data);
             transition: width var(--lv-dur-3) var(--lv-ease);
         }
         .lv-progress-seg--forget {

@@ -720,7 +720,13 @@
         gap: calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
         padding: 0 calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-pill);
-        box-shadow: 0 4px 12px color-mix(in srgb, var(--lv-color-brand) 28%, transparent);
+        box-shadow: var(--lv-shadow-1);
+        transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+
+        &:hover {
+            transform: translateY(-1.5px);
+            box-shadow: var(--lv-shadow-2);
+        }
     }
 
     :global(.lv-r54-sidebar .lv-tabs) {
@@ -798,7 +804,7 @@
         font-size: var(--lv-type-meta-size);
         line-height: var(--lv-lh-meta);
         border: 1px solid color-mix(in srgb, var(--lv-color-brand) 16%, var(--lv-border));
-        box-shadow: var(--lv-shadow-card), inset 0 1px 0 color-mix(in srgb, white 40%, transparent);
+        box-shadow: var(--lv-shadow-1);
         strong { font-weight: var(--lv-fw-emphasis); display: block; }
     }
     .lv-r54-sidebar-version { margin: 0 calc(var(--lv-space-unit) * 4); color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); line-height: 1.4; }
@@ -811,14 +817,18 @@
         justify-content: space-between;
         gap: var(--lv-sp-4);
         padding: 0 calc(var(--lv-space-unit) * 15);
-        border-bottom: 1px solid var(--lv-border);
-        background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
-        backdrop-filter: blur(12px) saturate(1.15);
-        -webkit-backdrop-filter: blur(12px) saturate(1.15);
-        box-shadow: 0 1px 3px color-mix(in srgb, black 3%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+        background: var(--lv-color-surface);
+        box-shadow: 0 1px 3px rgba(39, 38, 53, 0.03);
         position: sticky;
         top: 0;
         z-index: var(--lv-z-review-peek);
+
+        @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+            background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
+            backdrop-filter: blur(12px) saturate(1.15);
+            -webkit-backdrop-filter: blur(12px) saturate(1.15);
+        }
     }
 
     @container lv-hub (max-width: 1040px) {

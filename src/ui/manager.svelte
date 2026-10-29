@@ -1399,14 +1399,14 @@
         gap: var(--lv-sp-3);
         margin-top: var(--lv-sp-4);
         padding-top: var(--lv-sp-3);
-        border-top: 1px solid var(--lv-border);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         .lv-pager { font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
     }
 
     .lv-list {
         display: flex;
         flex-direction: column;
-        gap: var(--lv-sp-3);
+        gap: var(--lv-sp-2);
 
         .lv-row {
             display: flex; align-items: center; gap: var(--lv-sp-3);
@@ -1414,10 +1414,10 @@
             background: var(--lv-color-surface);
             border: 1px solid var(--lv-border);
             border-radius: var(--lv-r-l);
-            box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-1);
             transition: transform var(--lv-dur-2) var(--lv-ease),
                 border-color var(--lv-dur-2) var(--lv-ease),
-                background var(--lv-dur-2) var(--lv-ease),
+                background-color var(--lv-dur-2) var(--lv-ease),
                 box-shadow var(--lv-dur-2) var(--lv-ease);
             position: relative;
 
@@ -1441,8 +1441,8 @@
             &:hover {
                 transform: translateY(-1px);
                 border-color: var(--lv-border-strong);
-                background: color-mix(in srgb, var(--lv-primary-softer) 30%, var(--lv-color-surface));
-                box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+                background: color-mix(in srgb, var(--lv-primary-softer) 40%, var(--lv-color-surface));
+                box-shadow: var(--lv-shadow-2);
                 &::before { opacity: 1; }
                 .lv-arrow { opacity: 1; transform: translateX(0); }
             }
