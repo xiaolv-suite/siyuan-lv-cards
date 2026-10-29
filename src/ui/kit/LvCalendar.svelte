@@ -191,10 +191,10 @@
     }
     .lv-cal-day b { font-size: var(--lv-type-control-size); color: var(--lv-color-text); font-weight: var(--lv-fw-semibold); font-variant-numeric: tabular-nums; }
     .lv-cal-off { border-color: transparent; background: transparent; }
-    .lv-cal-day.past1 { background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-color-surface)); }
-    .lv-cal-day.past2 { background: color-mix(in srgb, var(--lv-color-brand) 26%, var(--lv-color-surface)); }
-    .lv-cal-day.past3 { background: color-mix(in srgb, var(--lv-color-brand) 42%, var(--lv-color-surface)); }
-    .lv-cal-day.past2 b, .lv-cal-day.past3 b { color: var(--lv-color-brand); }
+    .lv-cal-day.past1 { background: color-mix(in srgb, var(--lv-color-data) 12%, var(--lv-color-surface)); }
+    .lv-cal-day.past2 { background: color-mix(in srgb, var(--lv-color-data) 26%, var(--lv-color-surface)); }
+    .lv-cal-day.past3 { background: color-mix(in srgb, var(--lv-color-data) 42%, var(--lv-color-surface)); }
+    .lv-cal-day.past2 b, .lv-cal-day.past3 b { color: var(--lv-color-data); }
     .lv-cal-day.today {
         border: 2px solid var(--lv-color-brand);
         box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 25%, transparent);
@@ -216,9 +216,9 @@
         display: inline-block;
         border: 1px solid var(--lv-border);
     }
-    .lv-cal-sw.past1 { background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-color-surface)); }
-    .lv-cal-sw.past2 { background: color-mix(in srgb, var(--lv-color-brand) 26%, var(--lv-color-surface)); }
-    .lv-cal-sw.past3 { background: color-mix(in srgb, var(--lv-color-brand) 42%, var(--lv-color-surface)); }
+    .lv-cal-sw.past1 { background: color-mix(in srgb, var(--lv-color-data) 12%, var(--lv-color-surface)); }
+    .lv-cal-sw.past2 { background: color-mix(in srgb, var(--lv-color-data) 26%, var(--lv-color-surface)); }
+    .lv-cal-sw.past3 { background: color-mix(in srgb, var(--lv-color-data) 42%, var(--lv-color-surface)); }
     .lv-cal-sw.future2 { background: color-mix(in srgb, var(--lv-color-warning) 24%, var(--lv-color-surface)); }
     .lv-forecast {
         display: flex;
@@ -261,8 +261,13 @@
        narrow embedded panel even when the viewport itself is wide. */
     .lv-cal { min-width: 0; container-type: inline-size; }
     @container (max-width: 480px) {
-        .lv-cal-grid { gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)); }
-        .lv-cal-day { padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 1); }
-        .lv-cal-day b { font-size: var(--lv-type-caption-size); }
+        .lv-cal-grid { gap: calc(var(--lv-space-unit) * 1); }
+        .lv-cal-day { padding: calc(var(--lv-space-unit) * 1) 2px; min-height: 34px; aspect-ratio: 1.1; }
+        .lv-cal-day b { font-size: 11px; }
+    }
+    @container (max-width: 360px) {
+        .lv-cal-grid { gap: 2px; }
+        .lv-cal-day { padding: 1px; min-height: 30px; aspect-ratio: 1; border-radius: var(--lv-r-tag); }
+        .lv-cal-day b { font-size: 10px; }
     }
 </style>

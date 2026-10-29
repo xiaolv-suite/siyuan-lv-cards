@@ -3,12 +3,13 @@
         days: { date: string; stat: { new: number; review: number; forget: number } }[];
     } = $props();
 
+    // 规律二：两色分工——热力图为正向学习成果数据，专属使用【数据语义色】(天青水蓝)派生色阶
     function heatColor(n: number): string {
         if (n <= 0) {
             return "transparent";
         }
         const alpha = n >= 30 ? 100 : n >= 15 ? 65 : n >= 5 ? 40 : 20;
-        return `color-mix(in srgb, var(--lv-color-brand) ${alpha}%, transparent)`;
+        return `color-mix(in srgb, var(--lv-color-data) ${alpha}%, transparent)`;
     }
 
     function cellTitle(d: { date: string; stat: { new: number; review: number; forget: number } }): string {
@@ -35,10 +36,10 @@
     </div>
     <div class="lv-heat-legend ft__smaller ft__on-surface">
         <span class="lv-legend-cell" style="background: transparent; border: 1px solid var(--lv-border)"></span>
-        <span class="lv-legend-cell" style="background: color-mix(in srgb, var(--lv-color-brand) 20%, transparent)"></span>
-        <span class="lv-legend-cell" style="background: color-mix(in srgb, var(--lv-color-brand) 40%, transparent)"></span>
-        <span class="lv-legend-cell" style="background: color-mix(in srgb, var(--lv-color-brand) 65%, transparent)"></span>
-        <span class="lv-legend-cell" style="background: var(--lv-color-brand)"></span>
+        <span class="lv-legend-cell" style="background: color-mix(in srgb, var(--lv-color-data) 20%, transparent)"></span>
+        <span class="lv-legend-cell" style="background: color-mix(in srgb, var(--lv-color-data) 40%, transparent)"></span>
+        <span class="lv-legend-cell" style="background: color-mix(in srgb, var(--lv-color-data) 65%, transparent)"></span>
+        <span class="lv-legend-cell" style="background: var(--lv-color-data)"></span>
     </div>
 </div>
 
@@ -63,8 +64,8 @@
         width: 12px;
         height: 12px;
         border-radius: var(--lv-r-optical);
-        /* 空格可见度：6% 在白卡上近乎隐形，整图只剩一簇数据——提到 10% 让网格形态完整可读 */
-        background-color: color-mix(in srgb, var(--lv-color-text) 10%, transparent);
+        /* 空格可见度：微透同族灰 */
+        background-color: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         transition: transform var(--lv-dur-1) var(--lv-ease), outline var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
         outline: 1px solid transparent;
         position: relative;
@@ -72,10 +73,10 @@
     .lv-cell:hover {
         transform: scale(1.3);
         z-index: var(--lv-z-elevated);
-        outline-color: var(--lv-primary-border);
-        box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
+        outline-color: var(--lv-data-border);
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-data) 32%, transparent);
     }
-    .lv-cell-today { outline: 2px solid var(--lv-primary-border); outline-offset: 1px; }
+    .lv-cell-today { outline: 2px solid var(--lv-color-data); outline-offset: 1px; }
     .lv-heat-legend {
         display: flex;
         gap: calc(var(--lv-space-unit) * 3);
