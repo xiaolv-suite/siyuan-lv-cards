@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-    appendRevlog, emptyRevlog, isCardNew, mergeRevlog, normalizeRevlog, recalcDays, revlogToCsv, studySecondsOn, coverageStats, deckCoverage, docCoverage, calcStreak, calcXp, localDate, lastNDays, weekCompare, calcMilestones,
+    appendRevlog, rollbackLastRevlogEntry, emptyRevlog, isCardNew, mergeRevlog, normalizeRevlog, recalcDays, revlogToCsv, studySecondsOn, coverageStats, deckCoverage, docCoverage, calcStreak, calcXp, localDate, lastNDays, weekCompare, calcMilestones,
     type RevlogData,
 } from "../src/core/revlog";
 const entry = (ts: number, cardID: string, rating: number, source: "native" | "plugin" = "plugin") =>
@@ -37,6 +37,29 @@ describe("appendRevlog（AJ1）", () => {
         recalcDays(d);
         expect(JSON.stringify(d.days)).toBe(before);
         expect(d.days[localDate(t)].forget).toBe(1);
+    });
+
+    it("rollbackLastRevlogEntry 撤销评分条目并回滚聚合计数", () => {
+        const d = emptyRevlog();
+        const t = Date.now();
+        appendRevlog(d, entry(t, "c1", 1));
+        appendRevlog(d, entry(t + 1, "c2", 3));
+        expect(d.entries).toHaveLength(2);
+        expect(d.days[localDate(t)].new).toBe(2);
+        expect(d.days[localDate(t)].forget).toBe(1);
+
+        // 撤销 c2
+        const removed = rollbackLastRevlogEntry(d, "c2");
+        expect(removed?.cardID).toBe("c2");
+        expect(d.entries).toHaveLength(1);
+        expect(d.days[localDate(t)].new).toBe(1);
+        expect(d.days[localDate(t)].forget).toBe(1);
+
+        // 撤销 c1（遗忘卡）
+        rollbackLastRevlogEntry(d, "c1");
+        expect(d.entries).toHaveLength(0);
+        expect(d.days[localDate(t)]?.new ?? 0).toBe(0);
+        expect(d.days[localDate(t)]?.forget ?? 0).toBe(0);
     });
 });
 

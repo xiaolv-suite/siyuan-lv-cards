@@ -52,6 +52,7 @@
         relationsOfBlock?: (blockID: string) => { relation: { from: string; to: string; type: string; createdAt: number }; direction: "outgoing" | "incoming" }[];
         addRelation?: (from: string, to: string, type: string) => void;
         removeRelation?: (from: string, to: string, type: string) => void;
+        detachCards?: (blockIDs: string[]) => Promise<void> | void;
         /** BK-1：知识对象快照与操作（可选——旧宿主不传则详情不显示知识对象区） */
         ko?: {
             snapshot: (blockID: string) => { registered: boolean; fact: string; instances: { cardID: string; cardType: string; capability: string | null; disabled: boolean }[] };
@@ -484,6 +485,9 @@
                 try {
                     const targetDeckID = deckScope?.id ?? "";
                     await removeRiffCards(targetDeckID, blockIDs);
+                    if (ctx.detachCards) {
+                        await ctx.detachCards(blockIDs);
+                    }
                     invalidateDueCache(); // AT-4：删卡改变到期数
                     selected = [];
                     showMessage(t.manager.batchDone.replace("${n}", String(count)), 2000, "info");
@@ -612,6 +616,9 @@
                 batchError = "";
                 try {
                     await removeRiffCards("", [b.id]);
+                    if (ctx.detachCards) {
+                        await ctx.detachCards([b.id]);
+                    }
                     invalidateDueCache();
                     showMessage(t.manager.deleteDone, 2000, "info");
                     await load();

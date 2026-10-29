@@ -12,7 +12,7 @@ import { getRiffCards, getRiffCardsByBlockIDs } from "@/api/riff";
 import { leechCards, localDate, docCoverage } from "@/core/revlog";
 import { daysLeft, type ExamPlan } from "@/core/exam";
 import { cachedDueBlockIDs, dueCache } from "@/api/due-shared";
-import { relationsOf, addRelation, removeRelation, type RelationType } from "@/core/card-relations";
+import { relationsOf, addRelation, removeRelation, detachCard, type RelationType } from "@/core/card-relations";
 import { findBySource, registerObject, toggleInstance, removeInstance, deriveInstance } from "@/core/knowledge-objects";
 import { capabilityShare } from "@/core/capability-types";
 import { errorReasonStats, type ErrorReason } from "@/core/error-reasons";
@@ -248,6 +248,14 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             await plugin.cardRelationsMutations((next: any) => {
                                 if (!removeRelation(next, from, to, type as RelationType)) {
                                     throw new Error((plugin.i18n as any).review?.relations?.errMissing ?? "关系不存在");
+                                }
+                            });
+                        },
+                        detachCards: async (blockIDs: string[]) => {
+                            if (!blockIDs.length) return;
+                            await plugin.cardRelationsMutations((next: any) => {
+                                for (const id of blockIDs) {
+                                    detachCard(next, id);
                                 }
                             });
                         },
@@ -587,6 +595,7 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
                             answerTimeCapSec: plugin.settings.answerTimeCapSec,
                         }),
                         appendRevlog: (e: any) => plugin.appendRevlog(e),
+                        rollbackRevlog: (cardID?: string) => plugin.rollbackRevlog(cardID),
                         tagErrorReason: (cardID: string, reason: string) => {
                             plugin.tagErrorReason(cardID, reason as ErrorReason);
                         },

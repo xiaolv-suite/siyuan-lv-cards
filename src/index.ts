@@ -21,7 +21,7 @@ import {
     type AIJobsData, type AIJob,
 } from "./core/ai-jobs";
 import {
-    appendRevlog, calcStreak, emptyRevlog, localDate, normalizeRevlog, mergeRevlog,
+    appendRevlog, rollbackLastRevlogEntry, calcStreak, emptyRevlog, localDate, normalizeRevlog, mergeRevlog,
     type RevlogData, type RevlogEntry,
 } from "./core/revlog";
 import { detectFlashcardV2, type MigrationStatus } from "./api/flashcardV2";
@@ -2433,6 +2433,20 @@ export default class LvCardsPlugin extends Plugin {
         } catch { /* 事件旁路 */ }
     }
 
+    public rollbackRevlog(cardID?: string): RevlogEntry | null {
+        if (!this.persistedRevlogSnapshot) {
+            this.persistedRevlogSnapshot = cloneStore(this.revlog);
+        }
+        this.revlogMutationVersion += 1;
+        const removed = rollbackLastRevlogEntry(this.revlog, cardID);
+        if (removed) {
+            this.scheduleRevlogSave();
+            invalidateDueCache();
+            this.refreshDueBadge();
+        }
+        return removed;
+    }
+
     private scheduleRevlogSave() {
         if (this.saveRevlogTimer) {
             clearTimeout(this.saveRevlogTimer);
@@ -2706,6 +2720,10 @@ export default class LvCardsPlugin extends Plugin {
                 existing.panelElement
                     ?.querySelector(".lv-hub")
                     ?.dispatchEvent(new CustomEvent("lv-switch-tab", { detail: { tab: data.tab, focusBlockID: data.focusBlockID } }));
+            } else if (type === TAB_REVIEW && data) {
+                existing.panelElement
+                    ?.querySelector(".lv-review")
+                    ?.dispatchEvent(new CustomEvent("lv-switch-scope", { detail: data }));
             }
             return;
         }

@@ -40,9 +40,9 @@ describe("registerPluginCommands 命令注册", () => {
         const keys = registered.map(c => c.langKey);
         expect(keys).toEqual([...REGISTERED_COMMAND_KEYS]);
 
-        // 验证特定快捷键绑定（Ctrl+K）
+        // 验证特定快捷键绑定（Alt+K）
         const paletteCmd = registered.find(c => c.langKey === "palette");
-        expect(paletteCmd?.hotkey).toBe("Ctrl+K");
+        expect(paletteCmd?.hotkey).toBe("Alt+K");
 
         // 验证各回调的准确路由
         const openExamCmd = registered.find(c => c.langKey === "openExam");

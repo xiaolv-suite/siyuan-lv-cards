@@ -73,11 +73,11 @@ export function registerPluginCommands(host: CommandHost): void {
         hotkey: "",
         callback: () => host.openRepairDrill(),
     });
-    // T13 ⌘K 命令面板（docs/41 P0 · docs/42 §3.10）：动作+导航键盘直达
+    // T13 命令面板：动作+导航键盘直达（默认 Alt+K，规避思源富文本插入超链接冲突）
     host.addCommand({
         langKey: "palette",
         langText: host.i18n.cmdPalette,
-        hotkey: "Ctrl+K",
+        hotkey: "Alt+K",
         callback: () => host.openPalette(),
     });
     host.addCommand({

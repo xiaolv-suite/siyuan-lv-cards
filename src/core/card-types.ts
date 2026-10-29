@@ -81,8 +81,10 @@ export function calcLevenshteinDistance(a: string[], b: string[]): number {
  * 融入 Quizlet/RemNote 智能拼写容错（Typo Tolerance）：非严格模式下 1 字微瑕放行建议 3。
  * 空期望答案 ratio=0（不产「完美匹配」误导），正式评分始终由用户决定。 */
 export function gradeTyping(expected: string, actual: string, strict: boolean): TypingGrade {
-    const e = [...normalize(expected, strict)];
-    const a = [...normalize(actual, strict)];
+    // 防御极端超长输入制造 O(M*N) 超大内存矩阵导致页面崩溃（如误粘上万字长文）
+    const MAX_COMPARE_LEN = 500;
+    const e = [...normalize(expected, strict)].slice(0, MAX_COMPARE_LEN);
+    const a = [...normalize(actual, strict)].slice(0, MAX_COMPARE_LEN);
     const m = e.length, n = a.length;
     const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
     for (let i = 1; i <= m; i++) {

@@ -235,6 +235,29 @@ export function recalcDays(data: RevlogData): void {
     data.days = out;
 }
 
+/**
+ * 撤销最近一次评分历史条目并重算每日聚合（保持统计指标自洽）
+ */
+export function rollbackLastRevlogEntry(data: RevlogData, cardID?: string): RevlogEntry | null {
+    if (!data.entries || data.entries.length === 0) return null;
+    let targetIdx = -1;
+    if (cardID) {
+        for (let i = data.entries.length - 1; i >= 0; i--) {
+            if (data.entries[i].cardID === cardID) {
+                targetIdx = i;
+                break;
+            }
+        }
+    } else {
+        targetIdx = data.entries.length - 1;
+    }
+    if (targetIdx < 0) return null;
+    const [removed] = data.entries.splice(targetIdx, 1);
+    historyCache.delete(data.entries);
+    recalcDays(data);
+    return removed;
+}
+
 export interface MergeResult {
     added: number;
     skipped: number;

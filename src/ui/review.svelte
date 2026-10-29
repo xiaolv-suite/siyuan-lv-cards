@@ -127,6 +127,7 @@
         /** 初始 cram 模式（考前：lapses 降序） */
         initialCram?: boolean;
         appendRevlog: (entry: { cardID: string; deckID: string; blockID: string; rating: number; source: "plugin" }) => void;
+        rollbackRevlog?: (cardID?: string) => void;
         /** BJ-4：遗忘卡错误原因标注（旁路增强） */
         tagErrorReason?: (cardID: string, reason: string) => void;
         /** BK-1↔BJ-2：按来源块查知识对象（提示内容优先来源） */
@@ -1200,6 +1201,7 @@
             showMessage(t.review.undoNone, 1800, "info");
             return;
         }
+        ctx.rollbackRevlog?.(snap.current?.cardID);
         errorMsg = "";
         resetCardState();
         sessionDone = false;
@@ -1831,7 +1833,33 @@
             lastTimeoutMode = s.timeoutMode;
             lastTimeoutSeconds = s.timeoutSeconds;
         });
-        return () => offSettings?.();
+
+        function onSwitchScopeEvent(e: Event) {
+            const ce = e as CustomEvent<{ scope?: string; cram?: boolean }>;
+            if (ce.detail) {
+                let changed = false;
+                if (typeof ce.detail.scope === "string") {
+                    const nextScope = normalizeScopeKey(ce.detail.scope);
+                    if (nextScope !== scopeKey) {
+                        scopeKey = nextScope;
+                        changed = true;
+                    }
+                }
+                if (typeof ce.detail.cram === "boolean" && ce.detail.cram !== cramActive) {
+                    cramActive = ce.detail.cram;
+                    changed = true;
+                }
+                if (changed) {
+                    changeScope();
+                }
+            }
+        }
+        rootEl?.addEventListener("lv-switch-scope", onSwitchScopeEvent);
+
+        return () => {
+            offSettings?.();
+            rootEl?.removeEventListener("lv-switch-scope", onSwitchScopeEvent);
+        };
     });
 
     // 遮罩 overlay 定位：监听图片加载、卡面布局和视口变化，避免晚加载或窄屏时坐标过期。

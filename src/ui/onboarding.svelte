@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { showMessage } from "siyuan";
     import { getNotebooks, type Notebook } from "@/api/siyuan";
     import LvSection from "./kit/LvSection.svelte";
     import LvRow from "./kit/LvRow.svelte";
@@ -86,6 +87,7 @@
 
     function openSamples() {
         if (sampleDocId) openSampleDoc(sampleDocId);
+        showMessage(t.onboardingSamplesTip ?? "已为您打开示例笔记！随时可点击顶栏小驴闪卡图标或按 Alt+K 开启复习", 4000, "info");
         onClose();
     }
 
