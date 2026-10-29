@@ -353,4 +353,18 @@ describe("svelteDialog 延迟销毁与焦点归还", () => {
         vi.advanceTimersByTime(160);
         expect(unmounts).toBe(1);
     });
+
+    it("confirmDialogBool 在用户通过 Esc 或右上角叉号关闭时自动 resolve(false)，防止 Promise 挂起死锁", async () => {
+        const { confirmDialogBool } = await import("../src/libs/dialog");
+        const promise = confirmDialogBool({ title: "覆盖确认", content: "是否覆盖配置？" });
+        const instance = hostState.instances[hostState.instances.length - 1];
+        expect(instance).toBeTruthy();
+
+        // 模拟宿主通过 Esc 或右上角 X 关闭弹窗
+        instance.destroy();
+        vi.advanceTimersByTime(160);
+
+        const result = await promise;
+        expect(result).toBe(false);
+    });
 });

@@ -183,6 +183,10 @@
         return new Set(ctx.getStarredCardIDs?.() ?? []);
     });
 
+    const hasActiveFilters = $derived(
+        Boolean(filterText.trim() || statusFilter !== "all" || cardTypeFilter !== "all" || leechOnly || starredOnly || sortMode !== "default" || pickedSaved)
+    );
+
     let filteredBlocks = $derived(
         (() => {
             const lowerFilter = deferredFilter ? deferredFilter.toLowerCase() : "";
@@ -416,6 +420,9 @@
         filterText = "";
         deferredFilter = "";
         statusFilter = "all";
+        cardTypeFilter = "all";
+        sortMode = "default";
+        pickedSaved = "";
         leechOnly = false;
         starredOnly = false;
         selected = [];
@@ -873,6 +880,18 @@
                 onclick={toggleStarredFilter}
             ><LvIcon name="star" size={12} /> {t.manager.starredFilter ?? "星标卡"}</button>
         {/if}
+        {#if hasActiveFilters}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                title="重置全部筛选"
+                aria-label="重置全部筛选"
+                onclick={clearFilters}
+            >
+                <LvIcon name="close" size={12} />
+                <span>重置</span>
+            </button>
+        {/if}
         <div class="lv-toolbar-right">
             <span class="lv-toolbar-caption">{t.manager.total}: {total}</span>
             {#if filteredBlocks.length > 0}
@@ -924,9 +943,9 @@
 
     {#if showDeckModal}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-modal-mask" onclick={() => (showDeckModal = false)} role="presentation"></div>
-        <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus={{ onEscape: () => { showDeckModal = false; } }}>
-            <div class="lv-deck-modal-head">
+        <div class="lv-modal-backdrop" onclick={(e) => { if (e.target === e.currentTarget) showDeckModal = false; }} role="presentation">
+            <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus={{ onEscape: () => { showDeckModal = false; } }}>
+                <div class="lv-deck-modal-head">
                 <span id="lv-deck-modal-title" style="font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size)">
                     {modalMode === "move" ? (t.manager.batchMoveDeck ?? "移动卡片至目标卡组") : (t.manager.batchAddDeck ?? "添加卡片至目标卡组")}
                 </span>
@@ -955,6 +974,7 @@
                     {deckActionBusy ? "…" : (window.siyuan.languages.confirm ?? "确认")}
                 </button>
             </div>
+        </div>
         </div>
     {/if}
 
@@ -1015,7 +1035,7 @@
                         onkeydown={(event) => onRowKeydown(event, b, rowIndex)}
                     >
                         <span class="lv-content">
-                            <span class="lv-text">{@html highlightSearchHit(stripHtml(b.content) || t.manager.emptyContentFallback, filterText)}</span>
+                            <span class="lv-text">{@html highlightSearchHit(stripHtml(b.content) || t.manager.emptyContentFallback, deferredFilter)}</span>
                             <span class="lv-meta ft__smaller ft__on-surface">
                                 {#if (ctx.getStarredCardIDs?.() ?? []).includes(b.id)}
                                     <span class="lv-chip2 lv-chip2--warn" title="星标重点卡"><LvIcon name="star" size={11} /> 星标</span>
@@ -1251,19 +1271,8 @@
         gap: var(--lv-sp-2);
     }
 
-    .lv-modal-mask {
-        position: fixed;
-        inset: 0;
-        z-index: var(--lv-z-modal-backdrop);
-        background: color-mix(in srgb, black 32%, transparent);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-    }
     .lv-deck-modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        position: relative;
         z-index: var(--lv-z-modal-card);
         width: min(440px, 92vw);
         padding: var(--lv-sp-4);

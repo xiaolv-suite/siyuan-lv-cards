@@ -733,8 +733,13 @@ export function calcMilestones(data: RevlogData): Milestones {
     let prev: Date | null = null;
     for (const [key] of activeDays) {
         const cur = new Date(`${key}T00:00:00`);
-        if (prev && cur.getTime() - prev.getTime() <= 2 * 86400000) {
-            run += 1;
+        if (prev) {
+            const diffDays = Math.round((cur.getTime() - prev.getTime()) / 86400000);
+            if (diffDays === 1) {
+                run += 1;
+            } else {
+                run = 1;
+            }
         } else {
             run = 1;
         }

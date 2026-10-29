@@ -505,10 +505,13 @@
         if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy)) return;
         dismissBusy = true;
         const blockID = current.blockID;
+        const cardID = current.cardID;
         try {
             if (siyuanApi.setBlockAttrs) {
                 await siyuanApi.setBlockAttrs(blockID, buildDismissAttrs());
             }
+            reviewedIDs = [...reviewedIDs, cardID];
+            persistSession();
             showMessage(t.review?.cardDismissed ?? "已解散归档该卡片 (Ctrl+D)", 1500, "info");
             announce(t.review?.cardDismissed ?? "已解散归档该卡片", "polite");
             await next();
@@ -1260,12 +1263,11 @@
                 showErrTags = true;
             }
         } catch (e: any) {
-            // 评分失败保留现场（AJ11）：当前卡/答案态/队列不动，只提示错误
-            // The snapshot was created before the write. Since no write took
-            // effect, keeping it would expose a phantom undo after retry.
+            // 评分失败保留现场（AJ11）：当前卡/答案态/队列不动，只通过 Toast 和语音提示错误，不抹除卡面
             if (!writeSucceeded) popReviewHistory(history);
-            errorMsg = friendlyError(e, t);
-            announce(errorMsg, "assertive");
+            const err = friendlyError(e, t);
+            showMessage(err, 4000, "error");
+            announce(err, "assertive");
         } finally {
             submitting = false;
         }
@@ -1300,7 +1302,9 @@
             // failed request must not leave an undo entry for an unchanged
             // queue.
             if (!writeSucceeded) popReviewHistory(history);
-            errorMsg = friendlyError(e, t);
+            const err = friendlyError(e, t);
+            showMessage(err, 4000, "error");
+            announce(err, "assertive");
         } finally {
             submitting = false;
         }

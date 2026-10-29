@@ -42,6 +42,11 @@ export function localDateISO(d: Date): string {
 /** 解析内核 due（"YYYYMMDDHHmmss" 或 ISO）；失败返回 null */
 export function parseCardDue(due: string): Date | null {
     if (!due) return null;
+    // 若含有时区标识（如 Z 或 +08:00 / -05:00），直接按标准 ISO 8601 解析对应时刻
+    if (/[Zz]|[+-]\d{2}:?\d{2}/.test(due)) {
+        const d = new Date(due);
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
     const compact = due.replace(/[-: T]/g, "").slice(0, 14);
     if (/^\d{14}$/.test(compact)) {
         const d = new Date(

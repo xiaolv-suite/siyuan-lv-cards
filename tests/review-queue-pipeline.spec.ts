@@ -46,6 +46,11 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             expect(res.map(c => c.cardID)).toEqual(["c-4", "c-2", "c-3", "c-1"]);
         });
 
+        it("cramActive 配合 batchLimit 时排序先于截断，确保批次内是全库最难卡", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", cramActive: true, batchLimit: 2 });
+            expect(res.map(c => c.cardID)).toEqual(["c-4", "c-2"]);
+        });
+
         it("reverseOrder 倒序模式反转队列", () => {
             const res = applyQueuePipeline(mockCards, { scopeKey: "all", reverseOrder: true });
             expect(res.map(c => c.cardID)).toEqual(["c-4", "c-3", "c-2", "c-1"]);

@@ -56,6 +56,9 @@ interface IConfirmDialogArgs {
 export const confirmDialog = (args: IConfirmDialogArgs) => {
     const { title, content, confirm, cancel, width, height } = args;
 
+    let settled = false;
+    let trap: FocusTrap | null = null;
+
     const dialog = new Dialog({
         title,
         content: `<div class="b3-dialog__content">
@@ -63,11 +66,18 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
     </div>
 </div>
 <div class="b3-dialog__action">
-    <button class="b3-button b3-button--cancel">${window.siyuan.languages.cancel}</button><div class="fn__space"></div>
-    <button class="b3-button b3-button--text" id="confirmDialogConfirmBtn">${window.siyuan.languages.confirm}</button>
+    <button class="b3-button b3-button--cancel">${window.siyuan?.languages?.cancel ?? "取消"}</button><div class="fn__space"></div>
+    <button class="b3-button b3-button--text" id="confirmDialogConfirmBtn">${window.siyuan?.languages?.confirm ?? "确定"}</button>
 </div>`,
         width: width,
-        height: height
+        height: height,
+        destroyCallback: () => {
+            trap?.release();
+            if (!settled) {
+                settled = true;
+                cancel?.(target);
+            }
+        }
     });
 
     const target: HTMLElement = dialog.element.querySelector(".b3-dialog__content>div.ft__breakword");
@@ -78,20 +88,26 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
     }
 
     // AS-1：确认框捕获焦点（Tab 循环 + Esc 关闭 + 关闭后归还宿主焦点）
-    const trap = trapFocus(dialog.element, { onEscape: () => dialog.destroy() });
+    trap = trapFocus(dialog.element, { onEscape: () => dialog.destroy() });
 
     const btnsElement = dialog.element.querySelectorAll(".b3-button");
     btnsElement[0].addEventListener("click", () => {
-        trap.release();
-        if (cancel) {
-            cancel(target);
+        if (!settled) {
+            settled = true;
+            trap?.release();
+            if (cancel) {
+                cancel(target);
+            }
         }
         dialog.destroy();
     });
     btnsElement[1].addEventListener("click", () => {
-        trap.release();
-        if (confirm) {
-            confirm(target);
+        if (!settled) {
+            settled = true;
+            trap?.release();
+            if (confirm) {
+                confirm(target);
+            }
         }
         dialog.destroy();
     });

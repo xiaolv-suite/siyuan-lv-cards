@@ -37,19 +37,7 @@ export function applyQueuePipeline<TCard extends QueuePipelineCard>(
         result = result.filter(c => (options.scopeKey === "new") === (c.state === 0));
     }
 
-    // 2. 批次上限截断
-    const bl = options.batchLimit ?? 0;
-    if (bl > 0) {
-        result = result.slice(0, bl);
-    }
-
-    // 3. 同源兄弟卡防剧透推迟（Anki Bury Siblings）
-    if (!options.cramActive && options.burySiblings) {
-        const buryRes = filterBurySiblings(result as any[]);
-        result = buryRes.retained as TCard[];
-    }
-
-    // 4. 排序策略
+    // 2. 排序策略（必须在兄弟卡防剧透与批次截断前执行，保证考前冲刺高难卡、全局倒序/乱序真正生效）
     if (options.cramActive) {
         // 考前冲刺：遗忘多次的高难卡优先
         result.sort((a, b) => b.lapses - a.lapses);
@@ -59,6 +47,18 @@ export function applyQueuePipeline<TCard extends QueuePipelineCard>(
     } else if (options.randomOrder && options.shuffleFn) {
         // 随机乱序
         result = options.shuffleFn(result);
+    }
+
+    // 3. 同源兄弟卡防剧透推迟（Anki Bury Siblings）
+    if (!options.cramActive && options.burySiblings) {
+        const buryRes = filterBurySiblings(result as any[]);
+        result = buryRes.retained as TCard[];
+    }
+
+    // 4. 批次上限截断（在完成排序与防剧透后，取最终批次）
+    const bl = options.batchLimit ?? 0;
+    if (bl > 0) {
+        result = result.slice(0, bl);
     }
 
     return result;

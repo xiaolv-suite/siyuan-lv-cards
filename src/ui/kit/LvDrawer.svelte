@@ -74,7 +74,7 @@
         z-index: calc(var(--lv-z-drawer, 300) + 1);
         display: flex;
         flex-direction: column;
-        max-width: min(442px, calc(100vw - 28px));
+        max-width: calc(100vw - 28px);
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-dialog, var(--lv-r-dialog));

@@ -533,9 +533,14 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
             const div = document.createElement("div");
             div.style.height = "100%";
             this.element.appendChild(div);
+            let isDisposed = false;
             let reviewHandle: { destroy(): void } | null = null;
+            this.destroy = () => {
+                isDisposed = true;
+                reviewHandle?.destroy();
+            };
             deps.loadReviewMount().then(mnt => {
-                if (!div.isConnected) {
+                if (isDisposed || !div.isConnected) {
                     return;
                 }
                 reviewHandle = mnt(div, {
@@ -697,9 +702,8 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
                         },
                     },
                 });
-                this.destroy = () => reviewHandle?.destroy();
             }).catch((e: unknown) => {
-                if (div.isConnected) deps.mountChunkFallback(div, plugin.i18n, e);
+                if (!isDisposed && div.isConnected) deps.mountChunkFallback(div, plugin.i18n, e);
             });
         },
     });
