@@ -837,6 +837,7 @@
                         rows="10"
                         bind:value={source}
                         disabled={busy}
+                        spellcheck="false"
                         placeholder={t.aiWizard.sourceEditHint}
                         aria-label={t.aiWizard.sourceEditHint}
                         style="font-size: var(--lv-type-control-size); line-height: 1.6"
@@ -941,7 +942,12 @@
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2)">
                 <button class="b3-button b3-button--cancel" onclick={closeWizard}>{closeLabel ?? window.siyuan.languages.cancel}</button>
-                <button class="b3-button lv-btn-primary" disabled={busy || loadDocBusy || !source.trim()} onclick={openPreview}>
+                <button
+                    class="b3-button lv-btn-primary"
+                    disabled={busy || loadDocBusy || !source.trim()}
+                    aria-busy={busy}
+                    onclick={openPreview}
+                >
                     {busy ? t.aiWizard.generating : `${t.aiWizard.generate} →`}
                 </button>
             </div>
@@ -1014,8 +1020,8 @@
                             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} aria-label={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} disabled={creating || regenBusy !== null || restoredCandidates} onclick={() => regenerateCard(i)}><LvIcon name="refresh" size={13} /></button>
                             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.removeCandidate} aria-label={t.aiWizard.removeCandidate} disabled={creating || regenBusy !== null} onclick={() => removeCandidate(i)}><LvIcon name="close" size={13} /></button>
                         </label>
-                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.q} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardQ} aria-label={t.quickCardQ}></textarea>
-                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.a} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardA} aria-label={t.quickCardA}></textarea>
+                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.q} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardQ} aria-label={t.quickCardQ} spellcheck="false"></textarea>
+                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.a} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardA} aria-label={t.quickCardA} spellcheck="false"></textarea>
                         <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 3); margin-top: 6px">
                             <button class="b3-button b3-button--small {c.review === 'accepted' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null || draftIssues[i].length > 0 || gateIssues[i].length > 0} onclick={() => setReview(i, "accepted")}>{c.review === "accepted" ? t.aiWizard.reviewAccepted : t.aiWizard.acceptVer}</button>
                             <button class="b3-button b3-button--small {c.review === 'verified' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "verified")}>{t.aiWizard.markVerified}</button>
@@ -1112,14 +1118,35 @@
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}><LvIcon name="chevron-left" size={12} /> <span>{t.aiWizard.back}</span></button>
-                <input class="b3-text-field" style="width: 180px" placeholder={t.deckNewName} aria-label={t.deckNewName} bind:value={newName} disabled={creating} />
+                <input
+                    class="b3-text-field"
+                    style="width: 180px"
+                    placeholder={t.deckNewName}
+                    aria-label={t.deckNewName}
+                    bind:value={newName}
+                    disabled={creating}
+                    spellcheck="false"
+                    autocomplete="off"
+                    onkeydown={(e) => {
+                        if (e.key === "Enter" && canImport && !creating && regenBusy === null) {
+                            e.preventDefault();
+                            importCards();
+                        }
+                    }}
+                />
                 <select class="b3-select" style="max-width: 180px" bind:value={selected} disabled={creating || decks.length === 0} aria-label={t.deckPickerTitle}>
                     {#each decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
                 </select>
                 {#if decks.length === 0}
                     <span class="ft__smaller ft__on-surface">{t.quickCardNeedDeck}</span>
                 {/if}
-                <button class="b3-button lv-btn-primary" disabled={creating || regenBusy !== null || !canImport} onclick={importCards} title={t.aiWizard.importReviewed}>
+                <button
+                    class="b3-button lv-btn-primary"
+                    disabled={creating || regenBusy !== null || !canImport}
+                    aria-busy={creating}
+                    onclick={importCards}
+                    title={t.aiWizard.importReviewed}
+                >
                     <LvIcon name="check" size={13} />
                     <span>{creating ? "…" : t.aiWizard.createAcceptedN.replace("${n}", String(acceptedCount))}</span>
                 </button>
