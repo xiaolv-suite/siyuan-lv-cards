@@ -730,7 +730,7 @@
         min-height: 38px;
         padding: 0;
         color: var(--lv-color-text);
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-bold);
     }
 
@@ -779,7 +779,7 @@
         border-radius: var(--lv-r-m);
         color: var(--lv-color-text-muted);
         text-align: center;
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         position: relative;
         transition: all var(--lv-dur-1) var(--lv-ease);
     }
@@ -817,7 +817,7 @@
         border-radius: var(--lv-r-m);
         background: transparent;
         color: var(--lv-color-text-muted);
-        font-size: 11px;
+        font-size: var(--lv-type-meta-size);
         cursor: pointer;
         text-align: center;
         position: relative;
@@ -856,7 +856,7 @@
         .lv-r54-topbar { padding-right: calc(var(--lv-space-unit) * 12); padding-left: 24px; }
         :global(.lv-r54-sidebar .lv-tab) { padding-right: calc(var(--lv-space-unit) * 5); padding-left: 10px; }
     }
-    .lv-r54-workspace-context { display: flex; min-width: 0; align-items: center; gap: 9px; color: var(--lv-color-text-muted); font-size: 12px; }
+    .lv-r54-workspace-context { display: flex; min-width: 0; align-items: center; gap: 9px; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
     .lv-r54-workspace-context > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lv-r54-beta-badge { flex: none; border-radius: 7px; padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline)); background: var(--lv-primary-soft); color: var(--lv-color-brand); font-size: 10px; }
     .lv-r54-topbar-actions { display: flex; min-width: 0; align-items: center; gap: var(--lv-sp-2); }
@@ -995,7 +995,7 @@
     .lv-r54-health-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
     .lv-r54-health-grid .lv-card2 { padding: calc(var(--lv-space-unit) * 9 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 10); }
     .lv-r54-health-grid strong { display: block; margin-top: 10px; font-size: var(--lv-type-body-sm-size); }
-    .lv-r54-health-state { display: block; margin-top: 4px; color: var(--lv-color-text-muted); font-size: 11px; }
+    .lv-r54-health-state { display: block; margin-top: 4px; color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-r54-health-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
     .lv-r54-health-dot-good { background: var(--lv-color-success); }
     .lv-r54-health-dot-warn { background: var(--lv-color-warning); }

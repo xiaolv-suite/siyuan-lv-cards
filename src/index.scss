@@ -861,7 +861,10 @@ body[data-theme-mode="dark"],
 .lv-dialog-card,
 .lv-pause-dialog,
 .lv-help-body,
-.lv-palette-body {
+.lv-palette-body,
+pre,
+.language-math,
+.katex-display {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
 
@@ -1629,6 +1632,21 @@ body[data-theme-mode="dark"],
         margin: var(--lv-sp-2) 0;
     }
 
+    // 行内代码排版（实体代码胶囊质感）
+    :not(pre) > code {
+        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
+        margin: 0 calc(var(--lv-space-unit) * 1);
+        border-radius: var(--lv-r-xs);
+        background: color-mix(in srgb, var(--lv-color-text) 7%, transparent);
+        border: 1px solid color-mix(in srgb, var(--lv-color-text) 10%, transparent);
+        font-size: 0.9em;
+        font-family: var(--b3-font-family-code, monospace);
+        font-variant-numeric: tabular-nums;
+        color: var(--lv-color-text);
+        overflow-wrap: break-word;
+        word-break: break-word;
+    }
+
     // 代码块自适应与圆角背景
     pre {
         overflow-x: auto;
@@ -1638,6 +1656,8 @@ body[data-theme-mode="dark"],
         background: var(--lv-color-canvas);
         border: 1px solid var(--lv-border);
         margin: var(--lv-sp-2) 0;
+        font-family: var(--b3-font-family-code, monospace);
+        line-height: var(--lv-lh-code, 1.5);
     }
 
     // 引用块排版与温和品牌色边线

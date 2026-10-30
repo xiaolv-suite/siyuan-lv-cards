@@ -1936,7 +1936,7 @@
     }
     .lv-today-week-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); font-size: var(--lv-type-control-size); }
     .lv-today-week-summary strong { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--lv-color-data); }
-    .lv-today-week-summary small { color: var(--lv-color-text-muted); font-size: 10px; font-weight: var(--lv-fw-normal); }
+    .lv-today-week-summary small { color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); font-weight: var(--lv-fw-normal); }
     .lv-today-week-note {
         margin-top: auto;
         padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
@@ -1966,8 +1966,8 @@
         background: var(--lv-color-surface);
         text-align: center;
     }
-    .lv-first-use h2 { margin: calc(var(--lv-space-unit) * 4) 0; font-size: 24px; line-height: var(--lv-lh-body); }
-    .lv-first-use > p { max-width: 560px; margin: 0 auto; color: var(--lv-color-text-muted); font-size: 14px; line-height: var(--lv-lh-relaxed); }
+    .lv-first-use h2 { margin: calc(var(--lv-space-unit) * 4) 0; font-size: var(--lv-type-display-size); line-height: var(--lv-lh-body); }
+    .lv-first-use > p { max-width: 560px; margin: 0 auto; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); line-height: var(--lv-lh-relaxed); }
     .lv-empty-note-card {
         display: flex;
         align-items: flex-start;
@@ -2094,7 +2094,7 @@
             border: none !important;
             outline: none !important;
             background: transparent !important;
-            font-size: 11px !important;
+            font-size: var(--lv-type-meta-size) !important;
             font-weight: var(--lv-fw-semibold) !important;
             color: var(--lv-color-brand) !important;
             padding: 0 calc(var(--lv-space-unit) * 1) !important;
@@ -2120,7 +2120,7 @@
     .lv-refresh-status { margin: 0 0 var(--lv-sp-2); color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
     .lv-today-decks { margin: var(--lv-sp-4) 0; }
     .lv-today-decks-head { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-2); }
-    .lv-today-decks-head h3 { margin: 0; font-size: 14px; }
+    .lv-today-decks-head h3 { margin: 0; font-size: var(--lv-type-body-size); }
     .lv-today-decks-list {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
