@@ -237,5 +237,15 @@
         border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
+
+        span {
+            font-family: var(--lv-font-mono, monospace);
+            font-variant-numeric: tabular-nums;
+            padding: var(--lv-space-hairline) calc(var(--lv-space-unit) * 2);
+            border-radius: var(--lv-r-tag);
+            background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+            border: 1px solid var(--lv-border);
+            font-size: var(--lv-type-caption-size);
+        }
     }
 </style>

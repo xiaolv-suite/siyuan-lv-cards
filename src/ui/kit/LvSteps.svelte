@@ -1,5 +1,7 @@
 <script lang="ts">
     /** 步骤指示器（Kit，339）：向导/引导的进度条——圆点 + 连接线 + 标签 */
+    import LvIcon from "./LvIcon.svelte";
+
     let { steps, current, onclick }: {
         steps: string[];
         /** 当前步骤（0 起） */
@@ -19,7 +21,13 @@
             aria-current={i === current ? "step" : undefined}
             onclick={() => onclick?.(i)}
         >
-            <span class="lv-step-dot">{i < current ? "✓" : i + 1}</span>
+            <span class="lv-step-dot">
+                {#if i < current}
+                    <LvIcon name="check" size={12} />
+                {:else}
+                    {i + 1}
+                {/if}
+            </span>
             <span class="lv-step-label">{label}</span>
         </button>
         {#if i < steps.length - 1}
@@ -59,8 +67,10 @@
     .lv-step-dot {
         width: 20px;
         height: 20px;
-        line-height: var(--lv-lh-control-lg);
         border-radius: var(--lv-r-circle);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
