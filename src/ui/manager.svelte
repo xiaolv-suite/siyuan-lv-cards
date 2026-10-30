@@ -845,7 +845,24 @@
             },
         });
     }
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f")) {
+            e.preventDefault();
+            const input = document.getElementById("lv-manager-filter") as HTMLInputElement | null;
+            input?.focus();
+            input?.select();
+        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!loading && batchBusy === null) {
+                e.preventDefault();
+                void load();
+            }
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <LvPage
     pageId="lv-manager-page"
@@ -862,6 +879,8 @@
                 class="b3-text-field lv-filter"
                 type="text"
                 aria-label={t.manager.filterLabel}
+                title={`${t.manager.filterPlaceholder} (/)`}
+                aria-keyshortcuts="/"
                 placeholder={t.manager.filterPlaceholder}
                 spellcheck="false"
                 autocomplete="off"
@@ -878,7 +897,16 @@
                 ><LvIcon name="close" size={12} /></button>
             {/if}
         </div>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={loading || batchBusy !== null} onclick={load}><LvIcon name="refresh" size={13} /> <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span></button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            disabled={loading || batchBusy !== null}
+            title={`${loading ? t.dashboard.loading : t.dashboard.refresh} (r)`}
+            aria-keyshortcuts="r"
+            onclick={load}
+        >
+            <LvIcon name="refresh" size={13} />
+            <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span>
+        </button>
     {/snippet}
 
     <!-- T-管理器 R53 工具行：排序/筛选/保存独立于页头搜索 -->
@@ -1451,6 +1479,15 @@
         padding-top: var(--lv-sp-3);
         border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         .lv-pager { font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
 
     .lv-list {
@@ -1520,10 +1557,13 @@
                 color: inherit;
                 text-align: left;
                 cursor: pointer;
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
 
                 &:focus-visible {
-                    outline: 2px solid var(--lv-color-brand);
-                    outline-offset: 2px;
+                    outline: none;
+                    box-shadow: var(--lv-focus-ring);
                     border-radius: var(--lv-r-s);
                 }
             }

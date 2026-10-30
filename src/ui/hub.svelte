@@ -402,7 +402,19 @@
     });
 
     const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || navigator.platform || "");
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+            if (openPalette) {
+                e.preventDefault();
+                openPalette();
+            }
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="lv-hub" bind:this={hubRoot}>
     <!-- R54 工作台外壳：桌面左侧稳定主入口；旧模块作为学习页中的上下文工具。 -->
@@ -751,11 +763,19 @@
         place-items: center;
         border-radius: var(--lv-r-circle);
         box-shadow: var(--lv-shadow-1);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:hover {
             transform: translateY(-1.5px) scale(1.04);
             box-shadow: var(--lv-shadow-2);
+        }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
 
@@ -821,6 +841,14 @@
         cursor: pointer;
         text-align: center;
         position: relative;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
 
     .lv-r54-sidebar-link:hover,
@@ -875,12 +903,20 @@
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-normal);
         text-align: left;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
     }
     .lv-r54-search:not(:disabled):hover {
         border-color: var(--lv-primary-border);
         background: var(--lv-color-surface);
         box-shadow: var(--lv-shadow-1);
+    }
+    .lv-r54-search:focus-visible {
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
+        border-color: var(--lv-color-brand);
     }
     .lv-r54-search:disabled { cursor: not-allowed; opacity: .62; }
     .lv-r54-search kbd {
@@ -945,7 +981,15 @@
         font-size: var(--lv-type-control-size);
         white-space: nowrap;
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
 
     .lv-hub-subnav-btn:hover,
@@ -1041,7 +1085,15 @@
             color: var(--lv-color-text-muted);
             font-size: var(--lv-type-meta-size);
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
         }
         .lv-hub-mobile-btn:active {
             transform: scale(0.96);

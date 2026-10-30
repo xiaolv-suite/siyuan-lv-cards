@@ -730,7 +730,32 @@
             }
         };
     });
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if ((e.key === " " || e.key === "Enter") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!todayDecision.actionDisabled && (!loading || hasLoadedSnapshot)) {
+                e.preventDefault();
+                heroAction();
+            }
+        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!loading) {
+                e.preventDefault();
+                void refresh();
+            }
+        } else if (e.key === "m" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            ctx.openManager();
+        } else if ((e.key === "c" || e.key === "n") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (ctx.openQuickCard) {
+                e.preventDefault();
+                ctx.openQuickCard();
+            }
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <LvPage eyebrow={`TODAY / ${heroDateText()}`} title={t.dashboard.title} subtitle={revlogNote ? `${t.dashboard.since} ${revlogNote}` : ""}>
     {#snippet actions()}
@@ -744,11 +769,23 @@
                 <LvIcon name="edit" size={13} />
                 <span>{writeBusy ? "…" : t.dashboard.writeDoc}</span>
             </button>
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" onclick={() => ctx.openManager()}>
+            <button
+                class="b3-button b3-button--small b3-button--outline lv-btn-action"
+                title={`${t.menuManager} (m)`}
+                aria-keyshortcuts="m"
+                onclick={() => ctx.openManager()}
+            >
                 <LvIcon name="cards" size={13} />
                 <span>{t.menuManager}</span>
             </button>
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" data-testid="dashboard-refresh-btn" disabled={loading} onclick={refresh}>
+            <button
+                class="b3-button b3-button--small b3-button--outline lv-btn-action"
+                data-testid="dashboard-refresh-btn"
+                disabled={loading}
+                title={`${loading ? t.dashboard.loading : t.dashboard.refresh} (r)`}
+                aria-keyshortcuts="r"
+                onclick={refresh}
+            >
                 <LvIcon name="refresh" size={13} />
                 <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span>
             </button>
@@ -881,6 +918,8 @@
                     <button
                         class="b3-button lv-btn-primary"
                         disabled={todayDecision.actionDisabled || (loading && !hasLoadedSnapshot)}
+                        title={`${heroActionLabel()} (Space / Enter)`}
+                        aria-keyshortcuts="Space Enter"
                         aria-label={heroActionLabel()}
                         onclick={heroAction}
                     >
@@ -2068,12 +2107,20 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: all var(--lv-dur-1) var(--lv-ease);
 
         &:hover:not(:disabled) {
             color: var(--lv-color-brand);
             border-color: var(--lv-color-brand);
             background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
+        }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
     .lv-hero-budget-pill {
@@ -2145,6 +2192,8 @@
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         text-align: left;
         cursor: default;
+        content-visibility: auto;
+        contain-intrinsic-size: 0 56px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease);
@@ -2175,8 +2224,17 @@
             cursor: pointer;
             text-align: left;
             color: inherit;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
             &:hover .lv-today-deck-name {
                 color: var(--lv-color-brand);
+            }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-radius: var(--lv-r-m);
             }
         }
         .lv-today-deck-name {
@@ -2206,11 +2264,19 @@
             color: var(--lv-color-brand);
             border-color: var(--lv-primary-border);
             white-space: nowrap;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: all var(--lv-dur-1) var(--lv-ease);
 
             &:hover:not(:disabled) {
                 background: var(--lv-primary-soft);
                 border-color: var(--lv-color-brand);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
             }
 
             &:disabled {

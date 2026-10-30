@@ -1354,12 +1354,15 @@ pre,
         line-height: var(--lv-lh-reading-tight);
         letter-spacing: -0.025em;
         font-weight: var(--lv-fw-heading);
+        text-wrap: balance;
     }
     .lv-hero-desc {
         margin: 0 0 calc(var(--lv-space-unit) * 10);
-        max-width: 42em;
+        max-width: 48em;
         font-size: var(--lv-type-body-size);
         color: var(--lv-color-text-muted);
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-hero-cta {
         display: flex;

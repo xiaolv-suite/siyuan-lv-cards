@@ -195,13 +195,38 @@
         if (g.minutesPerDay === 0) out.push(t.gapBudget);
         return out;
     }
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (editing) {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !saving && !actionBusy) {
+                e.preventDefault();
+                void save();
+            } else if (e.key === "Escape" && !saving && !actionBusy) {
+                e.preventDefault();
+                cancelEdit();
+            }
+            return;
+        }
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if ((e.key === "+" || e.key === "a") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            startAdd();
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <LvPage eyebrow={embedded ? "" : "GOAL / PLAN"} title={embedded ? "" : t.title} subtitle={embedded ? "" : t.subtitle}>
     {#snippet actions()}
         {#if !editing}
             <!-- 主动作：每屏唯一 primary -->
-            <button class="b3-button b3-button--small lv-btn-primary" onclick={startAdd}>
+            <button
+                class="b3-button b3-button--small lv-btn-primary"
+                title={`${t.add} (+ / a)`}
+                aria-keyshortcuts="+ a"
+                onclick={startAdd}
+            >
                 <LvIcon name="plus" size={13} /> <span>{t.add}</span>
             </button>
         {/if}
@@ -243,11 +268,23 @@
             <div class="lv-form-hint"><LvIcon name="lightbulb" size={15} /> {t.suggested.replace("${n}", String(suggestedMinutes(form.purpose, form.level)))}</div>
             <div class="lv-form-actions">
                 {#if formError}<div class="lv-form-error" role="alert">{formError}</div>{/if}
-                <button class="b3-button lv-btn-primary b3-button--small lv-btn-tool" disabled={saving || actionBusy} onclick={() => void save()}>
+                <button
+                    class="b3-button lv-btn-primary b3-button--small lv-btn-tool"
+                    disabled={saving || actionBusy}
+                    title={`${t.save} (Ctrl+Enter)`}
+                    aria-keyshortcuts="Control+Enter Meta+Enter"
+                    onclick={() => void save()}
+                >
                     <LvIcon name="check" size={12} />
                     <span>{saving ? "保存中…" : t.save}</span>
                 </button>
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={saving || actionBusy} onclick={cancelEdit}>
+                <button
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    disabled={saving || actionBusy}
+                    title={`${t.cancel} (Esc)`}
+                    aria-keyshortcuts="Escape"
+                    onclick={cancelEdit}
+                >
                     <LvIcon name="close" size={12} />
                     <span>{t.cancel}</span>
                 </button>
@@ -345,10 +382,21 @@
     .lv-form-hint {
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
+        max-width: 48em;
+        text-wrap: pretty;
     }
     .lv-form-actions {
         display: flex;
         gap: var(--lv-sp-2);
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
     .lv-list {
         display: flex;
@@ -433,6 +481,17 @@
         align-items: flex-end;
         gap: var(--lv-sp-2);
         flex: none;
+
+        .b3-button,
+        .lv-chipbtn {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
     .lv-goal-main {
         flex: 1;
@@ -444,9 +503,13 @@
         gap: var(--lv-sp-2);
         font-size: var(--lv-type-body-size);
         font-weight: var(--lv-fw-semibold);
+        text-wrap: balance;
     }
     .lv-goal-meta {
         margin-top: calc(var(--lv-space-unit) * 1);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-visually-hidden {
         position: absolute;
