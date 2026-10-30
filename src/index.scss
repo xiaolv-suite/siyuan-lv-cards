@@ -1032,10 +1032,16 @@ pre,
     font-size: var(--lv-type-control-size);
     font-weight: var(--lv-fw-emphasis);
     cursor: pointer;
+    touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
     transition: background var(--lv-dur-1) var(--lv-ease),
         border-color var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
+    }
 
     &:not(:disabled):hover {
         background: var(--lv-surface-hover);
@@ -1063,6 +1069,14 @@ pre,
     background: transparent;
     border-color: transparent;
     color: var(--lv-color-danger);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
+    }
 
     &:not(:disabled):hover {
         background: var(--lv-danger-soft);

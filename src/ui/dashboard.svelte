@@ -2167,12 +2167,14 @@
         margin: 0;
         color: var(--lv-color-text);
         font-size: var(--lv-type-body-size);
-        line-height: var(--lv-lh-meta);
+        line-height: var(--lv-lh-reading, 1.65);
+        max-width: 48em;
+        text-wrap: pretty;
     }
     .lv-refresh-status { margin: 0 0 var(--lv-sp-2); color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
     .lv-today-decks { margin: var(--lv-sp-4) 0; }
     .lv-today-decks-head { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-2); }
-    .lv-today-decks-head h3 { margin: 0; font-size: var(--lv-type-body-size); }
+    .lv-today-decks-head h3 { margin: 0; font-size: var(--lv-type-body-size); text-wrap: balance; }
     .lv-today-decks-list {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
