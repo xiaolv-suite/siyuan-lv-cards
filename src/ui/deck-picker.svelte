@@ -128,15 +128,39 @@
             {/if}
         </div>
         <div class="lv-dp-new">
-            <input class="b3-text-field fn__block" placeholder={decks.length === 0 ? firstDeckNamePlaceholder : newNamePlaceholder} bind:value={newName} />
+            <input
+                class="b3-text-field fn__block"
+                placeholder={decks.length === 0 ? firstDeckNamePlaceholder : newNamePlaceholder}
+                aria-label={decks.length === 0 ? firstDeckNamePlaceholder : newNamePlaceholder}
+                spellcheck="false"
+                autocomplete="off"
+                bind:value={newName}
+            />
         </div>
         {#if errorMsg}
             <div class="ft__smaller" style="color: var(--lv-color-danger)" role="alert">{errorMsg}</div>
         {/if}
         <div class="b3-dialog__action">
-            <button class="b3-button b3-button--cancel" aria-label={window.siyuan.languages.cancel} disabled={busy} onclick={onClose}><LvIcon name="close" size={14} /></button>
+            <button
+                class="b3-button b3-button--cancel"
+                aria-label={window.siyuan.languages.cancel}
+                aria-keyshortcuts="Escape"
+                title={`${window.siyuan.languages.cancel} (Esc)`}
+                disabled={busy}
+                onclick={onClose}
+            >
+                <LvIcon name="close" size={14} />
+            </button>
             <div class="fn__space"></div>
-            <button class="b3-button lv-btn-primary" disabled={busy || !!loadError || (!selected && !newName.trim())} aria-busy={busy} onclick={confirm}>{busy ? busyLabel : `${confirmLabel} ↵`}</button>
+            <button
+                class="b3-button lv-btn-primary"
+                disabled={busy || !!loadError || (!selected && !newName.trim())}
+                aria-busy={busy}
+                aria-keyshortcuts="Enter"
+                onclick={confirm}
+            >
+                {busy ? busyLabel : `${confirmLabel} ↵`}
+            </button>
         </div>
     {/if}
 </div>
@@ -145,6 +169,9 @@
     .lv-deckpicker .lv-dp-list {
         max-height: 200px;
         overflow: auto;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
+        overscroll-behavior: contain;
         margin-bottom: var(--lv-sp-3);
     }
     .lv-deckpicker .lv-dp-row {
@@ -153,6 +180,8 @@
         padding: var(--lv-sp-2);
         border-radius: var(--lv-r-s);
         cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
     }
     .lv-deckpicker .lv-dp-row:hover { background: var(--lv-primary-softer); }

@@ -161,7 +161,7 @@
 
 <svelte:window on:keydown={onKeydown} />
 
-<div class="lv-chal b3-typography">
+<div class="lv-chal b3-typography" role="region" aria-label={t.challenge.title}>
     {#if phase === "idle"}
         <div class="lv-chal-center">
             <div class="lv-chal-icon"><LvIcon name="timer" size={34} /></div>
@@ -169,14 +169,28 @@
             <div class="lv-chal-desc">{t.challenge.desc.replace("${n}", "3")}</div>
             <button class="b3-button lv-btn-primary" onclick={start}>{t.challenge.start} <LvKbd k="Space" /></button>
             <div style="margin-top: var(--lv-sp-3)">
-                <button class="b3-button b3-button--cancel" onclick={exit}>{window.siyuan.languages.cancel}</button>
+                <button
+                    class="b3-button b3-button--cancel"
+                    aria-keyshortcuts="Escape"
+                    title={`${window.siyuan.languages.cancel} (Esc)`}
+                    onclick={exit}
+                >
+                    {window.siyuan.languages.cancel}
+                </button>
             </div>
         </div>
     {:else if phase === "loading"}
         <div class="lv-chal-center" aria-busy="true">
             <div class="lv-chal-icon"><LvIcon name="timer" size={34} /></div>
             <div class="lv-chal-title">{t.challenge.loading}</div>
-            <button class="b3-button b3-button--cancel" onclick={exit}>{window.siyuan.languages.cancel}</button>
+            <button
+                class="b3-button b3-button--cancel"
+                aria-keyshortcuts="Escape"
+                title={`${window.siyuan.languages.cancel} (Esc)`}
+                onclick={exit}
+            >
+                {window.siyuan.languages.cancel}
+            </button>
         </div>
     {:else if phase === "empty"}
         <div class="lv-chal-center">
@@ -184,7 +198,14 @@
             <div class="lv-chal-title">{t.challenge.empty}</div>
             <div class="fn__flex" style="gap: var(--lv-sp-2)">
                 <button class="b3-button b3-button--outline lv-btn-tool" onclick={start}><LvIcon name="refresh" size={13} /> <span>{t.challenge.retry}</span></button>
-            <button class="b3-button b3-button--cancel" onclick={exit}>{window.siyuan.languages.cancel}</button>
+                <button
+                    class="b3-button b3-button--cancel"
+                    aria-keyshortcuts="Escape"
+                    title={`${window.siyuan.languages.cancel} (Esc)`}
+                    onclick={exit}
+                >
+                    {window.siyuan.languages.cancel}
+                </button>
             </div>
         </div>
     {:else if phase === "error"}
@@ -194,7 +215,14 @@
             <div class="lv-chal-desc" role="alert">{errorMsg}</div>
             <div class="fn__flex" style="gap: var(--lv-sp-2)">
                 <button class="b3-button b3-button--outline lv-btn-tool" onclick={start}><LvIcon name="refresh" size={13} /> <span>{t.challenge.retry}</span></button>
-                <button class="b3-button b3-button--cancel" onclick={exit}>{window.siyuan.languages.cancel}</button>
+                <button
+                    class="b3-button b3-button--cancel"
+                    aria-keyshortcuts="Escape"
+                    title={`${window.siyuan.languages.cancel} (Esc)`}
+                    onclick={exit}
+                >
+                    {window.siyuan.languages.cancel}
+                </button>
             </div>
         </div>
     {:else if phase === "running"}
@@ -215,8 +243,20 @@
                 {@html cards[idx].dom}
             </div>
             <div class="lv-chal-actions">
-                <button class="b3-button lv-chal-btn lv-chal-unknown" onclick={() => mark(false)}><LvIcon name="close" size={13} /> <span>{t.challenge.unknown}</span> <LvKbd k="1" /></button>
-                <button class="b3-button lv-chal-btn lv-chal-known" onclick={() => mark(true)}><LvIcon name="check" size={13} /> <span>{t.challenge.known}</span> <LvKbd k="2" /></button>
+                <button
+                    class="b3-button lv-chal-btn lv-chal-unknown"
+                    aria-keyshortcuts="1 ArrowLeft x"
+                    onclick={() => mark(false)}
+                >
+                    <LvIcon name="close" size={13} /> <span>{t.challenge.unknown}</span> <LvKbd k="1" />
+                </button>
+                <button
+                    class="b3-button lv-chal-btn lv-chal-known"
+                    aria-keyshortcuts="2 ArrowRight Space Enter"
+                    onclick={() => mark(true)}
+                >
+                    <LvIcon name="check" size={13} /> <span>{t.challenge.known}</span> <LvKbd k="2" />
+                </button>
             </div>
         {:else}
             <div class="lv-chal-center">{t.challenge.loading}</div>
@@ -248,6 +288,14 @@
         margin: var(--lv-sp-3) 0;
         padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        max-width: 48em;
+        text-wrap: pretty;
+
+        :global(p) {
+            max-width: 48em;
+            text-wrap: pretty;
+            margin: var(--lv-sp-2) 0;
+        }
 
         :global(img) {
             max-width: 100%;
