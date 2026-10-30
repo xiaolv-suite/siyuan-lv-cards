@@ -4,7 +4,7 @@
     import { openTab, showMessage } from "siyuan";
     import {
         getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
-        batchSetRiffCardsDueTime,
+        batchSetRiffCardsDueTime, getRiffCards,
         type RiffDueCard, type RiffDeck, type Rating,
     } from "@/api/riff";
     import { getNotebooks, getBlockAttrs, getBlockDOM, type Notebook } from "@/api/siyuan";
@@ -71,6 +71,7 @@
     import ReviewAnswerSection from "./review/ReviewAnswerSection.svelte";
     import ReviewRequeueWaiting from "./review/ReviewRequeueWaiting.svelte";
     import ReviewCardBody from "./review/ReviewCardBody.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
@@ -793,6 +794,30 @@
                 return; // 旧响应：不改队列、卡面、计数或计时器
             }
             let cards = data.cards ?? [];
+            if (cramActive && cards.length === 0) {
+                // 若当天已无到期卡，但在 Cram 突击快刷模式下，从该卡组/范围拉取全部卡片供强行过筛
+                try {
+                    const deckID = scopeKey.startsWith("deck:") ? scopeKey.slice(5) : "";
+                    const allRes = await getRiffCards(deckID, 1, 100);
+                    const pulledCards: any[] = [];
+                    for (const b of allRes.blocks ?? []) {
+                        const rc = (b as any).riffCard ?? (b as any).RiffCard;
+                        if (rc) {
+                            pulledCards.push({
+                                cardID: rc.id ?? rc.cardID ?? b.id,
+                                deckID: rc.deckID ?? deckID,
+                                blockID: b.id,
+                                state: Number(rc.state ?? 0),
+                                reps: Number(rc.reps ?? 0),
+                                lapses: Number(rc.lapses ?? 0),
+                            });
+                        }
+                    }
+                    cards = pulledCards.filter(c => !kernelReviewedIDs.includes(c.cardID));
+                } catch {
+                    /* 静默降级 */
+                }
+            }
             // 「今天不学」+ 本场已跳过的卡本地过滤（内核调度不受影响，AJ9）
             cards = filterActiveSessionCards(cards, ctx.isSuspendedToday, sessionSkipped);
             // 自适应候选窗口：当到期卡量大且设置了每批上限时，对首批候选进行质量排查即可，避免全库千张卡阻塞首卡加载
@@ -1246,6 +1271,29 @@
                 await next();
                 return;
             }
+            // Cram 考前突击快刷模式（对标 FSRS/Obsidian Cram）：纯过筛练习，不修改内核排期 due/interval
+            if (cramActive) {
+                writeSucceeded = true;
+                playSfx(rating);
+                reviewedIDs = [...reviewedIDs, current.cardID];
+                const wasNew = isCardNew(ctx.getRevlog(), current.cardID);
+                const nextCounters = updateSessionCountersOnRate(
+                    { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
+                    rating,
+                    wasNew
+                );
+                sessionNew = nextCounters.new;
+                sessionReview = nextCounters.review;
+                sessionForget = nextCounters.forget;
+                sessionSkip = nextCounters.skip;
+                if (rating === 1 && eff().requeueAgain) {
+                    queueDelayedRequeue(current);
+                }
+                persistSession();
+                announce(t.review.liveRated, "polite");
+                await next();
+                return;
+            }
             const wasNew = isCardNew(ctx.getRevlog(), current.cardID);
             playSfx(rating);
             await reviewRiffCard(current.deckID, current.cardID, rating, reviewedIDs);
@@ -1345,7 +1393,10 @@
     function advanceHint() {
         if (!current || showAnswer) return;
         const ko = ctx.getKOBySource?.(current.blockID);
-        const res = advanceCardHint(cardHtml, hintLevel, current.cardID, ko?.fact);
+        const res = advanceCardHint(cardHtml, hintLevel, current.cardID, ko?.fact, {
+            expectedText,
+            contextTitle: currentBreadcrumbs?.formattedText || currentHPath,
+        });
         if (res) {
             hintLog = [...hintLog, res.hintLogEntry];
             hintLevel = res.level;
@@ -2107,12 +2158,21 @@
             />
         </div>
         <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%; margin:0 auto;`}>
+            {#if current && (current.lapses ?? 0) >= 5}
+                <div class="lv-leech-warning-banner" role="alert" aria-live="assertive" data-testid="review-leech-warning">
+                    <span class="lv-leech-icon"><LvIcon name="warning" size={15} /></span>
+                    <span class="lv-leech-text">
+                        <strong>{t?.review?.leechTitle ?? "水蛭卡预警"}</strong>：{t?.review?.leechWarning?.replace("${n}", String(current.lapses)) ?? `已遗忘 ${current.lapses} 次，建议精简问题或添加助记提示`}
+                    </span>
+                </div>
+            {/if}
             <ReviewCardBreadcrumbs
                 breadcrumbs={currentBreadcrumbs}
                 hpath={currentHPath}
                 bind:hideParentPath={hideBreadcrumbParentPath}
                 {t}
                 onToggleContext={toggleContext}
+                onOpenInEditor={openInEditor}
             />
             <ReviewCardBody
                 {cardHtml}
@@ -2364,6 +2424,35 @@
 
             &.lv-anim-glow {
                 border-color: var(--lv-primary-border);
+            }
+        }
+
+        .lv-leech-warning-banner {
+            display: flex;
+            align-items: center;
+            gap: var(--lv-sp-2);
+            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4);
+            margin-bottom: var(--lv-sp-3);
+            border-radius: var(--lv-r-m);
+            background: color-mix(in srgb, var(--lv-color-danger) 10%, var(--lv-color-surface));
+            border: 1px solid color-mix(in srgb, var(--lv-color-danger) 30%, transparent);
+            color: var(--lv-color-danger);
+            font-size: var(--lv-type-meta-size);
+            line-height: var(--lv-lh-meta);
+            box-shadow: var(--lv-shadow-1);
+            user-select: none;
+            -webkit-user-select: none;
+
+            .lv-leech-icon {
+                display: inline-flex;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            .lv-leech-text {
+                font-variant-numeric: tabular-nums;
+                strong {
+                    font-weight: var(--lv-fw-heading);
+                }
             }
         }
 

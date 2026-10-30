@@ -4,19 +4,23 @@
  * 封装复习出题队列的范围筛选、批次截断、同源防剧透、优先级排序、会话命中率计算与星标切换纯逻辑。
  */
 
-import { filterBurySiblings } from "./sibling-cards";
+import { filterBurySiblings, disperseSiblings } from "./sibling-cards";
+import { isLeechCard } from "./revlog";
 
 export interface QueuePipelineCard {
     cardID: string;
     state: number;
     lapses: number;
     blockID?: string;
+    sourceBlockId?: string;
+    isLeech?: boolean;
 }
 
 export interface QueuePipelineOptions<TCard> {
     scopeKey: string;
     batchLimit?: number;
     burySiblings?: boolean;
+    disperseSiblings?: boolean;
     cramActive?: boolean;
     reverseOrder?: boolean;
     randomOrder?: boolean;
@@ -30,7 +34,10 @@ export function applyQueuePipeline<TCard extends QueuePipelineCard>(
     cards: readonly TCard[],
     options: QueuePipelineOptions<TCard>
 ): TCard[] {
-    let result = [...cards];
+    let result: TCard[] = cards.map(c => ({
+        ...c,
+        isLeech: isLeechCard(c, 5),
+    }) as TCard);
 
     // 1. 仅新卡 / 仅旧卡模式（睡前巩固包）
     if (options.scopeKey === "new" || options.scopeKey === "old") {
@@ -49,10 +56,14 @@ export function applyQueuePipeline<TCard extends QueuePipelineCard>(
         result = options.shuffleFn(result);
     }
 
-    // 3. 同源兄弟卡防剧透推迟（Anki Bury Siblings）
-    if (!options.cramActive && options.burySiblings) {
-        const buryRes = filterBurySiblings(result as any[]);
-        result = buryRes.retained as TCard[];
+    // 3. 同源兄弟卡防剧透推迟或自动错峰排列（Anki Bury / Disperse Siblings）
+    if (!options.cramActive) {
+        if (options.burySiblings) {
+            const buryRes = filterBurySiblings(result as any[]);
+            result = buryRes.retained as TCard[];
+        } else if (options.disperseSiblings ?? true) {
+            result = disperseSiblings(result as any[]) as TCard[];
+        }
     }
 
     // 4. 批次上限截断（在完成排序与防剧透后，取最终批次）

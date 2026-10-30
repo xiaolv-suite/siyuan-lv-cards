@@ -233,7 +233,7 @@
     // svelte-ignore state_referenced_locally -- host callbacks and context are fixed for this Hub mount.
     const dctx: DashboardCtx = {
         ...dashboardBase,
-        openReviewScope: (scopeKey: string) => (dashboardBase as any).openReviewScope ? (dashboardBase as any).openReviewScope(scopeKey) : dashboardBase.openReview(),
+        openReviewScope: (scopeKey: string, cram?: boolean) => (dashboardBase as any).openReviewScope ? (dashboardBase as any).openReviewScope(scopeKey, cram) : (dashboardBase as any).openReview({ scope: scopeKey, cram }),
         onDueCount: (count) => (dueCount = count),
         openManager: () => switchTab("manage"),
         openManagerDeck,

@@ -110,8 +110,8 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             await plugin.suspendTodayMutations.unsuspend(ids);
                             return plugin.suspendToday.cardIDs.length;
                         },
-                        openReview: (options?: { scope?: string }) => plugin.openTabOf(TAB_REVIEW, options),
-                        openReviewScope: (scopeKey: string) => plugin.openTabOf(TAB_REVIEW, { scope: scopeKey }),
+                        openReview: (options?: { scope?: string; cram?: boolean }) => plugin.openTabOf(TAB_REVIEW, options),
+                        openReviewScope: (scopeKey: string, cram?: boolean) => plugin.openTabOf(TAB_REVIEW, { scope: scopeKey, cram: Boolean(cram) }),
                         openOnboarding: () => plugin.openOnboarding(),
                         getAIBatches: () => plugin.aiBatches.batches,
                         getLeechCards: () => {

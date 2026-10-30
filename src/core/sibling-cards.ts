@@ -5,13 +5,14 @@
  */
 
 export interface SiblingCardLike {
-    blockID: string;
+    blockID?: string;
+    sourceBlockId?: string;
     cardID: string;
     [key: string]: unknown;
 }
 
 /**
- * 依据 blockID 过滤同源兄弟卡：
+ * 依据 blockID / sourceBlockId 过滤同源兄弟卡：
  * 同一会话队列中，每个源块优先仅保留 1 张卡片进行测试，其余兄弟卡推迟到后续复习，杜绝虚假熟练感。
  */
 export function filterBurySiblings<T extends SiblingCardLike>(cards: readonly T[]): {
@@ -24,7 +25,7 @@ export function filterBurySiblings<T extends SiblingCardLike>(cards: readonly T[
     const buriedBlockIDs: string[] = [];
 
     for (const card of cards) {
-        const bid = String(card.blockID ?? "");
+        const bid = String(card.sourceBlockId ?? card.blockID ?? "");
         if (!bid) {
             retained.push(card);
             continue;
@@ -45,8 +46,8 @@ export function filterBurySiblings<T extends SiblingCardLike>(cards: readonly T[
 }
 
 /**
- * 同源卡片最大间距分散（Disperse Siblings）：
- * 若用户希望在同一长会话中完成所有卡片，将相同 blockID 的兄弟卡均匀打散到队列前后两端，拉长间隔。
+ * 同源卡片最大间距分散（Disperse Siblings / 错峰排列）：
+ * 将相同 sourceBlockId / blockID 的兄弟卡均匀打散到队列中，拉长间隔，杜绝连续出现。
  */
 export function disperseSiblings<T extends SiblingCardLike>(cards: readonly T[]): T[] {
     if (cards.length <= 2) return [...cards];
@@ -55,7 +56,7 @@ export function disperseSiblings<T extends SiblingCardLike>(cards: readonly T[])
     const noBlock: T[] = [];
 
     for (const card of cards) {
-        const bid = String(card.blockID ?? "");
+        const bid = String(card.sourceBlockId ?? card.blockID ?? "");
         if (!bid) {
             noBlock.push(card);
             continue;

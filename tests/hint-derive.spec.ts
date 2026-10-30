@@ -74,5 +74,23 @@ describe("deriveHintLevels（BJ-2 内容推导）", () => {
             expect(step1?.level).toBe("recall-target");
             expect(step1?.text).toContain("回忆：核心要点");
         });
+
+        it("传入 expectedText 与 contextTitle 时生成渐进式线索（Graded Cueing）", () => {
+            const html = "<p>光合作用在哪个细胞器中进行？</p>";
+            const step1 = stepLadderHint(html, null, undefined, {
+                expectedText: "叶绿体",
+                contextTitle: "生物笔记 / 细胞生物学",
+            });
+            expect(step1).not.toBeNull();
+            expect(step1?.level).toBe("keyword");
+            expect(step1?.text).toBe("首字线索：叶…（共 3 字）");
+
+            const step2 = stepLadderHint(html, step1!.level, undefined, {
+                expectedText: "叶绿体",
+                contextTitle: "生物笔记 / 细胞生物学",
+            });
+            expect(step2?.level).toBe("context");
+            expect(step2?.text).toContain("来源语境：生物笔记 / 细胞生物学");
+        });
     });
 });

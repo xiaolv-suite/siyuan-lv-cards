@@ -61,6 +61,25 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             const res = applyQueuePipeline(mockCards, { scopeKey: "all", randomOrder: true, shuffleFn: reverseShuffle });
             expect(res.map(c => c.cardID)).toEqual(["c-4", "c-3", "c-2", "c-1"]);
         });
+
+        it("自动标记水蛭卡 (lapses >= 5)", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all" });
+            const c4 = res.find(c => c.cardID === "c-4");
+            const c2 = res.find(c => c.cardID === "c-2");
+            expect(c4?.isLeech).toBe(true);
+            expect(c2?.isLeech).toBe(false);
+        });
+
+        it("未启用 burySiblings 时默认自动错峰排列同源兄弟卡", () => {
+            const raw: QueuePipelineCard[] = [
+                { cardID: "c-1", state: 1, lapses: 0, blockID: "b-1" },
+                { cardID: "c-2", state: 1, lapses: 0, blockID: "b-1" },
+                { cardID: "c-3", state: 1, lapses: 0, blockID: "b-2" },
+            ];
+            const res = applyQueuePipeline(raw, { scopeKey: "all", burySiblings: false });
+            // c-1 和 c-2 不会连续出现，c-3 插入中间
+            expect(res.map(c => c.cardID)).toEqual(["c-1", "c-3", "c-2"]);
+        });
     });
 
     describe("calculateReviewAccuracy", () => {

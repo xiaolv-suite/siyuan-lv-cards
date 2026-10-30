@@ -12,7 +12,7 @@
     import { downloadFile } from "@/core/data-transfer";
     import { getFlashcardStatistics, summarizeStatistics, type MigrationStatus } from "@/api/flashcardV2";
     import { calcStreak, lastNDays, localDate, studySecondsOn, coverageStats, deckCoverage, computeRetention, computeRetentionCurve, reviewStatsFor, weekCompare, calcMilestones, calcXp, type RevlogData, type RetentionResult, type CurvePoint, type WeekDelta, type Milestones, type XpResult, type CoverageStats, type DeckCoverage } from "@/core/revlog";
-    import { buildForecast, buildMonthGrid, dueMapFromForecast, type ForecastResult, type CalendarCell } from "@/core/forecast";
+    import { buildForecast, buildMonthGrid, dueMapFromForecast, get7DayForecast, type ForecastResult, type CalendarCell, type ForecastCardInput, type ForecastDay } from "@/core/forecast";
     import { renderDashboardReportMarkdown, computeWeekOverview, computeCurveSvgPaths } from "@/core/report-writer";
     import { openTab, showMessage } from "siyuan";
     import { friendlyError } from "@/api/errors";
@@ -33,9 +33,9 @@
         getRevlog: () => RevlogData;
         getV2Status: () => MigrationStatus | null;
         getDailyTargets: () => { new: number; review: number };
-        openReview: () => void;
+        openReview: (options?: { scope?: string; cram?: boolean }) => void;
         /** 启动指定卡包/范围复习 */
-        openReviewScope?: (scopeKey: string) => void;
+        openReviewScope?: (scopeKey: string, cram?: boolean) => void;
         /** 空库时的直接制卡入口；与上手引导并列，避免新用户只能先看说明。 */
         openQuickCard?: () => void;
         openManagerDeck?: (deckID: string, deckName: string) => void;
@@ -352,6 +352,22 @@
         }
     }
 
+    function startCramDeck(deckID: string) {
+        if (ctx.openReviewScope) {
+            ctx.openReviewScope(`deck:${deckID}`, true);
+        } else {
+            ctx.openReview({ scope: `deck:${deckID}`, cram: true });
+        }
+    }
+
+    function startGlobalCram() {
+        if (ctx.openReviewScope) {
+            ctx.openReviewScope("all", true);
+        } else {
+            ctx.openReview({ scope: "all", cram: true });
+        }
+    }
+
     function heroAction(): void {
         if (todayDecision.actionDisabled) return;
         if (totalCards === 0 && ctx.openQuickCard) {
@@ -434,6 +450,26 @@
     let calError = $state("");
     let calSelectedDate = $state<string | null>(null);
     let calSeq = 0;
+
+    // ---- 未来 7 日复习负载预报（FSRS4Anki 对标 · 支持负载平滑削峰填谷） ----
+    let forecastRawCards = $state<ForecastCardInput[]>([]);
+    let smoothLoadEnabled = $state(false);
+    let forecast7Days = $state<ForecastDay[]>([]);
+    let forecast7Max = $state(1);
+    let forecast7Total = $state(0);
+
+    function update7DayForecast() {
+        const now = new Date();
+        const f7 = get7DayForecast(forecastRawCards, { today: now, dailyNewTarget: targets.new, smooth: smoothLoadEnabled });
+        forecast7Days = f7.days;
+        forecast7Max = f7.maxCount;
+        forecast7Total = f7.totalDue;
+    }
+
+    function toggleSmoothLoad() {
+        smoothLoadEnabled = !smoothLoadEnabled;
+        update7DayForecast();
+    }
 
     function selectCalendarDate(date: string) {
         calSelectedDate = date;
@@ -564,7 +600,9 @@
                 page += 1;
             } while (page <= pageCount && page <= 20);
             if (seq !== calSeq) return;
+            forecastRawCards = cards;
             calForecast = buildForecast(cards, { today: now, horizonDays: 14, dailyNewTarget: targets.new });
+            update7DayForecast();
             const dueByDate = dueMapFromForecast(calForecast.days);
             const reviewsByDate = new Map(heat.map(h => [h.date, h.stat.review]));
             calCells = buildMonthGrid(now.getFullYear(), now.getMonth() + 1, now, reviewsByDate, dueByDate);
@@ -666,6 +704,7 @@
             lastSuccessfulAt = Date.now();
             loading = false;
             void scanDormantKnowledge();
+            void loadForecast();
             const nextDocCov = await docCovPromise;
             if (seq !== refreshSeq) {
                 return; // 文档归属查询期间用户已刷新（AR-6 generation 守卫）
@@ -1155,13 +1194,79 @@
                 <span><strong>{t.dashboard.weekPaceTitle}</strong> · {t.dashboard.weekPaceDesc}</span>
             </div>
         </section>
+
+        <!-- 未来 7 日复习负载预报（FSRS4Anki 对标 · 支持负载平滑削峰填谷） -->
+        <section class="lv-today-forecast lv-card2" aria-labelledby="lv-forecast-title" data-testid="dashboard-7day-forecast">
+            <div class="lv-today-week-head">
+                <div class="lv-forecast-title-group">
+                    <h2 id="lv-forecast-title">{t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}</h2>
+                    <span class="lv-today-week-range">{t.dashboard.forecast7Sub ?? "每日到期量预测与平滑削峰"}</span>
+                </div>
+                <div class="lv-forecast-head-actions">
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small lv-btn-tool"
+                        class:lv-btn-primary={smoothLoadEnabled}
+                        class:b3-button--outline={!smoothLoadEnabled}
+                        title={smoothLoadEnabled ? (t.dashboard.smoothLoadOn ?? "平滑已开启") : (t.dashboard.smoothLoadOff ?? "平滑已关闭")}
+                        onclick={toggleSmoothLoad}
+                        data-testid="dashboard-smooth-toggle-btn"
+                    >
+                        <LvIcon name="swap" size={12} />
+                        <span>{t.dashboard.smoothLoad ?? "负载平滑"}: {smoothLoadEnabled ? "开" : "关"}</span>
+                    </button>
+                </div>
+            </div>
+
+            {#if forecast7Days.length > 0}
+                <div class="lv-forecast-bars-row" role="region" aria-label={t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}>
+                    {#each forecast7Days as day, idx}
+                        {@const totalDay = day.reviews + day.news}
+                        {@const barHeightPct = Math.max(6, Math.min(100, Math.round((totalDay / Math.max(1, forecast7Max)) * 100)))}
+                        <div class="lv-forecast-col" title={`${day.date}：复习 ${day.reviews} + 新卡 ${day.news}（共 ${totalDay} 张）`}>
+                            <span class="lv-forecast-count">{totalDay}</span>
+                            <div class="lv-forecast-bar-track">
+                                <div class="lv-forecast-bar-fill" style={`height: ${barHeightPct}%;`}>
+                                    {#if day.reviews > 0}
+                                        <div class="lv-forecast-seg-review" style={`height: ${Math.round((day.reviews / Math.max(1, totalDay)) * 100)}%;`}></div>
+                                    {/if}
+                                </div>
+                            </div>
+                            <span class="lv-forecast-label">{idx === 0 ? (t.dashboard.todayLabel ?? "今天") : idx === 1 ? (t.dashboard.tomorrowLabel ?? "明天") : day.date.slice(5)}</span>
+                        </div>
+                    {/each}
+                </div>
+                <div class="lv-today-week-summary">
+                    <span>总预计到期 <strong>{forecast7Total}</strong> 张</span>
+                    {#if smoothLoadEnabled}
+                        <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> 削峰填谷已优化</span>
+                    {/if}
+                </div>
+            {:else}
+                <div class="lv-today-week-summary">
+                    <span class="ft__smaller ft__on-surface">{calLoading ? (t.dashboard.loading ?? "计算预测中...") : (t.dashboard.calEmpty ?? "预测窗口内没有到期卡片")}</span>
+                </div>
+            {/if}
+        </section>
         </div>
 
         {#if ctx.openManagerDeck && decks.length > 0}
             <section class="lv-today-decks" aria-labelledby="lv-today-decks-title">
                 <div class="lv-today-decks-head">
                     <h3 id="lv-today-decks-title">{t.dashboard.decksToday ?? "我的卡组"}</h3>
-                    <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openManager()}><LvIcon name="cards" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span></button>
+                    <div style="display: flex; gap: var(--lv-sp-2); align-items: center;">
+                        <button
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            title={t.dashboard.cramAll ?? "Cram 考前突击快刷（不改排期）"}
+                            onclick={startGlobalCram}
+                            data-testid="dashboard-start-cram-btn"
+                        >
+                            <LvIcon name="zap" size={13} /> <span>{t.dashboard.cramAll ?? "考前突击快刷"}</span>
+                        </button>
+                        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openManager()}>
+                            <LvIcon name="cards" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="lv-today-decks-list">
                     {#each [...displayedDecks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 6) as deck (deck.id)}
@@ -1177,6 +1282,16 @@
                             </button>
                             <div class="lv-today-deck-actions">
                                 <span class="lv-today-deck-count">{t.dashboard.deckCardCount.replace("${n}", String(deck.size ?? 0))}</span>
+                                <button
+                                    type="button"
+                                    class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
+                                    disabled={(deck.size ?? 0) === 0}
+                                    title={t.dashboard.cramDeckTip ?? `突击快刷此卡组（不改排期）`}
+                                    onclick={() => startCramDeck(deck.id)}
+                                    data-testid={`dashboard-cram-deck-${deck.id}`}
+                                >
+                                    <LvIcon name="zap" size={13} /> {t.dashboard.cramDeck ?? "突击"}
+                                </button>
                                 <button
                                     type="button"
                                     class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
@@ -1996,6 +2111,78 @@
         gap: calc(var(--lv-space-unit) * 3);
         line-height: var(--lv-lh-body);
         strong { color: var(--lv-color-text); font-weight: 600; white-space: nowrap; }
+    }
+    .lv-today-forecast {
+        display: flex;
+        flex-direction: column;
+        gap: var(--lv-sp-3);
+    }
+    .lv-forecast-title-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--lv-sp-1);
+    }
+    .lv-forecast-head-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+    }
+    .lv-forecast-bars-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--lv-sp-2);
+        height: 110px;
+        padding: var(--lv-sp-2) var(--lv-sp-1);
+        box-sizing: border-box;
+    }
+    .lv-forecast-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        height: 100%;
+        min-width: 0;
+        gap: var(--lv-sp-1);
+    }
+    .lv-forecast-count {
+        font-size: var(--lv-type-caption-size);
+        color: var(--lv-color-text-muted);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+    .lv-forecast-bar-track {
+        flex: 1;
+        width: clamp(14px, 3.2vw, 28px);
+        background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+        border-radius: var(--lv-r-pill);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        overflow: hidden;
+    }
+    .lv-forecast-bar-fill {
+        width: 100%;
+        background: var(--lv-color-cyan);
+        border-radius: var(--lv-r-pill);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        transition: height var(--lv-dur-2) var(--lv-ease);
+        overflow: hidden;
+    }
+    .lv-forecast-seg-review {
+        width: 100%;
+        background: var(--lv-color-brand);
+        border-radius: var(--lv-r-pill);
+    }
+    .lv-forecast-label {
+        font-size: var(--lv-type-caption-size);
+        color: var(--lv-color-text-muted);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        max-width: 100%;
     }
     .lv-empty-decks-bar {
         display: flex;

@@ -120,6 +120,77 @@ export function buildForecast(
     return { days, laterCount, coveredTotal, skippedTotal };
 }
 
+/**
+ * 7 日复习负载平滑削峰填谷（对标 FSRS4Anki Load Balancer）：
+ * 在预测周期内，将负载过高（峰值日）的部分卡片在前后 ±1~2 天内进行平滑分配，
+ * 避免某天爆发积压，返回平滑后的每日负载分布。
+ */
+export function smoothForecastLoad(days: readonly ForecastDay[]): ForecastDay[] {
+    if (days.length <= 1) return days.map(d => ({ ...d }));
+    const result = days.map(d => ({ ...d }));
+    const total = result.reduce((sum, d) => sum + d.reviews, 0);
+    const avg = total / result.length;
+
+    // 如果总负载极小，无需平滑
+    if (avg <= 1) return result;
+
+    // 平滑：将高于 1.25 倍均值的多余复习量平滑借给相邻较低日
+    for (let i = 0; i < result.length; i++) {
+        const threshold = Math.max(2, Math.ceil(avg * 1.25));
+        const excess = result[i].reviews - threshold;
+        if (excess > 0) {
+            // 优先借给前一天（如果不是过去且低于均值）
+            if (i > 0 && result[i - 1].reviews < avg) {
+                const shift = Math.min(Math.ceil(excess * 0.5), Math.floor(avg - result[i - 1].reviews));
+                if (shift > 0) {
+                    result[i].reviews -= shift;
+                    result[i - 1].reviews += shift;
+                }
+            }
+            // 再尝试借给后一天
+            const remainExcess = result[i].reviews - threshold;
+            if (remainExcess > 0 && i + 1 < result.length && result[i + 1].reviews < avg) {
+                const shift = Math.min(remainExcess, Math.floor(avg - result[i + 1].reviews));
+                if (shift > 0) {
+                    result[i].reviews -= shift;
+                    result[i + 1].reviews += shift;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+export interface SevenDayForecastSummary {
+    days: ForecastDay[];
+    smoothed: boolean;
+    maxCount: number;
+    totalDue: number;
+}
+
+/**
+ * 获取未来 7 天每日到期负载预报
+ */
+export function get7DayForecast(
+    cards: ForecastCardInput[],
+    opts: { today?: Date; dailyNewTarget?: number; smooth?: boolean } = {}
+): SevenDayForecastSummary {
+    const res = buildForecast(cards, {
+        today: opts.today,
+        horizonDays: 7,
+        dailyNewTarget: opts.dailyNewTarget ?? 0,
+    });
+    const finalDays = opts.smooth ? smoothForecastLoad(res.days) : res.days;
+    const maxCount = Math.max(1, ...finalDays.map(d => d.reviews + d.news));
+    const totalDue = finalDays.reduce((acc, d) => acc + d.reviews + d.news, 0);
+    return {
+        days: finalDays,
+        smoothed: Boolean(opts.smooth),
+        maxCount,
+        totalDue,
+    };
+}
+
 // ---- 月历格子 ----
 
 export type CalendarTone =

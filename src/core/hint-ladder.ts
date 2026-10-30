@@ -133,18 +133,42 @@ export function resolveHintLevelIndicator(
     return formatHintLevelIndicator(hintLevel, avail);
 }
 
+export interface HintStepOptions {
+    /** 答案期望文本（用于生成首字/长度遮挡线索） */
+    expectedText?: string;
+    /** 来源标题或语境描述 */
+    contextTitle?: string;
+}
+
 /**
  * 构建提示阶梯输入并执行下一级提示推进
  */
 export function stepLadderHint(
     cardHtml: string,
     currentLevel: HintLevel | null,
-    koFact?: string
+    koFact?: string,
+    opts?: HintStepOptions
 ): { level: HintLevel; text: string } | null {
     const cardText = (cardHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-    const input: HintLevelsInput = koFact
-        ? { "recall-target": `回忆：${koFact}`, keyword: koFact, full: cardText }
-        : deriveHintLevels(cardHtml || cardText);
+    let input: HintLevelsInput;
+    if (koFact) {
+        input = { "recall-target": `回忆：${koFact}`, keyword: koFact, full: cardText };
+    } else if (opts?.expectedText) {
+        const exp = opts.expectedText.trim();
+        const firstChar = exp.slice(0, 1);
+        const clueKeyword = exp.length > 1 ? `首字线索：${firstChar}…（共 ${exp.length} 字）` : `首字线索：${firstChar}`;
+        input = {
+            ...(opts.contextTitle ? { context: `来源语境：${opts.contextTitle}` } : {}),
+            keyword: clueKeyword,
+            explanation: exp,
+            full: cardText || exp,
+        };
+    } else {
+        input = deriveHintLevels(cardHtml || cardText);
+        if (opts?.contextTitle) {
+            input.context = `来源语境：${opts.contextTitle}`;
+        }
+    }
     if (!input.full) return null;
     return nextHint(input, currentLevel);
 }
@@ -164,9 +188,12 @@ export function advanceCardHint(
     currentLevel: HintLevel | null,
     cardID: string,
     koFact?: string,
-    now = Date.now()
+    optsOrNow?: HintStepOptions | number,
+    maybeNow?: number
 ): AdvanceHintResult | null {
-    const result = stepLadderHint(cardHtml, currentLevel, koFact);
+    const opts = typeof optsOrNow === "object" ? optsOrNow : undefined;
+    const now = typeof optsOrNow === "number" ? optsOrNow : (typeof maybeNow === "number" ? maybeNow : Date.now());
+    const result = stepLadderHint(cardHtml, currentLevel, koFact, opts);
     if (!result) return null;
 
     const logEntry = logHint(cardID, result.level, now);

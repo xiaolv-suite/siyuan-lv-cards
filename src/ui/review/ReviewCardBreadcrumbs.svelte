@@ -9,6 +9,7 @@
         t: any;
         onToggleContext?: () => void;
         onToggleParentPath?: () => void;
+        onOpenInEditor?: () => void;
     }
 
     let {
@@ -18,6 +19,7 @@
         t,
         onToggleContext = () => {},
         onToggleParentPath = () => {},
+        onOpenInEditor = () => {},
     }: Props = $props();
 
     function handleToggleParent(e: MouseEvent | KeyboardEvent) {
@@ -41,6 +43,7 @@
             class="lv-breadcrumb-btn"
             title={(breadcrumbs.formattedText || hpath) + " · " + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
             aria-label={(breadcrumbs.formattedText || hpath) + "，" + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
+            data-testid="review-breadcrumb-locate-btn"
         >
             <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
             <span class="lv-breadcrumb-text">
@@ -61,6 +64,16 @@
                 <LvIcon name={hideParentPath ? "chevron-right" : "chevron-left"} size={11} />
             </button>
         {/if}
+        <button
+            type="button"
+            class="lv-breadcrumb-locate-btn"
+            title={t.review?.locateInSiYuan ?? "在思源中定位原块"}
+            aria-label={t.review?.locateInSiYuan ?? "在思源中定位原块"}
+            onclick={(e) => { e.stopPropagation(); onOpenInEditor(); }}
+            data-testid="review-locate-source-btn"
+        >
+            <LvIcon name="edit" size={12} />
+        </button>
     </div>
 {:else if hpath}
     <!-- 汲取自闪卡小助手 ZY 与 RemNote：卡面来源文档知识语境面包屑 -->
@@ -76,9 +89,20 @@
             class="lv-breadcrumb-btn"
             title={t.review?.breadcrumbHint ?? "点击查阅来源文档上下文"}
             aria-label={hpath + "，" + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
+            data-testid="review-breadcrumb-locate-btn"
         >
             <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
             <span class="lv-breadcrumb-text">{hpath}</span>
+        </button>
+        <button
+            type="button"
+            class="lv-breadcrumb-locate-btn"
+            title={t.review?.locateInSiYuan ?? "在思源中定位原块"}
+            aria-label={t.review?.locateInSiYuan ?? "在思源中定位原块"}
+            onclick={(e) => { e.stopPropagation(); onOpenInEditor(); }}
+            data-testid="review-locate-source-btn"
+        >
+            <LvIcon name="edit" size={12} />
         </button>
     </div>
 {/if}
@@ -165,6 +189,34 @@
             padding: 0 var(--lv-space-hairline);
         }
         .lv-breadcrumb-toggle {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            padding: calc(var(--lv-space-unit) * 1);
+            border-radius: var(--lv-r-circle);
+            color: inherit;
+            transition: opacity var(--lv-dur-1) var(--lv-ease), background-color var(--lv-dur-1) var(--lv-ease);
+
+            &:hover {
+                opacity: 1;
+                background-color: color-mix(in srgb, var(--lv-color-brand) 15%, transparent);
+                color: var(--lv-color-brand);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                opacity: 1;
+            }
+        }
+        .lv-breadcrumb-locate-btn {
             background: transparent;
             border: none;
             cursor: pointer;

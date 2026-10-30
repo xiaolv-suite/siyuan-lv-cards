@@ -588,6 +588,12 @@ export interface LeechItem {
     lapses: number;
 }
 
+/** 判定是否为水蛭卡（对标 Anki Leech 机制，遗忘次数 >= 5 时自动标记为水蛭卡） */
+export function isLeechCard(card: { lapses?: number } | null | undefined, threshold: number = 5): boolean {
+    if (!card || typeof card.lapses !== "number") return false;
+    return card.lapses >= threshold;
+}
+
 /** leech 烂卡：revlog 中遗忘次数 ≥ 阈值的卡（M6·FR5，起点=插件启用日） */
 export function leechCards(data: RevlogData, threshold: number): LeechItem[] {
     const acc = new Map<string, LeechItem>();

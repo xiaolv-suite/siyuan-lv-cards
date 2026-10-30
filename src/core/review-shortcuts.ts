@@ -117,8 +117,8 @@ export function resolveReviewKeyAction(
         return "rate-default";
     }
 
-    // 6. h: 推进分级提示（仅问题态）
-    if (e.key === "h" && !ctx.showAnswer && ctx.hasCurrent) {
+    // 6. h / H: 推进分级提示（仅问题态，TextFold 渐进线索）
+    if ((e.key === "h" || e.key === "H") && !ctx.showAnswer && ctx.hasCurrent) {
         e.preventDefault?.();
         return "advance-hint";
     }

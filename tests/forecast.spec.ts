@@ -3,6 +3,8 @@ import {
     buildForecast,
     buildMonthGrid,
     dueMapFromForecast,
+    get7DayForecast,
+    smoothForecastLoad,
     localDateISO,
     parseCardDue,
     type ForecastCardInput,
@@ -89,5 +91,36 @@ describe("dueMapFromForecast", () => {
         );
         const m = dueMapFromForecast(r.days);
         expect(m.get(iso(0))).toBe(4);
+    });
+});
+
+describe("get7DayForecast & smoothForecastLoad", () => {
+    it("准确计算未来 7 天到期预测总量与峰值", () => {
+        const cards = [
+            card("20261007090000"), // day 0
+            card("20261008090000"), // day 1
+            card("20261008090000"), // day 1
+            card("20261009090000"), // day 2
+        ];
+        const res = get7DayForecast(cards, { today: TODAY });
+        expect(res.days).toHaveLength(7);
+        expect(res.totalDue).toBe(4);
+        expect(res.maxCount).toBe(2);
+        expect(res.smoothed).toBe(false);
+    });
+
+    it("smoothForecastLoad 削峰填谷平滑负载", () => {
+        const rawDays = [
+            { date: "2026-10-07", reviews: 2, news: 0 },
+            { date: "2026-10-08", reviews: 20, news: 0 }, // 尖峰
+            { date: "2026-10-09", reviews: 2, news: 0 },
+            { date: "2026-10-10", reviews: 2, news: 0 },
+        ];
+        const smoothed = smoothForecastLoad(rawDays);
+        expect(smoothed[1].reviews).toBeLessThan(20);
+        // 总数守恒
+        const rawTotal = rawDays.reduce((s, d) => s + d.reviews, 0);
+        const smoothedTotal = smoothed.reduce((s, d) => s + d.reviews, 0);
+        expect(smoothedTotal).toBe(rawTotal);
     });
 });

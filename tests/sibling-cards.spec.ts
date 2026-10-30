@@ -40,4 +40,19 @@ describe("sibling-cards bury & disperse engine", () => {
         const firstRound = dispersed.slice(0, 3).map(c => c.blockID);
         expect(new Set(firstRound).size).toBe(3);
     });
+
+    it("支持基于 sourceBlockId 识别并埋藏同源兄弟卡", () => {
+        const cardsWithSourceBlock: SiblingCardLike[] = [
+            { sourceBlockId: "sb-1", cardID: "c-1" },
+            { sourceBlockId: "sb-1", cardID: "c-2" },
+            { sourceBlockId: "sb-2", cardID: "c-3" },
+        ];
+        const res = filterBurySiblings(cardsWithSourceBlock);
+        expect(res.retained).toHaveLength(2);
+        expect(res.retained.map(c => c.cardID)).toEqual(["c-1", "c-3"]);
+        expect(res.buriedCount).toBe(1);
+
+        const dispersed = disperseSiblings(cardsWithSourceBlock);
+        expect(dispersed.map(c => c.cardID)).toEqual(["c-1", "c-3", "c-2"]);
+    });
 });
