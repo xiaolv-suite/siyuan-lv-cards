@@ -223,7 +223,25 @@
         checked = [];
         showMessage(t.refreshedNotice, 1500, "info");
     }
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f")) {
+            e.preventDefault();
+            const input = document.querySelector(".lv-inbox-search-input") as HTMLInputElement | null;
+            input?.focus();
+            input?.select();
+        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            refresh();
+        } else if (e.key === "a" && !e.ctrlKey && !e.metaKey && !e.altKey && visible.length > 0) {
+            e.preventDefault();
+            toggleAll();
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <LvPage eyebrow="CAPTURE / INBOX" title={t.title} subtitle={`${t.tabInbox} ${counts.inbox} · ${t.tabStaged} ${counts.staged} · ${t.tabSelected} ${counts.selected} · ${t.tabDismissed} ${counts.dismissed}`}>
     {#snippet actions()}
@@ -232,6 +250,8 @@
             type="search"
             placeholder={i18n.settings?.searchPlaceholder ?? "搜索材料…"}
             aria-label="搜索材料"
+            title="搜索材料 (/)"
+            aria-keyshortcuts="/"
             spellcheck="false"
             autocomplete="off"
             bind:value={searchQuery}
@@ -243,8 +263,25 @@
             onchange={(id: string) => { filter = id as InboxStatus; checked = []; }}
             ariaLabel={t.filterGroupLabel}
         />
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.selectAll} disabled={visible.length === 0} onclick={toggleAll}><LvIcon name="check" size={12} /> <span>{allChecked ? t.unselectAll : t.selectAll}</span></button>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.refresh} onclick={refresh}><LvIcon name="refresh" size={13} /> <span>{t.refresh}</span></button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            title={`${allChecked ? t.unselectAll : t.selectAll} (a)`}
+            aria-keyshortcuts="a"
+            disabled={visible.length === 0}
+            onclick={toggleAll}
+        >
+            <LvIcon name="check" size={12} />
+            <span>{allChecked ? t.unselectAll : t.selectAll}</span>
+        </button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            title={`${t.refresh} (r)`}
+            aria-keyshortcuts="r"
+            onclick={refresh}
+        >
+            <LvIcon name="refresh" size={13} />
+            <span>{t.refresh}</span>
+        </button>
     {/snippet}
 
     {#if makeError}<div class="lv-inbox-error" role="alert">{makeError}</div>{/if}
@@ -356,6 +393,16 @@
         margin-bottom: var(--lv-sp-3);
         animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
 
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
         @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
             background: color-mix(in srgb, var(--lv-primary-soft) 85%, var(--lv-color-surface));
             backdrop-filter: blur(10px) saturate(1.15);
@@ -414,14 +461,17 @@
         font: inherit;
         text-align: left;
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
     }
     .lv-content:focus-visible {
-        outline: 2px solid var(--lv-color-brand);
-        outline-offset: 2px;
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
         border-radius: var(--lv-r-s);
     }
     .lv-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .lv-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lv-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
     @media (max-width: 740px) {
         .lv-batchbar {

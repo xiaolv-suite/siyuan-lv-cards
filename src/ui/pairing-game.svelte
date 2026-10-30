@@ -236,12 +236,28 @@
         <div class="lv-pair-center">
             <div class="lv-done-badge" aria-hidden="true"><LvIcon name="check" size={24} /></div>
             <div class="lv-pair-result">{t.pairing.doneTitle}</div>
-            <div class="ft__smaller ft__on-surface">
+            <div class="ft__smaller ft__on-surface lv-pair-summary">
                 {t.pairing.doneTime.replace("${s}", String(seconds))} · {t.pairing.mistakes}: {mistakes}
             </div>
-            <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); margin-top: 12px; justify-content: center">
-                <button class="b3-button lv-btn-primary" disabled={loadBusy} aria-busy={loadBusy} onclick={load}><LvIcon name="refresh" size={13} /> <span>{loadBusy ? (t.pairing.loading ?? t.dashboard.loading) : t.pairing.again}</span></button>
-                <button class="b3-button b3-button--outline lv-btn-tool" onclick={exit}><span>{t.pairing.exit}</span></button>
+            <div class="fn__flex lv-pair-done-actions" style="gap: calc(var(--lv-space-unit) * 4); margin-top: 12px; justify-content: center">
+                <button
+                    class="b3-button lv-btn-primary"
+                    disabled={loadBusy}
+                    aria-busy={loadBusy}
+                    title={`${t.pairing.again} (Enter)`}
+                    aria-keyshortcuts="Enter"
+                    onclick={load}
+                >
+                    <LvIcon name="refresh" size={13} /> <span>{loadBusy ? (t.pairing.loading ?? t.dashboard.loading) : t.pairing.again}</span>
+                </button>
+                <button
+                    class="b3-button b3-button--outline lv-btn-tool"
+                    title={`${t.pairing.exit} (Esc)`}
+                    aria-keyshortcuts="Escape"
+                    onclick={exit}
+                >
+                    <span>{t.pairing.exit}</span>
+                </button>
             </div>
         </div>
     {/if}
@@ -260,7 +276,15 @@
         padding: var(--lv-sp-5);
         text-align: center;
     }
-    .lv-pair-head { display: flex; align-items: center; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-3); }
+    .lv-pair-head {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        margin-bottom: var(--lv-sp-3);
+        .lv-chip2 {
+            font-variant-numeric: tabular-nums;
+        }
+    }
     .lv-pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lv-sp-3); }
     .lv-pair-col { display: flex; flex-direction: column; gap: var(--lv-sp-2); }
     .lv-pair-cell {
@@ -273,6 +297,7 @@
         cursor: pointer;
         font-size: var(--lv-type-body-size);
         line-height: var(--lv-lh-meta);
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
         transition: border-color var(--lv-dur-1) var(--lv-ease),
@@ -301,5 +326,25 @@
         box-shadow: 0 0 0 1.5px var(--lv-color-brand), var(--lv-shadow-1) !important;
     }
     .lv-pair-ans { color: var(--lv-color-text-muted); }
-    .lv-pair-result { font-size: var(--lv-type-section-size); font-weight: 700; }
+    .lv-pair-result {
+        font-size: var(--lv-type-section-size);
+        font-weight: 700;
+        text-wrap: balance;
+    }
+    .lv-pair-summary {
+        max-width: 48em;
+        text-wrap: pretty;
+        font-variant-numeric: tabular-nums;
+    }
+    .lv-pair-done-actions {
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
 </style>

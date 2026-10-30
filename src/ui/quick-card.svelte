@@ -166,6 +166,10 @@
             && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
             e.preventDefault();
             confirm();
+        } else if (e.key === "Escape" && !busy && !embedded
+            && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
+            e.preventDefault();
+            onClose();
         }
     }
 </script>
@@ -327,7 +331,17 @@
         <div class="ft__smaller lv-qc-error" role="alert">{errorMsg}</div>
     {/if}
     <div class="b3-dialog__action lv-qc-actions">
-        {#if !embedded}<button class="b3-button b3-button--cancel" disabled={busy} onclick={onClose}>{window.siyuan.languages.cancel}</button>{/if}
+        {#if !embedded}
+            <button
+                class="b3-button b3-button--cancel"
+                disabled={busy}
+                title={`${window.siyuan.languages.cancel} (Esc)`}
+                aria-keyshortcuts="Escape"
+                onclick={onClose}
+            >
+                {window.siyuan.languages.cancel}
+            </button>
+        {/if}
         <button
             class="b3-button lv-btn-primary"
             disabled={!canSubmit}
@@ -354,6 +368,8 @@
         color: var(--lv-color-on-warning-soft);
         font-size: var(--lv-type-control-size);
         line-height: var(--lv-lh-meta);
+        max-width: 48em;
+        text-wrap: pretty;
     }
     .lv-qc-toolbar {
         display: flex;
@@ -385,6 +401,9 @@
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: all var(--lv-dur-1) var(--lv-ease);
     }
     .lv-qc-template button:hover:not(:disabled) {
@@ -440,7 +459,14 @@
     .lv-quickcard .lv-qc-deck-hint { margin-top: var(--lv-sp-1); }
     .lv-qc-deck-error { display: flex; align-items: center; gap: var(--lv-sp-2); margin-top: var(--lv-sp-1); color: var(--lv-color-danger); font-size: 12px; overflow-wrap: anywhere; }
     .lv-quickcard .lv-qc-help { margin-top: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
-    .lv-qc-guidance { margin: 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.65; }
+    .lv-qc-guidance {
+        margin: 0;
+        color: var(--lv-color-text-muted);
+        font-size: var(--lv-type-control-size);
+        line-height: var(--lv-lh-reading, 1.65);
+        max-width: 48em;
+        text-wrap: pretty;
+    }
     .lv-qc-preview { display: flex; min-width: 0; flex-direction: column; gap: var(--lv-sp-2); margin: 0; }
     .lv-qc-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--lv-space-unit) * 4); font-size: var(--lv-type-body-size); font-weight: var(--lv-fw-semibold); }
     .lv-qc-preview-tags { display: inline-flex; align-items: center; gap: var(--lv-sp-2); }
@@ -515,6 +541,16 @@
     .lv-quickcard .lv-qc-actions {
         justify-content: flex-end;
         gap: var(--lv-sp-2);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
     .lv-quickcard .lv-qc-actions :global(.lv-kbd2) {
         margin-left: calc(var(--lv-space-unit) * 3);
