@@ -40,6 +40,7 @@
             type="button"
             class="lv-breadcrumb-btn"
             title={(breadcrumbs.formattedText || hpath) + " · " + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
+            aria-label={(breadcrumbs.formattedText || hpath) + "，" + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
         >
             <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
             <span class="lv-breadcrumb-text">
@@ -74,6 +75,7 @@
             type="button"
             class="lv-breadcrumb-btn"
             title={t.review?.breadcrumbHint ?? "点击查阅来源文档上下文"}
+            aria-label={hpath + "，" + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
         >
             <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
             <span class="lv-breadcrumb-text">{hpath}</span>
@@ -96,6 +98,8 @@
         margin-bottom: var(--lv-sp-3);
         margin-right: var(--lv-sp-4);
         box-shadow: var(--lv-shadow-1);
+        user-select: none;
+        -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease),
             color var(--lv-dur-1) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease);
@@ -120,6 +124,12 @@
 
             &:hover {
                 color: var(--lv-color-brand);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-radius: var(--lv-r-pill);
             }
         }
 
@@ -168,6 +178,12 @@
                 opacity: 1;
                 background-color: color-mix(in srgb, var(--lv-color-brand) 15%, transparent);
                 color: var(--lv-color-brand);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                opacity: 1;
             }
         }
     }
