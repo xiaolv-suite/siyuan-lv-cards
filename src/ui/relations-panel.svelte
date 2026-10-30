@@ -152,9 +152,41 @@
 </div>
 
 <style>
-    .lv-relations { font-size: var(--lv-type-body-size); }
-    .lv-relations-title { font-weight: var(--lv-fw-heading); margin-bottom: var(--lv-sp-2); font-size: var(--lv-type-label-size); }
-    .lv-relations-empty { color: var(--lv-color-text-muted); opacity: .7; padding: var(--lv-sp-2) 0; }
+    .lv-relations {
+        font-size: var(--lv-type-body-size);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-text-field,
+        .b3-select {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
+    }
+    .lv-relations-title { font-weight: var(--lv-fw-heading); margin-bottom: var(--lv-sp-2); font-size: var(--lv-type-label-size); text-wrap: balance; }
+    .lv-relations-empty {
+        color: var(--lv-color-text-muted);
+        opacity: .7;
+        padding: var(--lv-sp-2) 0;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-relations-row {
         display: flex;
         align-items: center;

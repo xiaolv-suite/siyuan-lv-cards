@@ -941,11 +941,18 @@
                 </div>
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2)">
-                <button class="b3-button b3-button--cancel" onclick={closeWizard}>{closeLabel ?? window.siyuan.languages.cancel}</button>
+                <button
+                    class="b3-button b3-button--cancel"
+                    aria-keyshortcuts="Escape"
+                    title={`${closeLabel ?? window.siyuan.languages.cancel} (Esc)`}
+                    onclick={closeWizard}
+                >{closeLabel ?? window.siyuan.languages.cancel}</button>
                 <button
                     class="b3-button lv-btn-primary"
                     disabled={busy || loadDocBusy || !source.trim()}
                     aria-busy={busy}
+                    aria-keyshortcuts="Control+Enter Meta+Enter"
+                    title={`${busy ? t.aiWizard.generating : t.aiWizard.generate} (Ctrl+Enter)`}
                     onclick={openPreview}
                 >
                     {busy ? t.aiWizard.generating : `${t.aiWizard.generate} →`}
@@ -960,7 +967,13 @@
                 </div>
             {/if}
             <div class="fn__flex" style="align-items: center; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-2)">
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}>← {t.aiWizard.back}</button>
+                <button
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    disabled={creating}
+                    aria-keyshortcuts="Escape"
+                    title={`${t.aiWizard.back} (Esc)`}
+                    onclick={() => { cancelGeneration(); step = 1; }}
+                >← {t.aiWizard.back}</button>
                 <!-- T03：已选≠已审——选中决定集合，接受决定入库资格 -->
                 <LvChip tone="default">{t.aiWizard.selCount.replace("${n}", String(candidates.filter(c => c.keep).length))}</LvChip>
                 <LvChip tone="primary">{t.aiWizard.accCount.replace("${n}", String(acceptedCount))}</LvChip>
@@ -1117,7 +1130,15 @@
                 <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2)" role="alert">{errorMsg}</div>
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating} onclick={() => { cancelGeneration(); step = 1; }}><LvIcon name="chevron-left" size={12} /> <span>{t.aiWizard.back}</span></button>
+                <button
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    disabled={creating}
+                    aria-keyshortcuts="Escape"
+                    title={`${t.aiWizard.back} (Esc)`}
+                    onclick={() => { cancelGeneration(); step = 1; }}
+                >
+                    <LvIcon name="chevron-left" size={12} /> <span>{t.aiWizard.back}</span>
+                </button>
                 <input
                     class="b3-text-field"
                     style="width: 180px"
@@ -1144,8 +1165,9 @@
                     class="b3-button lv-btn-primary"
                     disabled={creating || regenBusy !== null || !canImport}
                     aria-busy={creating}
+                    aria-keyshortcuts="Control+Enter Meta+Enter"
+                    title={`${t.aiWizard.importReviewed} (Ctrl+Enter)`}
                     onclick={importCards}
-                    title={t.aiWizard.importReviewed}
                 >
                     <LvIcon name="check" size={13} />
                     <span>{creating ? "…" : t.aiWizard.createAcceptedN.replace("${n}", String(acceptedCount))}</span>
@@ -1162,6 +1184,29 @@
         height: 100%;
         overflow: auto;
         box-sizing: border-box;
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-text-field,
+        .b3-select {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
     }
     .lv-aiwiz.lv-aiwiz-embedded {
         height: auto;
@@ -1190,7 +1235,14 @@
         background: var(--lv-primary-softer, transparent);
         font-size: var(--lv-type-control-size);
     }
-    .lv-aiwiz-resume-note { flex: 1 1 100%; min-width: 0; color: var(--lv-color-text-muted); line-height: 1.5; }
+    .lv-aiwiz-resume-note {
+        flex: 1 1 100%;
+        min-width: 0;
+        color: var(--lv-color-text-muted);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-aiwiz-list {
         display: flex;
         flex-direction: column;
@@ -1208,6 +1260,8 @@
         border-radius: var(--lv-r-l);
         padding: var(--lv-sp-4);
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 160px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -1274,8 +1328,15 @@
         opacity: 0.7;
         font-size: var(--lv-type-control-size);
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: opacity var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
         &:hover { opacity: 1; background: var(--lv-primary-soft); color: var(--lv-color-brand); }
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-wb-srcview {
         white-space: pre-wrap;
@@ -1311,10 +1372,12 @@
     .lv-wb-empty-text {
         font-size: var(--lv-type-control-size);
         color: var(--lv-color-text-muted);
-        max-width: 30em;
-        line-height: var(--lv-lh-relaxed);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
-    /* T02：来源条目标签 = 查看原文按钮 */    .lv-wb-view {
+    /* T02：来源条目标签 = 查看原文按钮 */
+    .lv-wb-view {
         flex: 1;
         min-width: 0;
         overflow: hidden;
@@ -1327,6 +1390,13 @@
         font: inherit;
         padding: 0;
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         &:hover { color: var(--lv-color-brand); }
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
 </style>

@@ -163,6 +163,17 @@
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
     .lv-editor-overload-tip {
         margin: var(--lv-sp-1) 0;
@@ -171,7 +182,9 @@
         background: var(--lv-warn-soft);
         border: 1px solid color-mix(in srgb, var(--lv-color-warning) 28%, transparent);
         color: var(--lv-color-on-warning-soft);
-        line-height: var(--lv-lh-meta);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-editor-head {
         display: flex;
@@ -212,6 +225,14 @@
         width: 100%;
         resize: vertical;
         font-size: var(--lv-type-body-size);
+        touch-action: manipulation;
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+            border-color: var(--lv-color-brand);
+        }
     }
     .lv-editor-diff {
         max-height: 160px;

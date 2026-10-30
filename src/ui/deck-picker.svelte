@@ -114,7 +114,7 @@
                 <label class="fn__flex lv-dp-row" class:lv-dp-row--selected={selected === d.id}>
                     <input type="radio" name="lv-deck" value={d.id} bind:group={selected} />
                     <span class="fn__flex-1">{d.name}</span>
-                    <span class="ft__smaller ft__on-surface">{d.size}</span>
+                    <span class="ft__smaller ft__on-surface lv-dp-count">{d.size}</span>
                 </label>
             {/each}
             {#if loadError}
@@ -166,6 +166,34 @@
 </div>
 
 <style>
+    .lv-deckpicker .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+    .lv-deckpicker .b3-text-field {
+        touch-action: manipulation;
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+            border-color: var(--lv-color-brand);
+        }
+    }
+    .lv-deckpicker .ft__smaller {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
+    .lv-deckpicker .lv-dp-count {
+        font-variant-numeric: tabular-nums;
+    }
     .lv-deckpicker .lv-dp-list {
         max-height: 200px;
         overflow: auto;
@@ -180,6 +208,7 @@
         padding: var(--lv-sp-2);
         border-radius: var(--lv-r-s);
         cursor: pointer;
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);

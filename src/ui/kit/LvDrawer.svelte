@@ -48,7 +48,15 @@
             <span id={titleId} class="lv-drawer-title">{title}</span>
             <span class="lv-drawer-actions">
                 {#if actions}{@render actions()}{/if}
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onclose} aria-label={closeLabel}><LvIcon name="close" size={13} /></button>
+                <button
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    onclick={onclose}
+                    aria-label={closeLabel}
+                    aria-keyshortcuts="Escape"
+                    title={`${closeLabel} (Esc)`}
+                >
+                    <LvIcon name="close" size={13} />
+                </button>
             </span>
         </div>
         <div class="lv-drawer-body">
@@ -92,8 +100,23 @@
         padding: calc(var(--lv-space-unit) * 11) calc(var(--lv-space-unit) * 12) calc(var(--lv-space-unit) * 8 + var(--lv-space-hairline));
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
-    .lv-drawer-title { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-title-size); }
-    .lv-drawer-actions { display: inline-flex; align-items: center; gap: var(--lv-sp-2); }
+    .lv-drawer-title { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-title-size); text-wrap: balance; }
+    .lv-drawer-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+
+        button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
     .lv-drawer-body {
         flex: 1;
         overflow: auto;

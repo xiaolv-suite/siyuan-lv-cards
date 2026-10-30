@@ -133,8 +133,24 @@
 </section>
 
 <style>
-    .lv-lc { margin-bottom: var(--lv-sp-4); }
-    .lv-lc h4 { margin: 0 0 var(--lv-sp-2); }
+    .lv-lc {
+        margin-bottom: var(--lv-sp-4);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
+    .lv-lc h4 {
+        margin: 0 0 var(--lv-sp-2);
+        text-wrap: balance;
+    }
     .lv-lc-soft {
         background: var(--lv-surface-hover);
         border: 1px solid var(--lv-border);

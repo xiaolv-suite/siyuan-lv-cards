@@ -166,8 +166,33 @@
 </div>
 
 <style>
-    .lv-ko { font-size: var(--lv-type-body-size); }
-    .lv-ko-title { font-weight: var(--lv-fw-medium); margin-bottom: var(--lv-sp-2); }
+    .lv-ko {
+        font-size: var(--lv-type-body-size);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-select,
+        .b3-text-field {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
+    }
+    .lv-ko-title { font-weight: var(--lv-fw-medium); margin-bottom: var(--lv-sp-2); text-wrap: balance; }
     .lv-ko-fact {
         padding: var(--lv-sp-2) var(--lv-sp-3);
         border-left: 3px solid var(--lv-color-brand);
@@ -175,6 +200,9 @@
         border-radius: var(--lv-r-m);
         margin-bottom: var(--lv-sp-3);
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-ko-sub { color: var(--lv-color-text-muted); margin-bottom: var(--lv-sp-1); }
     .lv-ko-empty { color: var(--lv-color-text-muted); opacity: .7; padding: var(--lv-sp-1) 0; }

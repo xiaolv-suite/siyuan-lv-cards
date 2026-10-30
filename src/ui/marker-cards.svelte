@@ -64,6 +64,7 @@
 
     function onKeydown(e: KeyboardEvent) {
         if (busy) return;
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
             if (picked.size > 0) {
                 e.preventDefault();
@@ -72,6 +73,9 @@
         } else if (e.key === "Escape") {
             e.preventDefault();
             onClose();
+        } else if (e.key === "a" && !e.ctrlKey && !e.metaKey && !e.altKey && items.length > 0) {
+            e.preventDefault();
+            toggleAll();
         }
     }
 </script>
@@ -82,7 +86,13 @@
     <div class="lv-marker-header">
         <div class="lv-marker-hint">{t.markerHint.replace("${n}", String(items.length))}</div>
         {#if items.length > 0}
-            <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={toggleAll}>
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                title={`${allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")} (a)`}
+                aria-keyshortcuts="a"
+                onclick={toggleAll}
+            >
                 <LvIcon name="check" size={12} />
                 <span>{allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")}</span>
             </button>
@@ -94,7 +104,14 @@
             <div class="lv-marker-empty-icon" aria-hidden="true">✦</div>
             <div>{t.markerEmpty ?? "当前文档没有找到可制卡的标记内容"}</div>
             <div class="ft__smaller ft__on-surface">{t.markerEmptyHint ?? "请先添加 :: 问答或？整块标记，再重新扫描。"}</div>
-            <button class="b3-button b3-button--outline lv-btn-tool" onclick={onClose}><LvIcon name="close" size={12} /> <span>{t.markerCancel}</span></button>
+            <button
+                class="b3-button b3-button--outline lv-btn-tool"
+                aria-keyshortcuts="Escape"
+                title={`${t.markerCancel} (Esc)`}
+                onclick={onClose}
+            >
+                <LvIcon name="close" size={12} /> <span>{t.markerCancel}</span>
+            </button>
         </div>
     {:else}
     <div class="lv-marker-list">
@@ -111,14 +128,38 @@
     {/if}
     <div class="fn__flex lv-marker-actions">
         <span class="fn__flex-1"></span>
-        <button class="b3-button b3-button--cancel" onclick={onClose}>{t.markerCancel}</button>
-        <button class="b3-button lv-btn-primary" disabled={picked.size === 0 || busy} aria-busy={busy} onclick={confirm}>
+        <button
+            class="b3-button b3-button--cancel"
+            aria-keyshortcuts="Escape"
+            title={`${t.markerCancel} (Esc)`}
+            onclick={onClose}
+        >
+            {t.markerCancel}
+        </button>
+        <button
+            class="b3-button lv-btn-primary"
+            disabled={picked.size === 0 || busy}
+            aria-busy={busy}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            title={`${busy ? (t.markerSaving ?? "正在制卡…") : t.markerConfirm.replace("${n}", String(picked.size))} (${isMac ? "⌘↵" : "Ctrl+↵"})`}
+            onclick={confirm}
+        >
             {busy ? (t.markerSaving ?? "正在制卡…") : t.markerConfirm.replace("${n}", String(picked.size))} <LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />
         </button>
     </div>
 </div>
 
 <style>
+    .lv-marker .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-marker-header {
         display: flex;
         align-items: center;
@@ -130,6 +171,9 @@
         font-size: var(--lv-type-control-size);
         color: var(--lv-color-text-muted);
         margin: 0;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-marker-error {
         margin-bottom: var(--lv-sp-2);
@@ -151,6 +195,11 @@
         border-radius: var(--lv-r-s);
         border-bottom: 1px dashed var(--lv-border);
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        content-visibility: auto;
+        contain-intrinsic-size: 0 40px;
         transition: background var(--lv-dur-1) var(--lv-ease);
     }
     .lv-marker-item:hover {
@@ -171,6 +220,7 @@
     .lv-marker-empty {
         display: flex; flex-direction: column; align-items: center; gap: var(--lv-sp-2);
         padding: var(--lv-sp-5); text-align: center; color: var(--lv-color-text-muted);
+        max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-marker-empty-icon {
         width: 44px; height: 44px; border-radius: var(--lv-r-circle); display: flex; align-items: center;

@@ -336,12 +336,28 @@
 </div>
 
 <style>
-    .lv-occed { padding: var(--lv-sp-4); }
+    .lv-occed {
+        padding: var(--lv-sp-4);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
     .lv-occed .ft__smaller { max-width: 48em; text-wrap: pretty; }
     .lv-occed-state {
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         gap: var(--lv-sp-2); min-height: 160px; padding: var(--lv-sp-5);
         color: var(--lv-color-text-muted);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-occed-state-icon { font-size: var(--lv-type-hero-size); }
     .lv-occed-hidden { display: none; }
@@ -349,7 +365,7 @@
         display: flex; align-items: center; gap: var(--lv-sp-2);
         margin-bottom: var(--lv-sp-3);
     }
-    .lv-occed .lv-ob-step { font-weight: var(--lv-fw-bold); }
+    .lv-occed .lv-ob-step { font-weight: var(--lv-fw-bold); text-wrap: balance; }
     .lv-occed-stage {
         position: relative;
         width: 100%;

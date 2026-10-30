@@ -170,6 +170,16 @@
 </div>
 
 <style>
+    .lv-misconception-panel .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-cluster-list {
         display: flex;
         flex-direction: column;
@@ -210,6 +220,7 @@
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 3);
+        text-wrap: balance;
     }
     .lv-cluster-count {
         font-size: var(--lv-type-meta-size);

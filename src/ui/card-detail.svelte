@@ -554,6 +554,26 @@
     .lv-hist-list { max-height: 320px; overflow: auto; }
 
     /* T05 版本对比（docs/40）：逐行差异 */
+    .lv-ver-row .b3-button,
+    .lv-facet-panel .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+    .lv-ver-row .b3-button {
+        font-variant-numeric: tabular-nums;
+    }
+    .lv-hint {
+        color: var(--lv-color-text-muted);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-diff {
         margin-top: calc(var(--lv-space-unit) * 2);
         padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 3);
