@@ -79,6 +79,7 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
             }
         }
     });
+    dialog.element.classList.add("lv-dialog");
 
     const target: HTMLElement = dialog.element.querySelector(".b3-dialog__content>div.ft__breakword");
     if (typeof content === "string") {
@@ -137,6 +138,7 @@ export const simpleDialog = (args: {
     if (contentEl) {
         contentEl.appendChild(args.ele);
     }
+    dialog.element.classList.add("lv-dialog");
     return {
         dialog,
         close: dialog.destroy.bind(dialog)
