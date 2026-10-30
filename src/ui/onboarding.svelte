@@ -95,13 +95,29 @@
         openHelp();
         onClose();
     }
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.key === "Escape") {
+            e.preventDefault();
+            onClose();
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="lv-onboarding b3-typography">
     <div class="lv-ob-head">
         <span class="lv-ob-step">{t.onboardingStep} {step} / 3</span>
         <div class="fn__flex-1"></div>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onClose}><span>{t.onboardingSkip}</span></button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            aria-keyshortcuts="Escape"
+            title={`${t.onboardingSkip} (Esc)`}
+            onclick={onClose}
+        >
+            <span>{t.onboardingSkip}</span>
+        </button>
     </div>
 
     {#if step === 1}
@@ -194,6 +210,28 @@
         scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
         overscroll-behavior: contain;
         box-sizing: border-box;
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-select {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
     }
     .lv-ob-done-desc {
         max-width: 48em;
@@ -235,11 +273,15 @@
         background: var(--lv-color-canvas-subtle);
         border-radius: 0 var(--lv-r-s) var(--lv-r-s) 0;
         font-size: var(--lv-type-control-size);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-persona {
         flex: 1 1 140px;
         padding: var(--lv-sp-3);
         cursor: pointer;
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
         border: 1px solid var(--lv-border);
@@ -249,6 +291,11 @@
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: border-color var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-persona:hover {
         transform: translateY(-2px);
@@ -263,6 +310,7 @@
     .lv-persona-name {
         font-weight: var(--lv-fw-semibold);
         margin-bottom: calc(var(--lv-space-unit) * 1);
+        text-wrap: balance;
     }
     @media (max-width: 480px) {
         .lv-ob-type-grid { grid-template-columns: 1fr; }

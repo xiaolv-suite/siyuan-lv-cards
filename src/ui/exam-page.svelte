@@ -238,7 +238,27 @@
         if (!window.confirm(`${t.exam.delete} “${title}”？${consequence}`)) return;
         void runPlanAction(() => onDeletePlan(plan.id));
     }
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (editing) return;
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if ((e.key === "+" || e.key === "n" || e.key === "N") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!actionBusy && !savingPlan) {
+                e.preventDefault();
+                editing = newPlan();
+                formError = "";
+                fieldErrors = {};
+            }
+        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!loadBusy) {
+                e.preventDefault();
+                void load();
+            }
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="lv-page lv-exam">
     {#if loadError}
@@ -259,6 +279,8 @@
             <button
                 class="b3-button b3-button--outline lv-btn-new-plan"
                 aria-label={`+ ${t.exam.newPlan}`}
+                aria-keyshortcuts="+ n"
+                title={`${t.exam.newPlan} (+ / n)`}
                 disabled={actionBusy || savingPlan}
                 onclick={() => { editing = newPlan(); formError = ""; fieldErrors = {}; }}
             >
@@ -500,7 +522,27 @@
 {/if}
 
 <style>
-    .lv-exam { display: flex; flex-direction: column; gap: var(--lv-sp-3); }
+    .lv-exam {
+        display: flex;
+        flex-direction: column;
+        gap: var(--lv-sp-3);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
+    .lv-pagehead-sub {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-plan {
         position: relative;
         padding: calc(var(--lv-space-unit) * 9) calc(var(--lv-space-unit) * 10);
@@ -527,7 +569,7 @@
         box-shadow: var(--lv-shadow-1);
     }
     .lv-plan-head { align-items: center; gap: var(--lv-sp-2); margin-bottom: calc(var(--lv-space-unit) * 3); }
-    .lv-plan-name { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size); letter-spacing: -0.01em; }
+    .lv-plan-name { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size); letter-spacing: -0.01em; text-wrap: balance; }
     .lv-plan-meta { margin: var(--lv-sp-1) 0; }
     .lv-plan-pacing {
         display: flex; align-items: center; gap: var(--lv-sp-3);
@@ -539,6 +581,9 @@
     .lv-plan-advice {
         display: flex; flex-wrap: wrap; gap: calc(var(--lv-space-unit) * 2); align-items: baseline;
         margin: var(--lv-sp-1) 0 0;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-plan-actions {
         gap: var(--lv-sp-1);
@@ -568,6 +613,29 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-text-field,
+        .b3-select {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
     }
     .lv-form-error {
         color: var(--lv-color-danger);

@@ -194,7 +194,23 @@
         unsubscribeReviewed?.();
         unsubscribeStoresChanged?.();
     });
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if (e.key === "1" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            selectTab("recap");
+        } else if (e.key === "2" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            selectTab("plans");
+        } else if (e.key === "3" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            selectTab("calendar");
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <LvPage eyebrow="LEARNING" title={copy.title ?? i18n.hubPrimaryLearning ?? "学习"} subtitle={copy.subtitle ?? "看见进展，安排下一步。"}>
     {#snippet actions()}
@@ -266,7 +282,7 @@
     .lv-learning-columns { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: var(--lv-sp-4); align-items: start; }
     .lv-learning-trend, .lv-learning-records, .lv-learning-calendar, .lv-learning-day, .lv-learning-tool { min-width: 0; padding: var(--lv-sp-4); }
     .lv-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lv-sp-3); margin-bottom: var(--lv-sp-3); }
-    .lv-section-heading h2 { margin: 0; font-size: var(--lv-type-title-md-size); }
+    .lv-section-heading h2 { margin: 0; font-size: var(--lv-type-title-md-size); text-wrap: balance; }
     .lv-section-heading span, .lv-learning-calendar-foot, .lv-learning-entry-list span, .lv-learning-trend-list small { color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-learning-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lv-sp-2); }
     .lv-learning-trend-list, .lv-learning-entry-list { list-style: none; padding: 0; margin: var(--lv-sp-3) 0 0; }
@@ -298,6 +314,7 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 2);
         cursor: pointer;
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
         box-shadow: var(--lv-shadow-1);
@@ -308,14 +325,25 @@
             transform: translateY(-1px);
         }
     }
-    .lv-link-button:focus-visible { outline: 2px solid var(--lv-color-brand); outline-offset: 2px; }
+    .lv-link-button:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); border-color: var(--lv-color-brand); }
+    .lv-learning-columns .b3-button,
+    .lv-learning-actions .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-learning-empty, .lv-learning-empty-copy { color: var(--lv-color-text-muted); }
     .lv-learning-empty { display: grid; gap: var(--lv-sp-3); justify-items: start; padding: var(--lv-sp-5) 0; }
     .lv-learning-empty p, .lv-learning-empty-copy { max-width: 48em; text-wrap: pretty; }
     .lv-learning-actions { display: flex; justify-content: flex-end; margin-top: var(--lv-sp-4); }
     .lv-learning-plan :global(.lv-page) { padding: 0; }
     .lv-learning-plan :global(.lv-pagehead) { display: none; }
-    .lv-learning-tool h2 { margin: 0 0 var(--lv-sp-2); font-size: var(--lv-type-title-md-size); }
+    .lv-learning-tool h2 { margin: 0 0 var(--lv-sp-2); font-size: var(--lv-type-title-md-size); text-wrap: balance; }
     .lv-learning-tool p { color: var(--lv-color-text-muted); line-height: var(--lv-lh-relaxed); max-width: 48em; text-wrap: pretty; }
     .lv-learning-status { margin-bottom: var(--lv-sp-3); color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-learning-error { margin-bottom: var(--lv-sp-3); color: var(--lv-color-danger); }

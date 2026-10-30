@@ -1760,8 +1760,18 @@
                 transform: translateY(-1px);
             }
             &:focus-visible {
-                outline: 2px solid var(--lv-color-brand);
-                outline-offset: 2px;
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
             }
         }
         .lv-searchbar {
@@ -1798,6 +1808,9 @@
             flex: 1 1 130px;
             padding: var(--lv-sp-3);
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             border: 1px solid var(--lv-border);
             background: var(--lv-color-surface);
             text-align: left;
@@ -1811,6 +1824,11 @@
                 transform: translateY(-2px);
                 box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
                 border-color: var(--lv-border-strong);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
             }
 
             &.lv-persona--custom {
@@ -1827,6 +1845,6 @@
             background: var(--lv-primary-soft);
             box-shadow: 0 0 0 1px var(--lv-color-brand), var(--lv-shadow-card);
         }
-        .lv-persona-name { font-weight: var(--lv-fw-semibold); margin-bottom: 2px; }
+        .lv-persona-name { font-weight: var(--lv-fw-semibold); margin-bottom: 2px; text-wrap: balance; }
     }
 </style>

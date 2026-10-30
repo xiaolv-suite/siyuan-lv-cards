@@ -430,14 +430,32 @@
         void runScan();
     });
     onDestroy(() => { scanSeq += 1; });
+
+    function onKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!scanning && !pendingAction && !sourceHealthPendingId && !repairBusy && !rollbackBusy) {
+                e.preventDefault();
+                void runScan();
+            }
+        }
+    }
 </script>
+
+<svelte:window on:keydown={onKeydown} />
 
 <LvPage eyebrow="WORKSPACE / RECOVER" title={t.title} subtitle={t.queueCount.replace("${n}", String(total()))}>
     {#snippet actions()}
         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={upgradeLegacyCards}>
             <LvIcon name="zap" size={13} /> <span>存量格式规范化 (可选)</span>
         </button>
-        <button class="b3-button b3-button--small lv-btn-primary" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={runScan}>
+        <button
+            class="b3-button b3-button--small lv-btn-primary"
+            disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy}
+            aria-keyshortcuts="r"
+            title={`${scanning ? t.scanning : t.scan} (r)`}
+            onclick={runScan}
+        >
             <LvIcon name="refresh" size={13} /> <span>{scanning ? t.scanning : t.scan}</span>
         </button>
     {/snippet}
@@ -763,7 +781,25 @@
 <div class="lv-visually-hidden" aria-live="polite">{live}</div>
 
 <style>
-    .lv-maint-note { margin-bottom: var(--lv-sp-3); }
+    :global(.lv-pagehead-actions .b3-button),
+    .lv-maint-row .b3-button,
+    .lv-maint-similar-row .b3-button,
+    .lv-maint-repair .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+    .lv-maint-note {
+        margin-bottom: var(--lv-sp-3);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-maint-list { display: flex; flex-direction: column; gap: var(--lv-sp-2); }
     .lv-maint-group { margin-bottom: var(--lv-sp-4); }
     .lv-maint-group-head {

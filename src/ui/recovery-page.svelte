@@ -229,6 +229,7 @@
         font-size: var(--lv-type-title-size);
         font-weight: var(--lv-fw-heading);
         letter-spacing: -0.02em;
+        text-wrap: balance;
     }
     .lv-recovery-head p, .lv-recovery-copy {
         margin: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)) 0 0;
@@ -241,8 +242,14 @@
     .lv-recovery-section > button {
         margin-top: var(--lv-sp-3);
         min-height: 36px;
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-recovery-jobs { margin: var(--lv-sp-3) 0 0; padding: 0; list-style: none; }
     .lv-recovery-jobs li {
@@ -260,7 +267,29 @@
     .lv-recovery-job-state { color: var(--lv-color-brand); font-weight: var(--lv-fw-semibold); }
     .lv-recovery-job-counts, .lv-recovery-jobs li > p, .lv-recovery-jobs li > button { grid-column: 1 / -1; }
     .lv-recovery-job-counts { color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
-    .lv-recovery-jobs li > button { justify-self: start; min-height: 32px; border-radius: var(--lv-r-m); user-select: none; -webkit-user-select: none; }
+    .lv-recovery-jobs li > button {
+        justify-self: start;
+        min-height: 32px;
+        border-radius: var(--lv-r-m);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+    :global(.lv-pagehead-actions .b3-button) {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-recovery-footnote {
         margin: var(--lv-sp-4) 0 0;
         color: var(--lv-color-text-muted);

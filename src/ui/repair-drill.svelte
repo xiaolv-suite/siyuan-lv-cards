@@ -170,10 +170,26 @@
     {/key}
 
     <div class="fn__flex" style="justify-content: space-between; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3); align-items: center;">
-        <button class="b3-button b3-button--outline lv-btn-tool" disabled={step <= 1} onclick={() => (step = Math.max(1, step - 1))}><LvIcon name="chevron-left" size={13} /> <span>{t.drillPrev}</span></button>
+        <button
+            class="b3-button b3-button--outline lv-btn-tool"
+            disabled={step <= 1}
+            aria-keyshortcuts="ArrowLeft"
+            title={`${t.drillPrev} (←)`}
+            onclick={() => (step = Math.max(1, step - 1))}
+        >
+            <LvIcon name="chevron-left" size={13} /> <span>{t.drillPrev}</span>
+        </button>
         <span class="ft__smaller ft__on-surface">{step} / {STEPS}</span>
         {#if step < STEPS}
-            <button class="b3-button lv-btn-primary" style="display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 2);" onclick={() => (step = Math.min(STEPS, step + 1))}><span>{t.drillNext}</span> <LvIcon name="chevron-right" size={13} /></button>
+            <button
+                class="b3-button lv-btn-primary"
+                style="display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 2);"
+                aria-keyshortcuts="ArrowRight"
+                title={`${t.drillNext} (→)`}
+                onclick={() => (step = Math.min(STEPS, step + 1))}
+            >
+                <span>{t.drillNext}</span> <LvIcon name="chevron-right" size={13} />
+            </button>
         {:else}
             <button class="b3-button lv-btn-primary" onclick={onClose}>{t.drillExit}</button>
         {/if}
@@ -182,6 +198,26 @@
 </div>
 
 <style>
+    .lv-aiwiz .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+    .lv-aiwiz .b3-text-field {
+        touch-action: manipulation;
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+            border-color: var(--lv-color-brand);
+        }
+    }
     .lv-aiwiz p {
         max-width: 48em;
         text-wrap: pretty;
