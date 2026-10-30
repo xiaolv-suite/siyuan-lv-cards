@@ -247,13 +247,30 @@
 
 <svelte:window on:keydown={onKeydown} />
 
-<div class="lv-occed b3-typography">
+<div class="lv-occed b3-typography" role="dialog" aria-modal="true" aria-label={t.occlusion?.title ?? "图片遮挡制卡"}>
     <div class="lv-ob-head">
         <span class="lv-ob-step">{t.occlusion.title}</span>
         <span class="ft__smaller ft__on-surface">{t.occlusion.drawHint}</span>
         <div class="fn__flex-1"></div>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (rects = rects.slice(0, -1))} disabled={rects.length === 0}><LvIcon name="chevron-left" size={12} /> <span>{t.occlusion.undo}</span></button>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearRects} disabled={rects.length === 0 || busy}><LvIcon name="trash" size={12} /> <span>{t.occlusion.clear}</span></button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            onclick={() => (rects = rects.slice(0, -1))}
+            disabled={rects.length === 0}
+            title={`${t.occlusion?.undo ?? "撤销"} (Ctrl+Z)`}
+            aria-keyshortcuts="Control+z Meta+z"
+        >
+            <LvIcon name="chevron-left" size={12} />
+            <span>{t.occlusion.undo}</span>
+        </button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            onclick={clearRects}
+            disabled={rects.length === 0 || busy}
+            title={t.occlusion?.clear ?? "清空"}
+        >
+            <LvIcon name="trash" size={12} />
+            <span>{t.occlusion.clear}</span>
+        </button>
     </div>
     {#if loading}
         <div class="lv-occed-state" aria-busy="true" role="status">
@@ -297,9 +314,22 @@
         </svg>
     </div>
     <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3)">
-        <button class="b3-button b3-button--cancel" disabled={busy} onclick={close}>{window.siyuan.languages.cancel}</button>
+        <button
+            class="b3-button b3-button--cancel"
+            disabled={busy}
+            title={`${window.siyuan.languages.cancel} (Esc)`}
+            aria-keyshortcuts="Escape"
+            onclick={close}
+        >{window.siyuan.languages.cancel}</button>
         <div class="fn__space"></div>
-        <button class="b3-button lv-btn-primary" disabled={busy || loading || !!errorMsg || rects.length === 0} aria-busy={busy} onclick={save}>
+        <button
+            class="b3-button lv-btn-primary"
+            disabled={busy || loading || !!errorMsg || rects.length === 0}
+            aria-busy={busy}
+            title={isMac ? `${t.occlusion.save} (⌘+Enter)` : `${t.occlusion.save} (Ctrl+Enter)`}
+            aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
+            onclick={save}
+        >
             {t.occlusion.save} ({rects.length}) <LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />
         </button>
     </div>
@@ -307,6 +337,7 @@
 
 <style>
     .lv-occed { padding: var(--lv-sp-4); }
+    .lv-occed .ft__smaller { max-width: 48em; text-wrap: pretty; }
     .lv-occed-state {
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         gap: var(--lv-sp-2); min-height: 160px; padding: var(--lv-sp-5);
@@ -327,6 +358,10 @@
         overflow: auto;
         min-height: 120px;
         user-select: none;
+        -webkit-user-select: none;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
+        overscroll-behavior: contain;
     }
     .lv-occed-content :global(img) {
         display: block;

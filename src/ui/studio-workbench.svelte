@@ -253,7 +253,20 @@
             void startAI(request.sources, request.onImportComplete);
         }
     });
+
+    function onKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (e.key === "1" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            void startManual();
+        } else if (e.key === "2" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            void startAI();
+        }
+    }
 </script>
+
+<svelte:window on:keydown={onKeydown} />
 
 <div class="lv-r54-workbench lv-studio">
     <div class="lv-studio-heading">
@@ -269,23 +282,49 @@
     </div>
     <div class="lv-studio-toolbar">
         <div class="lv-studio-modes" role="group" aria-label={i18n.hubStudioModeLabel ?? "制卡方式"}>
-            <button class="b3-button lv-studio-mode-btn" class:lv-studio-mode-active={mode === "manual"} aria-pressed={mode === "manual"} disabled={loading} onclick={startManual}>
+            <button
+                class="b3-button lv-studio-mode-btn"
+                class:lv-studio-mode-active={mode === "manual"}
+                aria-pressed={mode === "manual"}
+                aria-keyshortcuts="1"
+                title={`${i18n.hubStudioManualKicker ?? "手工制卡"} (1)`}
+                disabled={loading}
+                onclick={startManual}
+            >
                 <LvIcon name="edit" size={13} />
                 <span>{i18n.hubStudioManualKicker ?? "手工制卡"}</span>
             </button>
-            <button class="b3-button lv-studio-mode-btn" class:lv-studio-mode-active={mode === "ai"} aria-pressed={mode === "ai"} disabled={loading} onclick={() => startAI()}>
+            <button
+                class="b3-button lv-studio-mode-btn"
+                class:lv-studio-mode-active={mode === "ai"}
+                aria-pressed={mode === "ai"}
+                aria-keyshortcuts="2"
+                title={`${i18n.hubStudioAICicker ?? "AI 辅助"} (2)`}
+                disabled={loading}
+                onclick={() => startAI()}
+            >
                 <LvIcon name="zap" size={13} />
                 <span>{i18n.hubStudioAICicker ?? "AI 辅助"}</span>
             </button>
         </div>
         <div class="lv-studio-tools">
             {#if openDrill}
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => openDrill?.()}>
+                <button
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    title={i18n.authoringDrillOpen ?? "修卡演练"}
+                    aria-label={i18n.authoringDrillOpen ?? "修卡演练"}
+                    onclick={() => openDrill?.()}
+                >
                     <LvIcon name="graduation" size={13} />
                     <span>{i18n.authoringDrillOpen ?? "修卡演练"}</span>
                 </button>
             {/if}
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={openOnboarding}>
+            <button
+                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                title={i18n.hubStudioOnboarding ?? "上手与示例"}
+                aria-label={i18n.hubStudioOnboarding ?? "上手与示例"}
+                onclick={openOnboarding}
+            >
                 <LvIcon name="lightbulb" size={13} />
                 <span>{i18n.hubStudioOnboarding ?? "上手与示例"}</span>
             </button>
@@ -357,7 +396,7 @@
     .lv-studio-tool { min-width: 0; }
     .lv-studio-heading { margin: 0 0 var(--lv-sp-4); }
     .lv-studio-heading h2 { margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); font-size: var(--lv-type-page-size); line-height: var(--lv-lh-reading-tight); }
-    .lv-studio-heading p { margin: 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); line-height: 1.65; }
+    .lv-studio-heading p { margin: 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); line-height: 1.65; max-width: 48em; text-wrap: pretty; }
     .lv-studio-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-3); margin-bottom: var(--lv-sp-3); }
     .lv-studio-modes {
         display: inline-flex;
@@ -377,7 +416,13 @@
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
         cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
         transition: color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+    }
+    .lv-studio-modes .b3-button:focus-visible {
+        outline: 2px solid var(--lv-color-brand);
+        outline-offset: 2px;
     }
     .lv-studio-modes .b3-button:hover:not(:disabled) {
         color: var(--lv-color-text);
@@ -390,7 +435,7 @@
         box-shadow: var(--lv-shadow-1);
     }
     .lv-studio-tools { display: flex; align-items: center; gap: var(--lv-sp-2); }
-    .lv-studio-tools .b3-button { min-height: 34px; border-radius: var(--lv-r-pill); padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6); }
+    .lv-studio-tools .b3-button { min-height: 34px; border-radius: var(--lv-r-pill); padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6); user-select: none; -webkit-user-select: none; }
     .lv-studio-replace {
         display: flex;
         align-items: center;
@@ -404,7 +449,8 @@
         box-shadow: var(--lv-shadow-card);
     }
     .lv-studio-replace-copy { flex: 1 1 220px; min-width: 0; }
-    .lv-studio-replace p { margin: calc(var(--lv-space-unit) * 2) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.5; }
+    .lv-studio-replace-copy strong { display: block; max-width: 48em; text-wrap: pretty; }
+    .lv-studio-replace p { margin: calc(var(--lv-space-unit) * 2) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.5; max-width: 48em; text-wrap: pretty; }
     .lv-studio-error { margin: calc(var(--lv-space-unit) * 6) 0; padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-danger-border); border-left: 3px solid var(--lv-color-danger); border-radius: var(--lv-r-m); background: var(--lv-danger-soft); color: var(--lv-color-on-danger-soft); overflow-wrap: anywhere; }
     .lv-studio-loading { padding: calc(var(--lv-space-unit) * 9) 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); }
     @container lv-studio (max-width: 680px) {

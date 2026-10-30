@@ -84,11 +84,28 @@
         const match = date.match(/^(\d{4})(\d{2})(\d{2})$/);
         return match ? `${match[1]}-${match[2]}-${match[3]}` : date || t.unknownDate;
     }
+
+    function onKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            void refresh();
+        }
+    }
 </script>
+
+<svelte:window on:keydown={onKeydown} />
 
 <LvPage eyebrow="WORKSPACE / RECOVERY" title={t.title} subtitle={t.subtitle}>
     {#snippet actions()}
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={loading} aria-busy={loading} onclick={refresh}>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            disabled={loading}
+            aria-busy={loading}
+            aria-keyshortcuts="r"
+            title={`${loading ? t.refreshing : t.refresh} (r)`}
+            onclick={refresh}
+        >
             <LvIcon name="refresh" size={13} />
             <span>{loading ? t.refreshing : t.refresh}</span>
         </button>
@@ -217,11 +234,15 @@
         margin: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)) 0 0;
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-body-size);
-        line-height: 1.65;
+        line-height: var(--lv-lh-reading, 1.65);
+        max-width: 48em;
+        text-wrap: pretty;
     }
     .lv-recovery-section > button {
         margin-top: var(--lv-sp-3);
         min-height: 36px;
+        user-select: none;
+        -webkit-user-select: none;
     }
     .lv-recovery-jobs { margin: var(--lv-sp-3) 0 0; padding: 0; list-style: none; }
     .lv-recovery-jobs li {
@@ -231,12 +252,21 @@
         padding: var(--lv-sp-3) 0;
         border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         font-size: var(--lv-type-control-size);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 110px;
     }
     .lv-recovery-job-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lv-sp-2); min-width: 0; }
     .lv-recovery-job-source { min-width: 0; overflow-wrap: anywhere; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-body-size); }
     .lv-recovery-job-state { color: var(--lv-color-brand); font-weight: var(--lv-fw-semibold); }
     .lv-recovery-job-counts, .lv-recovery-jobs li > p, .lv-recovery-jobs li > button { grid-column: 1 / -1; }
     .lv-recovery-job-counts { color: var(--lv-color-text-muted); font-variant-numeric: tabular-nums; }
-    .lv-recovery-jobs li > button { justify-self: start; min-height: 32px; border-radius: var(--lv-r-m); }
-    .lv-recovery-footnote { margin: var(--lv-sp-4) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.6; }
+    .lv-recovery-jobs li > button { justify-self: start; min-height: 32px; border-radius: var(--lv-r-m); user-select: none; -webkit-user-select: none; }
+    .lv-recovery-footnote {
+        margin: var(--lv-sp-4) 0 0;
+        color: var(--lv-color-text-muted);
+        font-size: var(--lv-type-control-size);
+        line-height: var(--lv-lh-reading, 1.6);
+        max-width: 48em;
+        text-wrap: pretty;
+    }
 </style>

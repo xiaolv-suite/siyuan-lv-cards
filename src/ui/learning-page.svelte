@@ -210,8 +210,8 @@
                     <div class="lv-learning-metrics">
                         <LvStat label={copy.formalReviews ?? "正式评分"} value={recentReviews} detail={copy.reviewCount ?? "近 7 天"} spark={recentSpark} />
                         <LvStat label={copy.newCount ?? "新卡"} value={recentNew} detail={copy.newCountDetail ?? "近 7 天首次记录"} />
-                        <LvStat label={copy.activeDays ?? "有学习记录的天数"} value={recentActiveDays} detail={copy.activeDaysDetail ?? "近 7 天"} />
-                        <LvStat label={copy.streak ?? "连续天数"} value={calcStreak(revlog)} detail={copy.streakDetail ?? "当前连续记录"} />
+                        <LvStat label={copy.activeDays ?? "有学习记录的天数"} value={recentActiveDays} detail={copy.activeDaysDetail ?? "近 7 天"} tone="data" />
+                        <LvStat label={copy.streak ?? "连续天数"} value={calcStreak(revlog)} detail={copy.streakDetail ?? "当前连续记录"} tone="data" />
                     </div>
                     <ul class="lv-learning-trend-list">{#each recent as day (day.date)}<li><span>{dateLabel(day.date)}</span><strong>{day.stat.review}</strong><small>{copy.reviewUnit ?? "次正式评分"}</small></li>{/each}</ul>
                 </section>
@@ -254,7 +254,13 @@
 </LvPage>
 
 <style>
-    .lv-learning-tabs { max-width: 100%; overflow-x: auto; padding: calc(var(--lv-space-unit) * 1) 0; }
+    .lv-learning-tabs {
+        max-width: 100%;
+        overflow-x: auto;
+        padding: calc(var(--lv-space-unit) * 1) 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
     :global(.lv-learning-tabs .lv-tabs) { min-width: max-content; }
     :global(.lv-learning-tabs .lv-tab) { min-height: 44px; }
     .lv-learning-columns { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: var(--lv-sp-4); align-items: start; }
@@ -264,11 +270,22 @@
     .lv-section-heading span, .lv-learning-calendar-foot, .lv-learning-entry-list span, .lv-learning-trend-list small { color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-learning-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lv-sp-2); }
     .lv-learning-trend-list, .lv-learning-entry-list { list-style: none; padding: 0; margin: var(--lv-sp-3) 0 0; }
-    .lv-learning-trend-list li, .lv-learning-entry-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); min-height: 38px; border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
+    .lv-learning-trend-list li, .lv-learning-entry-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--lv-sp-2);
+        min-height: 38px;
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 38px;
+    }
     .lv-learning-trend-list li { justify-content: flex-start; }
+    .lv-learning-trend-list span { font-variant-numeric: tabular-nums; }
     .lv-learning-trend-list strong { min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lv-color-data); }
     .lv-learning-entry-list li > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-    .lv-learning-entry-list strong { font-size: var(--lv-type-body-size); }
+    .lv-learning-entry-list strong { font-size: var(--lv-type-body-size); font-variant-numeric: tabular-nums; }
+    .lv-learning-entry-list span { font-variant-numeric: tabular-nums; }
     .lv-link-button {
         flex: none;
         border: 1px solid var(--lv-border);
@@ -281,6 +298,8 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 2);
         cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
         box-shadow: var(--lv-shadow-1);
         transition: all var(--lv-dur-1) var(--lv-ease);
         &:hover {
@@ -292,15 +311,17 @@
     .lv-link-button:focus-visible { outline: 2px solid var(--lv-color-brand); outline-offset: 2px; }
     .lv-learning-empty, .lv-learning-empty-copy { color: var(--lv-color-text-muted); }
     .lv-learning-empty { display: grid; gap: var(--lv-sp-3); justify-items: start; padding: var(--lv-sp-5) 0; }
+    .lv-learning-empty p, .lv-learning-empty-copy { max-width: 48em; text-wrap: pretty; }
     .lv-learning-actions { display: flex; justify-content: flex-end; margin-top: var(--lv-sp-4); }
     .lv-learning-plan :global(.lv-page) { padding: 0; }
     .lv-learning-plan :global(.lv-pagehead) { display: none; }
     .lv-learning-tool h2 { margin: 0 0 var(--lv-sp-2); font-size: var(--lv-type-title-md-size); }
-    .lv-learning-tool p { color: var(--lv-color-text-muted); line-height: var(--lv-lh-relaxed); }
+    .lv-learning-tool p { color: var(--lv-color-text-muted); line-height: var(--lv-lh-relaxed); max-width: 48em; text-wrap: pretty; }
     .lv-learning-status { margin-bottom: var(--lv-sp-3); color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-learning-error { margin-bottom: var(--lv-sp-3); color: var(--lv-color-danger); }
-    .lv-learning-warning { margin: var(--lv-sp-3) 0 0; color: var(--lv-color-warning); font-size: var(--lv-type-meta-size); }
+    .lv-learning-warning { margin: var(--lv-sp-3) 0 0; color: var(--lv-color-warning); font-size: var(--lv-type-meta-size); max-width: 48em; text-wrap: pretty; }
     .lv-learning-calendar-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-3); margin-top: var(--lv-sp-3); }
+    .lv-learning-calendar-foot span { max-width: 48em; text-wrap: pretty; }
     @container lv-hub (max-width: 740px) { .lv-learning-columns { grid-template-columns: 1fr; } }
     @media (max-width: 740px) { .lv-learning-columns { grid-template-columns: 1fr; } .lv-learning-calendar-foot { align-items: flex-start; flex-direction: column; } }
 </style>
