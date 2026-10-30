@@ -90,10 +90,10 @@
         <div class="lv-stat-progress-placeholder" aria-hidden="true"></div>
     {/if}
     {#if sparkPts}
-        <svg class="lv-stat-spark" width={sparkPts.w} height={sparkPts.h} viewBox={`0 0 ${sparkPts.w} ${sparkPts.h}`} aria-hidden="true">
-            <polygon points={`0,${sparkPts.h} ${sparkPts.xy} ${sparkPts.w},${sparkPts.h}`} fill="color-mix(in srgb, var(--lv-color-brand) 8%, transparent)" stroke="none"></polygon>
+        <svg class="lv-stat-spark" width={sparkPts.w} height={sparkPts.h} viewBox={`0 0 ${sparkPts.w} ${sparkPts.h}`} aria-hidden="true" focusable="false">
+            <polygon points={`0,${sparkPts.h} ${sparkPts.xy} ${sparkPts.w},${sparkPts.h}`} fill={`color-mix(in srgb, ${toneColor[tone] ?? "var(--lv-color-brand)"} 8%, transparent)`} stroke="none"></polygon>
             <polyline points={sparkPts.xy} fill="none" stroke="color-mix(in srgb, var(--lv-color-text) 30%, transparent)" stroke-width="1.5" stroke-linejoin="round"></polyline>
-            <circle cx={sparkPts.last[0]} cy={sparkPts.last[1]} r="2.6" fill="var(--lv-color-brand)"></circle>
+            <circle cx={sparkPts.last[0]} cy={sparkPts.last[1]} r="2.6" fill={toneColor[tone] ?? "var(--lv-color-brand)"}></circle>
         </svg>
     {/if}
 </div>

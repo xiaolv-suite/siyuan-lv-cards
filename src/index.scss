@@ -970,6 +970,10 @@ pre,
     padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
     border-radius: var(--lv-r-pill);
     border: 1px solid transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 
     &.lv-chip2--primary { background: var(--lv-primary-soft); color: var(--lv-color-brand); border-color: var(--lv-primary-border); }
     &.lv-chip2--warn { background: var(--lv-warn-soft); color: var(--lv-color-warning); border-color: color-mix(in srgb, var(--lv-color-warning) 30%, transparent); }

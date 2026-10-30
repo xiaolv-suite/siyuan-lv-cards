@@ -40,6 +40,7 @@
         margin-top: calc(var(--lv-space-unit) * 1);
         max-width: 34em;
         line-height: var(--lv-lh-reading);
+        text-wrap: pretty;
     }
     .lv-row2-control {
         display: flex;
