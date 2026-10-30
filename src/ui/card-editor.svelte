@@ -128,7 +128,7 @@
             {overloadNotice.suggestion}
         </div>
     {/if}
-    {#if errMsg}<div class="lv-editor-err ft__smaller">{errMsg}</div>{/if}
+    {#if errMsg}<div class="lv-editor-err ft__smaller" role="alert" aria-live="assertive">{errMsg}</div>{/if}
     <div class="lv-editor-actions">
         <button
             class="b3-button lv-btn-primary b3-button--small"
@@ -236,7 +236,12 @@
         align-items: center;
         gap: var(--lv-sp-2);
     }
-    .lv-editor-hint { flex: 1; text-align: right; }
+    .lv-editor-hint {
+        flex: 1;
+        text-align: right;
+        max-width: 48em;
+        text-wrap: pretty;
+    }
     @media (max-width: 320px) {
         .lv-editor-actions { flex-wrap: wrap; }
         .lv-editor-hint { text-align: left; }

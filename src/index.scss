@@ -331,11 +331,15 @@ body[data-theme-mode="dark"],
         font-weight: var(--lv-fw-heading);
         line-height: var(--lv-lh-body);
         letter-spacing: -0.025em;
+        text-wrap: balance;
     }
 
     .lv-pagehead-sub {
         margin: 0;
         font-size: var(--lv-type-body-size);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading);
     }
 
     // 动作组：与题面基线对齐（顶部对齐 + 4px 视觉补偿），行内不换行挤压题面
@@ -830,6 +834,22 @@ body[data-theme-mode="dark"],
                 pointer-events: auto;
             }
         }
+    }
+}
+
+// 移动与触控端防 300ms 点击延迟（UI-UX Pro Max · tap-delay 规则）
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+    .b3-button,
+    .b3-switch,
+    .lv-chipbtn,
+    .lv-link-button,
+    .lv-tab,
+    .lv-facet,
+    .lv-tool-btn,
+    .lv-btn-tool,
+    .lv-persona,
+    .lv-settings-nav-chip {
+        touch-action: manipulation;
     }
 }
 

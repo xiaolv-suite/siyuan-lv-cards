@@ -865,7 +865,16 @@
     }
 
     const isDirty = $derived(JSON.stringify(draft) !== JSON.stringify(ctx.settings));
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !saveBusy) {
+            e.preventDefault();
+            void save();
+        }
+    }
 </script>
+
+<svelte:window on:keydown={onWindowKeydown} />
 
 <div class="lv-settings b3-typography" use:trapFocus={{ onEscape: requestClose }}>
 
@@ -1639,9 +1648,21 @@
                 <span>{t.settings.unsavedTitle ?? "有未保存的更改"}</span>
             </span>
         {/if}
-        <button class="b3-button b3-button--cancel" disabled={saveBusy} onclick={requestClose}>{window.siyuan.languages.cancel}</button>
+        <button
+            class="b3-button b3-button--cancel"
+            disabled={saveBusy}
+            title={`${window.siyuan.languages.cancel} (Esc)`}
+            aria-keyshortcuts="Escape"
+            onclick={requestClose}
+        >{window.siyuan.languages.cancel}</button>
         <div class="fn__space"></div>
-        <button class="b3-button lv-btn-primary" disabled={saveBusy} onclick={save}>{saveBusy ? "…" : window.siyuan.languages.confirm}</button>
+        <button
+            class="b3-button lv-btn-primary"
+            disabled={saveBusy}
+            title={`${window.siyuan.languages.confirm} (Ctrl+Enter)`}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            onclick={save}
+        >{saveBusy ? "…" : window.siyuan.languages.confirm}</button>
     </div>
 </div>
 
@@ -1727,6 +1748,9 @@
             font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-medium);
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
             transition: all var(--lv-dur-1) var(--lv-ease);
 
             &:hover {
@@ -1734,6 +1758,10 @@
                 border-color: var(--lv-primary-border);
                 background: var(--lv-primary-soft);
                 transform: translateY(-1px);
+            }
+            &:focus-visible {
+                outline: 2px solid var(--lv-color-brand);
+                outline-offset: 2px;
             }
         }
         .lv-searchbar {
