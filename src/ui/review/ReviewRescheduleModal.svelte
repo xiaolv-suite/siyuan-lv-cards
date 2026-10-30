@@ -53,6 +53,15 @@
                 bind:value={rescheduleDays}
                 aria-invalid={invalidRescheduleDays}
                 aria-describedby={invalidRescheduleDays ? "lv-reschedule-error" : undefined}
+                onkeydown={(e) => {
+                    if (e.key === "Enter" && !invalidRescheduleDays && !actionBusy) {
+                        e.preventDefault();
+                        onReschedule();
+                    } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        onClose();
+                    }
+                }}
             />
             <span class="ft__smaller ft__on-surface">{t.review?.rescheduleDays ?? "天后复习"}</span>
             {#if previewTargetLabel}

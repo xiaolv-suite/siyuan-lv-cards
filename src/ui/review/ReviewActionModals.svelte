@@ -112,7 +112,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onClosePause}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.pauseTitle ?? "暂停这场复习"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.pauseTitle ?? "暂停这场复习"} tabindex="-1" use:trapFocus={{ onEscape: onClosePause }} onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
                 <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)">{t.review?.pauseTitle ?? "暂停这场复习"}</span>
                 <div class="fn__flex-1"></div>
@@ -136,7 +136,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseSessionOptions}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.sessionOptionsTitle ?? "本场偏好"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.sessionOptionsTitle ?? "本场偏好"} tabindex="-1" use:trapFocus={{ onEscape: onCloseSessionOptions }} onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
                 <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)">{t.review?.sessionOptionsTitle ?? "本场偏好与出题形态"}</span>
                 <div class="fn__flex-1"></div>
@@ -165,7 +165,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseMemoEditor}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.memoModalTitle ?? "助记便签"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.memoModalTitle ?? "助记便签"} tabindex="-1" use:trapFocus={{ onEscape: onCloseMemoEditor }} onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
                 <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="lightbulb" size={17} /> {t.review?.memoModalTitle ?? "给未来的自己留助记线索"}</span>
                 <div class="fn__flex-1"></div>
@@ -197,7 +197,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseRetireModal}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出卡组"} tabindex="-1" use:trapFocus onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出卡组"} tabindex="-1" use:trapFocus={{ onEscape: onCloseRetireModal }} onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
                 <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="ban" size={17} /> {t.review?.retireCardTitle ?? "移出复习卡组"}</span>
                 <div class="fn__flex-1"></div>
