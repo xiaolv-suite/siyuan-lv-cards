@@ -618,6 +618,11 @@ body[data-theme-mode="dark"],
 // 插件全部作用域表单控件质感系统（R54 原型规范）：
 // 统一白面底色、1px 细微边界、10px 现代圆角、平滑光晕聚焦与按压反馈
 :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+    ::selection {
+        background: color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
+        color: inherit;
+    }
+
     .b3-text-field,
     .b3-select {
         border: 1px solid var(--lv-border);
@@ -1422,6 +1427,7 @@ body[data-theme-mode="dark"],
     p {
         margin: var(--lv-sp-2) 0;
         max-width: 48em;
+        text-wrap: pretty;
     }
 
     .lv-mask-slot {

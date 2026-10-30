@@ -1654,6 +1654,7 @@
         height: auto;
         overflow-y: auto;
         overscroll-behavior: contain;
+        scroll-padding-top: 52px;
         box-sizing: border-box;
         max-width: 720px;
         margin: 0 auto;

@@ -24,7 +24,10 @@
 </div>
 
 <style>
-    .lv-section2 { margin-bottom: var(--lv-sp-4); }
+    .lv-section2 {
+        margin-bottom: var(--lv-sp-4);
+        scroll-margin-top: 52px;
+    }
     /* Global .lv-secthead owns typography/spacing; this component only adds
        the section-specific action alignment. Keep the selector scoped so it
        cannot redefine headings in unrelated views. */
