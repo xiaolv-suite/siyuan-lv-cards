@@ -98,7 +98,7 @@
             </button>
         {/if}
     </div>
-    {#if errorMsg}<div class="lv-marker-error" role="alert">{errorMsg}</div>{/if}
+    {#if errorMsg}<div class="lv-marker-error" role="alert" aria-live="assertive">{errorMsg}</div>{/if}
     {#if items.length === 0}
         <div class="lv-marker-empty lv-card2" role="status">
             <div class="lv-marker-empty-icon" aria-hidden="true">✦</div>
@@ -174,11 +174,14 @@
         max-width: 48em;
         text-wrap: pretty;
         line-height: var(--lv-lh-reading, 1.65);
+        font-variant-numeric: tabular-nums;
     }
     .lv-marker-error {
         margin-bottom: var(--lv-sp-2);
         color: var(--lv-color-danger);
         font-size: var(--lv-type-control-size);
+        max-width: 48em;
+        text-wrap: pretty;
     }
     .lv-marker-list {
         max-height: 46vh;
@@ -201,6 +204,11 @@
         content-visibility: auto;
         contain-intrinsic-size: 0 40px;
         transition: background var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-within {
+            outline: none;
+            box-shadow: inset 0 0 0 1.5px var(--lv-color-brand);
+        }
     }
     .lv-marker-item:hover {
         background: var(--lv-surface-hover);

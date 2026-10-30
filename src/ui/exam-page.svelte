@@ -421,7 +421,7 @@
         >
             <div class="lv-secthead">{editing.id && plans.plans.some(p => p.id === editing.id) ? t.exam.editPlan : t.exam.newPlan}</div>
             {#if formError}
-                <div class="lv-form-error" role="alert">{formError}</div>
+                <div class="lv-form-error" role="alert" aria-live="assertive">{formError}</div>
             {/if}
             <form onsubmit={(event) => { event.preventDefault(); void save(); }}>
             <LvRow label={t.exam.planName}>
@@ -437,11 +437,11 @@
                     autocomplete="off"
                 />
             </LvRow>
-            {#if fieldErrors.name}<div class="lv-field-error" id="exam-name-error">{fieldErrors.name}</div>{/if}
+            {#if fieldErrors.name}<div class="lv-field-error" id="exam-name-error" role="alert" aria-live="assertive">{fieldErrors.name}</div>{/if}
             <LvRow label={t.exam.examDateLabel}>
                 <input class="b3-text-field fn__size-200" aria-label={t.exam.examDateLabel} aria-invalid={Boolean(fieldErrors.examDate)} aria-describedby={fieldErrors.examDate ? "exam-date-error" : undefined} data-exam-field="examDate" type="date" bind:value={editing.examDate} />
             </LvRow>
-            {#if fieldErrors.examDate}<div class="lv-field-error" id="exam-date-error">{fieldErrors.examDate}</div>{/if}
+            {#if fieldErrors.examDate}<div class="lv-field-error" id="exam-date-error" role="alert" aria-live="assertive">{fieldErrors.examDate}</div>{/if}
             <LvRow label={t.exam.scopeLabel}>
                 {#snippet children()}
                     <select
@@ -484,7 +484,7 @@
                     bind:value={editing.totalCards}
                 />
             </LvRow>
-            {#if fieldErrors.totalCards}<div class="lv-field-error" id="exam-total-error">{fieldErrors.totalCards}</div>{/if}
+            {#if fieldErrors.totalCards}<div class="lv-field-error" id="exam-total-error" role="alert" aria-live="assertive">{fieldErrors.totalCards}</div>{/if}
             <LvRow label={t.exam.cramDaysLabel}>
                 <input
                     class="b3-text-field fn__size-60"
@@ -570,7 +570,13 @@
     }
     .lv-plan-head { align-items: center; gap: var(--lv-sp-2); margin-bottom: calc(var(--lv-space-unit) * 3); }
     .lv-plan-name { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size); letter-spacing: -0.01em; text-wrap: balance; }
-    .lv-plan-meta { margin: var(--lv-sp-1) 0; }
+    .lv-plan-meta {
+        margin: var(--lv-sp-1) 0;
+        font-variant-numeric: tabular-nums;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-plan-pacing {
         display: flex; align-items: center; gap: var(--lv-sp-3);
         font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted);
@@ -641,11 +647,16 @@
         color: var(--lv-color-danger);
         font-size: var(--lv-type-control-size);
         margin-bottom: var(--lv-sp-2);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-field-error {
         color: var(--lv-color-danger);
         font-size: var(--lv-type-control-size);
         margin: 0 0 var(--lv-sp-1);
+        max-width: 48em;
+        text-wrap: pretty;
     }
 
     @media (max-width: 740px) {
