@@ -871,7 +871,16 @@
 
     <!-- T09 三件套（docs/40）：搜索定位 + 本地样例预览（虚构内容，不触真实卡片） -->
     <div class="lv-searchbar">
-        <input bind:this={searchInput} class="b3-text-field" style="width: 100%" placeholder={t.settings.searchPlaceholder} aria-label={t.settings.searchPlaceholder} bind:value={searchQuery} />
+        <input
+            bind:this={searchInput}
+            class="b3-text-field"
+            style="width: 100%"
+            placeholder={t.settings.searchPlaceholder}
+            aria-label={t.settings.searchPlaceholder}
+            spellcheck="false"
+            autocomplete="off"
+            bind:value={searchQuery}
+        />
     </div>
     {#if !searchQuery.trim() && sectionScope !== "imports"}
         <nav class="lv-settings-nav-rail" aria-label="设置快速导航">
