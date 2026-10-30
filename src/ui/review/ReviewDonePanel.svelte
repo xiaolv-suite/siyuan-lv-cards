@@ -65,7 +65,23 @@
             ? Math.round(sessionQuizCorrect / sessionQuizTotal * 100)
             : 0
     );
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onReturnHome();
+        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onReviewAgain();
+        } else if (e.key === "m" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onOpenManager();
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="lv-center lv-done">
     <!-- T07 结果面（R52 results）：单面板 + check 徽 + 大数字统计 + 行式补充 + NEXT 软面板 -->
@@ -166,9 +182,30 @@
             </div>
         {/if}
         <div class="fn__flex lv-done-actions" style="justify-content: center; gap: var(--lv-sp-2)">
-            <button class="b3-button lv-btn-primary" onclick={onReturnHome}><LvIcon name="home" size={16} /> <span>{t.review?.returnHome ?? "返回闪卡主页"}</span></button>
-            <button class="b3-button b3-button--outline lv-btn-tool" onclick={onOpenManager}><LvIcon name="cards" size={14} /> <span>{t.menuManager ?? "卡片管理"}</span></button>
-            <button class="b3-button b3-button--outline lv-btn-tool" onclick={onReviewAgain}><LvIcon name="refresh" size={14} /> <span>{t.review?.again ?? "再来一组"}</span></button>
+            <button
+                class="b3-button lv-btn-primary"
+                title={`${t.review?.returnHome ?? "返回闪卡主页"} (Enter)`}
+                aria-keyshortcuts="Enter"
+                onclick={onReturnHome}
+            >
+                <LvIcon name="home" size={16} /> <span>{t.review?.returnHome ?? "返回闪卡主页"}</span>
+            </button>
+            <button
+                class="b3-button b3-button--outline lv-btn-tool"
+                title={`${t.menuManager ?? "卡片管理"} (m)`}
+                aria-keyshortcuts="m"
+                onclick={onOpenManager}
+            >
+                <LvIcon name="cards" size={14} /> <span>{t.menuManager ?? "卡片管理"}</span>
+            </button>
+            <button
+                class="b3-button b3-button--outline lv-btn-tool"
+                title={`${t.review?.again ?? "再来一组"} (r)`}
+                aria-keyshortcuts="r"
+                onclick={onReviewAgain}
+            >
+                <LvIcon name="refresh" size={14} /> <span>{t.review?.again ?? "再来一组"}</span>
+            </button>
         </div>
     </div>
 </div>
@@ -233,12 +270,16 @@
         font-weight: var(--lv-fw-heading);
         letter-spacing: -0.03em;
         line-height: var(--lv-lh-body);
+        text-wrap: balance;
     }
     .lv-done-sub {
         font-size: var(--lv-type-body-size);
         color: var(--lv-color-text-muted);
         font-variant-numeric: tabular-nums;
         margin-top: calc(var(--lv-space-unit) * 1);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-done-stats {
         display: grid;
@@ -280,12 +321,27 @@
         color: var(--lv-color-warning);
         font-weight: var(--lv-fw-semibold);
         font-size: var(--lv-type-body-size);
+        max-width: 48em;
+        text-wrap: pretty;
     }
     .lv-done-tip {
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         opacity: 0.85;
-        line-height: var(--lv-lh-reading);
+        line-height: var(--lv-lh-reading, 1.65);
+        max-width: 48em;
+        text-wrap: pretty;
+    }
+    .lv-done-actions {
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
     .lv-done-end-box {
         display: flex;

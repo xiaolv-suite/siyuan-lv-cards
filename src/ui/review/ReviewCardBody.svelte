@@ -173,6 +173,13 @@
         overflow-x: auto;
         max-width: 100%;
 
+        :global(p) {
+            max-width: 48em;
+            margin: var(--lv-sp-2) 0;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
+        }
+
         :global(img) {
             max-width: 100%;
             max-height: 52vh;

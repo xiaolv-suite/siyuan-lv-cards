@@ -84,6 +84,7 @@
             class:lv-btn-suggested={suggestedRating === 1}
             class:lv-btn-pressed={pressedKeyFeedback === "1"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="1"
             onclick={() => onRate(1)}
         >
@@ -99,6 +100,7 @@
             class:lv-btn-suggested={suggestedRating === 2}
             class:lv-btn-pressed={pressedKeyFeedback === "2"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="2"
             onclick={() => onRate(2)}
         >
@@ -114,6 +116,7 @@
             class:lv-btn-suggested={suggestedRating === 3}
             class:lv-btn-pressed={pressedKeyFeedback === "3"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="3"
             onclick={() => onRate(3)}
         >
@@ -130,6 +133,7 @@
             class:lv-btn-suggested={suggestedRating === 1}
             class:lv-btn-pressed={pressedKeyFeedback === "1"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="1"
             onclick={() => onRate(1)}
         >
@@ -145,6 +149,7 @@
             class:lv-btn-suggested={suggestedRating === 2}
             class:lv-btn-pressed={pressedKeyFeedback === "2"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="2"
             onclick={() => onRate(2)}
         >
@@ -160,6 +165,7 @@
             class:lv-btn-suggested={suggestedRating === 3}
             class:lv-btn-pressed={pressedKeyFeedback === "3"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="3"
             onclick={() => onRate(3)}
         >
@@ -175,6 +181,7 @@
             class:lv-btn-suggested={suggestedRating === 4}
             class:lv-btn-pressed={pressedKeyFeedback === "4"}
             disabled={actionBusy}
+            aria-busy={actionBusy}
             aria-keyshortcuts="4"
             onclick={() => onRate(4)}
         >
@@ -203,6 +210,17 @@
             gap: var(--lv-sp-2);
         }
 
+        .lv-btn-small-pill {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
         :global(.lv-btn-pressed) {
             transform: scale(0.94) !important;
             border-color: var(--lv-color-brand) !important;
@@ -228,6 +246,9 @@
             color: var(--lv-color-on-brand) !important;
             font-weight: var(--lv-fw-semibold);
             box-shadow: var(--lv-shadow-1);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: transform var(--lv-dur-1) var(--lv-ease),
                 box-shadow var(--lv-dur-2) var(--lv-ease),
                 background-color var(--lv-dur-1) var(--lv-ease),
@@ -242,6 +263,10 @@
             &:active {
                 transform: translateY(0.5px) scale(0.985);
                 box-shadow: var(--lv-shadow-1);
+            }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring), var(--lv-shadow-2);
             }
 
             .lv-btn-wide-kbd {
@@ -283,6 +308,9 @@
             min-height: 80px;
             background: var(--lv-color-surface);
             box-shadow: var(--lv-shadow-1);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: transform var(--lv-dur-1) var(--lv-ease),
                 background var(--lv-dur-1) var(--lv-ease),
                 box-shadow var(--lv-dur-2) var(--lv-ease),
@@ -296,6 +324,11 @@
             }
             &:active {
                 transform: translateY(0.5px) scale(0.985);
+            }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring), var(--lv-shadow-2);
+                border-color: var(--lv-color-brand);
             }
 
             .lv-rate-top {

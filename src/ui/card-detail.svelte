@@ -399,12 +399,12 @@
             <div class="lv-hint">{t.detail.issuesEmpty}</div>
         {:else}
             {#each issues as it (it.addedAt)}
-                <div class="lv-todo-row">
-                    <span>{new Date(it.addedAt).toLocaleDateString()}</span>
+                <div class="lv-todo-row lv-issue-row">
+                    <span class="lv-issue-ts">{new Date(it.addedAt).toLocaleDateString()}</span>
                     <span class="ft__smaller ft__on-surface">{t.detail.issueStatus}: {it.status}</span>
                 </div>
             {/each}
-            <div class="ft__smaller ft__on-surface" style="margin-top: var(--lv-sp-2)">{t.detail.issuesHint}</div>
+            <div class="ft__smaller ft__on-surface lv-issues-hint" style="margin-top: var(--lv-sp-2)">{t.detail.issuesHint}</div>
         {/if}
     {/if}
     </div>
@@ -439,12 +439,22 @@
 </LvDrawer>
 
 <style>
-    .lv-hist-row {
+    .lv-hist-row,
+    .lv-issue-row {
         padding: var(--lv-sp-2) 0;
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         content-visibility: auto;
         contain-intrinsic-size: 0 38px;
         &:last-child { border-bottom: none; }
+    }
+    .lv-hist-ts,
+    .lv-issue-ts {
+        font-variant-numeric: tabular-nums;
+    }
+    .lv-issues-hint {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-hist-meta {
         display: inline-flex;
@@ -514,9 +524,17 @@
         padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
         white-space: nowrap;
         text-align: center;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
 
         @media (max-width: 400px) {
             padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 3);

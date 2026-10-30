@@ -37,7 +37,20 @@
         onRefreshQueue: () => void;
         onReturnHome: () => void;
     } = $props();
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+        if ((e.key === "Enter" || e.key === "Escape") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onReturnHome();
+        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onRefreshQueue();
+        }
+    }
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <!-- 复习就绪看板（Review Ready Dashboard）：Bento 便当盒排布，内聚隔离提示，提供丰富的后续步骤 -->
 <div class="lv-center lv-ready-wrap" role="region" aria-label={t.review?.readyEmptyTitle ?? "复习就绪看板"}>
@@ -176,10 +189,22 @@
 
         <!-- 底栏全局主路径 -->
         <div class="lv-ready-bottom-bar">
-            <button type="button" class="b3-button b3-button--cancel lv-ready-refresh-btn" onclick={onRefreshQueue}>
+            <button
+                type="button"
+                class="b3-button b3-button--cancel lv-ready-refresh-btn"
+                title={`${t.dashboard?.refresh ?? "刷新状态"} (r)`}
+                aria-keyshortcuts="r"
+                onclick={onRefreshQueue}
+            >
                 <LvIcon name="refresh" size={14} /> {t.dashboard?.refresh ?? "刷新状态"}
             </button>
-            <button type="button" class="b3-button lv-btn-primary lv-ready-home-btn" onclick={onReturnHome}>
+            <button
+                type="button"
+                class="b3-button lv-btn-primary lv-ready-home-btn"
+                title={`${t.review?.returnHome ?? "返回闪卡主页"} (Enter)`}
+                aria-keyshortcuts="Enter"
+                onclick={onReturnHome}
+            >
                 <LvIcon name="home" size={15} /> {t.review?.returnHome ?? "返回闪卡主页"}
             </button>
         </div>
@@ -242,13 +267,16 @@
                     color: var(--lv-color-text);
                     margin: 0 0 calc(var(--lv-space-unit) * 3) 0;
                     letter-spacing: -0.02em;
+                    text-wrap: balance;
                 }
 
                 .lv-ready-desc {
                     margin: 0;
                     font-size: var(--lv-type-control-size);
                     color: var(--lv-color-text-muted);
-                    line-height: var(--lv-lh-reading);
+                    line-height: var(--lv-lh-reading, 1.65);
+                    max-width: 48em;
+                    text-wrap: pretty;
                 }
             }
 
@@ -405,6 +433,8 @@
                     color: var(--lv-color-text-muted);
                     line-height: var(--lv-lh-reading-tight);
                     flex: 1;
+                    max-width: 48em;
+                    text-wrap: pretty;
                 }
 
                 .lv-ready-card-footer {
@@ -415,6 +445,13 @@
                     .b3-button {
                         border-radius: var(--lv-r-pill);
                         font-size: var(--lv-type-meta-size);
+                        touch-action: manipulation;
+                        user-select: none;
+                        -webkit-user-select: none;
+                        &:focus-visible {
+                            outline: none;
+                            box-shadow: var(--lv-focus-ring);
+                        }
                     }
                 }
             }
@@ -427,6 +464,16 @@
             gap: var(--lv-sp-2);
             padding-top: var(--lv-sp-2);
             border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+
+            .b3-button {
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
+                &:focus-visible {
+                    outline: none;
+                    box-shadow: var(--lv-focus-ring);
+                }
+            }
 
             .lv-ready-home-btn {
                 border-radius: var(--lv-r-pill);

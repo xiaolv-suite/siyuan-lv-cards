@@ -63,12 +63,19 @@
         onclick={(e: Event) => e.stopPropagation()}
         onkeydown={(e) => { if (e.key === "Escape" || e.key === "?") { e.stopPropagation(); onCloseHelp(); } }}
         role="dialog"
+        aria-modal="true"
         aria-label={t.review?.helpTitle ?? "快捷键帮助"}
     >
         <div class="lv-help-head">
             <span>{t.review?.helpTitle ?? "快捷键帮助"}</span>
             <div class="fn__flex-1"></div>
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={cancelLabel} onclick={onCloseHelp}>
+            <button
+                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                aria-label={cancelLabel}
+                aria-keyshortcuts="Escape"
+                title={`${cancelLabel} (Esc)`}
+                onclick={onCloseHelp}
+            >
                 <LvIcon name="close" size={13} />
             </button>
         </div>
@@ -92,12 +99,19 @@
         onclick={(e: Event) => e.stopPropagation()}
         onkeydown={(e) => { if (e.key === "Escape" || e.key === "[") { e.stopPropagation(); onClosePeek(); } }}
         role="dialog"
+        aria-modal="true"
         aria-label={t.review?.peekTitle ?? "回看上一张卡片"}
     >
         <div class="lv-peek-head">
             <span>{t.review?.peekTitle ?? "回看上一张卡片"}</span>
             <div class="fn__flex-1"></div>
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={cancelLabel} onclick={onClosePeek}>
+            <button
+                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                aria-label={cancelLabel}
+                aria-keyshortcuts="Escape"
+                title={`${cancelLabel} (Esc)`}
+                onclick={onClosePeek}
+            >
                 <LvIcon name="close" size={13} />
             </button>
         </div>
@@ -167,6 +181,10 @@
                 grid-template-columns: 1fr 1fr;
             }
         }
+        .lv-kbd2 {
+            font-variant-numeric: tabular-nums;
+            font-family: var(--lv-font-mono, monospace);
+        }
         .lv-help-row {
             display: flex;
             gap: var(--lv-sp-3);
@@ -174,6 +192,7 @@
             padding: var(--lv-sp-2) 0;
             border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-body-size);
+            line-height: var(--lv-lh-body);
             &:last-child {
                 border-bottom: none;
             }

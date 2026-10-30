@@ -1905,9 +1905,18 @@ pre,
     box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
     text-align: left;
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
     transition: all var(--lv-dur-2) var(--lv-ease);
     width: 100%;
     box-sizing: border-box;
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: var(--lv-focus-ring) !important;
+        border-color: var(--lv-color-brand) !important;
+    }
 
     &:hover:not(:disabled) {
         transform: translateY(-2px);
@@ -2049,7 +2058,16 @@ pre,
     border: 1.5px solid var(--lv-border);
     box-shadow: var(--lv-shadow-card);
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
     transition: all var(--lv-dur-2) var(--lv-ease);
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: var(--lv-focus-ring) !important;
+        border-color: var(--lv-color-brand) !important;
+    }
 
     &:hover:not(:disabled) {
         transform: translateY(-2px);

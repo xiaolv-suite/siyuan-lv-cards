@@ -8,7 +8,7 @@
     } = $props();
 </script>
 
-<div class="lv-card2 lv-error2" role="alert">
+<div class="lv-card2 lv-error2" role="alert" aria-live="assertive">
     <div class="lv-error2-icon"><LvIcon name="warning" size={18} /></div>
     <div class="lv-error2-msg">{message}</div>
     {#if onretry}
@@ -41,7 +41,9 @@
         color: var(--lv-color-on-danger-soft);
         font-size: var(--lv-type-body-size);
         line-height: var(--lv-lh-body);
-        word-break: break-all;
+        overflow-wrap: anywhere;
+        max-width: 48em;
+        text-wrap: pretty;
         flex: 1;
         min-width: 200px;
     }
@@ -57,12 +59,19 @@
         color: var(--lv-color-danger);
         background: var(--lv-color-surface);
         box-shadow: var(--lv-shadow-1);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: transform var(--lv-dur-1) var(--lv-ease), background-color var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
             transform: translateY(-1px);
             background: color-mix(in srgb, var(--lv-color-danger) 10%, var(--lv-color-surface));
             box-shadow: var(--lv-shadow-2);
+        }
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
 </style>

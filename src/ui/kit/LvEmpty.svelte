@@ -53,6 +53,7 @@
         font-weight: var(--lv-fw-medium);
         max-width: 360px;
         line-height: var(--lv-lh-body);
+        text-wrap: pretty;
     }
     .lv-empty-btn {
         display: inline-flex;
@@ -64,6 +65,9 @@
         font-weight: var(--lv-fw-semibold);
         margin-top: var(--lv-sp-1);
         box-shadow: var(--lv-shadow-1);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:hover {
@@ -72,6 +76,10 @@
         }
         &:active {
             transform: translateY(0.5px) scale(0.985);
+        }
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
 </style>
