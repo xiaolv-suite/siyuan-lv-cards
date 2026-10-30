@@ -79,5 +79,17 @@
     .lv-occl-overlay {
         position: absolute;
         z-index: var(--lv-z-card-control);
+
+        rect {
+            touch-action: manipulation;
+            transition: opacity var(--lv-dur-1) var(--lv-ease), stroke var(--lv-dur-1) var(--lv-ease), stroke-width var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                stroke: var(--lv-color-brand);
+                stroke-width: 0.8;
+                opacity: 0.85;
+            }
+        }
     }
 </style>

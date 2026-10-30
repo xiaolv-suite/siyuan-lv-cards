@@ -1133,9 +1133,14 @@ pre,
         color: var(--lv-color-text-muted);
         padding: var(--lv-sp-2) var(--lv-sp-3);
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        text-wrap: balance;
     }
 
-    td { padding: var(--lv-sp-3); border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
+    td {
+        padding: var(--lv-sp-3);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        font-variant-numeric: tabular-nums;
+    }
     tr:last-child td { border-bottom: none; }
     tbody tr { transition: background var(--lv-dur-1) var(--lv-ease); }
     tbody tr:hover { background: var(--lv-primary-softer); }

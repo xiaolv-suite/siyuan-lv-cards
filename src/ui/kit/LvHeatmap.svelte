@@ -20,7 +20,7 @@
     }
 </script>
 
-<div class="lv-heatmap-wrap">
+<div class="lv-heatmap-wrap" role="region" aria-label="学习活跃度热力图">
     <!-- 周数大时网格远超卡宽：横向滚动（GitHub 式），避免溢出卡片 -->
     <div class="lv-heat-scroll">
         <div class="lv-heatmap">
@@ -30,6 +30,8 @@
                     class:lv-cell-today={i === days.length - 1}
                     style={`background: ${heatColor(d.stat.review)}`}
                     title={cellTitle(d)}
+                    role="img"
+                    aria-label={cellTitle(d)}
                 ></div>
             {/each}
         </div>
