@@ -464,6 +464,7 @@
         :global(p) {
             max-width: 48em;
             margin: var(--lv-sp-2) 0;
+            text-wrap: pretty;
         }
 
         :global(img) {
