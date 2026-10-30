@@ -658,6 +658,18 @@ body[data-theme-mode="dark"],
         }
     }
 
+    input[type="checkbox"].b3-switch {
+        cursor: pointer;
+        transition: background var(--lv-dur-1) var(--lv-ease),
+            border-color var(--lv-dur-1) var(--lv-ease),
+            box-shadow var(--lv-dur-2) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+
     .b3-select {
         min-height: 32px;
         padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 5);

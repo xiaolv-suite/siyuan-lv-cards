@@ -612,8 +612,8 @@
     let saveBusy = $state(false);
     let saveError = $state("");
 
-    function toggleModule(id: string, ev: Event) {
-        draft.modules[id] = (ev.target as HTMLInputElement).checked;
+    function toggleModule(id: string, ev: boolean | Event) {
+        draft.modules[id] = typeof ev === "boolean" ? ev : (ev.target as HTMLInputElement).checked;
         draft.persona = "custom";
     }
 
@@ -974,11 +974,12 @@
             <LvRow label={t.modules[m.nameKey]} hint={m.locked ? t.settings.lockedModule : t.modules[m.descKey]}>
                 {#snippet children()}
                     <LvChip tone={m.phase === "v0.1" ? "primary" : m.phase === "v0.9" ? "warn" : "default"}>{m.phase}</LvChip>
-                    {#if m.locked}
-                        <input class="b3-switch" type="checkbox" checked disabled />
-                    {:else}
-                        <input class="b3-switch" type="checkbox" checked={draft.modules[m.id]} onchange={(e) => toggleModule(m.id, e)} />
-                    {/if}
+                    <LvSwitch
+                        checked={m.locked ? true : Boolean(draft.modules[m.id])}
+                        disabled={m.locked}
+                        ariaLabel={t.modules[m.nameKey]}
+                        onchange={(val) => toggleModule(m.id, val)}
+                    />
                 {/snippet}
             </LvRow>
         {/each}
