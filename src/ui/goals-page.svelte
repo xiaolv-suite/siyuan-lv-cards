@@ -392,7 +392,7 @@
         .lv-step-num.lv-step-done {
             background: var(--lv-color-data);
             border-color: var(--lv-color-data);
-            color: #FFFFFF;
+            color: var(--lv-color-on-brand);
             box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-data) 30%, transparent);
         }
     }

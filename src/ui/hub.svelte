@@ -819,7 +819,7 @@
     .lv-r54-sidebar-link-active { background: var(--lv-primary-softer); color: var(--lv-color-brand); }
     .lv-r54-sidebar-icon { display: grid; width: 20px; height: 20px; flex: none; place-items: center; }
     .lv-r54-sidebar-text { font-size: 10px; line-height: 1.2; }
-    .lv-r54-sidebar-link .lv-r54-nav-count { position: absolute; top: 2px; right: 10px; display: inline-flex; width: auto; height: auto; min-width: 16px; justify-content: center; padding: 0 4px; border: 0; border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: #fff; font-size: 9px; font-variant-numeric: tabular-nums; }
+    .lv-r54-sidebar-link .lv-r54-nav-count { position: absolute; top: 2px; right: 10px; display: inline-flex; width: auto; height: auto; min-width: 16px; justify-content: center; padding: 0 4px; border: 0; border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: 9px; font-variant-numeric: tabular-nums; }
     .lv-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: calc(var(--lv-space-hairline) * -1); overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .lv-r54-content { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
     .lv-r54-topbar {

@@ -215,7 +215,7 @@
             border-radius: var(--lv-r-pill);
             background: var(--lv-color-brand);
             border: 1px solid transparent;
-            color: #FFFFFF !important;
+            color: var(--lv-color-on-brand) !important;
             font-weight: var(--lv-fw-semibold);
             box-shadow: var(--lv-shadow-1);
             transition: transform var(--lv-dur-1) var(--lv-ease),
@@ -238,12 +238,12 @@
                 margin-left: calc(var(--lv-space-unit) * 6);
                 padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
                 border-radius: var(--lv-r-pill);
-                background: rgba(255, 255, 255, 0.22);
-                border: 1px solid rgba(255, 255, 255, 0.35);
+                background: color-mix(in srgb, var(--lv-color-on-brand) 22%, transparent);
+                border: 1px solid color-mix(in srgb, var(--lv-color-on-brand) 35%, transparent);
                 font-size: var(--lv-type-meta-size);
                 font-weight: var(--lv-fw-semibold);
                 font-variant-numeric: tabular-nums;
-                color: #fff;
+                color: var(--lv-color-on-brand);
             }
         }
 

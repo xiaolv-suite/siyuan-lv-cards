@@ -559,7 +559,7 @@ body[data-theme-mode="dark"],
 .lv-btn-primary {
     position: relative;
     background: var(--lv-color-brand) !important;
-    color: #FFFFFF !important;
+    color: var(--lv-color-on-brand) !important;
     font-weight: var(--lv-fw-semibold);
     border: 1px solid transparent !important;
     border-radius: var(--lv-r-control);
@@ -773,7 +773,10 @@ body[data-theme-mode="dark"],
         .b3-button--small,
         .lv-btn-tool,
         .lv-chipbtn,
-        .b3-switch {
+        .b3-switch,
+        .lv-btn-icon,
+        .lv-zen-btn,
+        .lv-link-button {
             position: relative;
             &::before {
                 content: "";
@@ -1800,7 +1803,7 @@ body[data-theme-mode="dark"],
 
         .lv-choice-key-badge {
             background: var(--lv-color-brand);
-            color: #fff;
+            color: var(--lv-color-on-brand);
         }
     }
 
@@ -1869,7 +1872,7 @@ body[data-theme-mode="dark"],
 
         .lv-choice-key-badge {
             background: var(--lv-color-brand) !important;
-            color: #fff !important;
+            color: var(--lv-color-on-brand) !important;
         }
     }
 
@@ -2285,7 +2288,9 @@ body[data-theme-mode="dark"],
     border-color: var(--lv-color-brand) !important;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 32%, transparent), var(--lv-shadow-card) !important;
     transform: translateY(-2px);
-    animation: lv-pulse-suggest 2s infinite ease-in-out;
+    @media (prefers-reduced-motion: no-preference) {
+        animation: lv-pulse-suggest 2s infinite ease-in-out;
+    }
 }
 @keyframes lv-pulse-suggest {
     0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 32%, transparent), var(--lv-shadow-card); }

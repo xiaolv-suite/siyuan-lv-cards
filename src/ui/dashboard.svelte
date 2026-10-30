@@ -1914,7 +1914,7 @@
 
         &.lv-today-week-day-active i {
             background: var(--lv-color-data) !important;
-            color: #FFFFFF !important;
+            color: var(--lv-color-on-brand) !important;
             font-weight: var(--lv-fw-bold);
             box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-data) 36%, transparent);
             outline: none !important;

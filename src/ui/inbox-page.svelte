@@ -316,15 +316,16 @@
 
 <style>
     .lv-inbox-search-input {
-        width: 130px;
+        width: 160px;
         height: 28px;
         padding: 0 calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
         font-size: var(--lv-type-control-size);
-        transition: width var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
         &:focus {
-            width: 180px;
+            outline: none;
             border-color: var(--lv-color-brand);
+            box-shadow: var(--lv-focus-ring);
         }
     }
     .lv-inbox-error {
