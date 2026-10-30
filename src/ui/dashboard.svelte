@@ -2255,13 +2255,17 @@
         align-items: center;
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-2) 0;
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         font-size: var(--lv-type-body-size);
         &:last-of-type { border-bottom: none; }
         .lv-cov-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .lv-cov-seen { font-variant-numeric: tabular-nums; }
-        .lv-cov-track { width: 120px; flex: none; }
-        .lv-cov-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+        .lv-cov-track {
+            width: 120px;
+            flex: none;
+            .lv-mini-fill { background: var(--lv-color-data); }
+        }
+        .lv-cov-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lv-color-data); font-weight: var(--lv-fw-semibold); }
     }
     .lv-cov-docs {
         margin-top: var(--lv-sp-2);
@@ -2279,7 +2283,7 @@
         font-size: var(--lv-type-body-size);
         /* R52 .row：16px 行距 + 发丝分隔线（末行无线） */
         padding: var(--lv-sp-4) 0;
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
     .lv-todo-row:last-child { border-bottom: none; }
     .lv-todo-error { margin-top: var(--lv-sp-2); }
@@ -2430,9 +2434,10 @@
         align-items: center;
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-2) 0;
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         &:last-child { border-bottom: none; }
-        .lv-ai-rate { font-variant-numeric: tabular-nums; }
+        .lv-ai-rate { font-variant-numeric: tabular-nums; color: var(--lv-color-data); font-weight: var(--lv-fw-semibold); }
+        .lv-mini-track .lv-mini-fill { background: var(--lv-color-data); }
     }
 
     .lv-curve {

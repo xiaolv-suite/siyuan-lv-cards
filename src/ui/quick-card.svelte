@@ -353,7 +353,7 @@
         gap: calc(var(--lv-space-unit) * 10);
         margin-bottom: var(--lv-sp-4);
         padding-bottom: var(--lv-sp-3);
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
     .lv-qc-template {
         display: inline-flex;
@@ -470,7 +470,7 @@
         width: fit-content;
     }
     .lv-qc-preview-face p { margin: calc(var(--lv-space-unit) * 8) 0 0; font-size: 18px; line-height: var(--lv-lh-loose); white-space: pre-wrap; overflow-wrap: anywhere; }
-    .lv-qc-preview-answer { margin-top: calc(var(--lv-space-unit) * 9); padding-top: 16px; border-top: 1px solid var(--lv-border); }
+    .lv-qc-preview-answer { margin-top: calc(var(--lv-space-unit) * 9); padding-top: 16px; border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
     .lv-qc-preview-answer p { margin-top: calc(var(--lv-space-unit) * 4); }
     .lv-qc-mask {
         display: inline-block;

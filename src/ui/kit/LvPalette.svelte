@@ -159,7 +159,7 @@
         box-sizing: border-box;
         flex-shrink: 0;
         border: 0;
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         border-radius: 0;
         padding: calc(var(--lv-space-unit) * 6 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 8);
         font-size: var(--lv-type-body-sm-size);
@@ -227,7 +227,7 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 3);
         padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
-        border-top: 1px solid var(--lv-border);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
     }

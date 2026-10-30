@@ -121,7 +121,7 @@
             align-items: center;
             gap: var(--lv-sp-2);
             padding: var(--lv-sp-2) var(--lv-sp-4);
-            border-bottom: 1px solid var(--lv-border);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-control-size);
             color: var(--lv-color-text-muted);
         }
@@ -147,7 +147,7 @@
             align-items: center;
             gap: var(--lv-sp-2);
             padding: var(--lv-sp-2) var(--lv-sp-4);
-            border-bottom: 1px solid var(--lv-border);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-control-size);
             color: var(--lv-color-text-muted);
         }
@@ -168,7 +168,7 @@
             gap: var(--lv-sp-3);
             align-items: center;
             padding: var(--lv-sp-2) 0;
-            border-bottom: 1px solid var(--lv-border);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-body-size);
             &:last-child {
                 border-bottom: none;

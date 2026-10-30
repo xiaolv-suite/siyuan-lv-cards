@@ -214,7 +214,7 @@
             gap: var(--lv-sp-4);
             flex-wrap: wrap;
             padding-bottom: var(--lv-sp-3);
-            border-bottom: 1px solid var(--lv-border);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
 
             .lv-ready-title-group {
                 flex: 1;
@@ -426,7 +426,7 @@
             justify-content: space-between;
             gap: var(--lv-sp-2);
             padding-top: var(--lv-sp-2);
-            border-top: 1px solid var(--lv-border);
+            border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
 
             .lv-ready-home-btn {
                 border-radius: var(--lv-r-pill);

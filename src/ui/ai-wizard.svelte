@@ -1087,7 +1087,7 @@
                                 {/if}
                                 {#if (prov[i]?.versions.length ?? 0) > 0}
                                     <!-- BU-15：版本链（ai 生成/user 编辑双轨；回到任意历史版本） -->
-                                    <div style="border-top: 1px solid var(--lv-border); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
+                                    <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
                                         <div class="lv-eyebrow">{t.aiScore.versions} · {prov[i].versions.length}</div>
                                         <div style="margin-top: calc(var(--lv-space-unit) * 3); display: flex; flex-direction: column; gap: 4px">
                                             {#each [...prov[i].versions].reverse() as v, vi (prov[i].versions.length - 1 - vi)}

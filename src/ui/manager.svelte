@@ -1323,7 +1323,7 @@
         justify-content: space-between;
         gap: var(--lv-sp-2);
         padding-bottom: var(--lv-sp-2);
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
 
     .lv-batchbar {

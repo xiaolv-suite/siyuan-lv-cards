@@ -441,7 +441,7 @@
 <style>
     .lv-hist-row {
         padding: var(--lv-sp-2) 0;
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         &:last-child { border-bottom: none; }
     }
     .lv-hist-meta {

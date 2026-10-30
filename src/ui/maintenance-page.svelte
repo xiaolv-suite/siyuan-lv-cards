@@ -801,7 +801,7 @@
     .lv-maint-health-issues { margin: var(--lv-sp-1) 0 0; padding-left: var(--lv-sp-4); overflow-wrap: anywhere; }
     .lv-maint-health-history { margin-bottom: var(--lv-sp-4); padding: var(--lv-sp-3); }
     .lv-maint-health-history summary { cursor: pointer; color: var(--lv-color-brand); font-size: var(--lv-type-caption-size); }
-    .lv-maint-health-source { padding: var(--lv-sp-2) 0; border-top: 1px solid var(--lv-border); }
+    .lv-maint-health-source { padding: var(--lv-sp-2) 0; border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
     .lv-maint-health-source summary { overflow-wrap: anywhere; }
     .lv-maint-health-source summary span + span { margin-left: var(--lv-sp-2); }
     .lv-maint-health-block { display: block; margin-top: var(--lv-sp-2); overflow-wrap: anywhere; }

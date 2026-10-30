@@ -1063,10 +1063,10 @@ body[data-theme-mode="dark"],
         font-weight: var(--lv-fw-semibold);
         color: var(--lv-color-text-muted);
         padding: var(--lv-sp-2) var(--lv-sp-3);
-        border-bottom: 1px solid var(--lv-border);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
 
-    td { padding: var(--lv-sp-3); border-bottom: 1px solid var(--lv-border); }
+    td { padding: var(--lv-sp-3); border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
     tr:last-child td { border-bottom: none; }
     tbody tr { transition: background var(--lv-dur-1) var(--lv-ease); }
     tbody tr:hover { background: var(--lv-primary-softer); }
@@ -1323,8 +1323,8 @@ body[data-theme-mode="dark"],
     gap: calc(var(--lv-space-unit) * 3);
     background: transparent;
     border: none;
-    border-top: 1px solid var(--lv-border);
-    border-bottom: 1px solid var(--lv-border);
+    border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     border-radius: 0;
     color: var(--lv-color-text-muted);
     font-size: var(--lv-type-control-size);
@@ -1333,8 +1333,8 @@ body[data-theme-mode="dark"],
     &:not(:disabled):hover {
         background: var(--lv-surface-hover);
         border-color: transparent;
-        border-top: 1px solid var(--lv-border);
-        border-bottom: 1px solid var(--lv-border);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         color: var(--lv-color-text);
     }
 }

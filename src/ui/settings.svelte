@@ -1656,7 +1656,7 @@
             box-shadow: var(--lv-shadow-2);
             margin: var(--lv-sp-4) calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1);
             padding: var(--lv-sp-3) var(--lv-sp-4);
-            border-top: 1px solid var(--lv-border);
+            border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -1694,7 +1694,7 @@
             flex-wrap: wrap;
             margin: calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1) var(--lv-sp-3);
             padding: var(--lv-sp-2) var(--lv-sp-4);
-            border-bottom: 1px solid var(--lv-border);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
 
             @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
                 background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
@@ -1749,7 +1749,7 @@
             box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
             padding: var(--lv-sp-3);
             .lv-st-head, .lv-st-row { gap: var(--lv-sp-3); align-items: center; padding: calc(var(--lv-space-unit) * 1) 0; }
-            .lv-st-head { border-bottom: 1px solid var(--lv-border); padding-bottom: var(--lv-sp-1); font-weight: var(--lv-fw-semibold); }
+            .lv-st-head { border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-bottom: var(--lv-sp-1); font-weight: var(--lv-fw-semibold); }
             .lv-lw { margin-left: var(--lv-sp-3); font-variant-numeric: tabular-nums; }
         }
 

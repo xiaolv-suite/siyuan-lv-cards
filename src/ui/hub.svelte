@@ -1014,7 +1014,7 @@
             gap: calc(var(--lv-space-unit) * 1);
             flex: none;
             padding: calc(var(--lv-space-unit) * 3) var(--lv-sp-3) max(calc(var(--lv-space-unit) * 3), env(safe-area-inset-bottom));
-            border-top: 1px solid var(--lv-border);
+            border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
             backdrop-filter: blur(14px) saturate(1.15);
             -webkit-backdrop-filter: blur(14px) saturate(1.15);

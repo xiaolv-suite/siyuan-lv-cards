@@ -143,7 +143,7 @@
                     <div class="lv-eyebrow">{t.drillPractice}</div>
                     <div style="font-weight: var(--lv-fw-heading); margin: 10px 0; line-height: 1.65">{draft || "—"}</div>
                     {#if revealed}
-                        <div style="border-top: 1px solid var(--lv-border); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6); line-height: 1.65">{sample.answer}</div>
+                        <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6); line-height: 1.65">{sample.answer}</div>
                     {:else}
                         <button class="b3-button lv-btn-primary" style="margin-top: calc(var(--lv-space-unit) * 4)" onclick={() => (revealed = true)}>{t.drillReveal}</button>
                     {/if}

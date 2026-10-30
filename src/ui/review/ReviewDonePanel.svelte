@@ -245,7 +245,7 @@
         grid-template-columns: repeat(3, 1fr);
         gap: var(--lv-sp-4);
         padding: var(--lv-sp-3) 0 var(--lv-sp-2);
-        border-top: 1px solid var(--lv-border);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
     .lv-done-stat {
         display: flex;
@@ -303,7 +303,7 @@
         justify-content: flex-end;
         margin-top: var(--lv-sp-4);
         padding-top: var(--lv-sp-4);
-        border-top: 1px solid var(--lv-border);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
     .lv-done-next {
         margin-top: var(--lv-sp-4);
