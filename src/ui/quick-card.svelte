@@ -219,6 +219,7 @@
                             class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-cloze-shortcut-btn"
                             title={t.quickCardClozeInsertHint ?? "选中文字设为挖空，或光标处插入空位 (Ctrl+H)"}
                             aria-label={t.quickCardClozeInsert ?? "插入挖空 (Ctrl+H)"}
+                            aria-keyshortcuts="Control+h Meta+h"
                             onclick={(e) => { e.stopPropagation(); insertCloze(); }}
                         >
                             <LvIcon name="edit" size={12} />
@@ -234,6 +235,7 @@
                     bind:value={q}
                     placeholder={template === "cloze" ? t.quickCardClozeHint : t.quickCardQ}
                     disabled={busy}
+                    spellcheck="false"
                     onkeydown={(e) => {
                         if (template === "cloze" && (e.ctrlKey || e.metaKey) && (e.key === "h" || e.key === "H")) {
                             e.preventDefault();
@@ -253,6 +255,7 @@
                     bind:value={a}
                     placeholder={template === "superblock" ? (t.quickCardSuperBlockHint ?? "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块") : t.quickCardA}
                     disabled={busy}
+                    spellcheck="false"
                 ></textarea>
             </label>
             {#if template === "qa"}
@@ -325,7 +328,13 @@
     {/if}
     <div class="b3-dialog__action lv-qc-actions">
         {#if !embedded}<button class="b3-button b3-button--cancel" disabled={busy} onclick={onClose}>{window.siyuan.languages.cancel}</button>{/if}
-        <button class="b3-button lv-btn-primary" disabled={!canSubmit} onclick={confirm}>
+        <button
+            class="b3-button lv-btn-primary"
+            disabled={!canSubmit}
+            aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
+            title={`${t.quickCardCreate} (${isMac ? "⌘+Enter" : "Ctrl+Enter"})`}
+            onclick={confirm}
+        >
             {t.quickCardCreate} <LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />
         </button>
     </div>
