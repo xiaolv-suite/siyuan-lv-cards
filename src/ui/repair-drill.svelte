@@ -179,7 +179,7 @@
         >
             <LvIcon name="chevron-left" size={13} /> <span>{t.drillPrev}</span>
         </button>
-        <span class="ft__smaller ft__on-surface">{step} / {STEPS}</span>
+        <span class="ft__smaller ft__on-surface" style="font-variant-numeric: tabular-nums;">{step} / {STEPS}</span>
         {#if step < STEPS}
             <button
                 class="b3-button lv-btn-primary"
@@ -194,7 +194,7 @@
             <button class="b3-button lv-btn-primary" onclick={onClose}>{t.drillExit}</button>
         {/if}
     </div>
-    <div class="ft__smaller ft__on-surface" style="margin-top: var(--lv-sp-3); text-align: center">{t.drillFoot}</div>
+    <div class="ft__smaller ft__on-surface" style="margin-top: var(--lv-sp-3); text-align: center; max-width: 48em; margin-left: auto; margin-right: auto; text-wrap: pretty;">{t.drillFoot}</div>
 </div>
 
 <style>

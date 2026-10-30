@@ -164,6 +164,7 @@
         padding: calc(var(--lv-space-unit) * 6 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 8);
         font-size: var(--lv-type-body-sm-size);
         background: transparent;
+        touch-action: manipulation;
     }
     .lv-palette input:focus-visible {
         outline: none;
