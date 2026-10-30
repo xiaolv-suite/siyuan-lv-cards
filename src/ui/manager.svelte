@@ -1282,6 +1282,16 @@
 {/if}
 
 <style lang="scss">
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-toolbar-right {
         margin-left: auto;
         display: inline-flex;
@@ -1366,6 +1376,28 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
+
+        #lv-deck-modal-title {
+            text-wrap: balance;
+        }
+
+        p {
+            max-width: 48em;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
+        }
+
+        .b3-text-field,
+        .b3-select {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
     }
     .lv-deck-modal-head {
         display: flex;

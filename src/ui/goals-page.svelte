@@ -232,7 +232,7 @@
         {/if}
     {/snippet}
 
-    {#if formError && !editing}<div class="lv-form-error" role="alert">{formError}</div>{/if}
+    {#if formError && !editing}<div class="lv-form-error" role="alert" aria-live="assertive">{formError}</div>{/if}
 
     {#if editing}
         <div class="lv-card2 lv-form">
@@ -267,7 +267,7 @@
             </label>
             <div class="lv-form-hint"><LvIcon name="lightbulb" size={15} /> {t.suggested.replace("${n}", String(suggestedMinutes(form.purpose, form.level)))}</div>
             <div class="lv-form-actions">
-                {#if formError}<div class="lv-form-error" role="alert">{formError}</div>{/if}
+                {#if formError}<div class="lv-form-error" role="alert" aria-live="assertive">{formError}</div>{/if}
                 <button
                     class="b3-button lv-btn-primary b3-button--small lv-btn-tool"
                     disabled={saving || actionBusy}
@@ -358,6 +358,15 @@
 <div class="lv-visually-hidden" aria-live="polite">{live}</div>
 
 <style>
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-form {
         display: flex;
         flex-direction: column;
@@ -378,6 +387,26 @@
     .lv-field > select,
     .lv-field > input {
         flex: 1;
+        touch-action: manipulation;
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+            border-color: var(--lv-color-brand);
+        }
+    }
+    .lv-form-error {
+        color: var(--lv-color-danger);
+        background: var(--lv-danger-soft);
+        border: 1px solid var(--lv-danger-border);
+        border-radius: var(--lv-r-m);
+        padding: var(--lv-sp-2) var(--lv-sp-3);
+        margin-bottom: var(--lv-sp-2);
+        font-size: var(--lv-type-body-size);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-form-hint {
         color: var(--lv-color-text-muted);
@@ -388,15 +417,6 @@
     .lv-form-actions {
         display: flex;
         gap: var(--lv-sp-2);
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
-        }
     }
     .lv-list {
         display: flex;

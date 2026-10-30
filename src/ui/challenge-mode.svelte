@@ -274,6 +274,15 @@
 </div>
 
 <style>
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-chal { padding: var(--lv-sp-5); text-align: center; }
     .lv-chal-center {
         display: flex;
@@ -281,16 +290,6 @@
         align-items: center;
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-5);
-
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
-        }
     }
     .lv-chal-icon { font-size: var(--lv-type-hero-lg-size); }
     .lv-chal-title {

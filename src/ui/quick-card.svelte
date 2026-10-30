@@ -414,7 +414,11 @@
     .lv-qc-reveal:focus-visible,
     .lv-qc-toolbar :global(input:focus-visible),
     .lv-qc-toolbar :global(select:focus-visible),
-    .lv-qc-editor :global(textarea:focus-visible) { outline: 2px solid var(--lv-color-brand); outline-offset: 2px; }
+    .lv-qc-editor :global(textarea:focus-visible) {
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
+        border-color: var(--lv-color-brand);
+    }
     .lv-qc-template button:disabled { cursor: not-allowed; opacity: .55; }
     .lv-qc-template button.lv-qc-template-active {
         background: var(--lv-color-surface);
@@ -436,6 +440,8 @@
     .lv-quickcard :global(.b3-text-field),
     .lv-quickcard :global(.b3-select) {
         width: 100%;
+        touch-action: manipulation;
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
     }
     .lv-quickcard .lv-qc-field { margin-bottom: var(--lv-sp-3); }
     .lv-qc-bidi-toggle {
@@ -538,19 +544,18 @@
         color: var(--lv-color-danger);
         margin-bottom: var(--lv-sp-2);
     }
+    .lv-quickcard .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-quickcard .lv-qc-actions {
         justify-content: flex-end;
         gap: var(--lv-sp-2);
-
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
-        }
     }
     .lv-quickcard .lv-qc-actions :global(.lv-kbd2) {
         margin-left: calc(var(--lv-space-unit) * 3);

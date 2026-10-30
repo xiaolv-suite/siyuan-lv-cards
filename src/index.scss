@@ -2061,6 +2061,14 @@ pre,
         padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 12);
         font-weight: var(--lv-fw-semibold);
         box-shadow: 0 4px 14px color-mix(in srgb, var(--lv-color-brand) 28%, transparent);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
 }
 
@@ -2218,6 +2226,7 @@ pre,
             background: transparent;
             font-size: var(--lv-type-body-sm-size);
             padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 4);
+            touch-action: manipulation;
             &:focus { outline: none; }
         }
         .lv-fill-submit-btn {
@@ -2225,6 +2234,14 @@ pre,
             padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 8);
             font-weight: var(--lv-fw-semibold);
             white-space: nowrap;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
         }
     }
 }

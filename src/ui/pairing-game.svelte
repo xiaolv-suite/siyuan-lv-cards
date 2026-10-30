@@ -336,15 +336,13 @@
         text-wrap: pretty;
         font-variant-numeric: tabular-nums;
     }
-    .lv-pair-done-actions {
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
 </style>

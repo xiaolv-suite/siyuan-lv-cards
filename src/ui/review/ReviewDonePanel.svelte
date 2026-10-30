@@ -332,15 +332,13 @@
         max-width: 48em;
         text-wrap: pretty;
     }
-    .lv-done-actions {
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
+    .lv-done-panel .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
     .lv-done-end-box {
@@ -353,6 +351,18 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-text) 3%, transparent);
+    }
+    .lv-done-end-chips button {
+        touch-action: manipulation;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+    .lv-notice {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-done-actions {
         gap: var(--lv-sp-2);
@@ -376,6 +386,11 @@
         gap: var(--lv-sp-2);
         font-size: var(--lv-type-body-size);
         padding: calc(var(--lv-space-unit) * 2) 0;
+
+        > span {
+            font-variant-numeric: tabular-nums;
+            text-wrap: balance;
+        }
     }
     .lv-done {
         animation: lv-done-fade var(--lv-dur-3) var(--lv-ease) both;

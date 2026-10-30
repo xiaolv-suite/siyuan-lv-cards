@@ -701,6 +701,16 @@
 </div>
 
 <style>
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-hub {
         height: 100%;
         display: flex;
@@ -935,7 +945,11 @@
     .lv-r54-inbox-action { position: relative; display: grid; width: 44px; height: 44px; flex: none; place-items: center; padding: 0; border: 1px solid transparent; border-radius: var(--lv-r-m); background: transparent; color: var(--lv-color-text-muted); cursor: pointer; }
     .lv-r54-inbox-action:hover,
     .lv-r54-inbox-action-active { border-color: var(--lv-border); background: var(--lv-primary-softer); color: var(--lv-color-brand); }
-    .lv-r54-inbox-action:focus-visible { outline: 2px solid var(--lv-color-brand); outline-offset: 2px; }
+    .lv-r54-inbox-action:focus-visible {
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
+        border-color: var(--lv-color-brand);
+    }
     .lv-r54-action-count { position: absolute; top: 1px; right: 1px; display: grid; min-width: 17px; height: 17px; place-items: center; padding: 0 4px; border: 2px solid var(--lv-color-surface); border-radius: 999px; background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: var(--lv-type-micro-size); font-variant-numeric: tabular-nums; line-height: var(--lv-lh-tight); }
     .lv-r54-context-label { min-height: 30px; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
     .lv-hub-bar {
@@ -1017,6 +1031,7 @@
     .lv-r54-settings-action h3 {
         margin: calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline)) 0 calc(var(--lv-space-unit) * 4);
         font-size: var(--lv-type-title-lg-size);
+        text-wrap: balance;
     }
 
     .lv-r54-settings-action p,
@@ -1024,7 +1039,9 @@
         margin: 0 0 calc(var(--lv-space-unit) * 9);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-body-size);
-        line-height: var(--lv-lh-relaxed);
+        line-height: var(--lv-lh-reading, 1.65);
+        max-width: 48em;
+        text-wrap: pretty;
     }
 
     .lv-r54-settings-action {

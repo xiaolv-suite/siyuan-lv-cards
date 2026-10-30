@@ -284,9 +284,9 @@
         </button>
     {/snippet}
 
-    {#if makeError}<div class="lv-inbox-error" role="alert">{makeError}</div>{/if}
+    {#if makeError}<div class="lv-inbox-error" role="alert" aria-live="assertive">{makeError}</div>{/if}
     {#if sourceError}
-        <div class="lv-inbox-error" role="alert">
+        <div class="lv-inbox-error" role="alert" aria-live="assertive">
             <span>{sourceError}</span>
             {#if sourceErrorId && !sourcePendingId}
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => openSource(sourceErrorId)}><LvIcon name="refresh" size={12} /> <span>{t.retry ?? "重试"}</span></button>
@@ -355,13 +355,24 @@
 <LvLive message={live} />
 
 <style>
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-inbox-search-input {
         width: 160px;
         height: 28px;
         padding: 0 calc(var(--lv-space-unit) * 5);
         border-radius: var(--lv-r-pill);
         font-size: var(--lv-type-control-size);
+        touch-action: manipulation;
         transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+        &:focus-visible,
         &:focus {
             outline: none;
             border-color: var(--lv-color-brand);
@@ -376,6 +387,12 @@
         padding: var(--lv-sp-2) var(--lv-sp-3);
         margin-bottom: var(--lv-sp-3);
         font-size: var(--lv-type-body-size);
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-batchbar {
         position: sticky;
@@ -392,16 +409,6 @@
         box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         margin-bottom: var(--lv-sp-3);
         animation: lv-modal-pop var(--lv-dur-1) var(--lv-ease);
-
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
-        }
 
         @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
             background: color-mix(in srgb, var(--lv-primary-soft) 85%, var(--lv-color-surface));

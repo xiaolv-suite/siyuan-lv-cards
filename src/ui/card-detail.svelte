@@ -554,8 +554,7 @@
     .lv-hist-list { max-height: 320px; overflow: auto; }
 
     /* T05 版本对比（docs/40）：逐行差异 */
-    .lv-ver-row .b3-button,
-    .lv-facet-panel .b3-button {
+    :global(.b3-button) {
         touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
