@@ -1012,7 +1012,18 @@
             </div>
             <div style="margin-bottom: var(--lv-sp-4)">
                 <div class="ft__smaller" style="margin-bottom: calc(var(--lv-space-unit) * 2); color: var(--lv-color-text-muted)">{t.deckNewName ?? "或新建卡组"}</div>
-                <input class="b3-text-field fn__block" placeholder={t.deckNewName ?? "输入新卡组名称"} bind:value={newDeckNameInput} disabled={deckActionBusy} />
+                <input
+                    class="b3-text-field fn__block"
+                    placeholder={t.deckNewName ?? "输入新卡组名称"}
+                    bind:value={newDeckNameInput}
+                    disabled={deckActionBusy}
+                    onkeydown={(e) => {
+                        if (e.key === "Enter" && !deckActionBusy && newDeckNameInput.trim()) {
+                            e.preventDefault();
+                            submitBatchDeckAction();
+                        }
+                    }}
+                />
             </div>
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2)">
                 <button class="b3-button b3-button--cancel" disabled={deckActionBusy} onclick={() => (showDeckModal = false)}>{window.siyuan.languages.cancel}</button>

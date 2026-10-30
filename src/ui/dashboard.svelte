@@ -1544,7 +1544,17 @@
                     <tbody>
                         {#each decks as d (d.id)}
                             <tr>
-                                <td class="lv-deck-name">{d.name}<span class="lv-arrow" aria-hidden="true">›</span></td>
+                                <td class="lv-deck-name">
+                                    <button
+                                        type="button"
+                                        class="b3-button b3-button--text lv-deck-btn"
+                                        title={d.name}
+                                        onclick={() => ctx.openManagerDeck?.(d.id, d.name)}
+                                    >
+                                        <span>{d.name}</span>
+                                        <span class="lv-arrow" aria-hidden="true">›</span>
+                                    </button>
+                                </td>
                                 <td class="lv-num-col">{d.size}</td>
                                 <td class="lv-num-col ft__smaller ft__on-surface">{d.updated}</td>
                             </tr>

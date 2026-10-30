@@ -195,7 +195,7 @@
         max-width: 640px;
         width: 100%;
         margin: var(--lv-sp-2) auto 0;
-        padding-bottom: var(--lv-sp-2);
+        padding-bottom: max(var(--lv-sp-2), env(safe-area-inset-bottom));
         box-sizing: border-box;
 
         .lv-step-wrap {
