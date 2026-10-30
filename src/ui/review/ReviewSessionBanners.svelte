@@ -133,6 +133,17 @@
 {/if}
 
 <style lang="scss">
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+
     /* BI-9：恢复分支横幅 */
     .lv-recover {
         display: flex;
@@ -171,13 +182,25 @@
             font-size: var(--lv-type-meta-size);
             padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 5);
             color: var(--lv-color-text);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: all var(--lv-dur-1) var(--lv-ease);
             &:hover {
                 border-color: var(--lv-color-brand);
                 color: var(--lv-color-brand);
                 background: var(--lv-primary-soft);
             }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
         }
+    }
+    .lv-relief-impact span {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-return-title {
         color: var(--lv-color-text-muted);

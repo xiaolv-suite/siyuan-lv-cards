@@ -167,6 +167,17 @@
     .lv-center {
         margin: auto;
         color: var(--lv-color-text-muted);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
 
     .lv-card-content {
@@ -251,6 +262,9 @@
             :global(td) {
                 padding: var(--lv-sp-2) var(--lv-sp-3);
                 border: 1px solid var(--lv-border);
+            }
+            :global(td) {
+                font-variant-numeric: tabular-nums;
             }
             :global(th) {
                 background: var(--lv-color-canvas);

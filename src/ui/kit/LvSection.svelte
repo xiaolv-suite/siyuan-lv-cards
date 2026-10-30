@@ -31,6 +31,27 @@
     /* Global .lv-secthead owns typography/spacing; this component only adds
        the section-specific action alignment. Keep the selector scoped so it
        cannot redefine headings in unrelated views. */
-    .lv-section2 > .lv-secthead { justify-content: space-between; }
-    .lv-section2 > .lv-secthead .lv-secthead-actions { display: inline-flex; align-items: center; gap: var(--lv-sp-1); }
+    .lv-section2 > .lv-secthead {
+        justify-content: space-between;
+
+        span:first-child {
+            text-wrap: balance;
+        }
+    }
+    .lv-section2 > .lv-secthead .lv-secthead-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--lv-sp-1);
+
+        :global(.b3-button) {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
 </style>

@@ -31,3 +31,24 @@
     {/if}
     {@render children?.()}
 </div>
+
+<style>
+    .lv-pagehead-title {
+        text-wrap: balance;
+    }
+    .lv-pagehead-sub {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
+    .lv-pagehead-actions :global(.b3-button) {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+</style>

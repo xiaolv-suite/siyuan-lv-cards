@@ -131,6 +131,7 @@
         font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
         margin-bottom: var(--lv-sp-1);
+        text-wrap: balance;
     }
     .lv-stat .lv-stat-dot {
         width: 8px;
@@ -143,6 +144,7 @@
         font-size: var(--lv-type-body-size);
         font-weight: var(--lv-fw-semibold);
         color: var(--lv-color-text-muted);
+        font-variant-numeric: tabular-nums;
         background: none;
         -webkit-background-clip: initial;
         background-clip: initial;

@@ -57,6 +57,17 @@
         margin-bottom: var(--lv-sp-2);
         box-sizing: border-box;
 
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
         .lv-err-tag {
             border-radius: var(--lv-r-m);
             background: var(--lv-surface-hover);

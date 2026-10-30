@@ -35,11 +35,12 @@
     .lv-row2-name {
         font-size: var(--lv-type-body-size);
         font-weight: var(--lv-fw-semibold);
+        text-wrap: balance;
     }
     .lv-row2-hint {
         margin-top: calc(var(--lv-space-unit) * 1);
-        max-width: 34em;
-        line-height: var(--lv-lh-reading);
+        max-width: 48em;
+        line-height: var(--lv-lh-reading, 1.65);
         text-wrap: pretty;
     }
     .lv-row2-control {

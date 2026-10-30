@@ -116,6 +116,9 @@
             font: inherit;
             color: inherit;
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             display: inline-flex;
             align-items: center;
             gap: calc(var(--lv-space-unit) * 2);
@@ -165,6 +168,9 @@
             background: transparent;
             border: none;
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
