@@ -459,6 +459,11 @@
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
         line-height: var(--lv-lh-reading);
 
+        :global(p) {
+            max-width: 48em;
+            margin: var(--lv-sp-2) 0;
+        }
+
         :global(img) {
             max-width: 100%;
             max-height: 48vh;

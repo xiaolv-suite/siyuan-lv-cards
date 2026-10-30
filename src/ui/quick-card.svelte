@@ -469,7 +469,7 @@
         font-weight: var(--lv-fw-semibold);
         width: fit-content;
     }
-    .lv-qc-preview-face p { margin: calc(var(--lv-space-unit) * 8) 0 0; font-size: 18px; line-height: var(--lv-lh-loose); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .lv-qc-preview-face p { margin: calc(var(--lv-space-unit) * 8) 0 0; font-size: 18px; line-height: var(--lv-lh-loose); white-space: pre-wrap; overflow-wrap: anywhere; max-width: 48em; }
     .lv-qc-preview-answer { margin-top: calc(var(--lv-space-unit) * 9); padding-top: 16px; border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
     .lv-qc-preview-answer p { margin-top: calc(var(--lv-space-unit) * 4); }
     .lv-qc-mask {

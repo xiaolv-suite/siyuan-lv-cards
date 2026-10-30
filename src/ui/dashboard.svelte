@@ -2300,7 +2300,6 @@
         cursor: pointer;
         &:hover { background: var(--lv-primary-softer, transparent); }
     }
-    .lv-hint { color: var(--lv-color-text-muted); }
     .lv-loading {
         display: flex;
         flex-direction: column;
