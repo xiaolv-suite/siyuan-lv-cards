@@ -440,7 +440,15 @@
                     <span class="lv-r54-beta-badge">{i18n.hubBetaStatus ?? "内测版"}</span>
                 </div>
                 <div class="lv-r54-topbar-actions">
-                    <button class="lv-r54-search" disabled={!openPalette} aria-describedby={!openPalette ? "lv-r54-search-hint" : undefined} onclick={() => openPalette?.()} aria-label={i18n.cmdPalette ?? "命令面板"}>
+                    <button
+                        class="lv-r54-search"
+                        disabled={!openPalette}
+                        aria-describedby={!openPalette ? "lv-r54-search-hint" : undefined}
+                        onclick={() => openPalette?.()}
+                        aria-label={i18n.cmdPalette ?? "命令面板"}
+                        aria-keyshortcuts={isMac ? "Meta+k" : "Control+k"}
+                        title={`${i18n.cmdPalette ?? "命令面板"} (${isMac ? "⌘K" : "Ctrl+K"})`}
+                    >
                         <LvIcon name="search" size={17} />
                         <span class="lv-r54-search-text">{i18n.palettePlaceholder ?? "搜索动作、页面…"}</span>
                         <kbd>{isMac ? "⌘ K" : "Ctrl K"}</kbd>

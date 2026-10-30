@@ -139,6 +139,7 @@
     "dashboard": {
         "dashboard": "unfinishedAI",
         "retentionCurveTitle": "Retention Curve",
+        "todayStatsAriaLabel": "Today's Key Learning Metrics",
         "docUnattributedNote": "${n} cards cannot be attributed to a doc (block deleted/moved) — excluded",
         "docCards": "${n} cards reviewed",
         "unattributedNote": "${n} cards have records without deck info (native review UI) — excluded from breakdown",

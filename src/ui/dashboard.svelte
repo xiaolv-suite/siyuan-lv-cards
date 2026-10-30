@@ -953,7 +953,7 @@
             {/if}
         </div>
 
-        <div class="lv-today-stats">
+        <div class="lv-today-stats" role="region" aria-label={t.dashboard.todayStatsAriaLabel ?? "今日关键学习指标"}>
             <div class="lv-stat-cell">
                 <LvStat label={t.dashboard.todayDue} detail={t.dashboard.dueCountDetail} value={dueCount} tone="primary" animate />
             </div>

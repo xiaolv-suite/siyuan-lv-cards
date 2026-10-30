@@ -139,6 +139,7 @@
     "dashboard": {
         "dashboard": "unfinishedAI",
         "retentionCurveTitle": "记忆留存曲线",
+        "todayStatsAriaLabel": "今日关键学习指标",
         "docUnattributedNote": "另有 ${n} 张卡无法归属文档（块已删除/移动），未计入",
         "docCards": "${n} 张卡有记录",
         "unattributedNote": "另有 ${n} 张卡的记录缺卡组信息（原生复习界面），未计入分解",
