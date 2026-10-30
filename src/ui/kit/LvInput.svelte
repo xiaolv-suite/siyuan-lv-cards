@@ -62,5 +62,12 @@
         box-sizing: border-box;
         vertical-align: middle;
         line-height: var(--lv-lh-control-lg);
+        transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+            border-color: var(--lv-color-brand);
+        }
     }
 </style>

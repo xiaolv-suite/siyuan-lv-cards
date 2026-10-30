@@ -44,6 +44,16 @@
         cursor: default;
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        border-radius: var(--lv-r-pill);
+        transition: color var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-step:not(:disabled) { cursor: pointer; }
     .lv-step-dot {
@@ -54,6 +64,7 @@
         text-align: center;
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-semibold);
+        font-variant-numeric: tabular-nums;
         background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         flex-shrink: 0;
     }

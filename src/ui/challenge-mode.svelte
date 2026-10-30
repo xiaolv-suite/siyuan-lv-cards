@@ -275,10 +275,36 @@
 
 <style>
     .lv-chal { padding: var(--lv-sp-5); text-align: center; }
-    .lv-chal-center { display: flex; flex-direction: column; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-5); }
+    .lv-chal-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--lv-sp-3);
+        padding: var(--lv-sp-5);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
     .lv-chal-icon { font-size: var(--lv-type-hero-lg-size); }
-    .lv-chal-title { font-size: var(--lv-type-section-size); font-weight: 700; }
-    .lv-chal-desc { color: var(--lv-color-text-muted); margin-bottom: var(--lv-sp-3); }
+    .lv-chal-title {
+        font-size: var(--lv-type-section-size);
+        font-weight: 700;
+        text-wrap: balance;
+    }
+    .lv-chal-desc {
+        color: var(--lv-color-text-muted);
+        margin-bottom: var(--lv-sp-3);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-chal-head { display: flex; align-items: center; gap: var(--lv-sp-3); }
     .lv-chal-timer { font-size: var(--lv-type-section-size); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--lv-color-brand); }
     .lv-chal-low { color: var(--lv-color-danger) !important; }
@@ -319,6 +345,9 @@
         max-width: 160px;
         font-weight: var(--lv-fw-semibold);
         box-shadow: var(--lv-shadow-card);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
@@ -327,6 +356,10 @@
         }
         &:active {
             transform: translateY(1px) scale(0.98);
+        }
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
         }
     }
     .lv-chal-known { background: var(--lv-primary-soft); color: var(--lv-color-brand); }

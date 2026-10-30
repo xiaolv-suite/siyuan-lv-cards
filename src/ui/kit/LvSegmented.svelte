@@ -68,6 +68,7 @@
         padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
         font-weight: var(--lv-fw-emphasis);
@@ -75,6 +76,11 @@
             color var(--lv-dur-1, 120ms) var(--lv-ease, ease-out),
             box-shadow var(--lv-dur-1, 120ms) var(--lv-ease, ease-out),
             transform var(--lv-dur-1, 120ms) var(--lv-ease, ease-out);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-seg-item:hover:not(:disabled) {
         color: var(--lv-color-text);

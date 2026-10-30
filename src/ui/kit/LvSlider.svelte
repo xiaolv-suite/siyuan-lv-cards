@@ -40,6 +40,12 @@
         width: 140px;
         accent-color: var(--lv-color-brand);
         cursor: pointer;
+        touch-action: manipulation;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-slider-val {
         font-size: var(--lv-type-control-size);
