@@ -200,12 +200,15 @@
         text-align: left;
         line-height: var(--lv-lh-meta);
         white-space: normal;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease);
     }
     .lv-palette-item:hover { background: transparent; color: inherit; }
     .lv-palette-item:focus-visible {
-        outline: 2px solid var(--lv-color-brand);
-        outline-offset: -2px;
+        outline: none;
+        box-shadow: inset 0 0 0 2px var(--lv-color-brand);
     }
     .lv-palette-sel,
     .lv-palette-sel:hover {
@@ -220,6 +223,9 @@
         text-align: center;
         font-size: var(--lv-type-control-size);
         color: var(--lv-color-text-muted);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-palette-foot {
         display: flex;

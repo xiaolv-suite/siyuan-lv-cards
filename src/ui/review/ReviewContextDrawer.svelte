@@ -78,6 +78,23 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: var(--lv-sp-2);
+
+            .b3-button {
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
+
+                &:focus-visible {
+                    outline: none;
+                    box-shadow: var(--lv-focus-ring);
+                }
+            }
+        }
+
+        .lv-hint {
+            max-width: 48em;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
         }
 
         .lv-ctx-title {

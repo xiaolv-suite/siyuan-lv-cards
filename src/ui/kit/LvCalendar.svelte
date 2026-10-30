@@ -185,10 +185,14 @@
     button.lv-cal-day {
         cursor: pointer;
         appearance: none;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
     }
     button.lv-cal-day:focus-visible {
-        outline: 2px solid var(--lv-color-brand);
-        outline-offset: 2px;
+        outline: none;
+        box-shadow: var(--lv-focus-ring);
+        border-color: var(--lv-color-brand);
         z-index: var(--lv-z-elevated);
     }
     button.lv-cal-day[aria-pressed="true"] {

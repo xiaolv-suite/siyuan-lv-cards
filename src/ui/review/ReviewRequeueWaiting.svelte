@@ -61,6 +61,25 @@
             font-size: var(--lv-type-title-lg-size);
             font-weight: var(--lv-fw-heading);
             letter-spacing: -0.02em;
+            text-wrap: balance;
+        }
+
+        p {
+            max-width: 48em;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
         }
     }
 </style>

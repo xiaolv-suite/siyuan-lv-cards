@@ -156,6 +156,17 @@
         gap: var(--lv-sp-2);
         min-width: 0;
         flex-wrap: wrap;
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
     .lv-entry {
         display: inline-flex;
@@ -166,6 +177,17 @@
         .lv-entry-from {
             color: var(--lv-color-text-muted);
             white-space: nowrap;
+        }
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
         }
     }
     .lv-progress {

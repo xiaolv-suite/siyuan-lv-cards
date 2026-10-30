@@ -109,12 +109,15 @@
                 font-size: var(--lv-type-meta-size);
                 letter-spacing: 0.04em;
                 margin-bottom: calc(var(--lv-space-unit) * 1);
+                text-wrap: balance;
             }
             p {
                 margin: 0;
                 color: var(--lv-color-text-muted);
-                line-height: var(--lv-lh-reading-tight);
+                line-height: var(--lv-lh-reading, 1.65);
                 font-size: var(--lv-type-control-size);
+                max-width: 48em;
+                text-wrap: pretty;
             }
         }
     }
@@ -142,11 +145,12 @@
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
                 margin-bottom: calc(var(--lv-space-unit) * 1);
+                text-wrap: balance;
             }
             p {
                 margin: 0;
                 color: var(--lv-color-text);
-                line-height: var(--lv-lh-meta);
+                line-height: var(--lv-lh-reading, 1.65);
                 font-size: var(--lv-type-control-size);
                 max-width: 48em;
                 text-wrap: pretty;
@@ -155,6 +159,9 @@
         .lv-memo-edit-btn {
             flex: none;
             opacity: 0.7;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             &:hover { opacity: 1; }
             &:focus-visible {
                 outline: none;
@@ -181,6 +188,7 @@
         padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
         cursor: pointer;
         opacity: 0.75;
+        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
         transition: all var(--lv-dur-1) var(--lv-ease);
