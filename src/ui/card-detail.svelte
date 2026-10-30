@@ -442,6 +442,8 @@
     .lv-hist-row {
         padding: var(--lv-sp-2) 0;
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 38px;
         &:last-child { border-bottom: none; }
     }
     .lv-hist-meta {

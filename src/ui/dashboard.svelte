@@ -940,7 +940,7 @@
             <!-- R53 hero 目标环（docs/42 §4 T01）：今日目标完成度，无目标时不渲染 -->
             {#if targetPct() >= 0}
                 <div class="lv-hero-ring" aria-hidden="true">
-                    <svg viewBox="0 0 92 92">
+                    <svg viewBox="0 0 92 92" focusable="false">
                         <circle class="lv-hero-ring-track" cx="46" cy="46" r="40"></circle>
                         <circle
                             class="lv-hero-ring-fill"

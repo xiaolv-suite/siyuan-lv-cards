@@ -373,6 +373,8 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-l);
         box-shadow: var(--lv-shadow-1);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 52px;
         transition: border-color var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
             transform var(--lv-dur-1) var(--lv-ease);
