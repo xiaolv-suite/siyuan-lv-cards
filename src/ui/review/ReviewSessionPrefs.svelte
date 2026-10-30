@@ -1,5 +1,6 @@
 <script lang="ts">
     import LvIcon from "@/ui/kit/LvIcon.svelte";
+    import LvSwitch from "@/ui/kit/LvSwitch.svelte";
     import type { ReviewSettings } from "../review.svelte";
 
     const BUDGET_PRESETS = [5, 10, 15, 20, 25, 30, 45, 60] as const;
@@ -42,14 +43,27 @@
 </script>
 
 {#if open}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="lv-prefs" role="region" aria-label={t.review?.prefsTitle ?? "本场偏好"}>
+    <!-- svelte-ignore a11y_no_static_element_interactions, a11y_no_noninteractive_element_interactions -->
+    <div
+        class="lv-prefs"
+        role="region"
+        tabindex="-1"
+        aria-label={t.review?.prefsTitle ?? "本场偏好"}
+        onkeydown={(e) => { if (e.key === "Escape" && onClose) { e.stopPropagation(); onClose(); } }}
+    >
         <div class="lv-prefs-head">
             <span class="lv-prefs-title"><LvIcon name="settings" size={14} /> {t.review?.prefsTitle ?? "本场偏好"}</span>
             <span class="ft__smaller ft__on-surface">{t.review?.prefsHint ?? "仅对当前复习面板生效，离开后恢复全局设置"}</span>
             <div class="fn__flex-1"></div>
             {#if onClose}
-                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onClose} aria-label="关闭">
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    onclick={onClose}
+                    aria-label="关闭"
+                    aria-keyshortcuts="Escape"
+                    title="关闭 (Esc)"
+                >
                     <LvIcon name="close" size={12} />
                 </button>
             {/if}
@@ -67,12 +81,20 @@
         <div class="lv-prefs-row">
             <span>{t.settings?.reverseOrder ?? "双向问答反转"}</span>
             <div class="fn__flex-1"></div>
-            <input type="checkbox" class="b3-switch" checked={reverseOrder} onchange={(e: Event) => onSetOverride("reverseOrder", (e.target as HTMLInputElement).checked)} />
+            <LvSwitch
+                checked={reverseOrder}
+                ariaLabel={t.settings?.reverseOrder ?? "双向问答反转"}
+                onchange={(val) => onSetOverride("reverseOrder", val)}
+            />
         </div>
         <div class="lv-prefs-row">
             <span>{t.settings?.mixedRotationLabel ?? "混合题型轮换"}</span>
             <div class="fn__flex-1"></div>
-            <input type="checkbox" class="b3-switch" checked={mixedRotation} onchange={(e: Event) => onSetOverride("mixedRotation", (e.target as HTMLInputElement).checked)} />
+            <LvSwitch
+                checked={mixedRotation}
+                ariaLabel={t.settings?.mixedRotationLabel ?? "混合题型轮换"}
+                onchange={(val) => onSetOverride("mixedRotation", val)}
+            />
         </div>
         <div class="lv-prefs-row">
             <span>{t.settings?.timeoutMode ?? "超时处理"}</span>
@@ -101,6 +123,8 @@
                 min="5"
                 max="480"
                 step="5"
+                spellcheck="false"
+                autocomplete="off"
                 aria-label={t.review?.budgetCustomLabel ?? "自定义预算"}
                 placeholder={t.review?.budgetCustomHint ?? "分钟"}
                 onchange={(e: Event) => onSetBudget(clampBudgetMinutes((e.target as HTMLInputElement).value))}

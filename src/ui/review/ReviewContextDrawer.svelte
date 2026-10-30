@@ -20,12 +20,26 @@
 </script>
 
 {#if open}
-    <div class="lv-ctxpanel b3-typography" role="region" aria-label={t.review?.ctxTitle ?? "来源上下文"}>
+    <!-- svelte-ignore a11y_no_static_element_interactions, a11y_no_noninteractive_element_interactions -->
+    <div
+        class="lv-ctxpanel b3-typography"
+        role="region"
+        tabindex="-1"
+        aria-label={t.review?.ctxTitle ?? "来源上下文"}
+        onkeydown={(e) => { if (e.key === "Escape" && onClose) { e.stopPropagation(); onClose(); } }}
+    >
         <div class="lv-ctx-head">
             <span class="lv-ctx-title"><LvIcon name="book" size={14} /> {t.review?.ctxTitle ?? "来源上下文 (前后各 2 块)"}</span>
             <div class="fn__flex-1"></div>
             {#if onClose}
-                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onClose} aria-label="关闭">
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    onclick={onClose}
+                    aria-label="关闭"
+                    aria-keyshortcuts="Escape"
+                    title="关闭 (Esc)"
+                >
                     <LvIcon name="close" size={12} />
                 </button>
             {/if}
@@ -82,9 +96,15 @@
 
         .lv-ctx-block {
             padding: var(--lv-sp-2);
-            border-bottom: 1px dashed var(--lv-border);
+            border-bottom: 1px dashed color-mix(in srgb, var(--lv-color-text) 12%, transparent);
             &:last-child {
                 border-bottom: none;
+            }
+
+            :global(p) {
+                max-width: 48em;
+                text-wrap: pretty;
+                margin: var(--lv-sp-1) 0;
             }
         }
 

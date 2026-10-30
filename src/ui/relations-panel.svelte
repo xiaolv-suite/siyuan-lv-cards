@@ -93,7 +93,7 @@
     {:else}
         {#each relations as { relation, direction } (relation.from + relation.to + relation.type)}
             <div class="lv-relations-row">
-                <span class={`lv-relations-type b3-chip lv-rel-tag lv-rel-tag--${typeTone(relation.type)}`}>
+                <span class={`lv-relations-type lv-chip2 lv-rel-tag lv-rel-tag--${typeTone(relation.type)}`}>
                     {typeName(relation.type)}
                 </span>
                 <span class="lv-relations-dir ft__smaller ft__on-surface" class:lv-dir-out={direction === "outgoing"} class:lv-dir-in={direction === "incoming"}>

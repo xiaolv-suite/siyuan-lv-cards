@@ -3,6 +3,7 @@
      *  数据与持久化由宿主注入；派生为异步（宿主查 riff 卡 ID），deriving=true 期间禁用按钮。 */
     import { CARD_CATALOG } from "@/core/card-catalog";
     import LvIcon from "./kit/LvIcon.svelte";
+    import LvSwitch from "./kit/LvSwitch.svelte";
 
     let { fact, instances, deriving = false, t, ontoggle, onremove, onderive, onrevise }: {
         fact: string;
@@ -122,16 +123,14 @@
     {:else}
         {#each instances as inst (inst.cardID)}
             <div class="lv-ko-row" class:lv-ko-row-disabled={inst.disabled}>
-                <input
-                    type="checkbox"
-                    class="b3-switch"
+                <LvSwitch
                     checked={!inst.disabled}
                     title={t.review.ko.toggleTitle}
-                    aria-label={`${t.review.ko.toggleTitle}: ${inst.cardID}`}
+                    ariaLabel={`${t.review.ko.toggleTitle}: ${inst.cardID}`}
                     disabled={actionBusy !== null}
                     onchange={() => void toggleInstance(inst.cardID, !inst.disabled)}
                 />
-                <span class="lv-ko-type b3-chip">{typeName(inst.cardType)}</span>
+                <span class="lv-ko-type lv-chip2 lv-chip2--default">{typeName(inst.cardType)}</span>
                 {#if inst.capability}<span class="ft__smaller ft__on-surface">{inst.capability}</span>{/if}
                 <span class="fn__flex-1 lv-ko-id ft__smaller ft__on-surface">{inst.cardID}</span>
                 <button
