@@ -181,6 +181,28 @@
         margin-top: var(--lv-sp-3);
         position: relative;
         z-index: var(--lv-z-card-control);
+
+        input {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
+    }
+
+    .b3-button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
 
     .lv-choice-btn {
@@ -198,11 +220,19 @@
             text-align: left;
             border: 1px solid var(--lv-border);
             background: var(--lv-color-canvas);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease);
 
             &:hover:not(:disabled) {
                 border-color: var(--lv-primary-border);
                 background: var(--lv-primary-softer);
+            }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
             }
             &:disabled {
                 cursor: default;

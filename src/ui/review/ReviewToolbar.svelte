@@ -407,6 +407,20 @@
         min-width: 0;
         flex-wrap: nowrap;
 
+        .b3-button,
+        .lv-tool-btn,
+        .lv-font-btn,
+        .lv-toolbar-menu-item {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
         .lv-scope {
             height: 28px;
             min-height: 28px;
@@ -425,6 +439,14 @@
             box-sizing: border-box;
             box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
             flex-shrink: 1;
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
 
             option {
                 text-align: left;

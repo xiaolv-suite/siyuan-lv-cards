@@ -22,3 +22,15 @@
         onchange?.(checked);
     }}
 />
+
+<style>
+    .b3-switch {
+        touch-action: manipulation;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
+</style>

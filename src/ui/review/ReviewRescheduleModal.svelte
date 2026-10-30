@@ -112,6 +112,28 @@
         background: var(--lv-color-surface-subtle);
         box-sizing: border-box;
 
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-text-field {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
+
         .lv-reschedule-inputs {
             display: flex;
             gap: var(--lv-sp-2);
@@ -121,6 +143,7 @@
             .lv-reschedule-preview {
                 color: var(--lv-color-brand);
                 margin-left: var(--lv-sp-2);
+                font-variant-numeric: tabular-nums;
             }
         }
 
@@ -129,6 +152,9 @@
             background: var(--lv-danger-soft);
             padding: var(--lv-sp-1) var(--lv-sp-2);
             border-radius: var(--lv-r-compact);
+            max-width: 48em;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
         }
 
         .lv-reschedule-actions {
@@ -141,6 +167,9 @@
         .lv-reschedule-hint {
             opacity: 0.75;
             font-size: var(--lv-type-meta-size);
+            max-width: 48em;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
         }
     }
 </style>

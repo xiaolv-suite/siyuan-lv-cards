@@ -253,6 +253,41 @@
 {/if}
 
 <style lang="scss">
+    .lv-pause-dialog {
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-select,
+        .b3-text-field {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
+
+        .lv-help-head span {
+            text-wrap: balance;
+        }
+
+        p {
+            max-width: 48em;
+            text-wrap: pretty;
+            line-height: var(--lv-lh-reading, 1.65);
+        }
+    }
+
     .lv-lightbox-toolbar {
         position: absolute;
         top: 20px;
@@ -269,6 +304,17 @@
         border-radius: var(--lv-r-pill);
         box-shadow: var(--lv-shadow-float);
 
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
         .lv-lightbox-scale-num {
             font-size: var(--lv-type-control-size);
             font-weight: var(--lv-fw-semibold);
@@ -276,6 +322,7 @@
             min-width: 44px;
             text-align: center;
             user-select: none;
+            font-variant-numeric: tabular-nums;
         }
 
         .lv-lightbox-reset {

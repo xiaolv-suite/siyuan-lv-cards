@@ -72,17 +72,32 @@
                 display: block;
                 font-size: var(--lv-type-body-size);
                 color: var(--lv-color-text);
+                text-wrap: balance;
             }
             p {
                 margin: calc(var(--lv-space-unit) * 1) 0 0;
                 font-size: var(--lv-type-meta-size);
                 color: var(--lv-color-text-muted);
+                max-width: 48em;
+                text-wrap: pretty;
+                line-height: var(--lv-lh-reading, 1.65);
             }
         }
         .lv-pomodoro-actions {
             display: flex;
             gap: var(--lv-sp-2);
             flex-shrink: 0;
+
+            .b3-button {
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
+
+                &:focus-visible {
+                    outline: none;
+                    box-shadow: var(--lv-focus-ring);
+                }
+            }
         }
     }
 

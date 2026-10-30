@@ -64,6 +64,16 @@
 </div>
 
 <style>
+    .lv-tab {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-tab-label { min-width: 0; }
     .lv-tab-badge {
         display: inline-flex;

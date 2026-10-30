@@ -115,7 +115,15 @@
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-semibold);
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: all var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-zen-tool-btn:hover:not(:disabled) {
         background: var(--lv-surface-hover);
@@ -140,7 +148,15 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-meta-size);
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
         transition: all var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
     }
     .lv-zen-exit-btn:hover {
         background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-surface-hover));

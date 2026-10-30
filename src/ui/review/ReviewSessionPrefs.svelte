@@ -172,6 +172,27 @@
                 gap: calc(var(--lv-space-unit) * 2);
             }
         }
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+        .b3-select,
+        .b3-text-field {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
         .lv-budget-custom {
             width: 72px;
             font-size: var(--lv-type-control-size);
@@ -186,6 +207,9 @@
             padding: var(--lv-sp-1) 0;
             & > span:first-child {
                 color: var(--lv-color-text-muted);
+            }
+            span {
+                font-variant-numeric: tabular-nums;
             }
             .b3-select {
                 min-width: 9em;

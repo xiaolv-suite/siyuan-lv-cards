@@ -140,6 +140,17 @@
             border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-control-size);
             color: var(--lv-color-text-muted);
+
+            .b3-button {
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
+
+                &:focus-visible {
+                    outline: none;
+                    box-shadow: var(--lv-focus-ring);
+                }
+            }
         }
         .lv-peek-body {
             flex: 1;
@@ -167,6 +178,17 @@
             border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-control-size);
             color: var(--lv-color-text-muted);
+
+            .b3-button {
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
+
+                &:focus-visible {
+                    outline: none;
+                    box-shadow: var(--lv-focus-ring);
+                }
+            }
         }
         .lv-help-body {
             flex: 1;
@@ -195,6 +217,11 @@
             line-height: var(--lv-lh-body);
             &:last-child {
                 border-bottom: none;
+            }
+
+            span:last-child {
+                max-width: 48em;
+                text-wrap: pretty;
             }
         }
     }

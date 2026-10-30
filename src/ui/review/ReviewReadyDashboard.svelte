@@ -306,8 +306,13 @@
                     color: var(--lv-color-brand);
                     padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2);
                     cursor: pointer;
-                    &:focus {
+                    touch-action: manipulation;
+                    transition: box-shadow var(--lv-dur-1) var(--lv-ease);
+
+                    &:focus-visible {
                         outline: none;
+                        box-shadow: var(--lv-focus-ring);
+                        border-radius: var(--lv-r-pill);
                     }
                 }
             }
@@ -343,13 +348,16 @@
                     font-weight: var(--lv-fw-semibold);
                     color: var(--lv-color-warning);
                     margin-bottom: calc(var(--lv-space-unit) * 1);
+                    text-wrap: balance;
                 }
 
                 p {
                     margin: 0;
                     font-size: var(--lv-type-control-size);
                     color: var(--lv-color-text-muted);
-                    line-height: var(--lv-lh-body);
+                    line-height: var(--lv-lh-reading, 1.65);
+                    max-width: 48em;
+                    text-wrap: pretty;
                 }
             }
 
@@ -358,6 +366,17 @@
                 align-items: center;
                 gap: calc(var(--lv-space-unit) * 4);
                 flex-wrap: wrap;
+
+                .b3-button {
+                    touch-action: manipulation;
+                    user-select: none;
+                    -webkit-user-select: none;
+
+                    &:focus-visible {
+                        outline: none;
+                        box-shadow: var(--lv-focus-ring);
+                    }
+                }
             }
         }
 
@@ -419,6 +438,7 @@
                         font-size: var(--lv-type-body-sm-size);
                         font-weight: var(--lv-fw-semibold);
                         color: var(--lv-color-text);
+                        text-wrap: balance;
                     }
 
                     .lv-ready-card-subtitle {
