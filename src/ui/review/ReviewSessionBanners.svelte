@@ -96,7 +96,7 @@
     <div class="lv-return" role="status" aria-live="polite">
         <span class="lv-return-title">{t.returnCheck.bannerTitle}</span>
         {#each returnItems as it (it.key)}
-            <span class="b3-chip" class:b3-chip--warning={it.level === "warn"}>{it.text}</span>
+            <span class="lv-chip2" class:lv-chip2--warn={it.level === "warn"} class:lv-chip2--default={it.level !== "warn"}>{it.text}</span>
         {/each}
         <button class="b3-button b3-button--text b3-button--small" onclick={onDismissReturnCheck}>{t.returnCheck.dismiss}</button>
     </div>

@@ -99,6 +99,7 @@
         <button
             type="button"
             class="b3-button b3-button--outline b3-button--small lv-btn-tool"
+            title={t?.dashboard?.refresh ?? "刷新"}
             onclick={onRetryFace}
             data-testid="review-retry-face-btn"
         >
@@ -107,7 +108,7 @@
         </button>
     </div>
 {:else if !cardHtml}
-    <div class="lv-center" style="min-height: 220px" aria-busy="true" data-testid="review-face-loading">
+    <div class="lv-center" style="min-height: 220px" role="status" aria-busy="true" data-testid="review-face-loading">
         <span class="ft__smaller ft__on-surface">{t?.dashboard?.loading ?? "加载中..."}</span>
     </div>
 {:else}
@@ -156,7 +157,7 @@
         data-testid="review-face-hints"
     >
         {#each faceHints as hintKey (hintKey)}
-            <span class="b3-chip">{faceHintText(hintKey)}</span>
+            <span class="lv-chip2 lv-chip2--default">{faceHintText(hintKey)}</span>
         {/each}
         <span class="ft__on-surface">{t?.aiFace?.scrollHint ?? "可横向滚动"}</span>
     </div>

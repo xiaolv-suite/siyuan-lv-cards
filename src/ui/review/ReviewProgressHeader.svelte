@@ -106,7 +106,7 @@
         </span>
     {/if}
     <div class="fn__flex-1"></div>
-    {#if cramActive}<span class="b3-chip b3-chip--error" data-testid="review-cram-chip">{t?.exam?.cramOn ?? "冲刺模式"}</span>{/if}
+    {#if cramActive}<span class="lv-chip2 lv-chip2--error" data-testid="review-cram-chip">{t?.exam?.cramOn ?? "冲刺模式"}</span>{/if}
     {#if budgetMin > 0}
         <!-- BI-12：预算倒计时；到点转为中性提示（不自动结束、不算失败） -->
         {#if budgetExpired}
