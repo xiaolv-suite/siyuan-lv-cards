@@ -1462,20 +1462,20 @@
                 <svg viewBox="0 0 320 100" class="lv-curve" role="img" aria-label={t.dashboard.retentionCurveTitle ?? "记忆留存曲线"} bind:this={curveEl}>
                     <defs>
                         <linearGradient id="lv-curve-gradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="var(--lv-color-brand)" stop-opacity="0.22" />
-                            <stop offset="100%" stop-color="var(--lv-color-brand)" stop-opacity="0.0" />
+                            <stop offset="0%" stop-color="var(--lv-color-data)" stop-opacity="0.25" />
+                            <stop offset="100%" stop-color="var(--lv-color-data)" stop-opacity="0.0" />
                         </linearGradient>
                     </defs>
-                    <!-- 参考虚线网格 -->
-                    <line x1="8" y1="30" x2="312" y2="30" stroke="var(--lv-border)" stroke-dasharray="3 3" opacity="0.35" />
-                    <line x1="8" y1="60" x2="312" y2="60" stroke="var(--lv-border)" stroke-dasharray="3 3" opacity="0.35" />
-                    <line x1="8" y1="90" x2="312" y2="90" class="lv-curve-axis" />
-                    <!-- 面积渐变阴影面（汲取自参考图） -->
+                    <!-- 参考虚线网格：极淡处理 -->
+                    <line x1="8" y1="30" x2="312" y2="30" stroke="var(--lv-border)" stroke-dasharray="3 3" opacity="0.25" />
+                    <line x1="8" y1="60" x2="312" y2="60" stroke="var(--lv-border)" stroke-dasharray="3 3" opacity="0.25" />
+                    <line x1="8" y1="90" x2="312" y2="90" class="lv-curve-axis" opacity="0.6" />
+                    <!-- 面积渐变阴影面与数据折线（数据语义色天青碧水蓝，粗圆头线条） -->
                     <polygon points={areaPoints} fill="url(#lv-curve-gradient)" stroke="none" />
-                    <polyline fill="none" stroke="var(--lv-color-text-muted)" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.5" points={theoryPoints(curve)} />
-                    <polyline fill="none" stroke="var(--lv-color-brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points={pts} />
+                    <polyline fill="none" stroke="var(--lv-color-text-muted)" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.4" points={theoryPoints(curve)} />
+                    <polyline fill="none" stroke="var(--lv-color-data)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" points={pts} />
                     {#each curve as p (p.days)}
-                        <circle cx={10 + (p.days / Math.max(...curve.map(q => q.days), 1)) * 290} cy={90 - p.rate * 80} r="3.5" class="lv-curve-dot">
+                        <circle cx={10 + (p.days / Math.max(...curve.map(q => q.days), 1)) * 290} cy={90 - p.rate * 80} r="3.5" class="lv-curve-dot" fill="var(--lv-color-data)">
                             <title>{p.days}天 · {Math.round(p.rate * 100)}% (n={p.n})</title>
                         </circle>
                     {/each}
@@ -1667,7 +1667,7 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         text-align: left;
         cursor: pointer;
         color: inherit;
@@ -1678,7 +1678,7 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
 
             .lv-feature-title { color: var(--lv-color-brand); }
             .lv-feature-action-link { transform: translateX(2px); color: var(--lv-color-brand); }
@@ -2438,14 +2438,14 @@
         overflow: visible;
         .lv-curve-axis { stroke: var(--lv-border-strong); stroke-width: 1.5; }
         .lv-curve-dot {
-            fill: var(--lv-color-brand);
+            fill: var(--lv-color-data);
             stroke: var(--lv-color-surface);
             stroke-width: 2px;
             transition: transform var(--lv-dur-1) var(--lv-ease), r var(--lv-dur-1) var(--lv-ease);
             cursor: pointer;
             &:hover {
                 r: 5.5;
-                filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--lv-color-brand) 50%, transparent));
+                filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--lv-color-data) 40%, transparent));
             }
         }
     }

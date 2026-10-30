@@ -1415,7 +1415,7 @@
         background: var(--lv-primary-soft);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
     }
     .lv-mgr-deck-scope strong { color: var(--lv-color-text); overflow-wrap: anywhere; }
 
