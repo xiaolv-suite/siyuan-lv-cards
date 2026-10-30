@@ -42,6 +42,7 @@
                     class="b3-button lv-btn-primary fn__flex-1 lv-btn-wide"
                     class:lv-btn-pressed={pressedKeyFeedback === " "}
                     disabled={!faceReady}
+                    aria-keyshortcuts="Space"
                     onclick={() => {
                         if (onRevealNextCloze) {
                             onRevealNextCloze();
@@ -57,6 +58,7 @@
                     type="button"
                     class="b3-button b3-button--outline lv-btn-small-pill"
                     title="全部揭晓（Shift+Space）"
+                    aria-keyshortcuts="Shift+Space"
                     onclick={onRevealAnswer}
                 >
                     {t.review?.clozeRevealAll ?? "全部揭晓"}
@@ -68,6 +70,7 @@
                 class="b3-button lv-btn-primary lv-btn-wide"
                 class:lv-btn-pressed={pressedKeyFeedback === " "}
                 disabled={!faceReady}
+                aria-keyshortcuts="Space"
                 onclick={onRevealAnswer}
             >
                 {t.review?.showAnswer ?? "显示答案"}
@@ -81,6 +84,7 @@
             class:lv-btn-suggested={suggestedRating === 1}
             class:lv-btn-pressed={pressedKeyFeedback === "1"}
             disabled={actionBusy}
+            aria-keyshortcuts="1"
             onclick={() => onRate(1)}
         >
             <span class="lv-rate-top">
@@ -95,6 +99,7 @@
             class:lv-btn-suggested={suggestedRating === 2}
             class:lv-btn-pressed={pressedKeyFeedback === "2"}
             disabled={actionBusy}
+            aria-keyshortcuts="2"
             onclick={() => onRate(2)}
         >
             <span class="lv-rate-top">
@@ -109,6 +114,7 @@
             class:lv-btn-suggested={suggestedRating === 3}
             class:lv-btn-pressed={pressedKeyFeedback === "3"}
             disabled={actionBusy}
+            aria-keyshortcuts="3"
             onclick={() => onRate(3)}
         >
             <span class="lv-rate-top">
@@ -124,6 +130,7 @@
             class:lv-btn-suggested={suggestedRating === 1}
             class:lv-btn-pressed={pressedKeyFeedback === "1"}
             disabled={actionBusy}
+            aria-keyshortcuts="1"
             onclick={() => onRate(1)}
         >
             <span class="lv-rate-top">
@@ -138,6 +145,7 @@
             class:lv-btn-suggested={suggestedRating === 2}
             class:lv-btn-pressed={pressedKeyFeedback === "2"}
             disabled={actionBusy}
+            aria-keyshortcuts="2"
             onclick={() => onRate(2)}
         >
             <span class="lv-rate-top">
@@ -152,6 +160,7 @@
             class:lv-btn-suggested={suggestedRating === 3}
             class:lv-btn-pressed={pressedKeyFeedback === "3"}
             disabled={actionBusy}
+            aria-keyshortcuts="3"
             onclick={() => onRate(3)}
         >
             <span class="lv-rate-top">
@@ -166,6 +175,7 @@
             class:lv-btn-suggested={suggestedRating === 4}
             class:lv-btn-pressed={pressedKeyFeedback === "4"}
             disabled={actionBusy}
+            aria-keyshortcuts="4"
             onclick={() => onRate(4)}
         >
             <span class="lv-rate-top">

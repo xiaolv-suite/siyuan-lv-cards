@@ -1866,6 +1866,10 @@
         return () => {
             offSettings?.();
             rootEl?.removeEventListener("lv-switch-scope", onSwitchScopeEvent);
+            if (typeof window !== "undefined" && window.visualViewport) {
+                window.visualViewport.removeEventListener("resize", onViewportChange);
+                window.visualViewport.removeEventListener("scroll", onViewportChange);
+            }
         };
     });
 
