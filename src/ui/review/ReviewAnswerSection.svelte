@@ -65,6 +65,8 @@
             <input
                 class="b3-text-field fn__block"
                 bind:value={typingInput}
+                spellcheck="false"
+                autocomplete="off"
                 onkeydown={handleTypingKeyDown}
                 placeholder={t?.review?.typingPlaceholder ?? "输入你的答案后回车..."}
                 data-testid="review-typing-input"
@@ -84,6 +86,7 @@
                         class:lv-choice-correct={choices.picked !== null && i === choices.answerIdx}
                         class:lv-choice-wrong={choices.picked === i && i !== choices.answerIdx}
                         disabled={choices.picked !== null}
+                        aria-keyshortcuts={String.fromCharCode(65 + i)}
                         onclick={() => onPickChoice(i)}
                         data-testid={`review-choice-opt-${i}`}
                     >
@@ -127,6 +130,7 @@
         <button
             type="button"
             class="b3-button b3-button--small lv-btn-ghost"
+            aria-keyshortcuts="h"
             onclick={onAdvanceHint}
             data-testid="review-advance-hint-btn"
         >
@@ -136,6 +140,7 @@
             type="button"
             class="b3-button b3-button--text lv-reveal"
             disabled={!faceReady}
+            aria-keyshortcuts="Space"
             onclick={onRevealAnswer}
             data-testid="review-reveal-btn"
         >
