@@ -101,6 +101,8 @@
                                             <button
                                                 type="button"
                                                 class="b3-button b3-button--text b3-button--cancel"
+                                                title={i18n.createComparisonCard ?? "做辨析卡"}
+                                                aria-label={i18n.createComparisonCard ?? "做辨析卡"}
                                                 data-testid="create-compare-card-btn"
                                                 onclick={() => onCreateCounterExample?.(comp.conceptA, comp.conceptB)}
                                             >
@@ -123,6 +125,8 @@
                                         <button
                                             type="button"
                                             class="b3-button b3-button--text b3-button--cancel"
+                                            title={i18n.createCard ?? "出反例题"}
+                                            aria-label={i18n.createCard ?? "出反例题"}
                                             onclick={() => onCreateCounterExample?.(ce.targetConcepts[0], ce.targetConcepts[1])}
                                         >
                                             {i18n.createCard ?? "出反例题"}
@@ -144,6 +148,8 @@
                                             <button
                                                 type="button"
                                                 class="b3-button b3-button--text b3-button--cancel"
+                                                title={i18n.openCard ?? "查看卡片"}
+                                                aria-label={i18n.openCard ?? "查看卡片"}
                                                 onclick={() => onOpenCard?.(rev.affectedCards[0])}
                                             >
                                                 {i18n.openCard ?? "查看卡片"}
@@ -175,6 +181,8 @@
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-m);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 120px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -243,5 +251,7 @@
         font-size: var(--lv-type-meta-size);
         color: var(--lv-color-text-muted);
         line-height: var(--lv-lh-relaxed);
+        text-wrap: pretty;
+        max-width: 48em;
     }
 </style>

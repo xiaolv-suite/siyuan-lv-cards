@@ -121,8 +121,8 @@
                 <p class="ft__smaller ft__on-surface">{t.lc.historyEmpty}</p>
             {:else}
                 <ul>
-                    {#each historyNewestFirst as h}
-                        <li class="ft__smaller">
+                    {#each historyNewestFirst as h (h.at + h.from + h.to)}
+                        <li class="ft__smaller lv-lc-history-item">
                             {t.lc.state[h.from]} → {t.lc.state[h.to]} · {h.reason} · {new Date(h.at).toLocaleString()}
                         </li>
                     {/each}
@@ -153,9 +153,9 @@
             box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
-    .lv-lc-hint { margin: 0; line-height: 1.7; }
+    .lv-lc-hint { margin: 0; line-height: 1.7; max-width: 48em; text-wrap: pretty; }
     .lv-lc-now { display: flex; align-items: center; gap: var(--lv-sp-2); flex-wrap: wrap; margin-bottom: var(--lv-sp-2); }
-    .lv-lc-why { flex: 1 1 auto; min-width: 0; }
+    .lv-lc-why { flex: 1 1 auto; min-width: 0; max-width: 48em; text-wrap: pretty; }
     .lv-lc-next, .lv-lc-flow, .lv-lc-history { margin-bottom: var(--lv-sp-2); }
     .lv-lc-actions { display: flex; flex-wrap: wrap; gap: var(--lv-sp-1); margin-top: var(--lv-sp-1); }
     .lv-lc-history ul {
@@ -169,6 +169,7 @@
             }
         }
     }
+    .lv-lc-history-item { font-variant-numeric: tabular-nums; }
     .lv-lc-error { color: var(--lv-color-danger); overflow-wrap: anywhere; margin-bottom: var(--lv-sp-2); }
     @media (max-width: 320px) {
         .lv-lc-now { flex-direction: column; align-items: flex-start; }
