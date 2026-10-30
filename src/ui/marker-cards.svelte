@@ -101,7 +101,7 @@
         {#each items as it (it.blockID)}
             <label class="lv-marker-item" class:lv-marker-item--checked={picked.has(it.blockID)}>
                 <input type="checkbox" class="lv-check" checked={picked.has(it.blockID)} onchange={() => toggle(it.blockID)} />
-                <span class="b3-chip b3-chip--secondary lv-marker-kind">{it.kind === "qa" ? t.markerKindQa : t.markerKindWhole}</span>
+                <span class="lv-chip2 lv-chip2--default lv-marker-kind">{it.kind === "qa" ? t.markerKindQa : t.markerKindWhole}</span>
                 <span class="lv-marker-text" title={it.kind === "qa" ? `${it.front} :: ${it.back}` : it.front}>
                     {it.kind === "qa" ? `${it.front} → ${it.back}` : it.front}
                 </span>

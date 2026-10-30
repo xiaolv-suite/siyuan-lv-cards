@@ -210,9 +210,9 @@
         </div>
     {:else if phase === "running"}
         <div class="lv-pair-head">
-            <span class="b3-chip b3-chip--primary"><LvIcon name="timer" size={14} /> {seconds}s</span>
-            <span class="b3-chip">{t.pairing.pairs}: {matched.size} / {pairs.length}</span>
-            <span class="b3-chip b3-chip--error">{t.pairing.mistakes}: {mistakes}</span>
+            <span class="lv-chip2 lv-chip2--primary"><LvIcon name="timer" size={14} /> {seconds}s</span>
+            <span class="lv-chip2 lv-chip2--default">{t.pairing.pairs}: {matched.size} / {pairs.length}</span>
+            <span class="lv-chip2 lv-chip2--error">{t.pairing.mistakes}: {mistakes}</span>
             <div class="fn__flex-1"></div>
             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={exit}><LvIcon name="moon" size={12} /> <span>{t.pairing.exit}</span></button>
         </div>
@@ -273,10 +273,17 @@
         cursor: pointer;
         font-size: var(--lv-type-body-size);
         line-height: var(--lv-lh-meta);
+        user-select: none;
+        -webkit-user-select: none;
         transition: border-color var(--lv-dur-1) var(--lv-ease),
             background-color var(--lv-dur-1) var(--lv-ease),
             transform var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
 
         &:hover {
             border-color: var(--lv-border-strong);
