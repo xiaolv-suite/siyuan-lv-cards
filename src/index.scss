@@ -651,6 +651,11 @@ body[data-theme-mode="dark"],
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-danger) 22%, transparent);
         }
 
+        &::placeholder {
+            color: var(--lv-color-text-muted);
+            opacity: 0.65;
+        }
+
         &:disabled {
             opacity: 0.55;
             cursor: not-allowed;
@@ -904,6 +909,7 @@ pre,
     // R53 窄屏：页签横向滚动不换行
     @media (max-width: 740px) {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         &::-webkit-scrollbar { display: none; }
     }
@@ -1637,11 +1643,19 @@ pre,
     .katex-display {
         overflow-x: auto;
         overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
         padding: var(--lv-sp-2) var(--lv-sp-3);
         border-radius: var(--lv-r-m);
         background: color-mix(in srgb, var(--lv-color-canvas) 85%, transparent);
         margin: var(--lv-sp-2) 0;
+    }
+
+    // 行内公式与文字基线对齐保护，避免撑破正文行距
+    .katex:not(.katex-display) {
+        font-size: 1.05em;
+        line-height: 1;
+        white-space: nowrap;
     }
 
     // 行内代码排版（实体代码胶囊质感）
@@ -1662,6 +1676,7 @@ pre,
     // 代码块自适应与圆角背景
     pre {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
         padding: var(--lv-sp-3) var(--lv-sp-4);
         border-radius: var(--lv-r-m);
