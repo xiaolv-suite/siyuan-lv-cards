@@ -47,6 +47,7 @@
                         type="button"
                         role={interactiveQuiz.isMultiple ? "checkbox" : "radio"}
                         aria-checked={selectedChoiceKeys.includes(opt.key)}
+                        aria-keyshortcuts={opt.key}
                         class="lv-interactive-choice-card"
                         class:lv-choice-selected={selectedChoiceKeys.includes(opt.key)}
                         class:lv-choice-correct={showAnswer && opt.isAnswer}
@@ -73,6 +74,7 @@
                         type="button"
                         class="b3-button lv-btn-primary lv-choice-submit-btn"
                         disabled={selectedChoiceKeys.length === 0}
+                        aria-keyshortcuts="Enter"
                         onclick={onSubmitChoice}
                     >
                         <LvIcon name="check" size={14} /> 确认提交多选 ({selectedChoiceKeys.length} 项) · Enter
@@ -94,6 +96,7 @@
                     type="button"
                     role="radio"
                     aria-checked={userJudgeChoice === true}
+                    aria-keyshortcuts="t 1"
                     class="lv-interactive-judge-btn lv-judge-btn--true"
                     class:lv-judge-selected={userJudgeChoice === true}
                     class:lv-judge-correct={showAnswer && interactiveQuiz.judgeAnswer === true}
@@ -115,6 +118,7 @@
                     type="button"
                     role="radio"
                     aria-checked={userJudgeChoice === false}
+                    aria-keyshortcuts="f 2"
                     class="lv-interactive-judge-btn lv-judge-btn--false"
                     class:lv-judge-selected={userJudgeChoice === false}
                     class:lv-judge-correct={showAnswer && interactiveQuiz.judgeAnswer === false}
@@ -146,11 +150,13 @@
                     class="b3-text-field lv-fill-input"
                     use:autoFocusInput
                     value={typingInput}
+                    spellcheck="false"
+                    autocomplete="off"
                     oninput={(e) => onTypingInput?.((e.target as HTMLInputElement).value)}
                     placeholder="在此输入你的填空答案，按 Enter 智能判定..."
                     onkeydown={(e) => { if (e.key === "Enter") onFillCheck(); }}
                 />
-                <button type="button" class="b3-button lv-btn-primary lv-btn-tool lv-fill-submit-btn" onclick={onFillCheck}>
+                <button type="button" class="b3-button lv-btn-primary lv-btn-tool lv-fill-submit-btn" aria-keyshortcuts="Enter" onclick={onFillCheck}>
                     <LvIcon name="check" size={13} /> <span>判定 Enter</span>
                 </button>
             </div>

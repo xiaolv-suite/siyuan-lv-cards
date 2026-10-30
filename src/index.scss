@@ -2140,6 +2140,8 @@ body[data-theme-mode="dark"],
         font-size: var(--lv-type-body-sm-size);
         line-height: var(--lv-lh-reading);
         color: var(--lv-color-text);
+        max-width: 48em;
+        text-wrap: pretty;
     }
 }
 
