@@ -239,9 +239,17 @@
         }
         return ok;
     }
+
+    function safeClose() {
+        if (editing) {
+            const confirmed = window.confirm(t.editor?.discardConfirm ?? "当前卡片正在编辑中，确定放弃未保存的修改并关闭吗？");
+            if (!confirmed) return;
+        }
+        onClose();
+    }
 </script>
 
-<LvDrawer open title={t.manager.detailTitle} closeLabel={t.manager.close} width="min(560px, 92vw)" onclose={onClose}>
+<LvDrawer open title={t.manager.detailTitle} closeLabel={t.manager.close} width="min(560px, 92vw)" onclose={safeClose}>
     {#snippet actions()}
         {#if editorCtx && !editing}
             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={editorLoadBusy} aria-busy={editorLoadBusy} onclick={startEdit}><LvIcon name="edit" size={12} /> <span>{editorLoadBusy ? "…" : t.editor.edit}</span></button>

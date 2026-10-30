@@ -408,33 +408,29 @@
     <!-- R54 工作台外壳：桌面左侧稳定主入口；旧模块作为学习页中的上下文工具。 -->
     <div class="lv-r54-shell">
         <aside class="lv-r54-sidebar" aria-label={i18n.hubPrimaryLabel ?? "主要导航"}>
-            <div class="lv-r54-brand">
+            <div class="lv-r54-brand" title="小驴闪卡">
                 <svg class="lv-r54-brand-mark" viewBox="0 0 32 36" fill="none" aria-hidden="true" focusable="false">
                     <rect x="8" y="3" width="21" height="28" rx="6" fill="currentColor" opacity=".2" transform="rotate(8 8 3)" />
                     <rect x="2" y="7" width="21" height="28" rx="6" fill="currentColor" />
                     <path d="M8 15h9M8 21h6" stroke="var(--lv-color-surface)" stroke-width="2" stroke-linecap="round" />
                 </svg>
-                <span>小驴闪卡</span>
             </div>
-            <button class="b3-button lv-btn-primary lv-r54-new-card" disabled={!loadQuickCardView} aria-describedby={!loadQuickCardView ? "lv-r54-new-card-hint" : undefined} onclick={openStudioManual}>
-                <LvIcon name="plus" size={17} />
-                <span>{i18n.hubStudioManualAction?.includes("手工") ? "新建闪卡" : (i18n.hubStudioManualAction ?? "新建闪卡")}</span>
+            <button class="b3-button lv-btn-primary lv-r54-new-card" disabled={!loadQuickCardView} aria-describedby={!loadQuickCardView ? "lv-r54-new-card-hint" : undefined} onclick={openStudioManual} title={i18n.hubStudioManualAction?.includes("手工") ? "新建闪卡" : (i18n.hubStudioManualAction ?? "新建闪卡")}>
+                <LvIcon name="plus" size={19} />
             </button>
             <LvTabs tabs={primaryTabs} active={primaryFor(active)} onchange={switchTab} panelId={active === "authoring" ? "lv-hub-studio-panel" : "lv-hub-panel"} orientation="vertical" />
             {#if inbox}
-                <button class:lv-r54-sidebar-link-active={active === "inbox"} class="lv-r54-sidebar-link" aria-current={active === "inbox" ? "page" : undefined} onclick={() => switchTab("inbox")}>
-                    <span class="lv-r54-sidebar-icon"><LvIcon name="inbox" size={18} /></span>{i18n.hubTabInbox}
+                <button class:lv-r54-sidebar-link-active={active === "inbox"} class="lv-r54-sidebar-link" aria-current={active === "inbox" ? "page" : undefined} onclick={() => switchTab("inbox")} title={i18n.hubTabInbox}>
+                    <span class="lv-r54-sidebar-icon"><LvIcon name="inbox" size={18} /></span>
+                    <span class="lv-r54-sidebar-text">{i18n.hubTabInbox}</span>
                     {#if inboxOpenCount > 0}<span class="lv-r54-nav-count">{inboxOpenCount}</span>{/if}
                 </button>
             {/if}
             <div class="lv-r54-sidebar-divider"></div>
-            <button class="lv-r54-sidebar-link" onclick={() => dashboardBase.openOnboarding()}>
-                <span class="lv-r54-sidebar-icon"><LvIcon name="question" size={18} /></span>{i18n.hubStudioOnboarding ?? "上手与示例"}
+            <button class="lv-r54-sidebar-link" onclick={() => dashboardBase.openOnboarding()} title={i18n.hubStudioOnboarding ?? "上手与示例"}>
+                <span class="lv-r54-sidebar-icon"><LvIcon name="question" size={18} /></span>
+                <span class="lv-r54-sidebar-text">上手</span>
             </button>
-            <div class="lv-r54-sidebar-note">
-                <strong>{i18n.hubLocalFirstNote ?? "一天一点，让理解留得更久。"}</strong>
-            </div>
-            <p class="lv-r54-sidebar-version">{i18n.hubVersionNote ?? "内测版 · 本地优先"}</p>
             {#if !loadQuickCardView}<span id="lv-r54-new-card-hint" class="lv-sr-only">{i18n.hubManualUnavailable ?? "当前宿主未提供手工制卡入口"}</span>{/if}
         </aside>
         <section class="lv-r54-content">
@@ -694,53 +690,63 @@
 
     .lv-r54-shell {
         display: grid;
-        grid-template-columns: 184px minmax(0, 1fr);
+        grid-template-columns: 78px minmax(0, 1fr);
         flex: 1;
         min-height: 0;
-        background: var(--lv-color-canvas);
+        margin: 10px 12px 12px;
+        border-radius: var(--lv-r-dialog);
+        background: var(--lv-color-surface);
+        box-shadow: var(--lv-shadow-2);
+        overflow: hidden;
+        border: 1px solid var(--lv-border);
     }
 
     .lv-r54-sidebar {
         display: flex;
+        width: 78px;
         min-width: 0;
         flex-direction: column;
-        gap: calc(var(--lv-space-unit) * 11 + var(--lv-space-hairline));
-        padding: calc(var(--lv-space-unit) * 13) calc(var(--lv-space-unit) * 7) calc(var(--lv-space-unit) * 9);
-        border-right: 1px solid var(--lv-border);
-        background: color-mix(in srgb, var(--lv-color-canvas) 72%, var(--lv-color-surface));
+        align-items: center;
+        gap: var(--lv-sp-3);
+        padding: var(--lv-sp-3) 6px var(--lv-sp-2);
+        border-right: 1px solid color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+        background: color-mix(in srgb, var(--lv-color-canvas) 85%, var(--lv-color-surface));
     }
 
     .lv-r54-brand {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: calc(var(--lv-space-unit) * 4 + var(--lv-space-hairline));
-        min-height: 36px;
-        padding: 0 calc(var(--lv-space-unit) * 4);
+        justify-content: center;
+        gap: 2px;
+        min-height: 38px;
+        padding: 0;
         color: var(--lv-color-text);
-        font-size: var(--lv-type-label-size);
+        font-size: 11px;
         font-weight: var(--lv-fw-bold);
     }
 
     .lv-r54-brand-mark {
         display: block;
-        width: 28px;
-        height: 32px;
+        width: 26px;
+        height: 30px;
         flex: none;
         color: var(--lv-color-brand);
     }
 
     .lv-r54-new-card {
-        width: 100%;
+        width: 44px;
+        height: 44px;
         min-height: 44px;
-        justify-content: flex-start;
-        gap: calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
-        padding: 0 calc(var(--lv-space-unit) * 7);
-        border-radius: var(--lv-r-pill);
+        padding: 0;
+        display: grid;
+        place-items: center;
+        border-radius: var(--lv-r-circle);
         box-shadow: var(--lv-shadow-1);
         transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 
         &:hover {
-            transform: translateY(-1.5px);
+            transform: translateY(-1.5px) scale(1.04);
             box-shadow: var(--lv-shadow-2);
         }
     }
@@ -748,19 +754,24 @@
     :global(.lv-r54-sidebar .lv-tabs) {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
+        gap: var(--lv-sp-1);
         margin: 0;
+        width: 100%;
         border-bottom: 0;
     }
 
     :global(.lv-r54-sidebar .lv-tab) {
         display: flex;
-        min-height: 44px;
+        flex-direction: column;
+        min-height: 50px;
         align-items: center;
-        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
+        justify-content: center;
+        padding: 6px 2px;
+        gap: 2px;
         border-radius: var(--lv-r-m);
         color: var(--lv-color-text-muted);
-        text-align: left;
+        text-align: center;
+        font-size: 11px;
         position: relative;
         transition: all var(--lv-dur-1) var(--lv-ease);
     }
@@ -777,53 +788,38 @@
         border: 1px solid var(--lv-primary-border);
 
         &::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 25%;
-            bottom: 25%;
-            width: 3px;
-            border-radius: var(--lv-r-pill);
-            background: var(--lv-brand);
+            display: none;
         }
     }
-    :global(.lv-r54-sidebar .lv-tab) { gap: calc(var(--lv-space-unit) * 5); }
+    :global(.lv-r54-sidebar .lv-tab) { gap: 3px; }
     :global(.lv-r54-sidebar .lv-tab svg) { color: currentColor; }
     :global(.lv-r54-sidebar .lv-tab.lv-tab-active::after) { display: none; }
-    .lv-r54-sidebar-divider { height: 1px; margin: auto 8px 0; background: var(--lv-border); }
+    .lv-r54-sidebar-divider { height: 1px; width: 44px; margin: auto auto 4px; background: color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
 
     .lv-r54-sidebar-link {
         display: flex;
-        min-height: 40px;
+        flex-direction: column;
+        min-height: 44px;
+        width: 100%;
         align-items: center;
-        gap: calc(var(--lv-space-unit) * 4 + var(--lv-space-hairline));
-        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
+        justify-content: center;
+        gap: 2px;
+        padding: 4px 2px;
         border: 0;
         border-radius: var(--lv-r-m);
         background: transparent;
         color: var(--lv-color-text-muted);
-        font-size: var(--lv-type-control-size);
+        font-size: 11px;
         cursor: pointer;
-        text-align: left;
+        text-align: center;
+        position: relative;
     }
 
     .lv-r54-sidebar-link:hover,
     .lv-r54-sidebar-link-active { background: var(--lv-primary-softer); color: var(--lv-color-brand); }
     .lv-r54-sidebar-icon { display: grid; width: 20px; height: 20px; flex: none; place-items: center; }
-    .lv-r54-sidebar-link .lv-r54-nav-count { display: inline-flex; width: auto; height: auto; min-width: 20px; justify-content: center; margin-left: auto; padding: var(--lv-space-hairline) calc(var(--lv-space-unit) * 3); border: 0; border-radius: var(--lv-r-control); background: var(--lv-primary-soft); color: var(--lv-color-brand); font-size: 10px; font-variant-numeric: tabular-nums; }
-    .lv-r54-sidebar-note {
-        margin: 0 calc(var(--lv-space-unit) * 2);
-        padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 6);
-        border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
-        color: var(--lv-color-text);
-        font-size: var(--lv-type-meta-size);
-        line-height: var(--lv-lh-meta);
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 16%, var(--lv-border));
-        box-shadow: var(--lv-shadow-1);
-        strong { font-weight: var(--lv-fw-emphasis); display: block; }
-    }
-    .lv-r54-sidebar-version { margin: 0 calc(var(--lv-space-unit) * 4); color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); line-height: 1.4; }
+    .lv-r54-sidebar-text { font-size: 10px; line-height: 1.2; }
+    .lv-r54-sidebar-link .lv-r54-nav-count { position: absolute; top: 2px; right: 10px; display: inline-flex; width: auto; height: auto; min-width: 16px; justify-content: center; padding: 0 4px; border: 0; border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: #fff; font-size: 9px; font-variant-numeric: tabular-nums; }
     .lv-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: calc(var(--lv-space-hairline) * -1); overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .lv-r54-content { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
     .lv-r54-topbar {

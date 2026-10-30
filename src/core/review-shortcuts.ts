@@ -255,13 +255,14 @@ export interface ReviewModalFlags {
     showSessionOptionsModal: boolean;
     showMemoEditor: boolean;
     showRetireModal: boolean;
+    showReschedule?: boolean;
 }
 
 /**
- * 判定当前是否存在任意复习操作模态弹窗处于打开状态
+ * 判定当前是否存在任意复习操作模态弹窗处于打开状态（包含改期弹窗）
  */
 export function isAnyReviewModalOpen(flags: ReviewModalFlags): boolean {
-    return Boolean(flags.showPauseModal || flags.showSessionOptionsModal || flags.showMemoEditor || flags.showRetireModal);
+    return Boolean(flags.showPauseModal || flags.showSessionOptionsModal || flags.showMemoEditor || flags.showRetireModal || flags.showReschedule);
 }
 
 /**

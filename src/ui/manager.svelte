@@ -282,7 +282,7 @@
     function goto(p: number) {
         page = Math.min(Math.max(1, p), pageCount);
         resetScrollPosition();
-        load();
+        void load();
     }
 
     function resetScrollPosition() {

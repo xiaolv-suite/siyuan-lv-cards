@@ -544,7 +544,7 @@
     let sessionModalWasOpen = false;
     let sessionModalTimeoutSeconds: number | undefined;
     $effect(() => {
-        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal });
+        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showReschedule });
         if (open && !sessionModalWasOpen) {
             sessionModalWasOpen = true;
             sessionModalTimeoutSeconds = countdownCtrl?.getRemaining();
@@ -1509,8 +1509,8 @@
             }
             return;
         }
-        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal });
-        const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy));
+        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showReschedule });
+        const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy || rescheduleBusy));
         if (modalAct) {
             if (e.key === "Escape") e.preventDefault();
             if (modalAct.shouldClose) {
@@ -1518,6 +1518,7 @@
                 showSessionOptionsModal = false;
                 showMemoEditor = false;
                 showRetireModal = false;
+                showReschedule = false;
                 returnFocus();
             }
             return;

@@ -1616,9 +1616,42 @@
     .lv-today-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 274px); align-items: stretch; gap: var(--lv-sp-5); }
     .lv-today-primary { min-width: 0; }
     .lv-today-primary .lv-hero { margin-bottom: var(--lv-sp-4); }
-    .lv-today-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--lv-sp-2); }
-    .lv-today-stats .lv-stat-cell { min-width: 0; max-width: none; }
-    :global(.lv-today-stats .lv-stat-cell .lv-card2) { min-width: 0; padding: 10px 14px; border-radius: var(--lv-r-m); }
+    // 规则三：统计优先指标通栏（竖分割线替代卡片包裹，44px大数字与小标签）
+    .lv-today-stats {
+        display: flex;
+        align-items: stretch;
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-l);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        margin-bottom: var(--lv-sp-4);
+        overflow: hidden;
+    }
+    .lv-today-stats .lv-stat-cell {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        position: relative;
+
+        &:not(:last-child) {
+            border-right: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        }
+    }
+    :global(.lv-today-stats .lv-stat-cell .lv-card2) {
+        flex: 1;
+        min-width: 0;
+        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+
+        &:hover {
+            transform: none;
+            box-shadow: none;
+            background: color-mix(in srgb, var(--lv-color-canvas) 50%, transparent);
+        }
+    }
 
     .lv-feature-grid {
         display: grid;
@@ -1715,19 +1748,23 @@
             line-height: 1.3;
         }
     }
+    // 右侧上下文面板（Context Rail）——承载连续打卡重音卡片、周记录与步调
     .lv-today-week {
         display: flex;
         min-width: 0;
         flex-direction: column;
-        padding: calc(var(--lv-space-unit) * 11);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        padding: var(--lv-sp-4);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-l);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
             transform: translateY(-1px);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
             border-color: var(--lv-border-strong);
         }
     }
@@ -2195,15 +2232,15 @@
 
     @container lv-hub (max-width: 900px) {
         .lv-today-overview { grid-template-columns: minmax(0, 1fr) 250px; gap: var(--lv-sp-4); }
-        .lv-today-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @container lv-hub (max-width: 780px) {
         .lv-today-overview { grid-template-columns: minmax(0, 1fr); }
-        .lv-today-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .lv-today-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .lv-today-stats .lv-stat-cell:nth-child(2n) { border-right: none; }
+        .lv-today-stats .lv-stat-cell:nth-child(-n+2) { border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
         .lv-today-week { min-height: 230px; }
     }
     @container lv-hub (max-width: 560px) {
-        .lv-today-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .lv-feature-grid { grid-template-columns: 1fr; }
         .lv-first-use-steps { grid-template-columns: 1fr; }
     }
