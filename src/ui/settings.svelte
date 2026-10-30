@@ -1571,7 +1571,7 @@
             {#snippet children()}
                 <input class="b3-button b3-button--outline lv-btn-tool" type="file" accept=".json,application/json" aria-label={t.settings.importMerge} disabled={revlogImportBusy} onchange={importMerge} />
                 <input class="b3-button b3-button--outline lv-btn-tool" type="file" accept=".csv,text/csv" aria-label={t.settings.importCsv} disabled={revlogImportBusy} onchange={importCsv} />
-                {#if revlogImportStatus}<span class="ft__smaller ft__on-surface" role={revlogImportBusy ? "status" : "alert"} aria-busy={revlogImportBusy}>{revlogImportStatus}</span>{/if}
+                {#if revlogImportStatus}<span class="ft__smaller ft__on-surface" role={revlogImportBusy ? "status" : "alert"} aria-live={revlogImportBusy ? "polite" : "assertive"} aria-busy={revlogImportBusy}>{revlogImportStatus}</span>{/if}
             {/snippet}
         </LvRow>
         {#if ctx.backup}
