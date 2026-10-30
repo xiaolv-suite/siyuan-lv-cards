@@ -724,6 +724,10 @@ body[data-theme-mode="dark"],
             box-shadow: var(--lv-focus-ring);
         }
 
+        &:active:not(:disabled) {
+            transform: translateY(0.5px) scale(0.985);
+        }
+
         &.b3-button--small {
             min-height: 32px;
             padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);

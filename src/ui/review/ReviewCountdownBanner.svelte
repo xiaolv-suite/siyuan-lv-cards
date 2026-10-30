@@ -24,7 +24,7 @@
 
 {#if budgetMin === 25 && budgetExpired && showAnswer}
     <!-- 汲取自番茄闪卡 sy-tomato：25 分钟番茄专注周期达成，温和建议休息保护精力 -->
-    <div class="lv-notice lv-notice--warn lv-pomodoro-alert" role="status" aria-label={t.review?.pomodoroDoneTitle ?? "番茄专注周期达成"}>
+    <div class="lv-notice lv-notice--warn lv-pomodoro-alert" role="status" aria-live="polite" aria-label={t.review?.pomodoroDoneTitle ?? "番茄专注周期达成"}>
         <span class="lv-pomodoro-icon"><LvIcon name="timer" size={18} /></span>
         <div class="lv-pomodoro-text">
             <strong>{t.review?.pomodoroDoneTitle ?? "25 分钟番茄专注达成！"}</strong>
@@ -41,7 +41,7 @@
     </div>
 {:else if timeoutExpired && showAnswer}
     <!-- docs/13 §6：限时到点不自动记分，评分由用户确认 -->
-    <div class="lv-notice lv-notice--warn lv-timeout-expired-note" role="status" style="margin-bottom: var(--lv-sp-2)">
+    <div class="lv-notice lv-notice--warn lv-timeout-expired-note" role="status" aria-live="polite" style="margin-bottom: var(--lv-sp-2)">
         {t.review?.timeoutExpiredNote ?? "已到答题时限，请对照答案并自评"}
     </div>
 {/if}
