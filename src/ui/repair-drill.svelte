@@ -81,12 +81,20 @@
 
 <svelte:window on:keydown={onKeydown} />
 
-<div class="lv-aiwiz b3-typography">
+<div class="lv-aiwiz b3-typography" role="region" aria-label={t.drillBadge ?? "修卡演练"}>
     <div class="lv-ob-head">
         <LvSteps steps={stepLabels} current={step - 1} />
         <div class="fn__flex-1"></div>
         <span class="lv-tag lv-tag--brand">{t.drillBadge}</span>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={window.siyuan.languages.cancel} onclick={onClose}><LvIcon name="close" size={13} /></button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            aria-label={window.siyuan.languages.cancel}
+            aria-keyshortcuts="Escape"
+            title={`${window.siyuan.languages.cancel} (Esc)`}
+            onclick={onClose}
+        >
+            <LvIcon name="close" size={13} />
+        </button>
     </div>
 
     <!-- 样例选择器（T10 扩容） -->
@@ -120,7 +128,15 @@
             {:else if step === 3}
                 <!-- 修改并看实际卡面 -->
                 <label class="ft__smaller" style="display: block; margin-bottom: 6px" for="drill-rewrite">{t.drillEditLabel}</label>
-                <textarea id="drill-rewrite" class="b3-text-field fn__block" rows="2" bind:value={draft}></textarea>
+                <textarea
+                    id="drill-rewrite"
+                    class="b3-text-field fn__block"
+                    rows="2"
+                    bind:value={draft}
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-label={t.drillEditLabel}
+                ></textarea>
                 <div class="lv-card2" style="margin-top: calc(var(--lv-space-unit) * 5); padding: 18px 20px">
                     <div class="lv-eyebrow">{t.aiWizard.previewQLabel}</div>
                     <div style="font-weight: var(--lv-fw-heading); margin: 8px 0; line-height: 1.65">{draft || "—"}</div>
@@ -166,6 +182,10 @@
 </div>
 
 <style>
+    .lv-aiwiz p {
+        max-width: 48em;
+        text-wrap: pretty;
+    }
     .lv-aiwiz :global(.lv-card2) {
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),

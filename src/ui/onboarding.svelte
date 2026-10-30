@@ -155,7 +155,13 @@
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
                 <button class="b3-button b3-button--outline lv-btn-tool" onclick={() => (step = 1)}><LvIcon name="chevron-left" size={12} /> <span>{t.onboardingBack}</span></button>
-                <button class="b3-button lv-btn-primary" disabled={busy || notebookLoading || !nbId} onclick={createSamples}>
+                <button
+                    class="b3-button lv-btn-primary"
+                    disabled={busy || notebookLoading || !nbId}
+                    aria-busy={busy}
+                    title={busy ? "…" : t.onboardingCreate}
+                    onclick={createSamples}
+                >
                     <LvIcon name="plus" size={13} />
                     <span>{busy ? "…" : t.onboardingCreate}</span>
                 </button>
@@ -163,7 +169,7 @@
         </LvSection>
     {:else}
         <LvSection title={t.onboardingDoneTitle}>
-            <div class="ft__on-surface">{t.onboardingDoneDesc}</div>
+            <div class="ft__on-surface lv-ob-done-desc">{t.onboardingDoneDesc}</div>
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3)">
                 <button class="b3-button b3-button--outline lv-btn-tool" onclick={openHelpAndClose}><LvIcon name="question" size={12} /> <span>{t.onboardingHelp}</span></button>
                 {#if sampleDocId}
@@ -184,7 +190,16 @@
         margin: 0 auto;
         height: 100%;
         overflow: auto;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
+        overscroll-behavior: contain;
         box-sizing: border-box;
+    }
+    .lv-ob-done-desc {
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-relaxed);
+        margin: var(--lv-sp-2) 0;
     }
     .lv-ob-head {
         display: flex;
@@ -211,7 +226,7 @@
     }
     .lv-ob-intro strong, .lv-ob-types strong { display: block; margin-bottom: var(--lv-sp-1); }
     .lv-ob-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lv-sp-2); }
-    .lv-ob-type-grid span { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 1); font-size: 12px; }
+    .lv-ob-type-grid span { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 1); font-size: var(--lv-type-control-size); }
     .lv-ob-type-grid b { font-size: var(--lv-type-body-size); }
     .lv-ob-callout {
         margin-bottom: var(--lv-sp-3);
@@ -225,6 +240,8 @@
         flex: 1 1 140px;
         padding: var(--lv-sp-3);
         cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
         border: 1px solid var(--lv-border);
         background: var(--lv-color-surface);
         text-align: left;
