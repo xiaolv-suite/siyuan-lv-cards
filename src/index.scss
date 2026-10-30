@@ -796,16 +796,6 @@ body[data-theme-mode="dark"],
     }
 }
 
-// 对话框内容区滚动条（R53 细滚动条口径，与页面一致）
-.lv-dialog .b3-dialog__content {
-    scrollbar-width: thin;
-    scrollbar-color: var(--lv-border-strong) transparent;
-
-    &::-webkit-scrollbar { width: 8px; height: 8px; }
-    &::-webkit-scrollbar-thumb { background: var(--lv-border-strong); border-radius: 4px; }
-    &::-webkit-scrollbar-track { background: transparent; }
-}
-
 // 完整设置是长表单：弹窗本身提供固定视口高度，面板承担唯一纵向滚动。
 // min-height: 0 是 flex 子项能够收缩并出现滚动条的必要约束。
 .lv-dialog.lv-dialog--settings {
@@ -846,7 +836,12 @@ body[data-theme-mode="dark"],
 .lv-heat-scroll,
 .lv-drawer-body,
 .lv-diff,
-.lv-hist-list {
+.lv-hist-list,
+.lv-dialog .b3-dialog__content,
+.lv-dialog-card,
+.lv-pause-dialog,
+.lv-help-body,
+.lv-palette-body {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
 

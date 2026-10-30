@@ -44,6 +44,7 @@
         class:lv-zen-starred={isStarred}
         title={isStarred ? "已星标重点 (*)" : "星标重点 (*)"}
         aria-label="星标重点"
+        aria-keyshortcuts="*"
         {disabled}
         onclick={(e) => { e.stopPropagation(); onToggleStar(); }}
     >
@@ -64,6 +65,7 @@
         type="button"
         class="lv-zen-exit-btn"
         title="退出专注模式 (z)"
+        aria-keyshortcuts="z"
         onclick={(e) => { e.stopPropagation(); onExitZen(); }}
     >
         <span>退出专注 (z)</span>
