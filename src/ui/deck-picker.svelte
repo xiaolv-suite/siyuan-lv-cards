@@ -118,13 +118,13 @@
                 </label>
             {/each}
             {#if loadError}
-                <div class="ft__smaller" style="color: var(--lv-color-danger)" role="alert">{loadError}</div>
+                <div class="ft__smaller" style="color: var(--lv-color-danger); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{loadError}</div>
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" aria-label={retryLabel} disabled={loading || busy} onclick={loadDecks}>
                     <LvIcon name="refresh" size={12} />
                     <span>{retryLabel}</span>
                 </button>
             {:else if decks.length === 0}
-                <div class="ft__smaller ft__on-surface">{emptyDeckText}</div>
+                <div class="ft__smaller ft__on-surface" style="max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);">{emptyDeckText}</div>
             {/if}
         </div>
         <div class="lv-dp-new">
@@ -138,7 +138,7 @@
             />
         </div>
         {#if errorMsg}
-            <div class="ft__smaller" style="color: var(--lv-color-danger)" role="alert">{errorMsg}</div>
+            <div class="ft__smaller" style="color: var(--lv-color-danger); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{errorMsg}</div>
         {/if}
         <div class="b3-dialog__action">
             <button
@@ -212,6 +212,11 @@
         user-select: none;
         -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
+
+        &:focus-within {
+            outline: none;
+            box-shadow: inset 0 0 0 1.5px var(--lv-color-brand);
+        }
     }
     .lv-deckpicker .lv-dp-row:hover { background: var(--lv-primary-softer); }
     .lv-deckpicker .lv-dp-row--selected {

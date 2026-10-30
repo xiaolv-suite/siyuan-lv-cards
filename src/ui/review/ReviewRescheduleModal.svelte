@@ -71,12 +71,12 @@
             {/if}
         </div>
         {#if invalidRescheduleDays}
-            <span id="lv-reschedule-error" class="ft__smaller" role="alert" style="color: var(--lv-color-danger)">
+            <span id="lv-reschedule-error" class="ft__smaller" role="alert" aria-live="assertive" style="color: var(--lv-color-danger); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);">
                 {t.review?.rescheduleRange ?? "天数范围应为 1 ~ 36500"}
             </span>
         {/if}
         {#if rescheduleError}
-            <div class="ft__smaller lv-reschedule-error" role="alert">
+            <div class="ft__smaller lv-reschedule-error" role="alert" aria-live="assertive">
                 <strong>{t.review?.rescheduleErrorPreserved ?? "改期未生效"}</strong>: {rescheduleError}
             </div>
         {/if}

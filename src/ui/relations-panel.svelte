@@ -119,7 +119,7 @@
     <div class="lv-relations-add">
         {#if formError}<LvError message={formError} />{/if}
         {#if actionError}
-            <div role="alert"><LvError message={actionError} />
+            <div role="alert" aria-live="assertive"><LvError message={actionError} />
                 {#if retryAction}<button class="b3-button b3-button--text" disabled={busy} onclick={() => retryAction && void runAction(retryAction)}>{t.relations.retry ?? "重试"}</button>{/if}
             </div>
         {/if}
@@ -227,6 +227,7 @@
         font-family: var(--b3-font-family-code, monospace);
         font-size: var(--lv-type-control-size);
         word-break: break-all;
+        overflow-wrap: anywhere;
         color: var(--lv-color-text);
     }
     .lv-relations-del {

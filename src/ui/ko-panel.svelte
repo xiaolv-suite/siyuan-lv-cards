@@ -147,9 +147,9 @@
         {/each}
     {/if}
 
-    {#if deriveError}<div class="lv-ko-derive-error" role="alert">{deriveError}</div>{/if}
+    {#if deriveError}<div class="lv-ko-derive-error" role="alert" aria-live="assertive">{deriveError}</div>{/if}
     {#if actionError}
-        <div class="lv-ko-derive-error" role="alert">{actionError}
+        <div class="lv-ko-derive-error" role="alert" aria-live="assertive">{actionError}
             {#if retryAction}<button class="b3-button b3-button--text" disabled={actionBusy !== null} onclick={() => retryAction && void runAction(actionBusy ?? "retry", retryAction)}>{t.review.ko.retryAction ?? "重试"}</button>{/if}
         </div>
     {/if}
@@ -227,9 +227,17 @@
         }
     }
     .lv-ko-row-disabled { opacity: .5; }
-    .lv-ko-id { font-family: var(--b3-font-family-code, monospace); font-size: 12px; word-break: break-all; }
+    .lv-ko-id { font-family: var(--b3-font-family-code, monospace); font-size: 12px; word-break: break-all; overflow-wrap: anywhere; }
     .lv-ko-derive { display: flex; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2); align-items: center; }
-    .lv-ko-derive-error { margin-top: var(--lv-sp-2); color: var(--lv-color-danger); font-size: var(--lv-type-control-size); overflow-wrap: anywhere; }
+    .lv-ko-derive-error {
+        margin-top: var(--lv-sp-2);
+        color: var(--lv-color-danger);
+        font-size: var(--lv-type-control-size);
+        overflow-wrap: anywhere;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-ko-revise-btn { margin-left: auto; opacity: .8; }
     .lv-ko-revise textarea { resize: vertical; }
 </style>

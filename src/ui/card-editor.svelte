@@ -251,7 +251,12 @@
         background: color-mix(in srgb, var(--lv-color-success) 12%, transparent);
         border-radius: var(--lv-r-track);
     }
-    .lv-editor-err { color: var(--lv-color-danger); }
+    .lv-editor-err {
+        color: var(--lv-color-danger);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-editor-actions {
         display: flex;
         align-items: center;
@@ -262,6 +267,7 @@
         text-align: right;
         max-width: 48em;
         text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     @media (max-width: 320px) {
         .lv-editor-actions { flex-wrap: wrap; }

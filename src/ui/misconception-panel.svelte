@@ -2,6 +2,7 @@
     import LvSection from "./kit/LvSection.svelte";
     import LvChip from "./kit/LvChip.svelte";
     import LvEmpty from "./kit/LvEmpty.svelte";
+    import LvIcon from "./kit/LvIcon.svelte";
     import type { MisconceptionCluster } from "../core/misconception-cluster";
     import { exportMisconceptionReportMarkdown } from "../core/misconception-cluster";
 
@@ -96,7 +97,7 @@
                                 {@const comp = cluster.interventions.comparisonTable}
                                 <div class="lv-advice-block lv-advice-block--compare">
                                     <div class="lv-advice-header">
-                                        <span class="lv-advice-tag">⚖️ {t.advice?.buildComparisonTable ?? "对比辨析"}</span>
+                                        <span class="lv-advice-tag"><LvIcon name="swap" size={13} /> <span>{t.advice?.buildComparisonTable ?? "对比辨析"}</span></span>
                                         {#if comp.conceptA && comp.conceptB}
                                             <button
                                                 type="button"
@@ -121,7 +122,7 @@
                                 {@const ce = cluster.interventions.counterExample}
                                 <div class="lv-advice-block lv-advice-block--counter">
                                     <div class="lv-advice-header">
-                                        <span class="lv-advice-tag">🎯 {t.advice?.createCounterExample ?? "反例辨析"}</span>
+                                        <span class="lv-advice-tag"><LvIcon name="target" size={13} /> <span>{t.advice?.createCounterExample ?? "反例辨析"}</span></span>
                                         <button
                                             type="button"
                                             class="b3-button b3-button--text b3-button--cancel"
@@ -143,7 +144,7 @@
                                 {@const rev = cluster.interventions.sourceRevision}
                                 <div class="lv-advice-block lv-advice-block--revision">
                                     <div class="lv-advice-header">
-                                        <span class="lv-advice-tag">✂️ {rev.splitRecommended ? (t.advice?.splitCardAndAddDistinction ?? "拆分卡片") : (t.advice?.enrichSourceSummary ?? "扩充笔记")}</span>
+                                        <span class="lv-advice-tag"><LvIcon name="edit" size={13} /> <span>{rev.splitRecommended ? (t.advice?.splitCardAndAddDistinction ?? "拆分卡片") : (t.advice?.enrichSourceSummary ?? "扩充笔记")}</span></span>
                                         {#if rev.affectedCards.length > 0}
                                             <button
                                                 type="button"
@@ -254,6 +255,9 @@
         margin-bottom: var(--lv-sp-2);
     }
     .lv-advice-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--lv-sp-1);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
         color: var(--lv-color-text);

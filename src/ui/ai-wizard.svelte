@@ -797,7 +797,7 @@
                                 {#each nbOptions as n (n.id)}<option value={n.id}>{n.name}</option>{/each}
                             </select>
                             {#if nbError}
-                                <span class="ft__smaller" style="color: var(--lv-color-danger)" role="alert">{nbError}</span>
+                                <span class="ft__smaller" style="color: var(--lv-color-danger); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{nbError}</span>
                                 <button class="b3-button b3-button--small" disabled={nbLoading} onclick={loadNotebookOptions}>{t.dashboard.refresh}</button>
                             {/if}
                         </div>
@@ -875,7 +875,7 @@
                 </div>
             </div>
             {#if errorMsg}
-                <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2)" role="alert">{errorMsg}</div>
+                <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{errorMsg}</div>
             {/if}
             {#if previewOpen}
                 <!-- T02 AI 请求预检确认（docs/13 §4 & R54 原型规范）：实际片段/参数/估算/知情同意 → 确认后才发送 -->
@@ -883,7 +883,7 @@
                     <div class="lv-eyebrow">{t.aiWizard.preflightTitle}</div>
                     <div class="ft__smaller" style="line-height: var(--lv-lh-meta); color: var(--lv-color-text-muted)">{t.aiWizard.preflightNotice}</div>
                     <div style="background: var(--lv-color-surface-subtle); border-radius: 6px; padding: var(--lv-sp-2); max-height: 120px; overflow: auto; white-space: pre-wrap; font-size: var(--lv-type-control-size)">{source.trim().slice(0, 600)}{source.trim().length > 600 ? "…" : ""}</div>
-                    <div class="ft__smaller ft__on-surface">
+                    <div class="ft__smaller ft__on-surface" style="font-variant-numeric: tabular-nums; max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);">
                         {t.aiWizard.previewParams.replace("${n}", String(count)).replace("${lang}", language).replace("${type}", cardType === "qa" ? t.aiWizard.typeQa : t.aiWizard.typeCloze)}
                         · {t.aiWizard.preflightScopeDetail.replace("${chars}", String(source.trim().length))}
                         · ≈ {Math.ceil(source.trim().length / 4)} tokens {t.aiWizard.previewTokens}
@@ -1127,7 +1127,7 @@
                 {/each}
             </div>
             {#if errorMsg}
-                <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2)" role="alert">{errorMsg}</div>
+                <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{errorMsg}</div>
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
                 <button

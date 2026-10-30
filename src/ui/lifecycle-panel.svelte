@@ -111,7 +111,7 @@
             </div>
         {/if}
         {#if error}
-            <div class="lv-lc-error" role="alert">{error}
+            <div class="lv-lc-error" role="alert" aria-live="assertive">{error}
                 {#if retryAction}<button class="b3-button b3-button--text b3-button--small" disabled={busy} onclick={() => retryAction && void run(retryAction)}>{t.lc.retry ?? "重试"}</button>{/if}
             </div>
         {/if}
@@ -186,7 +186,14 @@
         }
     }
     .lv-lc-history-item { font-variant-numeric: tabular-nums; }
-    .lv-lc-error { color: var(--lv-color-danger); overflow-wrap: anywhere; margin-bottom: var(--lv-sp-2); }
+    .lv-lc-error {
+        color: var(--lv-color-danger);
+        overflow-wrap: anywhere;
+        margin-bottom: var(--lv-sp-2);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     @media (max-width: 320px) {
         .lv-lc-now { flex-direction: column; align-items: flex-start; }
     }

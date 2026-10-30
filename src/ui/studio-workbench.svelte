@@ -331,7 +331,7 @@
         </div>
     </div>
 
-    {#if error}<div class="lv-studio-error" role="alert">{i18n.hubStudioLoadError ?? "工作台打开失败"}：{error}</div>{/if}
+    {#if error}<div class="lv-studio-error" role="alert" aria-live="assertive">{i18n.hubStudioLoadError ?? "工作台打开失败"}：{error}</div>{/if}
 
     {#if pendingRecoveryJobId}
         <div class="lv-studio-replace" role="status">
@@ -391,7 +391,23 @@
 </div>
 
 <style>
-    .lv-studio { max-width: 1120px; margin: 0 auto; padding: var(--lv-sp-5); container: lv-studio / inline-size; }
+    .lv-studio {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: var(--lv-sp-5);
+        container: lv-studio / inline-size;
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+    }
     .lv-studio-tool[hidden] { display: none !important; }
     .lv-studio-tool { min-width: 0; }
     .lv-studio-heading { margin: 0 0 var(--lv-sp-4); }
@@ -475,7 +491,19 @@
     .lv-studio-replace-copy { flex: 1 1 220px; min-width: 0; }
     .lv-studio-replace-copy strong { display: block; max-width: 48em; text-wrap: pretty; }
     .lv-studio-replace p { margin: calc(var(--lv-space-unit) * 2) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.5; max-width: 48em; text-wrap: pretty; }
-    .lv-studio-error { margin: calc(var(--lv-space-unit) * 6) 0; padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-danger-border); border-left: 3px solid var(--lv-color-danger); border-radius: var(--lv-r-m); background: var(--lv-danger-soft); color: var(--lv-color-on-danger-soft); overflow-wrap: anywhere; }
+    .lv-studio-error {
+        margin: calc(var(--lv-space-unit) * 6) 0;
+        padding: var(--lv-sp-2) var(--lv-sp-3);
+        border: 1px solid var(--lv-danger-border);
+        border-left: 3px solid var(--lv-color-danger);
+        border-radius: var(--lv-r-m);
+        background: var(--lv-danger-soft);
+        color: var(--lv-color-on-danger-soft);
+        overflow-wrap: anywhere;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-studio-loading { padding: calc(var(--lv-space-unit) * 9) 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); }
     @container lv-studio (max-width: 680px) {
         .lv-studio-toolbar { align-items: flex-start; flex-wrap: wrap; }
