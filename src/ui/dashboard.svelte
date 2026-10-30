@@ -2372,17 +2372,18 @@
         .lv-ret-row {
             display: flex; justify-content: space-between; align-items: center;
             padding: var(--lv-sp-2) 0;
-            border-bottom: 1px solid var(--lv-border);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             font-size: var(--lv-type-body-size);
         }
         .lv-ret-row:last-child { border-bottom: none; }
-        .lv-ret-rate { font-variant-numeric: tabular-nums; font-weight: 600; }
+        .lv-ret-rate { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--lv-color-data); }
     }
 
     .lv-weekdelta {
         margin-left: var(--lv-sp-1);
         font-variant-numeric: tabular-nums;
-        &--good { color: var(--lv-color-brand); }
+        font-weight: 600;
+        &--good { color: var(--lv-color-data); }
         &--bad { color: var(--lv-color-danger); }
     }
 
@@ -2398,9 +2399,9 @@
     .lv-ms-cell {
         padding: calc(var(--lv-space-unit) * 8) calc(var(--lv-space-unit) * 6);
         border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-brand) 4%, var(--lv-color-surface));
+        background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
-        box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -2408,14 +2409,16 @@
         &:hover {
             transform: translateY(-2px);
             border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-card-hover), var(--lv-inset-shine);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         }
     }
     .lv-ms-num {
-        font-size: var(--lv-type-heading-size);
+        font-size: var(--lv-type-metric-size);
+        line-height: var(--lv-lh-tight);
         font-weight: var(--lv-fw-bold);
         font-variant-numeric: tabular-nums;
-        color: var(--lv-color-brand);
+        color: var(--lv-color-data);
+        letter-spacing: -0.02em;
     }
     .lv-ms-label {
         font-size: var(--lv-type-control-size);

@@ -835,7 +835,13 @@ body[data-theme-mode="dark"],
 .lv-page,
 .lv-list,
 .lv-peek-body,
-.lv-settings {
+.lv-settings,
+.lv-hub,
+.lv-review,
+.lv-heat-scroll,
+.lv-drawer-body,
+.lv-diff,
+.lv-hist-list {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--lv-color-text) 18%, transparent) transparent;
 
