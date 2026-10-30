@@ -45,7 +45,9 @@
             <button
                 type="button"
                 class="b3-button b3-button--text b3-button--small lv-memo-edit-btn"
-                title={t?.review?.memoEdit ?? "修改助记线索"}
+                title={`${t?.review?.memoEdit ?? "修改助记线索"} (m)`}
+                aria-label={t?.review?.memoEdit ?? "修改助记线索"}
+                aria-keyshortcuts="m"
                 onclick={onEditMemo}
                 data-testid="review-memo-edit-btn"
             >
@@ -67,7 +69,9 @@
             <button
                 type="button"
                 class="lv-memo-add-btn"
-                title={t?.review?.memoModalTitle ?? "给未来的自己留助记线索"}
+                title={`${t?.review?.memoModalTitle ?? "给未来的自己留助记线索"} (m)`}
+                aria-label={t?.review?.memoModalTitle ?? "给未来的自己留助记线索"}
+                aria-keyshortcuts="m"
                 onclick={onEditMemo}
                 data-testid="review-memo-add-btn"
             >
@@ -144,9 +148,20 @@
                 color: var(--lv-color-text);
                 line-height: var(--lv-lh-meta);
                 font-size: var(--lv-type-control-size);
+                max-width: 48em;
+                text-wrap: pretty;
             }
         }
-        .lv-memo-edit-btn { flex: none; opacity: 0.7; &:hover { opacity: 1; } }
+        .lv-memo-edit-btn {
+            flex: none;
+            opacity: 0.7;
+            &:hover { opacity: 1; }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                opacity: 1;
+            }
+        }
     }
 
     .lv-memo-prompt {
@@ -166,6 +181,8 @@
         padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
         cursor: pointer;
         opacity: 0.75;
+        user-select: none;
+        -webkit-user-select: none;
         transition: all var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
@@ -174,6 +191,12 @@
             border-color: var(--lv-primary-border);
             background: var(--lv-surface-hover);
             transform: translateY(-1px);
+        }
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+            border-color: var(--lv-color-brand);
+            opacity: 1;
         }
         &:active {
             transform: translateY(1px);
