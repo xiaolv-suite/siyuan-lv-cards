@@ -97,6 +97,7 @@
     .lv-drawer-body {
         flex: 1;
         overflow: auto;
+        overscroll-behavior: contain;
         padding: calc(var(--lv-space-unit) * 11) calc(var(--lv-space-unit) * 12);
     }
 </style>

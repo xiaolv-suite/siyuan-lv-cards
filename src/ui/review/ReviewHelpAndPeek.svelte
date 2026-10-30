@@ -128,6 +128,7 @@
         .lv-peek-body {
             flex: 1;
             overflow: auto;
+            overscroll-behavior: contain;
             padding: var(--lv-sp-4);
         }
     }
@@ -154,6 +155,7 @@
         .lv-help-body {
             flex: 1;
             overflow: auto;
+            overscroll-behavior: contain;
             padding: var(--lv-sp-4);
             display: grid;
             grid-template-columns: 1fr;

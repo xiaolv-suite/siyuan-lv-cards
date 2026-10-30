@@ -694,6 +694,8 @@ body[data-theme-mode="dark"],
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
         vertical-align: middle;
+        user-select: none;
+        -webkit-user-select: none;
         transition: background var(--lv-dur-1) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             color var(--lv-dur-1) var(--lv-ease),
@@ -886,6 +888,8 @@ body[data-theme-mode="dark"],
         border-radius: var(--lv-r-s) var(--lv-r-s) 0 0;
         position: relative;
         cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 3);
@@ -968,6 +972,8 @@ body[data-theme-mode="dark"],
     font-size: var(--lv-type-control-size);
     font-weight: var(--lv-fw-emphasis);
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
     transition: background var(--lv-dur-1) var(--lv-ease),
         border-color var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
 
@@ -1367,6 +1373,7 @@ body[data-theme-mode="dark"],
     width: min(520px, 92vw);
     max-height: 88vh;
     overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--lv-color-surface-raised, var(--lv-color-surface));
     border: 1px solid var(--lv-border);
     border-radius: var(--lv-r-dialog, var(--lv-r-dialog));

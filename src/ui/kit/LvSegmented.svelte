@@ -68,6 +68,8 @@
         padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 7);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
         font-weight: var(--lv-fw-emphasis);
         transition: background var(--lv-dur-1, 120ms) var(--lv-ease, ease-out),
             color var(--lv-dur-1, 120ms) var(--lv-ease, ease-out),
