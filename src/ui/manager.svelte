@@ -857,7 +857,18 @@
 >
     {#snippet actions()}
         <div class="lv-filter-wrap">
-            <input id="lv-manager-filter" class="b3-text-field lv-filter" type="text" aria-label={t.manager.filterLabel} placeholder={t.manager.filterPlaceholder} bind:value={filterText} oninput={() => { selected = []; filterDirty = true; }} />
+            <input
+                id="lv-manager-filter"
+                class="b3-text-field lv-filter"
+                type="text"
+                aria-label={t.manager.filterLabel}
+                placeholder={t.manager.filterPlaceholder}
+                spellcheck="false"
+                autocomplete="off"
+                bind:value={filterText}
+                oninput={() => { selected = []; filterDirty = true; }}
+                onkeydown={(e) => { if (e.key === "Escape" && filterText) { e.stopPropagation(); filterText = ""; selected = []; filterDirty = true; } }}
+            />
             {#if filterText}
                 <button
                     type="button"
@@ -1070,7 +1081,7 @@
                         onkeydown={(event) => onRowKeydown(event, b, rowIndex)}
                     >
                         <span class="lv-content">
-                            <span class="lv-text">{@html highlightSearchHit(stripHtml(b.content) || t.manager.emptyContentFallback, deferredFilter)}</span>
+                            <span class="lv-text" title={stripHtml(b.content) || t.manager.emptyContentFallback}>{@html highlightSearchHit(stripHtml(b.content) || t.manager.emptyContentFallback, deferredFilter)}</span>
                             <span class="lv-meta ft__smaller ft__on-surface">
                                 {#if (ctx.getStarredCardIDs?.() ?? []).includes(b.id)}
                                     <span class="lv-chip2 lv-chip2--warn" title="星标重点卡"><LvIcon name="star" size={11} /> 星标</span>

@@ -880,6 +880,7 @@
             spellcheck="false"
             autocomplete="off"
             bind:value={searchQuery}
+            onkeydown={(e) => { if (e.key === "Escape" && searchQuery) { e.stopPropagation(); searchQuery = ""; } }}
         />
     </div>
     {#if !searchQuery.trim() && sectionScope !== "imports"}

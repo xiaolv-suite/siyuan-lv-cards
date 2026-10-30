@@ -232,7 +232,10 @@
             type="search"
             placeholder={i18n.settings?.searchPlaceholder ?? "搜索材料…"}
             aria-label="搜索材料"
+            spellcheck="false"
+            autocomplete="off"
             bind:value={searchQuery}
+            onkeydown={(e) => { if (e.key === "Escape" && searchQuery) { e.stopPropagation(); searchQuery = ""; } }}
         />
         <LvSegmented
             options={FILTERS.map(f => ({ value: f.id, label: `${t[f.labelKey]} (${counts[f.id]})` }))}
