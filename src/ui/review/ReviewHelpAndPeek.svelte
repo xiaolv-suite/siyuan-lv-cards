@@ -61,6 +61,7 @@
         bind:this={helpEl}
         transition:fade={{ duration: getMotionDuration("normal") }}
         onclick={(e: Event) => e.stopPropagation()}
+        onkeydown={(e) => { if (e.key === "Escape" || e.key === "?") { e.stopPropagation(); onCloseHelp(); } }}
         role="dialog"
         aria-label={t.review?.helpTitle ?? "快捷键帮助"}
     >
@@ -89,6 +90,7 @@
         tabindex="-1"
         transition:fade={{ duration: getMotionDuration("normal") }}
         onclick={(e: Event) => e.stopPropagation()}
+        onkeydown={(e) => { if (e.key === "Escape" || e.key === "[") { e.stopPropagation(); onClosePeek(); } }}
         role="dialog"
         aria-label={t.review?.peekTitle ?? "回看上一张卡片"}
     >

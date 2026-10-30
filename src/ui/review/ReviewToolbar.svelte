@@ -233,9 +233,9 @@
     <button
         type="button"
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={`${t.review?.skip ?? "跳过"} (s)`}
+        title={`${t.review?.skip ?? "跳过"} (x)`}
         aria-label={t.review?.skip ?? "跳过"}
-        aria-keyshortcuts="s"
+        aria-keyshortcuts="x 0"
         disabled={actionBusy}
         onclick={onSkip}
     >
@@ -342,7 +342,8 @@
                     type="button"
                     class="lv-toolbar-menu-item"
                     disabled={actionBusy}
-                    title={t.review?.suspendToday ?? "今日不再复习此卡"}
+                    title={`${t.review?.suspendToday ?? "今日不再复习此卡"} (s)`}
+                    aria-keyshortcuts="s"
                     onclick={() => { onSuspendToday(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="moon" size={16} /></span>
