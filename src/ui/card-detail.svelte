@@ -336,12 +336,12 @@
                 </div>
             {/if}
             {#if diffBusy}<div class="ft__smaller ft__on-surface" role="status" aria-busy="true">{t.dashboard.loading}</div>{/if}
-            {#if diffError}<div class="ft__smaller ft__on-surface" role="alert">{t.detail.diffLoadFail}</div>{/if}
+            {#if diffError}<div class="ft__smaller ft__on-surface" role="alert" aria-live="assertive">{t.detail.diffLoadFail}</div>{/if}
         {/if}
         {#if previewLoading}
             <div class="lv-detail-preview-state" role="status" aria-busy="true">{t.dashboard.loading}</div>
         {:else if previewError}
-            <div class="lv-detail-preview-error" role="alert">
+            <div class="lv-detail-preview-error" role="alert" aria-live="assertive">
                 <span>{t.detail.diffLoadFail}</span>
                 <button class="b3-button b3-button--small lv-btn-tool" onclick={() => loadPreview(block.id)}>
                     <LvIcon name="refresh" size={12} />
@@ -424,7 +424,7 @@
             <button class="b3-button b3-button--text" disabled={koRegisterBusy} aria-busy={koRegisterBusy} onclick={registerKnowledgeObject}>
                 {koRegisterBusy ? (t.review?.ko?.saving ?? "保存中…") : (t.review?.ko?.register ?? t.ko?.register ?? "")}
             </button>
-            {#if koRegisterError}<div class="lv-detail-preview-error" role="alert">{koRegisterError} <button class="b3-button b3-button--text" disabled={koRegisterBusy} onclick={registerKnowledgeObject}>{t.review?.ko?.retryAction ?? "重试"}</button></div>{/if}
+            {#if koRegisterError}<div class="lv-detail-preview-error" role="alert" aria-live="assertive">{koRegisterError} <button class="b3-button b3-button--text" disabled={koRegisterBusy} onclick={registerKnowledgeObject}>{t.review?.ko?.retryAction ?? "重试"}</button></div>{/if}
         {/if}
     {/if}
     {#if relationsCtx}
@@ -501,7 +501,12 @@
         margin-bottom: var(--lv-sp-2);
         color: var(--lv-color-text-muted);
     }
-    .lv-detail-preview-error { color: var(--lv-color-danger); }
+    .lv-detail-preview-error {
+        color: var(--lv-color-danger);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-detail-meta div { padding: calc(var(--lv-space-unit) * 1) 0; }
 
     /* T05 分面导航（R52 segmented 同构，现代圆润胶囊排） */

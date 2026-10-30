@@ -1179,7 +1179,7 @@
                 />
                 {#if notebookLoading}<span class="ft__smaller ft__on-surface" role="status" aria-busy="true">{t.settings.targetNotebookLoading}</span>{/if}
                 {#if notebookError}
-                    <div role="alert" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--lv-sp-2);color: var(--lv-color-danger);overflow-wrap:anywhere">
+                    <div role="alert" aria-live="assertive" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--lv-sp-2);color: var(--lv-color-danger);overflow-wrap:anywhere;max-width:48em;text-wrap:pretty;line-height:var(--lv-lh-reading, 1.65);">
                         <span>{notebookError}</span>
                         <button class="b3-button b3-button--small" disabled={notebookLoading} onclick={loadNotebooks}>{t.settings.targetNotebookRetry}</button>
                     </div>
@@ -1537,7 +1537,7 @@
                 </button>
             {/snippet}
         </LvRow>
-        {#if v2Error}<div class="lv-notice lv-notice--warn" role="alert">{v2Error}</div>{/if}
+        {#if v2Error}<div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive">{v2Error}</div>{/if}
         <LvRow label={t.settings.suspendedManage} hint={t.settings.suspendedHint.replace("${n}", String(ctx.getSuspendedCount()))}>
             {#snippet children()}
                 <button class="b3-button b3-button--outline lv-btn-tool" aria-label={t.settings.suspendedRestore} disabled={restoreSuspendedBusy || ctx.getSuspendedCount() === 0} aria-busy={restoreSuspendedBusy} onclick={restoreAllSuspended}>
@@ -1546,7 +1546,7 @@
                 </button>
             {/snippet}
         </LvRow>
-        {#if restoreSuspendedError}<div class="lv-notice lv-notice--warn" role="alert">{restoreSuspendedError} <button class="b3-button b3-button--text" disabled={restoreSuspendedBusy} onclick={restoreAllSuspended}>{t.settings.retry ?? "重试"}</button></div>{/if}
+        {#if restoreSuspendedError}<div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive">{restoreSuspendedError} <button class="b3-button b3-button--text" disabled={restoreSuspendedBusy} onclick={restoreAllSuspended}>{t.settings.retry ?? "重试"}</button></div>{/if}
         <LvRow label={t.settings.exportRevlog} hint={t.settings.storageNote}>
             {#snippet children()}
                 <button class="b3-button b3-button--outline lv-btn-tool" aria-label={`${t.settings.exportRevlog} · JSON`} onclick={ctx.exportRevlog}>
@@ -1639,7 +1639,7 @@
     {/if}
 
     {#if saveError}
-        <div class="lv-notice lv-notice--warn" role="alert" style="margin-bottom: var(--lv-sp-2)">{saveError}</div>
+        <div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive" style="margin-bottom: var(--lv-sp-2)">{saveError}</div>
     {/if}
     <div class="b3-dialog__action lv-settings-sticky-footer">
         {#if isDirty}

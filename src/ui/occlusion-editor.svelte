@@ -278,7 +278,7 @@
             <div>{t.occlusion.loading ?? "正在读取图片…"}</div>
         </div>
     {:else if errorMsg}
-        <div class="lv-occed-state" role="alert">
+        <div class="lv-occed-state" role="alert" aria-live="assertive">
             <div class="lv-occed-state-icon"><LvIcon name="warning" size={28} /></div>
             <div>{errorMsg}</div>
             <button class="b3-button b3-button--outline lv-btn-tool" disabled={loading} onclick={loadPreview}><LvIcon name="refresh" size={13} /> <span>{t.occlusion.retry ?? "重试"}</span></button>
@@ -330,7 +330,7 @@
             aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
             onclick={save}
         >
-            {t.occlusion.save} ({rects.length}) <LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />
+            {t.occlusion.save} <span style="font-variant-numeric: tabular-nums;">({rects.length})</span> <LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />
         </button>
     </div>
 </div>

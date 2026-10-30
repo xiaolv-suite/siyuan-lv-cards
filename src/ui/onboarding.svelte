@@ -161,13 +161,13 @@
             {#if notebookLoading}
                 <div class="ft__smaller ft__on-surface" role="status" style="margin-top: var(--lv-sp-2)">{t.dashboard.loading}</div>
             {:else if notebookError}
-                <div class="lv-notice lv-notice--warn" role="alert" style="margin-top: var(--lv-sp-2)">{notebookError}</div>
+                <div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive" style="margin-top: var(--lv-sp-2)">{notebookError}</div>
                 <div class="fn__flex" style="justify-content: flex-end; margin-top: var(--lv-sp-1)">
                     <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={busy} onclick={loadNotebooks}><LvIcon name="refresh" size={13} /> <span>{t.dashboard.refresh}</span></button>
                 </div>
             {/if}
             {#if errorMsg}
-                <div class="lv-notice lv-notice--warn" role="alert" style="margin-top: var(--lv-sp-2); border-color: var(--lv-danger-border); background: var(--lv-danger-soft); color: var(--lv-color-danger)">{errorMsg}</div>
+                <div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive" style="margin-top: var(--lv-sp-2); border-color: var(--lv-danger-border); background: var(--lv-danger-soft); color: var(--lv-color-danger)">{errorMsg}</div>
             {/if}
             <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
                 <button class="b3-button b3-button--outline lv-btn-tool" onclick={() => (step = 1)}><LvIcon name="chevron-left" size={12} /> <span>{t.onboardingBack}</span></button>

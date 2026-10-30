@@ -120,7 +120,7 @@
 
 {#if qualityExcludedCount > 0 && !emptyQueue}
     <div class="lv-notice lv-notice--warn" role="status" aria-live="polite" style="display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); flex-wrap: wrap;">
-        <span>{t.review.qualityExcluded.replace("${n}", String(qualityExcludedCount))}</span>
+        <span style="font-variant-numeric: tabular-nums;">{t.review.qualityExcluded.replace("${n}", String(qualityExcludedCount))}</span>
         <div style="display: flex; gap: var(--lv-sp-2); align-items: center;">
             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onRecheckQuality}>
                 <LvIcon name="refresh" size={12} /> <span>{t.review.qualityRecheck}</span>

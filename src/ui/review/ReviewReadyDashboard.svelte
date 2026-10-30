@@ -109,7 +109,7 @@
                 <div class="lv-ready-alert-main">
                     <span class="lv-ready-alert-icon"><LvIcon name="warning" size={18} /></span>
                     <div class="lv-ready-alert-text">
-                        <strong>{(t.review?.qualityExcluded ?? "有 ${n} 张卡片存在异常").replace("${n}", String(qualityExcludedCardIDs.length))}</strong>
+                        <strong style="font-variant-numeric: tabular-nums;">{(t.review?.qualityExcluded ?? "有 ${n} 张卡片存在异常").replace("${n}", String(qualityExcludedCardIDs.length))}</strong>
                         <p>{t.review?.qualityExcludedHelp ?? "这通常是因为原笔记块被移动、删除或内容为空。它们已受安全保护，不会影响正常进度。"}</p>
                     </div>
                 </div>
@@ -157,10 +157,10 @@
                 </div>
                 <p class="lv-ready-card-desc">{t.review?.readyCreateDesc ?? "支持自由回忆、问答、选区挖空（==答案==）及图片遮挡等多样化制卡形态。"}</p>
                 <div class="lv-ready-card-footer">
-                    <button type="button" class="b3-button b3-button--small b3-button--outline" onclick={onOpenAuthoring}>
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenAuthoring}>
                         + {t.review?.createCards ?? "去制作新卡"}
                     </button>
-                    <button type="button" class="b3-button b3-button--small b3-button--outline" onclick={onOpenInbox}>
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenInbox}>
                         <LvIcon name="inbox" size={14} /> {t.dashboard?.inbox ?? "材料收件箱"}
                     </button>
                 </div>

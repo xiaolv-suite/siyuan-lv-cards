@@ -242,7 +242,7 @@
         {:else}
             <div class="lv-learning-columns"><section class="lv-card2 lv-learning-calendar" aria-label={tabLabels.calendar}>
                 {#if calLoading}<div class="lv-learning-status" role="status" aria-live="polite">{copy.calendarLoading ?? "正在读取学习日历…"}</div>{/if}
-                {#if calError}<div class="lv-learning-error" role="alert">{calError}</div>{/if}
+                {#if calError}<div class="lv-learning-error" role="alert" aria-live="assertive">{calError}</div>{/if}
                 <LvCalendar
                     monthLabel={monthLabel()}
                     cells={calCells}
@@ -346,7 +346,13 @@
     .lv-learning-tool h2 { margin: 0 0 var(--lv-sp-2); font-size: var(--lv-type-title-md-size); text-wrap: balance; }
     .lv-learning-tool p { color: var(--lv-color-text-muted); line-height: var(--lv-lh-relaxed); max-width: 48em; text-wrap: pretty; }
     .lv-learning-status { margin-bottom: var(--lv-sp-3); color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
-    .lv-learning-error { margin-bottom: var(--lv-sp-3); color: var(--lv-color-danger); }
+    .lv-learning-error {
+        margin-bottom: var(--lv-sp-3);
+        color: var(--lv-color-danger);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-learning-warning { margin: var(--lv-sp-3) 0 0; color: var(--lv-color-warning); font-size: var(--lv-type-meta-size); max-width: 48em; text-wrap: pretty; }
     .lv-learning-calendar-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-3); margin-top: var(--lv-sp-3); }
     .lv-learning-calendar-foot span { max-width: 48em; text-wrap: pretty; }

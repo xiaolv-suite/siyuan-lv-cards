@@ -485,7 +485,7 @@
                     <textarea class="b3-text-field fn__block" rows="4" value={draft} disabled={repairBusy || rollbackBusy || scanning} aria-label={`${repairText("repairDraft", "修复内容")} ${blockID}`} oninput={(event) => updateRepairDraft(blockID, (event.currentTarget as HTMLTextAreaElement).value)}></textarea>
                 </div>
             {/each}
-            {#if repairError}<div class="lv-maint-repair-error" role="alert">{repairError}</div>{/if}
+            {#if repairError}<div class="lv-maint-repair-error" role="alert" aria-live="assertive">{repairError}</div>{/if}
             {#if repairPreview}
                 <div class="lv-maint-repair-preview" role="status">
                     <strong>{repairText("repairPreview", "预览结果")}</strong>
@@ -523,7 +523,7 @@
             <div class="lv-maint-repair-draft-head">
                 <div>
                     <h3 id="lv-maint-last-repair-title" style="margin: 0; font-size: 15px; font-weight: var(--lv-fw-semibold);">{repairText("lastRepairTitle", "上次批量修复记录")}</h3>
-                    <span class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2); display: block;">
+                    <span class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2); display: block; font-variant-numeric: tabular-nums;">
                         {repairText("lastRepairApplied", "已更新 ${n} 张卡片 · ${time}").replace("${n}", String(lastRepair.summary.update)).replace("${time}", new Date(lastRepair.appliedAt).toLocaleString())}
                     </span>
                 </div>
@@ -539,7 +539,7 @@
                 </div>
             </div>
             {#if rollbackError}
-                <div class="lv-maint-repair-error" role="alert" style="margin-top: var(--lv-sp-2);">{rollbackError}</div>
+                <div class="lv-maint-repair-error" role="alert" aria-live="assertive" style="margin-top: var(--lv-sp-2);">{rollbackError}</div>
             {/if}
             {#if lastRepairDiffOpen}
                 <div class="lv-maint-repair-preview" style="margin-top: var(--lv-sp-3);">
@@ -857,7 +857,14 @@
     .lv-maint-repair-preview { display: flex; flex-direction: column; gap: var(--lv-sp-1); margin-top: var(--lv-sp-3); padding: var(--lv-sp-2); border: 1px solid var(--lv-border); border-radius: var(--lv-r-m); }
     .lv-maint-repair-diff summary { cursor: pointer; color: var(--lv-color-brand); }
     .lv-maint-repair-diff pre { max-height: 150px; margin: var(--lv-sp-1) 0 0; padding: var(--lv-sp-2); overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--lv-color-surface); font: inherit; }
-    .lv-maint-repair-error { color: var(--lv-color-danger); margin-top: var(--lv-sp-1); overflow-wrap: anywhere; }
+    .lv-maint-repair-error {
+        color: var(--lv-color-danger);
+        margin-top: var(--lv-sp-1);
+        overflow-wrap: anywhere;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     .lv-maint-similar-row {
         display: flex;
         align-items: center;

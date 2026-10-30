@@ -407,6 +407,9 @@ body[data-theme-mode="dark"],
     font-size: var(--lv-type-control-size);
     color: var(--lv-color-text-muted);
     margin: var(--lv-sp-4) 0;
+    max-width: 48em;
+    text-wrap: pretty;
+    line-height: var(--lv-lh-reading, 1.65);
 
     &--warn { background: var(--lv-warn-soft); color: var(--lv-color-warning); border-color: transparent; }
     &--good { background: var(--lv-good-soft); color: var(--lv-color-success); border-color: transparent; }
