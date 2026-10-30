@@ -501,7 +501,7 @@
                     bind:value={editing.cramDays}
                 />
             </LvRow>
-            {#if fieldErrors.cramDays}<div class="lv-field-error" id="exam-cram-error">{fieldErrors.cramDays}</div>{/if}
+            {#if fieldErrors.cramDays}<div class="lv-field-error" id="exam-cram-error" role="alert" aria-live="assertive">{fieldErrors.cramDays}</div>{/if}
             <div class="b3-dialog__action">
                 <button
                     class="b3-button b3-button--cancel"

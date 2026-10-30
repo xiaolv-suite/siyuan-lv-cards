@@ -794,8 +794,8 @@
 
     {#if writeError}
         <!-- AR-5：写入失败原因就近展示（按钮 title 同步提示） -->
-        <div class="lv-glass" style="border-color: var(--lv-color-danger); padding: 6px 10px; margin-bottom: calc(var(--lv-space-unit) * 4)">
-            <span class="ft__smaller" style="color: var(--lv-color-danger)">{writeError}</span>
+        <div class="lv-glass" style="border-color: var(--lv-color-danger); padding: 6px 10px; margin-bottom: calc(var(--lv-space-unit) * 4)" role="alert" aria-live="assertive">
+            <span class="ft__smaller" style="color: var(--lv-color-danger); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);">{writeError}</span>
         </div>
     {/if}
     {#if ctx.getV2Status()}
@@ -1494,7 +1494,9 @@
         <LvSection title={t.retention.curve} sub={t.retention.curveSub}>
             {#snippet actions()}
                 {#if curve.length >= 2}
-                    <button class="b3-button b3-button--small" title={t.retention.exportPng} onclick={exportCurvePng}>⬇ PNG</button>
+                    <button class="b3-button b3-button--small lv-btn-tool" title={t.retention.exportPng} onclick={exportCurvePng}>
+                        <LvIcon name="image" size={12} /> <span>PNG</span>
+                    </button>
                 {/if}
             {/snippet}
             {#if curve.length >= 2}

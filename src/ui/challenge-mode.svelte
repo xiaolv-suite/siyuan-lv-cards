@@ -212,7 +212,7 @@
         <div class="lv-chal-center">
             <div class="lv-chal-icon"><LvIcon name="warning" size={34} /></div>
             <div class="lv-chal-title">{t.challenge.loadError}</div>
-            <div class="lv-chal-desc" role="alert">{errorMsg}</div>
+            <div class="lv-chal-desc" role="alert" aria-live="assertive">{errorMsg}</div>
             <div class="fn__flex" style="gap: var(--lv-sp-2)">
                 <button class="b3-button b3-button--outline lv-btn-tool" onclick={start}><LvIcon name="refresh" size={13} /> <span>{t.challenge.retry}</span></button>
                 <button
@@ -265,7 +265,7 @@
         <div class="lv-chal-center">
             <div class="lv-chal-icon"><LvIcon name="flag" size={34} /></div>
             <div class="lv-chal-title">{t.challenge.doneTitle}</div>
-            <div class="lv-chal-desc">
+            <div class="lv-chal-desc" style="font-variant-numeric: tabular-nums;">
                 ✓ {known} · ✗ {unknown} · {t.review?.doneSkip ?? "跳过"} {t.challenge.skipped}
             </div>
             <button class="b3-button lv-btn-primary" onclick={exit}><LvIcon name="check" size={13} /> <span>{t.challenge.closeBtn}</span></button>

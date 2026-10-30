@@ -994,7 +994,7 @@
     {#if selected.length > 0}
         <div class="lv-glass lv-batchbar">
             <LvChip tone="primary">{t.manager.batchSelected.replace("${n}", String(selected.length))}</LvChip>
-            {#if batchError}<span class="lv-batch-error" role="alert">{batchError}</span>{/if}
+            {#if batchError}<span class="lv-batch-error" role="alert" aria-live="assertive">{batchError}</span>{/if}
             <div class="fn__flex-1"></div>
             {#if ctx.uiMode !== "simple"}
                 <button class="b3-button b3-button--outline lv-btn-tool" disabled={batchBusy !== null} onclick={() => openBatchDeckModal("add")}>

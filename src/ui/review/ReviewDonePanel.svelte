@@ -173,7 +173,7 @@
                 {/if}
                 {#if starredCardCount > 0}
                     <div class="lv-next-row" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                        <span>⭐ 本场共星标了 {starredCardCount} 张重点卡片</span>
+                        <span style="display: inline-flex; align-items: center; gap: var(--lv-sp-1); font-variant-numeric: tabular-nums;"><LvIcon name="star" size={13} /> <span>本场共星标了 {starredCardCount} 张重点卡片</span></span>
                         <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={onCramStarred}>
                             <LvIcon name="star" size={13} /> 立即专项练习星标卡
                         </button>
