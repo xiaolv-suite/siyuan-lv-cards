@@ -405,6 +405,8 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 76px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);

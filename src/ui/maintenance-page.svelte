@@ -782,6 +782,8 @@
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 60px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -796,7 +798,7 @@
     .lv-maint-excerpt { font-size: var(--lv-type-body-size); overflow-wrap: anywhere; }
     .lv-maint-preview { margin-top: var(--lv-sp-1); }
     .lv-maint-preview summary { cursor: pointer; color: var(--lv-color-brand); font-size: var(--lv-type-caption-size); }
-    .lv-maint-preview-face { margin-top: var(--lv-sp-1); padding: var(--lv-sp-2); border-radius: var(--lv-r-m); background: var(--lv-color-surface); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .lv-maint-preview-face { margin-top: var(--lv-sp-1); padding: var(--lv-sp-2); border-radius: var(--lv-r-m); background: var(--lv-color-surface); white-space: pre-wrap; overflow-wrap: anywhere; max-width: 48em; text-wrap: pretty; }
     .lv-maint-media-broken { color: var(--lv-color-danger); overflow-wrap: anywhere; }
     .lv-maint-health-issues { margin: var(--lv-sp-1) 0 0; padding-left: var(--lv-sp-4); overflow-wrap: anywhere; }
     .lv-maint-health-history { margin-bottom: var(--lv-sp-4); padding: var(--lv-sp-3); }
@@ -830,6 +832,8 @@
         border-radius: var(--lv-r-m);
         background: var(--lv-color-surface);
         box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 60px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);

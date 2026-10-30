@@ -403,7 +403,17 @@
             {/if}
             <form onsubmit={(event) => { event.preventDefault(); void save(); }}>
             <LvRow label={t.exam.planName}>
-                <input class="b3-text-field fn__size-200" aria-label={t.exam.planName} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? "exam-name-error" : undefined} data-exam-field="name" bind:value={editing.name} placeholder={t.exam.untitled} />
+                <input
+                    class="b3-text-field fn__size-200"
+                    aria-label={t.exam.planName}
+                    aria-invalid={Boolean(fieldErrors.name)}
+                    aria-describedby={fieldErrors.name ? "exam-name-error" : undefined}
+                    data-exam-field="name"
+                    bind:value={editing.name}
+                    placeholder={t.exam.untitled}
+                    spellcheck="false"
+                    autocomplete="off"
+                />
             </LvRow>
             {#if fieldErrors.name}<div class="lv-field-error" id="exam-name-error">{fieldErrors.name}</div>{/if}
             <LvRow label={t.exam.examDateLabel}>
@@ -437,15 +447,50 @@
                 {/snippet}
             </LvRow>
             <LvRow label={t.exam.totalCardsLabel} hint={t.exam.totalCardsHint}>
-                <input class="b3-text-field fn__size-60" aria-label={t.exam.totalCardsLabel} aria-invalid={Boolean(fieldErrors.totalCards)} aria-describedby={fieldErrors.totalCards ? "exam-total-error" : undefined} data-exam-field="totalCards" type="number" min="1" max="1000000" step="1" bind:value={editing.totalCards} />
+                <input
+                    class="b3-text-field fn__size-60"
+                    aria-label={t.exam.totalCardsLabel}
+                    aria-invalid={Boolean(fieldErrors.totalCards)}
+                    aria-describedby={fieldErrors.totalCards ? "exam-total-error" : undefined}
+                    data-exam-field="totalCards"
+                    type="number"
+                    min="1"
+                    max="1000000"
+                    step="1"
+                    spellcheck="false"
+                    autocomplete="off"
+                    bind:value={editing.totalCards}
+                />
             </LvRow>
             {#if fieldErrors.totalCards}<div class="lv-field-error" id="exam-total-error">{fieldErrors.totalCards}</div>{/if}
             <LvRow label={t.exam.cramDaysLabel}>
-                <input class="b3-text-field fn__size-60" aria-label={t.exam.cramDaysLabel} aria-invalid={Boolean(fieldErrors.cramDays)} aria-describedby={fieldErrors.cramDays ? "exam-cram-error" : undefined} data-exam-field="cramDays" type="number" min="0" max="365" step="1" bind:value={editing.cramDays} />
+                <input
+                    class="b3-text-field fn__size-60"
+                    aria-label={t.exam.cramDaysLabel}
+                    aria-invalid={Boolean(fieldErrors.cramDays)}
+                    aria-describedby={fieldErrors.cramDays ? "exam-cram-error" : undefined}
+                    data-exam-field="cramDays"
+                    type="number"
+                    min="0"
+                    max="365"
+                    step="1"
+                    spellcheck="false"
+                    autocomplete="off"
+                    bind:value={editing.cramDays}
+                />
             </LvRow>
             {#if fieldErrors.cramDays}<div class="lv-field-error" id="exam-cram-error">{fieldErrors.cramDays}</div>{/if}
             <div class="b3-dialog__action">
-                <button class="b3-button b3-button--cancel" type="button" disabled={savingPlan} onclick={() => (editing = null)}>{window.siyuan.languages.cancel}</button>
+                <button
+                    class="b3-button b3-button--cancel"
+                    type="button"
+                    disabled={savingPlan}
+                    aria-keyshortcuts="Escape"
+                    title={`${window.siyuan.languages.cancel} (Esc)`}
+                    onclick={() => (editing = null)}
+                >
+                    {window.siyuan.languages.cancel}
+                </button>
                 <div class="fn__space"></div>
                 <button class="b3-button lv-btn-primary" type="submit" disabled={savingPlan}>{savingPlan ? (isChinese ? "保存中…" : "Saving…") : saveFailed ? (isChinese ? "重试保存" : "Retry save") : window.siyuan.languages.confirm}</button>
             </div>
@@ -464,6 +509,8 @@
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        content-visibility: auto;
+        contain-intrinsic-size: 0 120px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             border-color var(--lv-dur-1) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease);
@@ -487,6 +534,7 @@
         font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted);
         margin: var(--lv-sp-2) 0;
         b { color: var(--lv-color-data); font-variant-numeric: tabular-nums; }
+        .lv-mini-track .lv-mini-fill { background: var(--lv-color-data); }
     }
     .lv-plan-advice {
         display: flex; flex-wrap: wrap; gap: calc(var(--lv-space-unit) * 2); align-items: baseline;
