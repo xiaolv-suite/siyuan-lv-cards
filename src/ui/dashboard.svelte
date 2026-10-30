@@ -878,7 +878,12 @@
                     {todayDecision.summary}
                 </p>
                 <div class="lv-hero-cta">
-                    <button class="b3-button lv-btn-primary" disabled={todayDecision.actionDisabled || (loading && !hasLoadedSnapshot)} onclick={heroAction}>
+                    <button
+                        class="b3-button lv-btn-primary"
+                        disabled={todayDecision.actionDisabled || (loading && !hasLoadedSnapshot)}
+                        aria-label={heroActionLabel()}
+                        onclick={heroAction}
+                    >
                         {heroActionLabel()}
                     </button>
                     <button

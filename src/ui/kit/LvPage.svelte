@@ -16,7 +16,7 @@
     } = $props();
 </script>
 
-<div class="lv-page" id={pageId} {onscroll} {onfocusin}>
+<div class="lv-page" id={pageId} role="main" aria-label={title || eyebrow || undefined} {onscroll} {onfocusin}>
     {#if title || actions}
         <div class="lv-pagehead">
             <div class="lv-pagehead-main">
