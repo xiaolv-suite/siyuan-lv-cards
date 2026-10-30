@@ -79,6 +79,7 @@
             type="button"
             class="b3-button b3-button--small b3-button--outline lv-editor-cloze-btn"
             title="为选中内容快速添加 ==答案== 挖空（快捷键：Ctrl+H）"
+            aria-keyshortcuts="Control+h Meta+h"
             onclick={wrapSelectionWithCloze}
         >
             == 挖空 ==
@@ -92,6 +93,7 @@
             aria-label={t.editor.inputLabel}
             rows={4}
             disabled={saving}
+            spellcheck="false"
             onkeydown={(e: KeyboardEvent) => {
                 if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") {
                     e.preventDefault();
@@ -128,10 +130,24 @@
     {/if}
     {#if errMsg}<div class="lv-editor-err ft__smaller">{errMsg}</div>{/if}
     <div class="lv-editor-actions">
-        <button class="b3-button lv-btn-primary b3-button--small" disabled={!changed || saving} onclick={save}>
+        <button
+            class="b3-button lv-btn-primary b3-button--small"
+            disabled={!changed || saving}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            title={`${t.editor.save} (Ctrl+Enter)`}
+            onclick={save}
+        >
             {saving ? t.editor.saving : t.editor.save}
         </button>
-        <button class="b3-button b3-button--small" disabled={saving} onclick={oncancel}>{t.editor.cancel}</button>
+        <button
+            class="b3-button b3-button--small"
+            disabled={saving}
+            aria-keyshortcuts="Escape"
+            title={`${t.editor.cancel} (Esc)`}
+            onclick={oncancel}
+        >
+            {t.editor.cancel}
+        </button>
         <span class="ft__smaller ft__on-surface lv-editor-hint">{t.editor.hint}</span>
     </div>
 </section>
