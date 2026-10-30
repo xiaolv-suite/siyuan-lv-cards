@@ -33,5 +33,6 @@
         box-sizing: border-box;
         vertical-align: middle;
         line-height: var(--lv-lh-control-lg);
+        cursor: pointer;
     }
 </style>

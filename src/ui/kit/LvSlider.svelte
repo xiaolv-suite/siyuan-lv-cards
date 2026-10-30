@@ -39,6 +39,7 @@
     .lv-slider input[type="range"] {
         width: 140px;
         accent-color: var(--lv-color-brand);
+        cursor: pointer;
     }
     .lv-slider-val {
         font-size: var(--lv-type-control-size);
