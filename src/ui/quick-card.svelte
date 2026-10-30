@@ -326,9 +326,9 @@
             {overloadNotice.suggestion}
         </div>
     {/if}
-    {#if createdNotice}<div class="lv-qc-success" role="status">{createdNotice}</div>{/if}
+    {#if createdNotice}<div class="lv-qc-success" role="status" aria-live="polite">{createdNotice}</div>{/if}
     {#if errorMsg}
-        <div class="ft__smaller lv-qc-error" role="alert">{errorMsg}</div>
+        <div class="ft__smaller lv-qc-error" role="alert" aria-live="assertive">{errorMsg}</div>
     {/if}
     <div class="b3-dialog__action lv-qc-actions">
         {#if !embedded}
@@ -526,7 +526,14 @@
     }
     .lv-qc-placeholder { color: var(--lv-color-text-muted); opacity: .65; }
     .lv-qc-reveal { align-self: flex-start; min-height: 44px; }
-    .lv-qc-success { margin: var(--lv-sp-2) 0; color: var(--lv-color-success); font-size: var(--lv-type-control-size); }
+    .lv-qc-success {
+        margin: var(--lv-sp-2) 0;
+        color: var(--lv-color-success);
+        font-size: var(--lv-type-control-size);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
     @container lv-quickcard (min-width: 781px) {
         .lv-qc-content { grid-template-columns: minmax(0, 1fr) minmax(300px, .88fr); gap: 20px; }
         .lv-qc-preview { position: sticky; top: var(--lv-sp-4); }
@@ -543,6 +550,9 @@
     .lv-quickcard .lv-qc-error {
         color: var(--lv-color-danger);
         margin-bottom: var(--lv-sp-2);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-quickcard .b3-button {
         touch-action: manipulation;

@@ -132,7 +132,7 @@
         </div>
         {#if budgetEstimate}
             <div class="lv-prefs-row">
-                <span class="ft__smaller ft__on-surface">
+                <span class="ft__smaller ft__on-surface" style="font-variant-numeric: tabular-nums;">
                     {(t.review?.budgetEst ?? "预计完成 ${done} 张 · 剩余 ${left} 张").replace("${done}", String(budgetEstimate.done)).replace("${left}", String(budgetEstimate.left))}
                 </span>
             </div>

@@ -120,7 +120,7 @@
             </div>
             <div style="padding: var(--lv-sp-3) 0">
                 <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review?.pauseDesc ?? "当前范围、进度与本场偏好已安全保留。"}</p>
-                <div style="margin-top: var(--lv-sp-2); font-size: var(--lv-type-control-size); color: var(--lv-color-brand)">
+                <div style="margin-top: var(--lv-sp-2); font-size: var(--lv-type-control-size); color: var(--lv-color-brand); font-variant-numeric: tabular-nums;">
                     {t.review?.doneConfirm ?? "已正式评分"}: <strong>{reviewedCount}</strong> · {t.review?.skipNotRated ?? "跳过"}: <strong>{skippedCount}</strong>
                 </div>
             </div>

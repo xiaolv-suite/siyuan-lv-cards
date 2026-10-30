@@ -81,6 +81,7 @@
                 max-width: 48em;
                 text-wrap: pretty;
                 line-height: var(--lv-lh-reading, 1.65);
+                font-variant-numeric: tabular-nums;
             }
         }
         .lv-pomodoro-actions {

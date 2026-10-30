@@ -91,11 +91,12 @@
     <div
         class="lv-center"
         style="display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 5); align-items: center; justify-content: center; min-height: 220px"
-        role="status"
+        role="alert"
+        aria-live="assertive"
         data-testid="review-face-error"
     >
         <span style="font-size: var(--lv-type-hero-size)"><LvIcon name="warning" size={30} /></span>
-        <span class="ft__smaller ft__on-surface" style="text-align: center">{faceError}</span>
+        <span class="ft__smaller ft__on-surface" style="text-align: center; max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);">{faceError}</span>
         <button
             type="button"
             class="b3-button b3-button--outline b3-button--small lv-btn-tool"
