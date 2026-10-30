@@ -148,8 +148,8 @@
 
     <!-- docs/13 §4：图标可读、操作不依赖 hover；常驻核心高频操作，二级动作折叠进更多气泡 -->
     <div class="lv-font-scale-group" title={t.review?.fontScaleTitle ?? "调整卡面字号"}>
-        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="缩小卡面字号" onclick={() => onAdjustFontScale(-0.1)}>A−</button>
-        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="放大卡面字号" onclick={() => onAdjustFontScale(0.1)}>A+</button>
+        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="缩小卡面字号" aria-label="缩小卡面字号" onclick={() => onAdjustFontScale(-0.1)}>A−</button>
+        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="放大卡面字号" aria-label="放大卡面字号" onclick={() => onAdjustFontScale(0.1)}>A+</button>
     </div>
 
     <button
@@ -182,6 +182,7 @@
         class:lv-btn-starred={isStarred}
         title="星标重点卡片 (*)"
         aria-label="星标重点卡片"
+        aria-keyshortcuts="*"
         aria-pressed={isStarred}
         disabled={!current || actionBusy}
         onclick={onToggleStar}
@@ -221,6 +222,7 @@
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
         title={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
         aria-label={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
+        aria-keyshortcuts="p q"
         disabled={actionBusy}
         onclick={onUndo}
     >
@@ -231,6 +233,9 @@
     <button
         type="button"
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
+        title={`${t.review?.skip ?? "跳过"} (s)`}
+        aria-label={t.review?.skip ?? "跳过"}
+        aria-keyshortcuts="s"
         disabled={actionBusy}
         onclick={onSkip}
     >
@@ -260,6 +265,7 @@
                     class="lv-toolbar-menu-item"
                     class:lv-active={reversedRecall}
                     title={t.review?.enableReversed ?? "翻转问答自测 (R)"}
+                    aria-keyshortcuts="r"
                     onclick={() => { reversedRecall = !reversedRecall; showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span>
@@ -271,6 +277,7 @@
                     class="lv-toolbar-menu-item"
                     class:lv-active={zenMode}
                     title="沉浸专注模式 (z)"
+                    aria-keyshortcuts="z"
                     onclick={() => { zenMode = !zenMode; showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="eye" size={16} /></span>
@@ -314,6 +321,7 @@
                     type="button"
                     class="lv-toolbar-menu-item"
                     title={t.review?.openInEditor ?? "在编辑器中打开"}
+                    aria-keyshortcuts="o"
                     onclick={() => { onOpenInEditor(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="edit" size={16} /></span>
