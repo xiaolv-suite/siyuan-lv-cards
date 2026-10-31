@@ -121,12 +121,8 @@
     </div>
 
     {#if step === 1}
-        <!-- R53 UX：标题不与对话框头重复——用步骤问题句驱动选择 -->
+        <!-- 阶段 B：把唯一需要用户做的决定（选画像）放在最上方首屏主位，说明移到下方且对齐小图标与标题 -->
         <LvSection title={t.onboardingPersonaQ} sub={t.onboardingPersonaHint}>
-            <div class="lv-ob-intro">
-                <strong>{t.onboardingHowTitle}</strong>
-                <div class="ft__smaller ft__on-surface">{t.onboardingHowDesc}</div>
-            </div>
             <div class="fn__flex fn__flex-wrap lv-ob-cards">
                 {#each personaKeys as p (p.id)}
                     <button class="lv-persona" class:lv-persona-active={persona === p.id} onclick={() => pickPersona(p.id)}>
@@ -134,6 +130,10 @@
                         <div class="ft__smaller ft__on-surface">{t[p.nameKey + "_desc"]}</div>
                     </button>
                 {/each}
+            </div>
+            <div class="lv-ob-intro">
+                <strong>{t.onboardingHowTitle}</strong>
+                <div class="ft__smaller ft__on-surface">{t.onboardingHowDesc}</div>
             </div>
             <div class="lv-ob-types">
                 <strong>{t.onboardingTypesTitle}</strong>
@@ -252,6 +252,7 @@
     }
     .lv-ob-cards {
         gap: var(--lv-sp-2);
+        margin-bottom: var(--lv-sp-3);
     }
     .lv-ob-intro, .lv-ob-types {
         margin-bottom: var(--lv-sp-3);
@@ -265,7 +266,7 @@
     .lv-ob-intro strong, .lv-ob-types strong { display: block; margin-bottom: var(--lv-sp-1); }
     .lv-ob-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lv-sp-2); }
     .lv-ob-type-grid span { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 1); font-size: var(--lv-type-control-size); }
-    .lv-ob-type-grid b { font-size: var(--lv-type-body-size); }
+    .lv-ob-type-grid b { display: inline-flex; align-items: center; gap: 6px; font-size: var(--lv-type-body-size); }
     .lv-ob-callout {
         margin-bottom: var(--lv-sp-3);
         padding: var(--lv-sp-2) var(--lv-sp-3);

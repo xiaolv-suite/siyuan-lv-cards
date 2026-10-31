@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.222.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.223.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -19,14 +19,15 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.222.0 (Latest)
-* **Streamlined 5-button review toolbar & unified session preferences**: Kept only Undo, Skip, Edit, Star, and More on the review topbar; merged scope, session purpose, and answer mode into a single Session Preferences panel.
-* **Unified 3-way "Remove from Review…" modal**: Consolidated Suspend Today, Archive/Hide, and Remove from Deck into one clear modal explaining the empirically verified FSRS progress reset and native flashcard visibility boundaries.
-* **Fixed cloze focus hijack & above-the-fold rating bar**: Stopped ordinary cloze cards from auto-rendering an exam fill input that hijacked Space and review shortcuts when typing mode is off; eliminated undo flash; made card height content-adaptive with a sticky rating bar visible without scrolling at 1024px width and 150% zoom.
+### v0.223.0 (Latest)
+* **Relocated Hub sub-navigation by task**: Moved Maintenance under Library, Material Inbox under Studio, and Recovery into Today's action section—leaving Learning focused purely on Goals/Recap and Exam Sprints while keeping all legacy route IDs compatible.
+* **Slimmed Today deep-stats & promoted deck actions**: Placed deck rename, `.lvcards` share export, and delete directly on first-screen deck rows; trimmed duplicate deck/forecast tables from folded deep-stats to keep only Heatmap, Calendar, Retention, Leeches, and Error Reasons.
+* **Refined Onboarding & topbar landing**: Moved persona selection cards to the top of Onboarding Step 1, clarified QA card copy, and ensured clicking the topbar icon always lands cleanly on Today—completing Stage B (Usability).
 
 <details>
-<summary>📜 View Historical Releases (v0.221.0 ~ v0.210.0)</summary>
+<summary>📜 View Historical Releases (v0.222.0 ~ v0.210.0)</summary>
 
+* **v0.222.0**: Streamlined review toolbar to 5 core buttons, unified Session Preferences and the 3-way Remove from Review modal, fixed cloze focus hijack, and kept the rating bar above the fold at 1024px and 150% zoom.
 * **v0.221.0**: Fixed SuperBlock QA authoring & Maintenance false positives; archived 42 unreachable experimental core modules and aligned bilingual docs.
 * **v0.220.0**: Fixed second-card "document path is ambiguous" errors, onboarding sample-card empty false positives, image-occlusion target/opacity/edit-readback bugs, review settings forwarding, scoped custom card CSS, timed-challenge answer masking, version-acceptance refresh, and `.lvcards` conflict strategy selection.
 * **v0.219.0**: Undo no longer rolls back historical revlog entries for skipped/requeued/Cram cards; `Ctrl+D` dismissal can be undone; Cram sessions isolated from formal daily state; starred-card persistence, dismissed-card filtering and done-screen targeted Cram.

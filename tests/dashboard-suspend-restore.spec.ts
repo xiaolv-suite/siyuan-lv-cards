@@ -106,17 +106,14 @@ describe("dashboard restore suspended action", () => {
         mocks.getRiffDecks.mockResolvedValue([{ id: "deck-a", name: "卡组", size: 2 }]);
         mocks.dueGet.mockResolvedValue({ cards: [], unreviewedCount: 1, unreviewedNewCardCount: 0, unreviewedOldCardCount: 1 });
         mocks.getRiffCards.mockRejectedValue(new Error("forecast offline"));
-        mocks.getRiffDueCards.mockRejectedValue(new Error("deck offline"));
         render(Dashboard, { ctx: { ...ctx(vi.fn()), getDeepStatsOpen: () => true } });
         await screen.findByText("forecast offline", { exact: false });
-        await screen.findByText("deck offline", { exact: false });
         await new Promise(resolve => setTimeout(resolve, 50));
         expect(mocks.getRiffCards).toHaveBeenCalledTimes(1);
-        expect(mocks.getRiffDueCards).toHaveBeenCalledTimes(1);
+        expect(mocks.getRiffDueCards).not.toHaveBeenCalled();
         const forecastError = screen.getByText("forecast offline", { exact: false }).closest("[role=alert]")!;
         await fireEvent.click(forecastError.querySelector("button")!);
         await waitFor(() => expect(mocks.getRiffCards).toHaveBeenCalledTimes(2));
-        expect(mocks.getRiffDueCards).toHaveBeenCalledTimes(1);
     });
 
     it("disables the primary review action when refreshing the last snapshot fails", async () => {

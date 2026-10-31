@@ -1209,7 +1209,7 @@
     "onboardingHowDesc": "在编辑器里选中块，可从块菜单、快速制卡或 AI 制卡入口生成闪卡 → 卡片加入卡组 → 在复习页回忆答案、翻面核对，再按记忆情况选择 1–4 档评分；思源内核会用 FSRS 安排下次复习。示例卡仅用于熟悉流程，随时可以从卡组移除或删除示例文档。",
     "onboardingTypesTitle": "先认识几种常见卡面",
     "onboardingTypeQa": "问答卡",
-    "onboardingTypeQaDesc": "先回忆问题答案；当前版本按挖空标记保存答案",
+    "onboardingTypeQaDesc": "正面提问、背面揭晓答案，支持普通问答与超级块多段问答",
     "onboardingTypeCloze": "挖空卡",
     "onboardingTypeClozeDesc": "用 ==内容== 隐藏关键句",
     "onboardingTypeFormula": "公式卡",

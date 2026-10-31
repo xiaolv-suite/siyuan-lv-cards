@@ -1209,7 +1209,7 @@
     "onboardingHowDesc": "Select a block in the editor and use the block menu, Quick card, or AI card entry to create a flashcard → add it to a deck → recall the answer in review, reveal it to check, then choose a 1–4 rating; SiYuan's kernel uses FSRS to schedule the next review. Samples are for learning the workflow and can be removed from the deck or deleted with the sample document.",
     "onboardingTypesTitle": "A few common card formats",
     "onboardingTypeQa": "Q&A",
-    "onboardingTypeQaDesc": "Recall the answer first; answers currently use cloze markup",
+    "onboardingTypeQaDesc": "Prompt on the front and reveal the answer on the back; supports inline and SuperBlock QA",
     "onboardingTypeCloze": "Cloze",
     "onboardingTypeClozeDesc": "Hide key text with ==content==",
     "onboardingTypeFormula": "Formula",

@@ -96,4 +96,29 @@ describe("hub navigation boundaries", () => {
         await fireEvent.click(screen.getAllByRole("button", { name: i18n.hubPrimaryLibrary, exact: true })[0]);
         await waitFor(() => expect(mocks.getRiffCards).toHaveBeenCalledWith("", 1, 20));
     });
+
+    it("阶段 B U1：将维护归属卡库、收件箱归属制卡、恢复归属今日，学习下只保留目标回顾与考试", () => {
+        const host = context();
+        host.props.inbox = {
+            get: () => ({ version: 1, items: [] }),
+            subscribe: () => () => {},
+            add: vi.fn(),
+            setStatus: vi.fn(),
+            remove: vi.fn(),
+            loadSourcesForCards: vi.fn(),
+            completeCards: vi.fn(),
+        };
+        const view = render(Hub, { ...host.props, initialTab: "maintenance" });
+        const libSubnav = view.container.querySelector("nav.lv-hub-subnav")!;
+        expect(libSubnav.getAttribute("aria-label")).toBe(i18n.hubPrimaryLibrary);
+        expect(libSubnav.textContent).toContain(i18n.hubTabMaintenance);
+        view.unmount();
+
+        const view2 = render(Hub, { ...host.props, initialTab: "learning" });
+        const learnSubnav = view2.container.querySelector("nav.lv-hub-subnav")!;
+        expect(learnSubnav.textContent).not.toContain(i18n.hubTabInbox);
+        expect(learnSubnav.textContent).not.toContain(i18n.hubTabMaintenance);
+        expect(learnSubnav.textContent).not.toContain(i18n.hubTabRecovery);
+        view2.unmount();
+    });
 });

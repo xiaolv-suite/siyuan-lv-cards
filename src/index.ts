@@ -2718,10 +2718,11 @@ export default class LvCardsPlugin extends Plugin {
         const existing = getAllTabs(`${this.name}${type}`)[0];
         if (existing) {
             existing.headElement.click();
-            if (type === TAB_DASHBOARD && data?.tab && typeof data.tab === "string") {
+            if (type === TAB_DASHBOARD) {
+                const targetTab = (typeof data?.tab === "string" && data.tab) ? data.tab : "overview";
                 existing.panelElement
                     ?.querySelector(".lv-hub")
-                    ?.dispatchEvent(new CustomEvent("lv-switch-tab", { detail: { tab: data.tab, focusBlockID: data.focusBlockID } }));
+                    ?.dispatchEvent(new CustomEvent("lv-switch-tab", { detail: { tab: targetTab, focusBlockID: data?.focusBlockID } }));
             } else if (type === TAB_REVIEW) {
                 existing.panelElement
                     ?.querySelector(".lv-review")

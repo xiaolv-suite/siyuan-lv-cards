@@ -61,7 +61,7 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                 if (hubDisposed) return;
                 handle = mnt(div, {
                     i18n: plugin.i18n,
-                    initialTab: (this.data?.tab as string) ?? plugin.settings.lastHubTab,
+                    initialTab: (this.data?.tab as string) || "overview",
                     initialBlockID: typeof this.data?.focusBlockID === "string" ? this.data.focusBlockID : "",
                     uiMode: plugin.settings.uiMode,
                     openWizard: () => plugin.openAIWizard(),

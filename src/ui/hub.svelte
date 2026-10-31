@@ -170,14 +170,10 @@
     let managerInitialBlockID = $state(initialBlockID);
 
     function primaryFor(route: string): string {
-        if (route === "manage") return "library";
-        if (route === "authoring") return "studio";
-        if (route === "learning" || route === "goals" || route === "exam" || route === "maintenance" || route === "inbox" || route === "recovery") return "learning";
+        if (route === "manage" || route === "maintenance") return "library";
+        if (route === "authoring" || route === "inbox") return "studio";
+        if (route === "learning" || route === "goals" || route === "exam") return "learning";
         return route === "settings" ? "settings" : "today";
-    }
-
-    function isLearningRoute(): boolean {
-        return primaryFor(active) === "learning";
     }
 
     // svelte-ignore state_referenced_locally
@@ -431,13 +427,6 @@
                 <LvIcon name="plus" size={19} />
             </button>
             <LvTabs tabs={primaryTabs} active={primaryFor(active)} onchange={switchTab} panelId={active === "authoring" ? "lv-hub-studio-panel" : "lv-hub-panel"} orientation="vertical" />
-            {#if inbox}
-                <button class:lv-r54-sidebar-link-active={active === "inbox"} class="lv-r54-sidebar-link" aria-current={active === "inbox" ? "page" : undefined} onclick={() => switchTab("inbox")} title={i18n.hubTabInbox}>
-                    <span class="lv-r54-sidebar-icon"><LvIcon name="inbox" size={18} /></span>
-                    <span class="lv-r54-sidebar-text">{i18n.hubTabInbox}</span>
-                    {#if inboxOpenCount > 0}<span class="lv-r54-nav-count">{inboxOpenCount}</span>{/if}
-                </button>
-            {/if}
             <div class="lv-r54-sidebar-divider"></div>
             <button class="lv-r54-sidebar-link" onclick={() => dashboardBase.openOnboarding()} title={i18n.hubStudioOnboarding ?? "上手与示例"}>
                 <span class="lv-r54-sidebar-icon"><LvIcon name="question" size={18} /></span>
@@ -485,19 +474,27 @@
             </header>
             {#if !openPalette}<span id="lv-r54-search-hint" class="lv-sr-only">{i18n.hubSearchUnavailable ?? "当前宿主未提供命令面板"}</span>{/if}
             <div class="lv-hub-bar">
-                {#if isLearningRoute()}
+                {#if primaryFor(active) === "library" && uiMode !== "simple"}
+                    <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡库"}>
+                        <button class:lv-hub-subnav-active={active === "manage"} class="lv-hub-subnav-btn" aria-current={active === "manage" ? "page" : undefined} onclick={() => switchTab("manage")}>{i18n.hubTabManage ?? "卡片管理"}</button>
+                        <button class:lv-hub-subnav-active={active === "maintenance"} class="lv-hub-subnav-btn" aria-current={active === "maintenance" ? "page" : undefined} onclick={() => switchTab("maintenance")}>{i18n.hubTabMaintenance ?? "维护债务"}</button>
+                    </nav>
+                {:else if primaryFor(active) === "studio" && inbox}
+                    <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryStudio ?? "制卡"}>
+                        <button class:lv-hub-subnav-active={active === "authoring"} class="lv-hub-subnav-btn" aria-current={active === "authoring" ? "page" : undefined} onclick={() => switchTab("authoring")}>{i18n.hubTabAuthoring ?? "制卡工坊"}</button>
+                        <button class:lv-hub-subnav-active={active === "inbox"} class="lv-hub-subnav-btn" aria-current={active === "inbox" ? "page" : undefined} onclick={() => switchTab("inbox")}>{i18n.hubTabInbox}{#if inboxOpenCount > 0} ({inboxOpenCount}){/if}</button>
+                    </nav>
+                {:else if primaryFor(active) === "learning"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubSecondaryLabel ?? "学习工具"}>
                         <button class:lv-hub-subnav-active={active === "learning"} class="lv-hub-subnav-btn" aria-current={active === "learning" ? "page" : undefined} onclick={() => switchTab("learning")}>{i18n.hubPrimaryLearning ?? "学习"}</button>
-                        {#if inbox}
-                            <button class:lv-hub-subnav-active={active === "inbox"} class="lv-hub-subnav-btn" aria-current={active === "inbox" ? "page" : undefined} onclick={() => switchTab("inbox")}>{i18n.hubTabInbox}</button>
-                        {/if}
                         {#if exam && uiMode !== "simple"}
                             <button class:lv-hub-subnav-active={active === "exam"} class="lv-hub-subnav-btn" aria-current={active === "exam" ? "page" : undefined} onclick={() => switchTab("exam")}>{i18n.hubTabExam}</button>
                         {/if}
-                        {#if uiMode !== "simple"}
-                            <button class:lv-hub-subnav-active={active === "maintenance"} class="lv-hub-subnav-btn" aria-current={active === "maintenance" ? "page" : undefined} onclick={() => switchTab("maintenance")}>{i18n.hubTabMaintenance}</button>
-                        {/if}
-                        <button class:lv-hub-subnav-active={active === "recovery"} class="lv-hub-subnav-btn" aria-current={active === "recovery" ? "page" : undefined} onclick={() => switchTab("recovery")}>{i18n.hubTabRecovery ?? "待处理与恢复"}</button>
+                    </nav>
+                {:else if active === "recovery"}
+                    <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryToday ?? "今日"}>
+                        <button class="lv-hub-subnav-btn" onclick={() => switchTab("today")}>{i18n.hubPrimaryToday ?? "今日"}</button>
+                        <button class="lv-hub-subnav-btn lv-hub-subnav-active" aria-current="page" onclick={() => switchTab("recovery")}>{i18n.hubTabRecovery ?? "待处理与恢复"}</button>
                     </nav>
                 {:else}
                     <div class="lv-r54-context-label">{primaryFor(active) === "today" ? (i18n.hubPrimaryToday ?? "今日") : primaryFor(active) === "library" ? (i18n.hubPrimaryLibrary ?? "卡库") : primaryFor(active) === "studio" ? (i18n.hubPrimaryStudio ?? "制卡") : (i18n.hubPrimarySettings ?? "设置")}</div>
@@ -861,11 +858,9 @@
         }
     }
 
-    .lv-r54-sidebar-link:hover,
-    .lv-r54-sidebar-link-active { background: var(--lv-primary-softer); color: var(--lv-color-brand); }
+    .lv-r54-sidebar-link:hover { background: var(--lv-primary-softer); color: var(--lv-color-brand); }
     .lv-r54-sidebar-icon { display: grid; width: 20px; height: 20px; flex: none; place-items: center; }
     .lv-r54-sidebar-text { font-size: 10px; line-height: 1.2; }
-    .lv-r54-sidebar-link .lv-r54-nav-count { position: absolute; top: 2px; right: 10px; display: inline-flex; width: auto; height: auto; min-width: 16px; justify-content: center; padding: 0 4px; border: 0; border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: 9px; font-variant-numeric: tabular-nums; }
     .lv-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: calc(var(--lv-space-hairline) * -1); overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .lv-r54-content { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
     .lv-r54-topbar {

@@ -2,16 +2,15 @@
     import { onMount } from "svelte";
     import type { App } from "siyuan";
     import { fade } from "svelte/transition";
-    import { getRiffDecks, getRiffCards, getRiffDueCards, renameRiffDeck, removeRiffDeck, type RiffDeck } from "@/api/riff";
+    import { getRiffDecks, getRiffCards, renameRiffDeck, removeRiffDeck, type RiffDeck } from "@/api/riff";
     import { dueCache } from "@/api/due-shared";
     import { isSessionLive, type EndReason } from "@/core/session-state";
     import { decideTodayAction } from "@/core/today-decision";
-    import { buildDeckDashboard, type DeckDashboardRow } from "@/core/deck-dashboard";
     import { exportLvCardsDeckPackage, LvCardsExportError } from "@/core/lvcards-export";
     import { sqlQuery } from "@/api/siyuan";
     import { downloadFile } from "@/core/data-transfer";
-    import { getFlashcardStatistics, summarizeStatistics, type MigrationStatus } from "@/api/flashcardV2";
-    import { calcStreak, lastNDays, localDate, studySecondsOn, coverageStats, deckCoverage, computeRetention, computeRetentionCurve, reviewStatsFor, weekCompare, calcMilestones, calcXp, type RevlogData, type RetentionResult, type CurvePoint, type WeekDelta, type Milestones, type XpResult, type CoverageStats, type DeckCoverage } from "@/core/revlog";
+    import { type MigrationStatus } from "@/api/flashcardV2";
+    import { calcStreak, lastNDays, localDate, studySecondsOn, coverageStats, computeRetention, computeRetentionCurve, reviewStatsFor, type RevlogData, type RetentionResult, type CurvePoint, type CoverageStats } from "@/core/revlog";
     import { buildForecast, buildMonthGrid, dueMapFromForecast, get7DayForecast, smoothForecastLoad, type ForecastResult, type CalendarCell, type ForecastCardInput, type ForecastDay } from "@/core/forecast";
     import { renderDashboardReportMarkdown, computeWeekOverview, computeCurveSvgPaths } from "@/core/report-writer";
     import { openTab, showMessage } from "siyuan";
@@ -178,14 +177,8 @@
     let todayStudyMinutes = $state(0);
     /** 卡片覆盖（AQ-12 本地证据口径）：分母缺失时为 null 不展示 */
     let coverage = $state<CoverageStats | null>(null);
-    /** 卡组维度覆盖（AQ-12 剩余面）：按 revlog.deckID 归属，原生缺 deckID 进 unattributed */
-    let deckCov = $state<DeckCoverage | null>(null);
-    /** 文档维度覆盖（AQ-12）：null=查询失败/未提供，隐藏该区 */
-    let docCov = $state<{ docs: { docID: string; title: string; seen: number }[]; unattributed: number } | null>(null);
     /** 未完成的 AI 导入（ADR-7）：null=无 */
     let unfinishedAI = $state<{ id: string; done: number; total: number } | null>(null);
-    /** BJ-1：能力分布（知识对象实例标注；null=宿主未提供或无数据） */
-    let koStats = $state<{ cap: string; count: number; pct: number }[] | null>(null);
     /** BJ-4：错误原因分布（遗忘卡标注；null=宿主未提供或无数据） */
     let errStats = $state<{ reason: string; count: number }[] | null>(null);
     let totalCards = $state(0);
@@ -194,12 +187,8 @@
     let errorMsg = $state("");
     let hasLoadedSnapshot = $state(false);
     let lastSuccessfulAt = $state(0);
-    let v2Stats: { key: string; value: string }[] = $state([]);
     let retention: RetentionResult | null = $state(null);
     let curve: CurvePoint[] = $state([]);
-    let week: WeekDelta | null = $state(null);
-    let milestones: Milestones | null = $state(null);
-    let xp: XpResult | null = $state(null);
     let curveEl: SVGSVGElement | null = $state(null);
 
     /** 图表导出 PNG（M5）：SVG→canvas，CSS 变量先解析为具体色值（独立渲染无级联上下文） */
@@ -249,8 +238,6 @@
         img.src = url;
     }
     let aiQuality = $state<{ date: string; cards: number; reviews: number; rate: number | null }[]>([]);
-    /** AI 累计 token 消耗（299） */
-    let tokensTotal = $state(0);
     let leech: { blockID: string; lapses: number }[] = $state([]);
     let examChip = $state<{ name: string; days: number } | null>(null);
     let targets = $state({ new: 0, review: 0 });
@@ -511,15 +498,7 @@
     // 首次展开深度统计时拉取一次；此后随 refresh() 的 heat 更新不再自动重拉（预测是旁路增强）
     $effect(() => {
         if (deepOpen && !calAttempted) void loadForecast();
-        if (deepOpen && !ddAttempted && decks.length > 0) void loadDeckDashboard();
     });
-
-    // T-卡组仪表盘（docs/41 P1）：近 30 天本地日志按卡组聚合；到期/新卡来自内核实时（每卡组一次，上限 12 组）
-    let ddRows = $state<DeckDashboardRow[]>([]);
-    let ddLoading = $state(false);
-    let ddAttempted = $state(false);
-    let ddError = $state("");
-    let ddSeq = 0;
 
     /** T-分享包（docs/41 P1）：整卡组导出为原生 .lvcards 分享包，支持完整分页与底层原始 Markdown 回读 */
     let ddExportBusy = $state(false);
@@ -568,34 +547,6 @@
             void refresh();
         } catch (e: any) {
             showMessage(friendlyError(e, t), 3000, "error");
-        }
-    }
-
-    async function loadDeckDashboard() {
-        if (ddLoading || decks.length === 0) return;
-        const seq = ++ddSeq;
-        ddAttempted = true;
-        ddLoading = true;
-        ddError = "";
-        try {
-            const dueByDeck = new Map<string, { due: number; newCards: number }>();
-            const top = [...decks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 12);
-            const dueResults = await Promise.all(top.map(async d => {
-                const due = await getRiffDueCards(d.id, []);
-                return [d.id, { due: due.unreviewedOldCardCount ?? 0, newCards: due.unreviewedNewCardCount ?? 0 }] as const;
-            }));
-            if (seq !== ddSeq) return;
-            for (const [id, due] of dueResults) {
-                dueByDeck.set(id, due);
-            }
-            ddRows = buildDeckDashboard(ctx.getRevlog().entries, decks.map(d => d.id), dueByDeck, { now: new Date() });
-        } catch (e) {
-            if (seq === ddSeq) {
-                ddError = friendlyError(e, t);
-                ddRows = [];
-            }
-        } finally {
-            if (seq === ddSeq) ddLoading = false;
         }
     }
 
@@ -660,13 +611,6 @@
         errorMsg = "";
         ctx.onDueCount?.(null);
         try {
-            // 性能（docs/40 收尾）：三个异步源并行——文档归属/V2 统计的 SQL 不再串行阻塞
-            // hero 统计（到期数等）的渲染；快路径先行呈现，慢面板就绪后渐进补齐
-            const docCovPromise: Promise<{ docs: { docID: string; title: string; seen: number }[]; unattributed: number } | null> =
-                ctx.getDocCoverage ? ctx.getDocCoverage().catch(() => null) : Promise.resolve(null);
-            const v2StatsPromise: Promise<unknown[]> = ctx.getV2Status()
-                ? getFlashcardStatistics({}).then((s) => (Array.isArray(s) ? s : [])).catch(() => [])
-                : Promise.resolve([]);
             const [deckList, due] = await Promise.all([
                 getRiffDecks(),
                 dueCache.get(""), // AT-4：与 badge/挑战/配对等并发读取共享缓存，评分后经 invalidate 拉新
@@ -684,10 +628,7 @@
             todayReview = reviewedToday;
             todayStudyMinutes = Math.round(studySecondsOn(revlog, localDate(Date.now())) / 60);
             coverage = coverageStats(revlog, totalCards || undefined);
-            deckCov = deckCoverage(revlog, deckList.map(d => ({ id: d.id, size: d.size })));
             unfinishedAI = ctx.getUnfinishedAIJob?.() ?? null;
-            // BJ-1：能力分布（可选 ctx；无实例返回空数组→区块隐藏）
-            koStats = ctx.getCapabilityShare?.() ?? null;
             errStats = ctx.getErrorReasonStats?.() ?? null;
             dueCount = due?.unreviewedCount ?? 0;
             ctx.onDueCount?.(dueCount);
@@ -706,9 +647,6 @@
             revlogNote = first ? new Date(first).toLocaleDateString() : "";
             retention = computeRetention(revlog);
             curve = computeRetentionCurve(revlog);
-            week = weekCompare(revlog);
-            milestones = calcMilestones(revlog);
-            xp = ctx.getXpEnabled() ? calcXp(revlog) : null;
             aiQuality = ctx
                 .getAIBatches()
                 .filter(b => b.blockIDs.length > 0)
@@ -718,35 +656,14 @@
                     const stat = reviewStatsFor(revlog, b.blockIDs);
                     return { date: b.date, cards: b.blockIDs.length, reviews: stat.reviews, rate: stat.rate };
                 });
-            // token 消耗历史（299）：全部批次累计（旧批次无 tokens 字段按 0 计）
-            tokensTotal = ctx.getAIBatches().reduce((acc, b) => acc + (b.tokens ?? 0), 0);
             leech = ctx.getLeechCards().slice(0, 8);
             examChip = ctx.getExamCountdown();
             targets = ctx.getDailyTargets();
-            // 快路径完成：hero 与统计立即可见（慢面板就绪后渐进补齐）
             hasLoadedSnapshot = true;
             lastSuccessfulAt = Date.now();
             loading = false;
             void scanDormantKnowledge();
             void loadForecast();
-            const nextDocCov = await docCovPromise;
-            if (seq !== refreshSeq) {
-                return; // 文档归属查询期间用户已刷新（AR-6 generation 守卫）
-            }
-            docCov = nextDocCov;
-            // 内核 V2（3.9.0）激活时，顺带拉取官方统计摘要（宽容解析，失败静默）
-            if (ctx.getV2Status()) {
-                try {
-                    const stats = await v2StatsPromise;
-                    if (seq === refreshSeq) {
-                        v2Stats = summarizeStatistics(stats);
-                    }
-                } catch {
-                    if (seq === refreshSeq) {
-                        v2Stats = [];
-                    }
-                }
-            }
         } catch (e: unknown) {
             if (seq === refreshSeq) {
                 errorMsg = friendlyError(e, t);
@@ -779,7 +696,6 @@
         return () => {
             refreshSeq += 1;
             calSeq += 1;
-            ddSeq += 1;
             offFinished?.();
             offReviewed?.();
             offStores?.();
@@ -1326,6 +1242,15 @@
                                 >
                                     <LvIcon name="cards" size={13} /> {(deck.size ?? 0) === 0 ? "暂无卡片" : (t.dashboard.openReview ?? "复习")}
                                 </button>
+                                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={`${t.dashboard.renameDeck ?? "重命名卡组"} ${deck.name}`} onclick={() => renameDeckPrompt(deck.id, deck.name)}>
+                                    <LvIcon name="edit" size={13} />
+                                </button>
+                                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={`${t.dashboard.ddShareBtn} ${deck.name}`} onclick={() => exportDeckShare(deck.id, deck.name)}>
+                                    <LvIcon name="cards" size={13} />
+                                </button>
+                                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={`${t.dashboard.deleteDeck ?? "删除卡组"} ${deck.name}`} onclick={() => removeDeckConfirm(deck.id, deck.name)}>
+                                    <LvIcon name="trash" size={13} />
+                                </button>
                             </div>
                         </div>
                     {/each}
@@ -1356,8 +1281,15 @@
             </div>
         {/if}
 
-        <!-- T08 待处理与恢复（docs/40 批 5 简化聚合）：只聚合不重做；恢复幂等 -->
+        <!-- T08 待处理与恢复（阶段 B · U1：待处理与恢复并入今日页） -->
         <LvSection title={t.dashboard.todoTitle}>
+            {#snippet actions()}
+                {#if ctx.openHubTab}
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => ctx.openHubTab?.("recovery")}>
+                        <span>{t.hubTabRecovery ?? "待处理与恢复"}</span>
+                    </button>
+                {/if}
+            {/snippet}
             {#if inboxOpen === 0 && suspended === 0 && !unfinishedAI && dormantCount === 0}
                 <div class="lv-hint">{t.dashboard.todoNone}</div>
             {:else}
@@ -1427,35 +1359,6 @@
             <LvHeatmap days={heat} />
         </LvSection>
 
-        <!-- AQ-12 覆盖明细（首屏 caption 的展开面）：卡组/文档两维度，行 + 迷你进度 -->
-        {#if coverage && coverage.coverage !== null && ((deckCov && deckCov.decks.some(d => d.size !== null)) || (docCov && docCov.docs.length > 0))}
-            <LvSection title={t.dashboard.coverageDetail}>
-                {#if deckCov && deckCov.decks.some(d => d.size !== null)}
-                    {#each [...deckCov.decks].filter(d => d.size !== null).sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 5) as dc (dc.deckID)}
-                        <div class="lv-cov-row">
-                            <span class="lv-cov-name">{decks.find(d => d.id === dc.deckID)?.name ?? dc.deckID}</span>
-                            <span class="lv-cov-seen ft__smaller ft__on-surface">{dc.seen}/{dc.size}</span>
-                            <div class="lv-mini-track lv-cov-track"><div class="lv-mini-fill" style={`width:${Math.round((dc.coverage ?? 0) * 100)}%`}></div></div>
-                            <span class="lv-cov-pct ft__smaller">{Math.round((dc.coverage ?? 0) * 100)}%</span>
-                        </div>
-                    {/each}
-                    {#if deckCov.unattributedCards > 0}
-                        <div class="ft__smaller ft__on-surface" style="margin-top: var(--lv-sp-2)">{t.dashboard.unattributedNote.replace("${n}", String(deckCov.unattributedCards))}</div>
-                    {/if}
-                {/if}
-                {#if docCov && docCov.docs.length > 0}
-                    <div class="lv-cov-docs ft__smaller ft__on-surface">
-                        {#each docCov.docs.slice(0, 3) as dc (dc.docID)}
-                            <div><LvIcon name="book" size={15} /> {dc.title || dc.docID.slice(0, 8)} · {t.dashboard.docCards.replace("${n}", String(dc.seen))}</div>
-                        {/each}
-                        {#if docCov.unattributed > 0}
-                            <div>{t.dashboard.docUnattributedNote.replace("${n}", String(docCov.unattributed))}</div>
-                        {/if}
-                    </div>
-                {/if}
-            </LvSection>
-        {/if}
-
         <!-- T14 学习日历与负载预测（docs/41 P0）：过去=复习热力，未来=到期负载；首次展开拉取，只读不改调度 -->
         <LvSection title={t.dashboard.calTitle} sub={t.dashboard.calSub}>
             {#if calError}
@@ -1481,132 +1384,6 @@
                         + (calSelectedSummary ? " · " + calSelectedSummary : "")
                     : ""}
             />
-        </LvSection>
-
-        <!-- T-卡组仪表盘（docs/41 P1）：近 30 天本地日志按卡组聚合的排行表 -->
-        <LvSection title={t.dashboard.ddTitle} sub={t.dashboard.ddSub}>
-            {#if ddError}
-                <LvError message={ddError} onretry={ddLoading ? undefined : loadDeckDashboard} retryLabel={t.dashboard.refresh} />
-            {:else if ddRows.length === 0}
-                <div class="hint">{ddLoading ? t.dashboard.loading : t.dashboard.ddEmpty}</div>
-            {:else}
-                <table class="lv-table">
-                    <thead>
-                        <tr>
-                            <th>{t.dashboard.ddDeck}</th>
-                            <th style="text-align:right">{t.dashboard.ddDue}</th>
-                            <th style="text-align:right">{t.dashboard.ddNew}</th>
-                            <th style="text-align:right">{t.dashboard.ddReviews7}</th>
-                            <th style="text-align:right">{t.dashboard.ddRetention}</th>
-                            <th style="text-align:right">{t.dashboard.ddLeeches}</th>
-                            <th style="text-align:right">{t.dashboard.ddShare}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each ddRows as row (row.deckID)}
-                            {@const deckName = decks.find(d => d.id === row.deckID)?.name ?? row.deckID}
-                            <tr>
-                                <td class="lv-deck-name">
-                                    <button
-                                        type="button"
-                                        class="b3-button b3-button--text lv-deck-btn"
-                                        title={deckName}
-                                        onclick={() => ctx.openManagerDeck?.(row.deckID, deckName)}
-                                    >
-                                        <span>{deckName}</span>
-                                        <span class="lv-arrow" aria-hidden="true">›</span>
-                                    </button>
-                                </td>
-                                <td style="text-align:right;font-variant-numeric:tabular-nums">{row.dueToday}</td>
-                                <td style="text-align:right;font-variant-numeric:tabular-nums">{row.newCount}</td>
-                                <td style="text-align:right;font-variant-numeric:tabular-nums" title={row.passRate7 !== null ? `7 天复习 ${row.reviews7} 次 · 通过率 ${row.passRate7}%` : `7 天复习 ${row.reviews7} 次`}>{row.reviews7}</td>
-                                <td style="text-align:right;font-variant-numeric:tabular-nums" class:lv-dd-retention-good={row.retention !== null && row.retention >= 85} class:lv-dd-retention-low={row.retention !== null && row.retention < 70}>{row.retention === null ? t.dashboard.unknown : row.retention + "%"}</td>
-                                <td style="text-align:right;font-variant-numeric:tabular-nums" class:lv-dd-leech-warn={row.leeches > 0}>{#if row.leeches > 0}<LvIcon name="warning" size={14} /> {row.leeches}{:else}0{/if}</td>
-                                <td style="text-align:right">
-                                    <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px">
-                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={t.dashboard.renameDeck ?? "重命名卡组"} onclick={() => renameDeckPrompt(row.deckID, deckName)}>
-                                            <LvIcon name="edit" size={13} />
-                                        </button>
-                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={t.dashboard.ddShareBtn} onclick={() => exportDeckShare(row.deckID, deckName)}>
-                                            <LvIcon name="cards" size={13} />
-                                        </button>
-                                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={t.dashboard.deleteDeck ?? "删除卡组"} onclick={() => removeDeckConfirm(row.deckID, deckName)}>
-                                            <LvIcon name="trash" size={13} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-                <p class="tiny" style="margin: calc(var(--lv-space-unit) * 4) 0 0">{t.dashboard.ddNote}</p>
-            {/if}
-        </LvSection>
-
-        <LvSection title={t.weekcmp.title} sub={t.weekcmp.sub}>
-            {#if week && (week.thisWeek.new + week.thisWeek.review + week.lastWeek.new + week.lastWeek.review) > 0}
-                <div class="lv-ret">
-                    {#each [
-                        { label: t.weekcmp.new, cur: week.thisWeek.new, prev: week.lastWeek.new, d: week.delta.new, good: 1 },
-                        { label: t.weekcmp.review, cur: week.thisWeek.review, prev: week.lastWeek.review, d: week.delta.review, good: 1 },
-                        { label: t.weekcmp.forget, cur: week.thisWeek.forget, prev: week.lastWeek.forget, d: week.delta.forget, good: -1 },
-                    ] as row (row.label)}
-                        <div class="lv-ret-row">
-                            <span>{row.label}</span>
-                            <span class="lv-ret-rate">
-                                {row.cur}
-                                <span class="ft__smaller ft__on-surface" style="opacity:.65">({t.weekcmp.last} {row.prev})</span>
-                                {#if row.d !== 0}
-                                    <span
-                                        class="ft__smaller lv-weekdelta"
-                                        class:lv-weekdelta--good={row.d * row.good > 0}
-                                        class:lv-weekdelta--bad={row.d * row.good < 0}
-                                    >{row.d > 0 ? "+" : ""}{row.d}</span>
-                                {/if}
-                            </span>
-                        </div>
-                    {/each}
-                </div>
-            {:else}
-                <div class="lv-hint">{t.weekcmp.none}</div>
-            {/if}
-        </LvSection>
-
-        <LvSection title={t.milestones.title} sub={t.milestones.sub}>
-            {#snippet actions()}
-                {#if xp}
-                    <span title={t.milestones.xpTip.replace("${n}", String(xp.toNext))}>
-                        <LvChip tone="warn">Lv.{xp.level} · {xp.xp} XP</LvChip>
-                    </span>
-                {/if}
-            {/snippet}
-            {#if milestones && milestones.totalReviews > 0}
-                <div class="lv-ms-grid">
-                    <div class="lv-ms-cell">
-                        <div class="lv-ms-num">{milestones.totalReviews}</div>
-                        <div class="lv-ms-label">{t.milestones.total}</div>
-                    </div>
-                    <div class="lv-ms-cell">
-                        <div class="lv-ms-num">{milestones.longestStreak}</div>
-                        <div class="lv-ms-label">{t.milestones.longest}</div>
-                    </div>
-                    <div class="lv-ms-cell">
-                        <div class="lv-ms-num">{milestones.daysActive}</div>
-                        <div class="lv-ms-label">{t.milestones.active}</div>
-                    </div>
-                    <div class="lv-ms-cell">
-                        <div class="lv-ms-num">{milestones.bestDay ? milestones.bestDay.count : 0}</div>
-                        <div class="lv-ms-label">{t.milestones.best}</div>
-                    </div>
-                </div>
-                {#if milestones.nextGoal}
-                    <div class="lv-hint" style="margin-top: var(--lv-sp-2)">
-                        {t.milestones.goal.replace("${a}", String(milestones.nextGoal.at)).replace("${n}", String(milestones.nextGoal.remaining))}
-                    </div>
-                {/if}
-            {:else}
-                <div class="lv-hint">{t.milestones.none}</div>
-            {/if}
         </LvSection>
 
         <LvSection title={t.retention.title} sub={t.retention.sub}>
@@ -1672,31 +1449,6 @@
             {/if}
         </LvSection>
 
-        <LvSection title={t.aiQuality.title} sub={t.aiQuality.sub}>
-            {#snippet actions()}
-                {#if tokensTotal > 0}
-                    <span class="ft__smaller ft__on-surface" title={t.aiQuality.tokensTip}>≈{tokensTotal} tokens</span>
-                {/if}
-            {/snippet}
-            {#if aiQuality.length === 0}
-                <div class="lv-hint">{t.aiQuality.none}</div>
-            {:else}
-                {#each aiQuality as q (q.date)}
-                    <div class="fn__flex lv-airow">
-                        <span class="ft__smaller">{q.date}</span>
-                        <div class="fn__flex-1"></div>
-                        <span class="ft__smaller ft__on-surface">{t.aiQuality.cards}: {q.cards}</span>
-                        <div class="lv-mini-track" style="width: 120px">
-                            <div class="lv-mini-fill" style={`width:${q.rate === null ? 0 : Math.round(q.rate * 100)}%`}></div>
-                        </div>
-                        <span class="ft__smaller lv-ai-rate">
-                            {q.rate === null ? t.aiQuality.noSample : `${Math.round(q.rate * 100)}%`} · {t.aiQuality.reviews}: {q.reviews}
-                        </span>
-                    </div>
-                {/each}
-            {/if}
-        </LvSection>
-
         <LvSection title={t.leech.title} sub={t.leech.sub}>
             {#if leech.length === 0}
                 <div class="lv-hint">{t.leech.none}</div>
@@ -1714,70 +1466,6 @@
                 {/each}
             {/if}
         </LvSection>
-
-        <LvSection title={t.dashboard.decks}>
-            {#if decks.length === 0}
-                <div class="lv-hint">{t.dashboard.noDecks}</div>
-            {:else}
-                <table class="lv-table">
-                    <thead>
-                        <tr>
-                            <th>{t.dashboard.deckName}</th>
-                            <th class="lv-num-col">{t.dashboard.deckSize}</th>
-                            <th class="lv-num-col">{t.dashboard.deckUpdated}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each decks as d (d.id)}
-                            <tr>
-                                <td class="lv-deck-name">
-                                    <button
-                                        type="button"
-                                        class="b3-button b3-button--text lv-deck-btn"
-                                        title={d.name}
-                                        onclick={() => ctx.openManagerDeck?.(d.id, d.name)}
-                                    >
-                                        <span>{d.name}</span>
-                                        <span class="lv-arrow" aria-hidden="true">›</span>
-                                    </button>
-                                </td>
-                                <td class="lv-num-col">{d.size}</td>
-                                <td class="lv-num-col ft__smaller ft__on-surface">{d.updated}</td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            {/if}
-        </LvSection>
-
-        <LvSection title={t.dashboard.forecast}>
-            {#if v2Stats.length > 0}
-                <div class="fn__flex fn__flex-wrap lv-v2stats">
-                    {#each v2Stats as s (s.key)}
-                        <div class="lv-stat-mini">
-                            <div class="lv-mini-label">{s.key}</div>
-                            <div class="lv-mini-num">{s.value}</div>
-                        </div>
-                    {/each}
-                </div>
-            {:else}
-                <div class="lv-hint">{t.dashboard.forecastTbd}</div>
-            {/if}
-        </LvSection>
-
-        {#if koStats && koStats.some(s => s.count > 0)}
-            <!-- BJ-1：能力分布（基于已登记知识对象实例；口径=插件侧标注覆盖；全 0 不展示——未知不显示为 0） -->
-            <LvSection title={t.capability?.title ?? "Capability"} sub={t.capability?.sub ?? ""}>
-                <div class="fn__flex fn__flex-wrap lv-caps">
-                    {#each koStats.filter(s => s.count > 0) as s (s.cap)}
-                        <div class="lv-stat-mini">
-                            <div class="lv-mini-label">{t.capability?.labels?.[s.cap] ?? s.cap}</div>
-                            <div class="lv-mini-num">{s.count} <span class="ft__smaller ft__on-surface">({s.pct}%)</span></div>
-                        </div>
-                    {/each}
-                </div>
-            </LvSection>
-        {/if}
 
         {#if errStats && errStats.length > 0}
             <!-- BJ-4：错误原因分布（遗忘卡标注；口径=全量累计） -->
@@ -2542,33 +2230,10 @@
         .lv-first-use-steps { grid-template-columns: 1fr; }
     }
 
-    /* AQ-12 覆盖：首屏一行 caption + 深度区行明细 */
+    /* AQ-12 覆盖：首屏一行 caption */
     .lv-cov-line {
         margin: calc(-1 * var(--lv-sp-2)) 0 var(--lv-sp-3);
         opacity: 0.85;
-    }
-    .lv-cov-row {
-        display: flex;
-        align-items: center;
-        gap: var(--lv-sp-3);
-        padding: var(--lv-sp-2) 0;
-        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-        font-size: var(--lv-type-body-size);
-        &:last-of-type { border-bottom: none; }
-        .lv-cov-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .lv-cov-seen { font-variant-numeric: tabular-nums; }
-        .lv-cov-track {
-            width: 120px;
-            flex: none;
-            .lv-mini-fill { background: var(--lv-color-data); }
-        }
-        .lv-cov-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lv-color-data); font-weight: var(--lv-fw-semibold); }
-    }
-    .lv-cov-docs {
-        margin-top: var(--lv-sp-2);
-        display: flex;
-        flex-direction: column;
-        gap: calc(var(--lv-space-unit) * 1);
     }
 
     /* T08 待处理行（docs/40 批 5）：行式布局 + 右侧动作 */
@@ -2615,59 +2280,6 @@
         .lv-first-use-steps > div { padding: var(--lv-sp-2) 0; }
     }
 
-    .lv-deck-btn {
-        padding: 0;
-        text-align: left;
-        color: var(--lv-color-text);
-        font-weight: var(--lv-fw-medium);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 220px;
-        display: inline-flex;
-        align-items: center;
-
-        &:hover {
-            color: var(--lv-color-brand);
-        }
-    }
-    .lv-dd-retention-good {
-        color: var(--lv-color-success);
-        font-weight: var(--lv-fw-semibold);
-    }
-    .lv-dd-retention-low {
-        color: var(--lv-color-danger);
-    }
-    .lv-dd-leech-warn {
-        color: var(--lv-color-warning);
-        font-weight: var(--lv-fw-semibold);
-    }
-
-    .lv-table .lv-deck-name .lv-arrow {
-        display: inline-block;
-        margin-left: calc(var(--lv-space-unit) * 3);
-        color: var(--lv-color-brand);
-        opacity: 0;
-        transform: translateX(-4px);
-        transition: opacity var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease);
-    }
-
-    .lv-table tbody tr:hover .lv-arrow {
-        opacity: 1;
-        transform: translateX(0);
-    }
-
-    .lv-v2stats { gap: var(--lv-sp-3);
-        .lv-stat-mini {
-            flex: 1 1 110px;
-            padding: var(--lv-sp-3);
-            background: var(--lv-primary-softer);
-            border-radius: var(--lv-r-m);
-            .lv-mini-label { font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); }
-            .lv-mini-num { font-weight: var(--lv-fw-bold); font-variant-numeric: tabular-nums; }
-        }
-    }
-
     .lv-ret {
         .lv-ret-row {
             display: flex; justify-content: space-between; align-items: center;
@@ -2679,61 +2291,12 @@
         .lv-ret-rate { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--lv-color-data); }
     }
 
-    .lv-weekdelta {
-        margin-left: var(--lv-sp-1);
-        font-variant-numeric: tabular-nums;
-        font-weight: 600;
-        &--good { color: var(--lv-color-data); }
-        &--bad { color: var(--lv-color-danger); }
-    }
-
-    .lv-ms-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: var(--lv-sp-3);
-        text-align: center;
-        @media (max-width: 740px) {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-    .lv-ms-cell {
-        padding: calc(var(--lv-space-unit) * 8) calc(var(--lv-space-unit) * 6);
-        border-radius: var(--lv-r-m);
-        background: var(--lv-color-surface);
-        border: 1px solid var(--lv-border);
-        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
-        transition: transform var(--lv-dur-2) var(--lv-ease),
-            border-color var(--lv-dur-1) var(--lv-ease),
-            box-shadow var(--lv-dur-2) var(--lv-ease);
-
-        &:hover {
-            transform: translateY(-2px);
-            border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
-        }
-    }
-    .lv-ms-num {
-        font-size: var(--lv-type-metric-size);
-        line-height: var(--lv-lh-tight);
-        font-weight: var(--lv-fw-bold);
-        font-variant-numeric: tabular-nums;
-        color: var(--lv-color-data);
-        letter-spacing: -0.02em;
-    }
-    .lv-ms-label {
-        font-size: var(--lv-type-control-size);
-        color: var(--lv-color-text-muted);
-        margin-top: calc(var(--lv-space-unit) * 1);
-    }
-
     .lv-airow {
         align-items: center;
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-2) 0;
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         &:last-child { border-bottom: none; }
-        .lv-ai-rate { font-variant-numeric: tabular-nums; color: var(--lv-color-data); font-weight: var(--lv-fw-semibold); }
-        .lv-mini-track .lv-mini-fill { background: var(--lv-color-data); }
     }
 
     .lv-curve {
