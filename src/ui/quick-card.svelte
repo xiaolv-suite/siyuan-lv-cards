@@ -1,8 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
-    import { serializeQaCard, validateQaDraft } from "@/core/flashcard-quality";
-    import { checkMinimumInformationPrinciple } from "@/core/incremental-learning";
+    import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -63,8 +62,75 @@
     const clozeParts = $derived(q.split("____"));
     const hasClozeMarker = $derived(clozeParts.length > 1);
     const draftIssues = $derived(validateQaDraft(q, a));
-    const overloadNotice = $derived(checkMinimumInformationPrinciple(`${q} ${a}`));
+    const overloadNotice = $derived(inspectCardLearnability({ question: q, answer: a, template }));
+    let showSplitPreview = $state(false);
     const canSubmit = $derived(!busy && draftIssues.length === 0 && canCreateDeck && (template !== "cloze" || hasClozeMarker));
+
+    function serializeDraftByTemplate(draft: CardSplitDraft): string {
+        const question = draft.q.trim();
+        const answer = draft.a.trim();
+        if (template === "cloze" && question.includes("____")) {
+            return question.split("____").join(`==${answer}==`);
+        }
+        if (template === "superblock") {
+            return `{{{col\n${question}\n\n${answer}\n}}}`;
+        }
+        return serializeQaCard(question, answer);
+    }
+
+    async function confirmSplitCreate() {
+        if (busy || !canCreateDeck || overloadNotice.splitDrafts.length < 2) return;
+        busy = true;
+        errorMsg = "";
+        createdNotice = "";
+        try {
+            let deckID = selected;
+            let deckName = decks.find(d => d.id === deckID)?.name ?? "";
+            if (newName.trim()) {
+                const deck = await createRiffDeck(newName.trim());
+                deckID = deck.id;
+                deckName = deck.name;
+                decks = [...decks, deck];
+                selected = deckID;
+                newName = "";
+            }
+            if (!deckID) {
+                errorMsg = t.quickCardNeedDeck;
+                return;
+            }
+            const drafts = overloadNotice.splitDrafts;
+            let sharedDocID: string | undefined;
+            for (const draft of drafts) {
+                const res = await onCreate(
+                    serializeDraftByTemplate(draft),
+                    deckID,
+                    deckName,
+                    draft.q.trim(),
+                    draft.a.trim(),
+                    sharedDocID,
+                );
+                if (!sharedDocID && res && res.docID) {
+                    sharedDocID = res.docID;
+                }
+            }
+            if (disposed) return;
+            showSplitPreview = false;
+            if (embedded) {
+                q = "";
+                a = "";
+                isBidirectional = false;
+                previewAnswer = false;
+                createdNotice = (t.quickCardSplitDone ?? "已拆分为 ${n} 张原子卡并加入卡组").replace("${n}", String(drafts.length));
+            } else {
+                onClose();
+            }
+        } catch (e: any) {
+            if (disposed) return;
+            errorMsg = e?.message ?? String(e);
+        } finally {
+            if (!disposed) busy = false;
+        }
+    }
 
     function setTemplate(value: "qa" | "cloze" | "superblock") {
         template = value;
@@ -323,7 +389,43 @@
     </div>
     {#if overloadNotice.overloaded}
         <div class="lv-qc-overload-tip" role="status">
-            {overloadNotice.suggestion}
+            <div class="lv-qc-overload-main">
+                <div class="lv-qc-overload-badges">
+                    {#each overloadNotice.issues as issue (issue.kind)}
+                        <span class="lv-chip2 lv-chip2--warn" title={issue.detail}>{issue.label}</span>
+                    {/each}
+                </div>
+                <div>{overloadNotice.suggestion}</div>
+            </div>
+            {#if overloadNotice.splitDrafts.length >= 2}
+                <div class="lv-qc-split-actions">
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                        disabled={busy}
+                        onclick={() => (showSplitPreview = !showSplitPreview)}
+                    >
+                        <LvIcon name="eye" size={12} />
+                        <span>{showSplitPreview ? "收起拆卡预览" : `预览拆分（${overloadNotice.splitDrafts.length} 张）`}</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small lv-btn-primary lv-btn-tool"
+                        disabled={busy || !canCreateDeck}
+                        onclick={confirmSplitCreate}
+                    >
+                        <LvIcon name="zap" size={12} />
+                        <span>一键拆分为 {overloadNotice.splitDrafts.length} 张原子卡入组</span>
+                    </button>
+                </div>
+                {#if showSplitPreview}
+                    <ol class="lv-qc-split-list">
+                        {#each overloadNotice.splitDrafts as draft, idx (idx)}
+                            <li><strong>#{idx + 1} 问：</strong>{draft.q} <span class="ft__on-surface">→</span> <strong>答：</strong>{draft.a}</li>
+                        {/each}
+                    </ol>
+                {/if}
+            {/if}
         </div>
     {/if}
     {#if createdNotice}<div class="lv-qc-success" role="status" aria-live="polite">{createdNotice}</div>{/if}
@@ -368,8 +470,31 @@
         color: var(--lv-color-on-warning-soft);
         font-size: var(--lv-type-control-size);
         line-height: var(--lv-lh-meta);
-        max-width: 48em;
+        max-width: 56em;
         text-wrap: pretty;
+        display: flex;
+        flex-direction: column;
+        gap: var(--lv-sp-2);
+    }
+    .lv-qc-overload-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 4px;
+    }
+    .lv-qc-split-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-2);
+        align-items: center;
+    }
+    .lv-qc-split-list {
+        margin: 4px 0 0;
+        padding-left: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: var(--lv-type-meta-size);
     }
     .lv-qc-toolbar {
         display: flex;

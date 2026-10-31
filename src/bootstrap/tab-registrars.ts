@@ -17,7 +17,7 @@ import { findBySource, registerObject, toggleInstance, removeInstance, deriveIns
 import { capabilityShare } from "@/core/capability-types";
 import { errorReasonStats, type ErrorReason } from "@/core/error-reasons";
 import { ensureLifecycle, transition, lifecycleStats, type ContentState } from "@/core/content-lifecycle";
-import { versionsOf } from "@/core/content-versions";
+import { appendVersion, versionsOf } from "@/core/content-versions";
 import { bulkSetStatus, undoSelection, removeInboxItem, addInboxItem, type InboxStatus } from "@/core/inbox";
 import { scanAllMaintenanceCardIds } from "@/core/maintenance-scan";
 import { hasImageContent } from "@/core/flashcard-quality";
@@ -338,6 +338,9 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             try {
                                 const rows = await sqlQuery(`SELECT markdown FROM blocks WHERE id='${blockID.replace(/'/g, "''")}'`);
                                 const md = rows[0]?.markdown;
+                                if (typeof md === "string" && md.trim() && plugin.contentVersions && versionsOf(plugin.contentVersions, blockID).length === 0) {
+                                    plugin.contentVersions = appendVersion(plugin.contentVersions, blockID, md, Date.now(), "editor");
+                                }
                                 return typeof md === "string" ? md : null;
                             } catch {
                                 return null;
@@ -424,7 +427,7 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                         scan: async () => {
                             const hubSvc = deps.loadHubServices ? await deps.loadHubServices() : null;
                             const findDups = hubSvc?.findApproximateDuplicateCandidates ?? (() => []);
-                            const out: { blockID: string; md: string; memo?: string; state?: string; rootID?: string; occlusion?: boolean; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }[] = [];
+                            const out: { blockID: string; md: string; baselineMarkdown?: string; memo?: string; state?: string; rootID?: string; occlusion?: boolean; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }[] = [];
                             let error = "";
                             try {
                                 const scan = await scanAllMaintenanceCardIds((page, pageSize) => getRiffCards("", page, pageSize));

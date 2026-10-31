@@ -7,7 +7,7 @@
     import { lintAICards } from "@/core/ai-lint";
     import { maskSensitive, scanSensitive, type SensitiveHit } from "@/core/ai-sensitive";
     import { scoreBatch, type Scorecard } from "@/core/ai-quality-scorecard";
-    import { validateQaDraft } from "@/core/flashcard-quality";
+    import { proposeCardSplits, validateQaDraft } from "@/core/flashcard-quality";
     import { renderUnifiedCardFace } from "@/core/card-face";
     import { inspectAiCandidates, selectImportableAiCandidates, type AiCardGateIssue } from "@/core/ai-card-gate";
     import { planReview, type ReviewPlan } from "@/core/ai-review-strategy";
@@ -183,6 +183,32 @@
     let lintWarnings: string[][] = $derived.by(() => lintAICards(candidates.map(c => ({ q: c.q, a: c.a }))));
     /** BU-13 质量评分卡：随候选（含编辑）响应式重算；综合分仅审阅提示 */
     let scorecards: Scorecard[] = $derived(scoreBatch(candidates.map(c => ({ q: c.q, a: c.a, source }))));
+    let candidateSplits = $derived(candidates.map(c => proposeCardSplits({ question: c.q, answer: c.a, template: cardType })));
+
+    function splitCandidate(i: number) {
+        if (creating || regenBusy !== null || !candidates[i]) return;
+        const splits = candidateSplits[i];
+        if (!splits || splits.length < 2) return;
+        recordUserVersion(i);
+        const base = candidates[i];
+        let nextOrig = candidates.reduce((m, item) => Math.max(m, item.origIndex), 0);
+        const expanded = splits.map((draft, idx) => ({
+            q: draft.q,
+            a: draft.a,
+            d: base.d,
+            keep: base.keep,
+            origIndex: idx === 0 ? base.origIndex : ++nextOrig,
+            review: "pending" as const,
+            edited: true,
+        }));
+        const baseProv = provOf(i);
+        const expandedProv: CardProvenance[] = expanded.map((item, idx) =>
+            idx === 0 ? baseProv : { index: item.origIndex, versions: [{ at: Date.now(), via: "user", q: item.q, a: item.a }] },
+        );
+        candidates = [...candidates.slice(0, i), ...expanded, ...candidates.slice(i + 1)];
+        prov = [...candidates.slice(0, i).map((_, idx) => provOf(idx)), ...expandedProv, ...candidates.slice(i + 1).map((_, idx) => provOf(i + 1 + idx))];
+        errorMsg = "";
+    }
     /** BU-14 审阅计划：按因子就高不就低（模型登记/来源可信/批量均分/问题卡占比） */
     let reviewPlan: ReviewPlan | null = $derived.by(() => {
         if (candidates.length === 0) {
@@ -1035,10 +1061,28 @@
                         </label>
                         <textarea class="b3-text-field fn__block" rows="2" bind:value={c.q} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardQ} aria-label={t.quickCardQ} spellcheck="false"></textarea>
                         <textarea class="b3-text-field fn__block" rows="2" bind:value={c.a} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardA} aria-label={t.quickCardA} spellcheck="false"></textarea>
-                        <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 3); margin-top: 6px">
+                        {#if scorecards[i]?.assertionReport && scorecards[i].assertionReport.unsupportedCount > 0}
+                            {@const unsupportedList = scorecards[i].assertionReport.assertions.filter(a => a.status === "unsupported").map(a => a.text)}
+                            <div class="ft__smaller" style="margin-top: 4px; padding: 4px 8px; border-radius: 4px; background: var(--lv-warn-soft); color: var(--lv-color-on-warning-soft); line-height: 1.5;" role="status">
+                                ⚠️ 答案中有 {scorecards[i].assertionReport.unsupportedCount} 处表述在来源材料中未找到直接依据{#if unsupportedList.length > 0}：「{unsupportedList.slice(0, 2).join("；")}」{/if}，建议对照来源核实或修改。
+                            </div>
+                        {/if}
+                        <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 3); margin-top: 6px; flex-wrap: wrap;">
                             <button class="b3-button b3-button--small {c.review === 'accepted' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null || draftIssues[i].length > 0 || gateIssues[i].length > 0} onclick={() => setReview(i, "accepted")}>{c.review === "accepted" ? t.aiWizard.reviewAccepted : t.aiWizard.acceptVer}</button>
                             <button class="b3-button b3-button--small {c.review === 'verified' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "verified")}>{t.aiWizard.markVerified}</button>
                             <button class="b3-button b3-button--small {c.review === 'needsCheck' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "needsCheck")}>{t.aiWizard.markNeedsCheck}</button>
+                            {#if (candidateSplits[i]?.length ?? 0) >= 2}
+                                <button
+                                    type="button"
+                                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                                    disabled={creating || regenBusy !== null}
+                                    title="将复合问答一键拆分为多张独立原子候选卡"
+                                    onclick={() => splitCandidate(i)}
+                                >
+                                    <LvIcon name="zap" size={12} />
+                                    <span>拆成 {candidateSplits[i].length} 张</span>
+                                </button>
+                            {/if}
                             <div class="fn__flex-1"></div>
                             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
                         </div>

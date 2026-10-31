@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.223.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.224.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -15,18 +15,25 @@ Knowledge workers and students often struggle with three universal learning pain
 
 Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间隔重复 (Free Spaced Repetition Scheduler)** as the single source of truth. It establishes a complete, closed-loop learning journey: from ambient reading material capture and atomic authoring, to multi-sensory active recall testing, leech card quarantine, and loss-free cross-platform export.
 
+### ✨ Three Things Native SiYuan Flashcards Do Not Have
+
+1. **Pre-Entry Learnability Guard & 1-Click Atomic Splitting**: Across Quick Card, Marker Cards, and AI Candidate Review, the plugin flags overlong prompts/answers, multi-question prompts, ambiguous pronouns, answer leaks, and ungrounded AI answers—offering **1-click splitting into independent atomic cards** before bad cards pollute your deck.
+2. **Source-Change Detection & Versioned Card Repair Loop**: Enrolling a card records its source fingerprint and baseline Markdown. When the original note block is edited, moved, or deleted, Maintenance displays a side-by-side diff (`Baseline vs. Current`) with in-place repair, automatic version snapshots, and 1-click rollback to any historical version.
+3. **Block-Level Context Tracing & Open Data Portability**: Review cards carry interactive source breadcrumbs and a slide-out surrounding-block context drawer (`C`), 4-level progressive hints (`H`), leech quarantine, and lossless interoperability with Anki (`.apkg`), Obsidian SR, and `.lvcards` share bundles.
+
 ---
 
 ## 🆕 What's New
 
-### v0.223.0 (Latest)
-* **Relocated Hub sub-navigation by task**: Moved Maintenance under Library, Material Inbox under Studio, and Recovery into Today's action section—leaving Learning focused purely on Goals/Recap and Exam Sprints while keeping all legacy route IDs compatible.
-* **Slimmed Today deep-stats & promoted deck actions**: Placed deck rename, `.lvcards` share export, and delete directly on first-screen deck rows; trimmed duplicate deck/forecast tables from folded deep-stats to keep only Heatmap, Calendar, Retention, Leeches, and Error Reasons.
-* **Refined Onboarding & topbar landing**: Moved persona selection cards to the top of Onboarding Step 1, clarified QA card copy, and ensured clicking the topbar icon always lands cleanly on Today—completing Stage B (Usability).
+### v0.224.0 (Latest)
+* **Pre-Entry Learnability Guard & 1-Click Card Splitting (C1)**: Added soft learnability checks (multi-question, overlong content/answer, ambiguous pronoun, answer leak, excessive clozes) across Quick Card, Marker Cards, and AI Candidate Review, with 1-click atomic card splitting and inline ungrounded-assertion hints.
+* **Source-Change Side-by-Side Diff & Repair Loop (C2)**: Recorded baseline Markdown on card enrollment (including block/slash menu deck picker); Maintenance now shows side-by-side `Baseline vs. Current` diffs with in-place repair, automatically recording version history and resolving source-change alerts upon repair.
+* **1-Click Historical Version Restore in Card Detail**: Preserves the initial pre-edit markdown on first edit and adds a "Restore this version" action in the Card Detail version history list.
 
 <details>
-<summary>📜 View Historical Releases (v0.222.0 ~ v0.210.0)</summary>
+<summary>📜 View Historical Releases (v0.223.0 ~ v0.210.0)</summary>
 
+* **v0.223.0**: Relocated Hub sub-navigation by task, slimmed Today deep-stats, promoted deck actions to first screen, and fixed Onboarding Step 1 & topbar landing.
 * **v0.222.0**: Streamlined review toolbar to 5 core buttons, unified Session Preferences and the 3-way Remove from Review modal, fixed cloze focus hijack, and kept the rating bar above the fold at 1024px and 150% zoom.
 * **v0.221.0**: Fixed SuperBlock QA authoring & Maintenance false positives; archived 42 unreachable experimental core modules and aligned bilingual docs.
 * **v0.220.0**: Fixed second-card "document path is ambiguous" errors, onboarding sample-card empty false positives, image-occlusion target/opacity/edit-readback bugs, review settings forwarding, scoped custom card CSS, timed-challenge answer masking, version-acceptance refresh, and `.lvcards` conflict strategy selection.

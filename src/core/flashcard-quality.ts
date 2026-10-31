@@ -198,5 +198,11 @@ export function hasImageContent(markdown: string): boolean {
 
 export {
     checkMinimumInformationPrinciple,
+    inspectCardLearnability,
+    proposeCardSplits,
     type OverloadInspection,
+    type LearnabilityInspection,
+    type LearnabilityIssue,
+    type LearnabilityIssueKind,
+    type CardSplitDraft,
 } from "./incremental-learning";

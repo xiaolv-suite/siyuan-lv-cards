@@ -9,6 +9,7 @@
     import LvError from "./kit/LvError.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
     import { groupDebts, detectDebts, DEBT_KINDS, type DebtItem, type DebtKind } from "@/core/maintenance-queue";
+    import { diffLines } from "@/core/line-diff";
     import type { SourceHealthHistoryItem } from "@/core/source-health-store";
     import MisconceptionPanel from "./misconception-panel.svelte";
     import type { MisconceptionCluster } from "@/core/misconception-cluster";
@@ -21,7 +22,7 @@
         i18n: any;
         maintenance: {
             scan: () => Promise<{
-                items: { blockID: string; md: string; memo?: string; state?: string; rootID?: string; occlusion?: boolean; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }[];
+                items: { blockID: string; md: string; baselineMarkdown?: string; memo?: string; state?: string; rootID?: string; occlusion?: boolean; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }[];
                 sourceHealthHistory?: SourceHealthHistoryItem[];
                 approximateDuplicates?: { blockIDs: [string, string]; similarity: number; method: "containment" | "ngram" }[];
                 error?: string;
@@ -59,7 +60,7 @@
     let errorMsg = $state("");
     let groups = $state<Record<DebtKind, DebtItem[]>>(groupDebts([]));
     let excerpts = $state<Map<string, string>>(new Map());
-    let cardMap = $state<Map<string, { md: string; rootID?: string; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }>>(new Map());
+    let cardMap = $state<Map<string, { md: string; baselineMarkdown?: string; memo?: string; rootID?: string; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }>>(new Map());
     let sourceHistories = $state<SourceHealthHistoryItem[]>([]);
     let historyExpanded = $state(false);
     let historyLimits = $state<Record<string, number>>({});
@@ -102,7 +103,7 @@
     let repairPreview = $state<RepairPreview | null>(null);
     let repairBusy = $state(false);
     let repairError = $state("");
-    const repairableKinds = new Set<DebtKind>(["invalidCard", "leak", "tooLong"]);
+    const repairableKinds = new Set<DebtKind>(["invalidCard", "leak", "tooLong", "sourceHealth"]);
     const repairText = (key: string, fallback: string): string => t[key] ?? fallback;
 
     function healthKindLabel(kind: string): string {
@@ -178,10 +179,10 @@
         return similarDecisions[similarPairKey(candidate.blockIDs)];
     }
 
-    function addRepairDraft(blockID: string) {
+    function addRepairDraft(blockID: string, initialMd?: string) {
         const card = cardMap.get(blockID);
-        if (!card || Object.prototype.hasOwnProperty.call(repairDrafts, blockID)) return;
-        repairDrafts = { ...repairDrafts, [blockID]: card.md };
+        if (!card) return;
+        repairDrafts = { ...repairDrafts, [blockID]: initialMd ?? card.md };
         repairPreview = null;
         repairError = "";
     }
@@ -274,7 +275,7 @@
             const scannedCards = result.items;
             groups = groupDebts(detectDebts(scannedCards));
             excerpts = new Map(scannedCards.map(c => [c.blockID, excerpt(c.md)]));
-            cardMap = new Map(scannedCards.map(c => [c.blockID, { md: c.md, memo: (c as any).memo, rootID: c.rootID, mediaRefs: c.mediaRefs, mediaBroken: c.mediaBroken, mediaUnknown: c.mediaUnknown, sourceHealthIssues: c.sourceHealthIssues }]));
+            cardMap = new Map(scannedCards.map(c => [c.blockID, { md: c.md, baselineMarkdown: c.baselineMarkdown, memo: (c as any).memo, rootID: c.rootID, mediaRefs: c.mediaRefs, mediaBroken: c.mediaBroken, mediaUnknown: c.mediaUnknown, sourceHealthIssues: c.sourceHealthIssues }]));
             sourceHistories = [...(result.sourceHealthHistory ?? [])].sort((left, right) => lastHealthEvent(right) - lastHealthEvent(left));
             approximateDuplicates = result.approximateDuplicates ?? [];
             suspended = new Set(scannedCards.filter(c => maintenance.isSuspendedToday(c.blockID)).map(c => c.blockID));
@@ -592,11 +593,46 @@
                             <div class="lv-maint-main">
                                 <div class="lv-maint-excerpt">{excerpts.get(d.blockID) || d.blockID}</div>
                                 {#if kind === "sourceHealth"}
+                                    {@const healthCard = cardMap.get(d.blockID)}
                                     <ul class="lv-maint-health-issues ft__smaller ft__on-surface">
-                                        {#each cardMap.get(d.blockID)?.sourceHealthIssues ?? [] as issue (issue.kind)}
-                                            <li>{healthKindLabel(issue.kind)}: {issue.detail}</li>
+                                        {#each healthCard?.sourceHealthIssues ?? [] as issue (issue.kind)}
+                                            <li>{healthKindLabel(issue.kind)}: {issue.kind === "changed" && healthCard?.baselineMarkdown ? "原块内容已变更（可展开下方并排对比或直接修卡）" : issue.detail}</li>
                                         {/each}
                                     </ul>
+                                    {#if healthCard?.baselineMarkdown && healthCard.baselineMarkdown !== healthCard.md}
+                                        <div class="lv-maint-source-diff" role="group" aria-label="来源变更并排对比">
+                                            <div class="lv-maint-similar-cards">
+                                                <article class="lv-maint-similar-card">
+                                                    <header class="lv-maint-similar-card-head">
+                                                        <strong>变更前基线</strong>
+                                                    </header>
+                                                    <pre class="lv-maint-similar-face">{healthCard.baselineMarkdown}</pre>
+                                                </article>
+                                                <article class="lv-maint-similar-card">
+                                                    <header class="lv-maint-similar-card-head">
+                                                        <strong>当前来源内容</strong>
+                                                    </header>
+                                                    <pre class="lv-maint-similar-face">{healthCard.md}</pre>
+                                                </article>
+                                            </div>
+                                            <div class="lv-maint-inline-diff">
+                                                {#each diffLines(healthCard.baselineMarkdown, healthCard.md) as row, ri (ri)}
+                                                    <div class="lv-maint-diff-line lv-maint-diff-{row.kind}">{row.kind === "add" ? "+ " : row.kind === "del" ? "− " : "  "}{row.text}</div>
+                                                {/each}
+                                            </div>
+                                            <div class="lv-maint-repair-actions" style="margin-top: 6px;">
+                                                <button
+                                                    type="button"
+                                                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                                                    disabled={repairBusy}
+                                                    onclick={() => addRepairDraft(d.blockID, healthCard.baselineMarkdown)}
+                                                >
+                                                    <LvIcon name="refresh" size={12} />
+                                                    <span>用基线原文恢复草稿</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {/if}
                                 {:else if d.detail}<div class="ft__smaller ft__on-surface">{kind === "invalidCard" ? (t.qualityReasons?.[d.detail] ?? d.detail) : d.detail}</div>{/if}
                                 {#if cardMap.has(d.blockID)}
                                     {@const card = cardMap.get(d.blockID)!}
@@ -839,6 +875,20 @@
     .lv-maint-preview-face { margin-top: var(--lv-sp-1); padding: var(--lv-sp-2); border-radius: var(--lv-r-m); background: var(--lv-color-surface); white-space: pre-wrap; overflow-wrap: anywhere; max-width: 48em; text-wrap: pretty; }
     .lv-maint-media-broken { color: var(--lv-color-danger); overflow-wrap: anywhere; }
     .lv-maint-health-issues { margin: var(--lv-sp-1) 0 0; padding-left: var(--lv-sp-4); overflow-wrap: anywhere; }
+    .lv-maint-source-diff { margin-top: var(--lv-sp-2); display: flex; flex-direction: column; gap: var(--lv-sp-2); }
+    .lv-maint-inline-diff {
+        padding: var(--lv-sp-2);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-s);
+        background: var(--lv-color-canvas);
+        font-family: var(--b3-font-family-code, monospace);
+        font-size: var(--lv-type-caption-size);
+        max-height: 160px;
+        overflow: auto;
+        white-space: pre-wrap;
+    }
+    .lv-maint-diff-add { color: var(--lv-color-success); background: color-mix(in srgb, var(--lv-color-success) 10%, transparent); }
+    .lv-maint-diff-del { color: var(--lv-color-danger); background: color-mix(in srgb, var(--lv-color-danger) 10%, transparent); text-decoration: line-through; }
     .lv-maint-health-history { margin-bottom: var(--lv-sp-4); padding: var(--lv-sp-3); }
     .lv-maint-health-history summary { cursor: pointer; color: var(--lv-color-brand); font-size: var(--lv-type-caption-size); }
     .lv-maint-health-source { padding: var(--lv-sp-2) 0; border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }

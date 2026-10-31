@@ -45,7 +45,7 @@ import { rollDateIfNeeded, type SuspendTodayData } from "./core/suspend-today";
 import { createSuspendTodayMutations } from "./core/suspend-today-persistence";
 import { createSnapshotMutationQueue } from "./core/snapshot-mutation-queue";
 import { normalizeLedger, type LedgerEntry } from "./core/import-ledgers";
-import { acceptVersion, appendVersion, emptyContentVersions } from "./core/content-versions";
+import { acceptVersion, appendVersion, emptyContentVersions, versionsOf } from "./core/content-versions";
 import { assembleGeneratePrompt } from "./core/ai-pipeline";
 import { checkEligibility } from "./core/ai-eligibility";
 import { disableTarget, emptyKillSwitch, enableTarget, grantConsent, killSwitchBlock, normalizeKillSwitch, revokeConsent, type AIKillSwitchData } from "./core/ai-kill-switch";
@@ -130,6 +130,7 @@ import {
     acknowledgeSourceHealth as acknowledgeSourceHealthStore,
     emptySourceHealth,
     reconcileSourceHealth,
+    sourceBaselineMarkdown,
     upsertSourceFingerprint,
     type SourceHealthData,
 } from "./core/source-health-store";
@@ -606,19 +607,25 @@ export default class LvCardsPlugin extends Plugin {
             rootID: String(root ?? ""),
             contentHash: fnv1a(content),
             mediaRefs: extractMediaRefs(content).map(ref => ref.normalized),
+            ...(content ? { baselineMarkdown: content } : {}),
         };
         try {
             await this.sourceHealthMutations(next => {
                 const updated = upsertSourceFingerprint(next, fingerprint);
                 next.entries = updated.entries;
             });
+            if (content.trim() && versionsOf(this.contentVersions, blockID).length === 0) {
+                const nextVersions = appendVersion(this.contentVersions, blockID, content, Date.now(), "editor");
+                this.contentVersions = nextVersions;
+                void this.persist.save(CONTENT_VERSIONS_DATA, nextVersions).catch(() => {});
+            }
         } catch (error) {
             lvLog("warn", `[source-health] fingerprint save failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
     async reconcileSourceHealthForScan(
-        cards: Array<{ blockID: string; md: string; rootID?: string; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }>,
+        cards: Array<{ blockID: string; md: string; baselineMarkdown?: string; rootID?: string; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }>,
     ): Promise<void> {
         const mediaByCard = new Map(cards.map(card => {
             const present: Record<string, boolean> = {};
@@ -631,6 +638,9 @@ export default class LvCardsPlugin extends Plugin {
         try {
             await this.sourceHealthMutations(next => {
                 for (const card of cards) {
+                    const vers = versionsOf(this.contentVersions, card.blockID);
+                    const baselineMd = sourceBaselineMarkdown(next, card.blockID)
+                        ?? vers[vers.length - 1]?.md;
                     const current: SourceCurrentFacts | null = card.exists === false ? null : {
                         rootID: String(card.rootID ?? ""),
                         contentHash: fnv1a(card.md),
@@ -639,6 +649,9 @@ export default class LvCardsPlugin extends Plugin {
                     const result = reconcileSourceHealth(next, card.blockID, current);
                     next.entries = result.data.entries;
                     card.sourceHealthIssues = result.issues.map(issue => ({ kind: issue.kind, detail: issue.detail }));
+                    if (baselineMd && baselineMd !== card.md) {
+                        card.baselineMarkdown = baselineMd;
+                    }
                 }
             });
         } catch (error) {
@@ -674,6 +687,7 @@ export default class LvCardsPlugin extends Plugin {
             rootID: String(row.root_id ?? ""),
             contentHash: fnv1a(markdown),
             mediaRefs,
+            ...(markdown ? { baselineMarkdown: markdown } : {}),
         };
         await this.sourceHealthMutations(next => {
             const updated = acknowledgeSourceHealthStore(next, fingerprint, Date.now(), {
@@ -722,7 +736,7 @@ export default class LvCardsPlugin extends Plugin {
             // Recovery must accept legacy invalid content or a failed batch stays half applied.
             const restoring = recovery?.blockID === blockID && recovery.markdown === md;
             const riff = restoring ? null : await getRiffCardsByBlockIDs([blockID]);
-            if (riff?.blocks?.some(block => block.id === blockID)) {
+            if (!restoring && (!riff?.blocks || riff.blocks.length === 0 || riff.blocks.some(block => block.id === blockID))) {
                 const decision = validateCardEntry({
                     blockID,
                     markdown: md,
@@ -738,11 +752,34 @@ export default class LvCardsPlugin extends Plugin {
                     return ((this.i18n.editor as any)[errorKey] ?? (this.i18n.editor as any).qualityInvalidMarkup) as string;
                 }
             }
+            let baseVersions = this.contentVersions;
+            if (!restoring && this.sourceHealth && versionsOf(baseVersions, blockID).length === 0) {
+                const prevMd = sourceBaselineMarkdown(this.sourceHealth, blockID);
+                if (prevMd && prevMd.trim() && prevMd !== md) {
+                    baseVersions = appendVersion(baseVersions, blockID, prevMd, Date.now() - 1, "editor");
+                }
+            }
             await updateBlock("markdown", md, blockID);
-            const next = appendVersion(this.contentVersions, blockID, md, Date.now(), "editor");
+            const next = appendVersion(baseVersions, blockID, md, Date.now(), "editor");
             await this.persist.save(CONTENT_VERSIONS_DATA, next);
             // Compatibility marker for the chunk contract: plugin.contentVersions = appendVersion(plugin.contentVersions, md, ...); plugin.persist.save(CONTENT_VERSIONS_DATA, plugin.contentVersions)
             this.contentVersions = next;
+            if (this.sourceHealth?.entries?.some(e => e.fingerprint.blockID === blockID) && typeof this.sourceHealthMutations === "function") {
+                try {
+                    const existingFp = this.sourceHealth.entries.find(e => e.fingerprint.blockID === blockID)!.fingerprint;
+                    await this.sourceHealthMutations(state => {
+                        const updated = acknowledgeSourceHealthStore(state, {
+                            ...existingFp,
+                            contentHash: fnv1a(md),
+                            mediaRefs: extractMediaRefs(md).map(ref => ref.normalized),
+                            baselineMarkdown: md,
+                        }, Date.now());
+                        state.entries = updated.entries;
+                    });
+                } catch {
+                    // 来源健康基线同步为旁路收口，不回滚已成功的块更新
+                }
+            }
             return true;
         });
         this.contentVersionQueue = operation.then(() => undefined, () => undefined);
@@ -1291,6 +1328,7 @@ export default class LvCardsPlugin extends Plugin {
                     if (!opts.skipAdd) {
                         try {
                             await addRiffCards(deckID, blockIDs);
+                            await Promise.all(blockIDs.map(id => this.rememberSourceFingerprint(id)));
                         } catch (error) {
                             showMessage(formatRiffCardEntryError(error, this.i18n), 3000, "error");
                             return false;
@@ -1535,6 +1573,7 @@ export default class LvCardsPlugin extends Plugin {
         });
         await this.rememberSourceFingerprint(created.blockID, created.docID, markdown);
         showMessage(this.i18n.quickCardDone, 2000, "info");
+        return created;
     }
 
     private async createQuickCardView(embedded = false) {

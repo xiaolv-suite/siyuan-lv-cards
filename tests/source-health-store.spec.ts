@@ -4,6 +4,7 @@ import {
     acknowledgeSourceHealth,
     normalizeSourceHealth,
     reconcileSourceHealth,
+    sourceBaselineMarkdown,
     sourceHealthHistories,
     sourceHealthHistory,
     sourceHealthIssues,
@@ -204,5 +205,21 @@ describe("source-health-store", () => {
             { blockID: "b1", records: [{ at: 100, kind: "deleted", resolved: false, detail: "b1" }] },
             { blockID: "removed-card", records: [{ at: 200, kind: "deleted", resolved: false, detail: "removed-card" }] },
         ]);
+    });
+
+    it("preserves baselineMarkdown across normalization and acknowledgement for C2 source diffing", () => {
+        let data = upsertSourceFingerprint(emptySourceHealth(), {
+            ...fingerprint,
+            baselineMarkdown: "细胞呼吸的主要场所是 ==线粒体==",
+        });
+        const normalized = normalizeSourceHealth(JSON.parse(JSON.stringify(data)));
+        expect(sourceBaselineMarkdown(normalized, "b1")).toBe("细胞呼吸的主要场所是 ==线粒体==");
+
+        const acknowledged = acknowledgeSourceHealth(normalized, {
+            ...fingerprint,
+            contentHash: "h2",
+            baselineMarkdown: "有氧呼吸的主要场所是 ==线粒体==",
+        }, 500);
+        expect(sourceBaselineMarkdown(acknowledged, "b1")).toBe("有氧呼吸的主要场所是 ==线粒体==");
     });
 });

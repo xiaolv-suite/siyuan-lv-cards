@@ -8,8 +8,10 @@ import {
     buildExtractCard,
     checkMinimumInformationPrinciple,
     filterDismissedFromQueue,
+    inspectCardLearnability,
     isDismissedCard,
     isExtractCard,
+    proposeCardSplits,
     shouldBypassFsrs,
 } from "@/core/incremental-learning";
 import { buildCardsBridge } from "@/api/external-bridge";
@@ -110,6 +112,48 @@ describe("渐进学习与两级调度解耦 (Incremental Learning - Issue #19)",
             expect(res.overloaded).toBe(true);
             expect(res.clozeCount).toBe(4);
             expect(res.suggestion).toContain("挖空过多");
+        });
+
+        it("C1 可学性把关：识别单卡多问、指代不明、答案泄漏、答案过长，且不误杀含分号的代码/公式卡", () => {
+            // 1. 单卡多问 + 一键拆卡草案
+            const multi = inspectCardLearnability({
+                question: "什么是有丝分裂？什么是减数分裂？",
+                answer: "有丝分裂产生体细胞；减数分裂产生生殖细胞",
+                template: "qa",
+            });
+            expect(multi.overloaded).toBe(true);
+            expect(multi.issues.map(i => i.kind)).toContain("multi-question");
+            expect(multi.splitDrafts).toEqual([
+                { q: "什么是有丝分裂？", a: "有丝分裂产生体细胞" },
+                { q: "什么是减数分裂？", a: "减数分裂产生生殖细胞" },
+            ]);
+
+            // 2. 指代不明 + 答案泄漏
+            const leakAndAmb = inspectCardLearnability({
+                question: "它的核心作用是建立可靠连接吗？",
+                answer: "建立可靠连接",
+                template: "qa",
+            });
+            expect(leakAndAmb.issues.map(i => i.kind)).toContain("ambiguous-pronoun");
+            expect(leakAndAmb.issues.map(i => i.kind)).toContain("answer-leak");
+
+            // 3. 保护含分号的代码与公式，不误报单卡多问
+            const codeCard = inspectCardLearnability({
+                question: "执行 `const a = 1; const b = 2;` 后 `a + b` 的值是多少？",
+                answer: "3",
+                template: "qa",
+            });
+            expect(codeCard.overloaded).toBe(false);
+            expect(codeCard.issues).toEqual([]);
+
+            // 4. 多处 ==挖空== 自动生成按空位独立的拆卡草案
+            const multiClozeSplits = proposeCardSplits({
+                question: "在 ==1911年==，==卢瑟福== 提出了核式结构模型。",
+            });
+            expect(multiClozeSplits).toEqual([
+                { q: "在 ==1911年==，卢瑟福 提出了核式结构模型。", a: "1911年" },
+                { q: "在 1911年，==卢瑟福== 提出了核式结构模型。", a: "卢瑟福" },
+            ]);
         });
     });
 

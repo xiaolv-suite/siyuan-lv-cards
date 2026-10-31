@@ -206,4 +206,28 @@ describe("card detail preview loading", () => {
         expect(screen.getByText("4s")).toBeTruthy();
         expect(screen.getByText("9s")).toBeTruthy();
     });
+
+    it("restores an older content version and refreshes the card preview", async () => {
+        getBlockDOM.mockResolvedValueOnce("<p>Current V2</p>").mockResolvedValueOnce("<p>Restored V1</p>");
+        const save = vi.fn().mockResolvedValue(true);
+        const onSaved = vi.fn();
+        render(CardDetail, {
+            ...props("card-a", "Current V2"),
+            editorCtx: { load: async () => "Current V2", save },
+            onSaved,
+            versions: [
+                { md: "Current V2 ==A2==", at: 2000, via: "editor" },
+                { md: "Initial V1 ==A1==", at: 1000, via: "editor" },
+            ],
+        });
+
+        await screen.findByText("Current V2");
+        await fireEvent.click(screen.getByRole("button", { name: "History ▾" }));
+        const restoreBtn = await screen.findByRole("button", { name: "恢复此版本" });
+        await fireEvent.click(restoreBtn);
+
+        await waitFor(() => expect(save).toHaveBeenCalledWith("Initial V1 ==A1=="));
+        await waitFor(() => expect(onSaved).toHaveBeenCalledWith("card-a"));
+        expect(await screen.findByText("Restored V1")).toBeTruthy();
+    });
 });

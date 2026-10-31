@@ -100,4 +100,23 @@ describe("marker cards preview modal", () => {
 
         expect(screen.getByText("当前文档没有找到可制卡的标记内容")).toBeTruthy();
     });
+
+    it("surfaces learnability warning badges and supports picking only clean items", async () => {
+        const itemsWithWarning: MarkerItem[] = [
+            { blockID: "b-clean", kind: "qa", front: "TCP 的全称是什么？", back: "传输控制协议" },
+            { blockID: "b-multi", kind: "qa", front: "什么是 TCP？什么是 UDP？", back: "传输层协议" },
+        ];
+        const props = baseProps({ items: itemsWithWarning });
+        render(MarkerCards, props);
+
+        expect(screen.getByText("1 条可学性提醒")).toBeTruthy();
+        expect(screen.getByText("单卡多问")).toBeTruthy();
+
+        const pickCleanBtn = screen.getByRole("button", { name: "只选良构项" });
+        await fireEvent.click(pickCleanBtn);
+
+        const confirmBtn = screen.getByRole("button", { name: /确认制卡 \(1\)/ });
+        await fireEvent.click(confirmBtn);
+        expect(props.onCreate).toHaveBeenCalledWith([itemsWithWarning[0]]);
+    });
 });

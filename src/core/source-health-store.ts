@@ -90,6 +90,9 @@ export function normalizeSourceHealth(raw: unknown): SourceHealthData {
             contentHash: entry.fingerprint.contentHash,
             mediaRefs: [...new Set(entry.fingerprint.mediaRefs)],
             ...(typeof entry.fingerprint.license === "string" ? { license: entry.fingerprint.license } : {}),
+            ...(typeof entry.fingerprint.baselineMarkdown === "string" && entry.fingerprint.baselineMarkdown
+                ? { baselineMarkdown: entry.fingerprint.baselineMarkdown }
+                : {}),
         };
         byBlock.set(fingerprint.blockID, { fingerprint, history: validHistory(entry.history) });
     }
@@ -186,6 +189,12 @@ export function sourceHealthIssues(data: SourceHealthData, blockID: string): Sou
 export function sourceHealthHistory(data: SourceHealthData, blockID: string): SourceHealthRecord[] {
     const entry = data.entries.find(item => item.fingerprint.blockID === blockID);
     return entry ? entry.history.map(item => ({ ...item })) : [];
+}
+
+/** Return the recorded baseline markdown for a block if available. */
+export function sourceBaselineMarkdown(data: SourceHealthData, blockID: string): string | undefined {
+    const entry = data.entries.find(item => item.fingerprint.blockID === blockID);
+    return entry?.fingerprint.baselineMarkdown;
 }
 
 /** All persisted histories, including sources that no longer belong to a card group. */

@@ -18,6 +18,8 @@ export interface SourceFingerprint {
     /** 媒体引用键列表（如 assets/xxx.png） */
     mediaRefs: string[];
     license?: string;
+    /** 建卡或上次确认基线时的原始 Markdown（可选，供维护页并排高亮对比来源变更） */
+    baselineMarkdown?: string;
 }
 
 /** 当前事实（null = 查无此块，按已删除处理） */

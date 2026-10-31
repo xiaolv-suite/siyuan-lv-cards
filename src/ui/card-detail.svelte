@@ -73,6 +73,8 @@
     let koRegisterError = $state("");
     let acceptBusyAt = $state<number | null>(null);
     let acceptError = $state("");
+    let restoreBusyAt = $state<number | null>(null);
+    let restoreError = $state("");
 
     async function handleAcceptVersion(at: number) {
         if (!acceptVersion || acceptBusyAt !== null) return;
@@ -86,6 +88,28 @@
                 : (t.detail?.acceptFailed ?? "版本核对保存失败，请重试。");
         } finally {
             acceptBusyAt = null;
+        }
+    }
+
+    async function restoreVersionToCard(at: number, versionMd: string) {
+        if (!editorCtx || restoreBusyAt !== null) return;
+        restoreBusyAt = at;
+        restoreError = "";
+        try {
+            const ok = await saveEdit(versionMd);
+            if (typeof ok === "string") {
+                restoreError = ok;
+            } else if (ok !== true) {
+                restoreError = t.editor?.saveFail ?? "恢复历史版本失败，请重试。";
+            } else {
+                diffAt = null;
+            }
+        } catch (error) {
+            restoreError = error instanceof Error && error.message
+                ? error.message
+                : (t.editor?.saveFail ?? "恢复历史版本失败，请重试。");
+        } finally {
+            restoreBusyAt = null;
         }
     }
     async function compareWithCurrent(at: number, versionMd: string) {
@@ -162,6 +186,10 @@
         editorLoadFail = false;
         koRegisterBusy = false;
         koRegisterError = "";
+        acceptBusyAt = null;
+        acceptError = "";
+        restoreBusyAt = null;
+        restoreError = "";
         void loadPreview(blockID);
         return () => {
             // 使卸载或切换前发出的请求失效，晚到的响应不能覆盖当前块。
@@ -314,10 +342,13 @@
                 {#if acceptError}
                     <div class="lv-detail-preview-error" role="alert" aria-live="assertive">{acceptError}</div>
                 {/if}
+                {#if restoreError}
+                    <div class="lv-detail-preview-error" role="alert" aria-live="assertive">{restoreError}</div>
+                {/if}
                 <div class="lv-ver-list">
                     {#each versions as v (v.at)}
                         <div class="lv-ver-row">
-                            <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 2); align-items: center">
+                            <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 2); align-items: center; flex-wrap: wrap;">
                                 <button class="b3-button b3-button--small" onclick={() => (verOpenAt = verOpenAt === v.at ? null : v.at)}>
                                     {new Date(v.at).toLocaleString()} · {v.via === "ai" ? t.detail.viaAI : t.detail.viaEditor}
                                 </button>
@@ -341,6 +372,17 @@
                                     <LvIcon name="swap" size={12} />
                                     <span>{t.detail.diffCompare}</span>
                                 </button>
+                                {#if editorCtx}
+                                    <button
+                                        class="b3-button b3-button--small lv-btn-tool"
+                                        disabled={restoreBusyAt !== null || diffBusy}
+                                        aria-busy={restoreBusyAt === v.at}
+                                        onclick={() => void restoreVersionToCard(v.at, v.md)}
+                                    >
+                                        <LvIcon name="refresh" size={12} />
+                                        <span>{t.detail?.restoreVer ?? "恢复此版本"}</span>
+                                    </button>
+                                {/if}
                             </div>
                             {#if verOpenAt === v.at}
                                 <div class="ft__smaller" style="white-space: pre-wrap; max-height: 160px; overflow: auto; margin-top: 4px; padding: calc(var(--lv-space-unit) * 4); border: 1px solid var(--lv-border); border-radius: var(--lv-r-compact)">{v.md}</div>

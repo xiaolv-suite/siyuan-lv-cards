@@ -706,7 +706,14 @@
         let cancelled = false;
         void (async () => {
             try {
-                const target = (await getRiffCardsByBlockIDs([targetID])).blocks?.find(b => b.id === targetID);
+                let target = (await getRiffCardsByBlockIDs([targetID])).blocks?.find(b => b.id === targetID)
+                    ?? blocks.find(b => b.id === targetID);
+                if (!target && ctx.blockContent) {
+                    const md = await ctx.blockContent(targetID);
+                    if (md !== null) {
+                        target = { id: targetID, content: md } as SearchBlock;
+                    }
+                }
                 if (!cancelled && seq === detailRequestSeq) {
                     if (target) {
                         openDetail(target);

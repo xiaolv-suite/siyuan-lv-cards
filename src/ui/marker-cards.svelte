@@ -1,5 +1,6 @@
 <script lang="ts">
     /** 标记符制卡预览（M2·FR4）：勾选扫描结果 → 确认制卡（:: 问答新建块，？整块直加） */
+    import { inspectCardLearnability } from "@/core/flashcard-quality";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -53,6 +54,20 @@
 
     const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || navigator.platform || "");
     const allPicked = $derived(items.length > 0 && items.every(i => picked.has(i.blockID)));
+    const itemInspections = $derived(
+        items.map(it =>
+            inspectCardLearnability({
+                question: it.front,
+                answer: it.back,
+                template: it.kind === "qa" ? "qa" : "whole",
+            }),
+        ),
+    );
+    const warnItemCount = $derived(itemInspections.filter(ins => ins.overloaded).length);
+
+    function pickCleanOnly() {
+        picked = new Set(items.filter((_, idx) => !itemInspections[idx]?.overloaded).map(i => i.blockID));
+    }
 
     function toggleAll() {
         if (allPicked) {
@@ -84,18 +99,34 @@
 
 <div class="lv-marker b3-typography">
     <div class="lv-marker-header">
-        <div class="lv-marker-hint">{t.markerHint.replace("${n}", String(items.length))}</div>
+        <div class="lv-marker-hint">
+            <span>{t.markerHint.replace("${n}", String(items.length))}</span>
+            {#if warnItemCount > 0}
+                <span class="lv-chip2 lv-chip2--warn" style="margin-left: 6px" title="部分条目存在过长、多问或答案泄漏，仍可直接制卡，也可先精简">{warnItemCount} 条可学性提醒</span>
+            {/if}
+        </div>
         {#if items.length > 0}
-            <button
-                type="button"
-                class="b3-button b3-button--small b3-button--outline lv-btn-tool"
-                title={`${allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")} (a)`}
-                aria-keyshortcuts="a"
-                onclick={toggleAll}
-            >
-                <LvIcon name="check" size={12} />
-                <span>{allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")}</span>
-            </button>
+            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                {#if warnItemCount > 0 && warnItemCount < items.length}
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                        onclick={pickCleanOnly}
+                    >
+                        <span>只选良构项</span>
+                    </button>
+                {/if}
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    title={`${allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")} (a)`}
+                    aria-keyshortcuts="a"
+                    onclick={toggleAll}
+                >
+                    <LvIcon name="check" size={12} />
+                    <span>{allPicked ? (t.unselectAll ?? "取消全选") : (t.selectAll ?? "全选")}</span>
+                </button>
+            </div>
         {/if}
     </div>
     {#if errorMsg}<div class="lv-marker-error" role="alert" aria-live="assertive">{errorMsg}</div>{/if}
@@ -115,13 +146,16 @@
         </div>
     {:else}
     <div class="lv-marker-list">
-        {#each items as it (it.blockID)}
+        {#each items as it, idx (it.blockID)}
             <label class="lv-marker-item" class:lv-marker-item--checked={picked.has(it.blockID)}>
                 <input type="checkbox" class="lv-check" checked={picked.has(it.blockID)} onchange={() => toggle(it.blockID)} />
                 <span class="lv-chip2 lv-chip2--default lv-marker-kind">{it.kind === "qa" ? t.markerKindQa : t.markerKindWhole}</span>
                 <span class="lv-marker-text" title={it.kind === "qa" ? `${it.front} :: ${it.back}` : it.front}>
                     {it.kind === "qa" ? `${it.front} → ${it.back}` : it.front}
                 </span>
+                {#each itemInspections[idx]?.issues ?? [] as issue (issue.kind)}
+                    <span class="lv-chip2 lv-chip2--warn lv-marker-kind" title={issue.detail}>{issue.label}</span>
+                {/each}
             </label>
         {/each}
     </div>
