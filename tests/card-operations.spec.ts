@@ -15,6 +15,7 @@ const {
     invalidateDueCache,
     createDocWithMd,
     appendBlock,
+    setBlockAttrs,
 } = vi.hoisted(() => ({
     getRiffCardsByBlockIDs: vi.fn(),
     removeRiffCards: vi.fn(),
@@ -22,6 +23,7 @@ const {
     invalidateDueCache: vi.fn(),
     createDocWithMd: vi.fn(),
     appendBlock: vi.fn(),
+    setBlockAttrs: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../src/api/riff", () => ({
@@ -37,6 +39,7 @@ vi.mock("../src/api/due-shared", () => ({
 vi.mock("../src/api/siyuan", () => ({
     createDocWithMd,
     appendBlock,
+    setBlockAttrs,
 }));
 
 describe("card-operations 卡片操作与制卡核心引擎", () => {
@@ -174,6 +177,53 @@ describe("card-operations 卡片操作与制卡核心引擎", () => {
                 .rejects.toThrow("quickCardInvalid");
             expect(createDocWithMd).not.toHaveBeenCalled();
             expect(appendBlock).not.toHaveBeenCalled();
+        });
+
+        it("附带来源文档反链与块属性同步", async () => {
+            createDocWithMd.mockResolvedValueOnce("doc-quick-1");
+            appendBlock.mockResolvedValueOnce(["block-created-src"]);
+            addRiffCards.mockResolvedValueOnce(undefined);
+
+            const res = await executeQuickCardCreation({
+                nbId: "nb-1",
+                markdown: "细胞核的作用是 ==遗传信息库==",
+                deckID: "d1",
+                sourceDocID: "20261031-doc-cell",
+                sourceTitle: "细胞生物学",
+            });
+
+            expect(res.blockID).toBe("block-created-src");
+            expect(appendBlock).toHaveBeenCalledWith(
+                "markdown",
+                expect.stringContaining('> 来源：(( 20261031-doc-cell "细胞生物学" ))'),
+                "doc-quick-1",
+            );
+            expect(setBlockAttrs).toHaveBeenCalledWith("block-created-src", {
+                "custom-lv-source-doc": "20261031-doc-cell",
+            });
+        });
+
+        it("支持直接在原笔记文档就地追加制卡", async () => {
+            appendBlock.mockResolvedValueOnce(["block-created-inplace"]);
+            addRiffCards.mockResolvedValueOnce(undefined);
+
+            const res = await executeQuickCardCreation({
+                nbId: "nb-1",
+                markdown: "原位笔记知识点 ==就地复习==",
+                deckID: "d1",
+                inPlaceDocID: "20261031-doc-current",
+            });
+
+            expect(res.docID).toBe("20261031-doc-current");
+            expect(createDocWithMd).not.toHaveBeenCalled();
+            expect(appendBlock).toHaveBeenCalledWith(
+                "markdown",
+                "原位笔记知识点 ==就地复习==",
+                "20261031-doc-current",
+            );
+            expect(setBlockAttrs).toHaveBeenCalledWith("block-created-inplace", {
+                "custom-lv-source-doc": "20261031-doc-current",
+            });
         });
     });
 

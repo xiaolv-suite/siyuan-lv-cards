@@ -28,6 +28,7 @@ export function computePaletteCommands(config: PaletteCommandConfig): PaletteCom
         { id: "quick", group: "actions", label: i18n.cmdQuickCard ?? "快速制卡" },
         { id: "pairing", group: "actions", label: i18n.cmdPairing ?? "配对挑战" },
         { id: "drill", group: "actions", label: i18n.drillTitle ?? "修卡演练" },
+        { id: "dynamic-board", group: "actions", label: (i18n as any).cmdDynamicBoard ?? "动态看板与错题本" },
         { id: "settings", group: "actions", label: i18n.settingsTitle ?? "设置" },
         { id: "imports", group: "actions", label: i18n.settings?.importsTitle ?? "导入与迁移", keywords: "Anki Obsidian .apkg .colpkg .lvcards Markdown JSON CSV log import migrate backup 导入 迁移 日志 备份 恢复" },
         { id: "overview", group: "nav", label: i18n.hubTabOverview ?? "总览" },

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { registerPluginCommands, REGISTERED_COMMAND_KEYS, type CommandHost } from "../src/bootstrap/commands";
 
 describe("registerPluginCommands 命令注册", () => {
-    it("正确注册全部 15 个命令且无遗漏（包含 openManager 与 openAIWizard）", () => {
+    it("正确注册全部 16 个命令且无遗漏（包含 openManager 与 openAIWizard 及 dynamicBoard）", () => {
         const registered: any[] = [];
         const mockHost: CommandHost = {
             addCommand: vi.fn(cmd => registered.push(cmd)),
@@ -22,6 +22,7 @@ describe("registerPluginCommands 命令注册", () => {
                 cmdPairing: "配对练习",
                 cmdOpenHelp: "帮助文档",
                 cmdSampleWorkspace: "生成示例工作区",
+                cmdDynamicBoard: "打开《闪卡动态看板与错题本》",
             },
             openDashboard: vi.fn(),
             openReview: vi.fn(),
@@ -36,11 +37,12 @@ describe("registerPluginCommands 命令注册", () => {
             openPairing: vi.fn().mockResolvedValue(undefined),
             openHelpDoc: vi.fn(),
             createSampleWorkspace: vi.fn().mockResolvedValue(undefined),
+            openDynamicBoard: vi.fn(),
         };
 
         registerPluginCommands(mockHost);
 
-        expect(mockHost.addCommand).toHaveBeenCalledTimes(15);
+        expect(mockHost.addCommand).toHaveBeenCalledTimes(16);
         const keys = registered.map(c => c.langKey);
         expect(keys).toEqual([...REGISTERED_COMMAND_KEYS]);
 

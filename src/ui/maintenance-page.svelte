@@ -49,6 +49,7 @@
             isSuspendedToday: (blockID: string) => boolean;
             openSource: (blockID: string) => Promise<void>;
             openCard: (blockID: string) => void;
+            openDynamicBoardDoc?: () => void | Promise<void>;
             getMisconceptionClusters?: () => Promise<MisconceptionCluster[]>;
         };
     } = $props();
@@ -447,6 +448,15 @@
 
 <LvPage eyebrow="WORKSPACE / RECOVER" title={t.title} subtitle={t.queueCount.replace("${n}", String(total()))}>
     {#snippet actions()}
+        <button
+            type="button"
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy}
+            title={t.dynamicBoardDocTip ?? "在思源笔记中打开实时 SQL 动态错题看板"}
+            onclick={() => maintenance.openDynamicBoardDoc?.()}
+        >
+            <LvIcon name="book" size={13} /> <span>{t.dynamicBoardDocBtn ?? "动态错题看板"}</span>
+        </button>
         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={upgradeLegacyCards}>
             <LvIcon name="zap" size={13} /> <span>存量格式规范化 (可选)</span>
         </button>

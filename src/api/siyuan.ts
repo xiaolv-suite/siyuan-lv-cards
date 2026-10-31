@@ -83,7 +83,7 @@ export function isMetadataNotReadyError(error: unknown): boolean {
  * 按人类可读路径查找文档；同名文档有多个时取最早创建的一个（ID 以创建时间开头），保证每次落到同一处。
  * getIDsByHPath 读文档树而非 SQL 索引，刚建好的文档也能立即查到。
  */
-async function findDocIDByHPath(notebook: string, hpath: string): Promise<string | null> {
+export async function findDocIDByHPath(notebook: string, hpath: string): Promise<string | null> {
     const ids = await kernelPost<string[] | null>("/api/filetree/getIDsByHPath", { notebook, path: hpath });
     if (!Array.isArray(ids) || ids.length === 0) return null;
     return [...ids].sort()[0];

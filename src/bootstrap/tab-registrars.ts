@@ -7,7 +7,8 @@
  */
 
 import { openTab, showMessage } from "siyuan";
-import { getBlockDOM, sqlQuery, probeAssetRefs, getBlockDocMap, getDocTitles } from "@/api/siyuan";
+import { getBlockDOM, sqlQuery, probeAssetRefs, getBlockDocMap, getDocTitles, setBlockAttrs } from "@/api/siyuan";
+import { buildLeechAttrs } from "@/core/block-attributes";
 import { getRiffCards, getRiffCardsByBlockIDs } from "@/api/riff";
 import { leechCards, localDate, docCoverage } from "@/core/revlog";
 import { daysLeft, type ExamPlan } from "@/core/exam";
@@ -217,14 +218,7 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             return items.map((i: any) => ({ blockID: i.blockID, lapses: i.lapses }));
                         },
                         getStarredCardIDs: () => plugin.settings.starredCards,
-                        toggleStarCard: async (id: string) => {
-                            const s = new Set(plugin.settings.starredCards);
-                            const added = !s.delete(id);
-                            if (added) s.add(id);
-                            plugin.settings.starredCards = [...s];
-                            plugin.saveSettingsSoon();
-                            return added;
-                        },
+                        toggleStarCard: async (id: string) => plugin.toggleStarCard(id),
                         isNewBlock: (blockID: string) => !plugin.getRevlogBlockIndex().reviewedSet.has(blockID),
                         getLapsesMap: () => plugin.getRevlogBlockIndex().lapsesMap,
                         getBlockHistory: (blockID: string) =>
@@ -475,6 +469,10 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                                     }
                                 }
                                 await plugin.reconcileSourceHealthForScan(out);
+                                const leeches = leechCards(plugin.revlog, plugin.settings.leechThreshold);
+                                for (const l of leeches) {
+                                    void setBlockAttrs(l.blockID, buildLeechAttrs(true, l.lapses)).catch(() => {});
+                                }
                             } catch (e) { error = e instanceof Error ? e.message : String(e); }
                             return {
                                 items: out,
@@ -508,6 +506,7 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             }
                         },
                         openCard: (blockID: string) => plugin.openTabOf(TAB_DASHBOARD, { tab: "manage", focusBlockID: blockID }),
+                        openDynamicBoardDoc: () => plugin.openOrCreateDynamicBoardDoc(),
                     },
                     recovery: {
                         load: async () => ({
@@ -601,18 +600,11 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
                             leechThreshold: plugin.settings.leechThreshold,
                         }),
                         getStarredCardIDs: () => plugin.settings.starredCards,
-                        toggleStarCard: async (id: string) => {
-                            const s = new Set(plugin.settings.starredCards);
-                            const added = !s.delete(id);
-                            if (added) s.add(id);
-                            plugin.settings.starredCards = [...s];
-                            plugin.saveSettingsSoon();
-                            return added;
-                        },
+                        toggleStarCard: async (id: string) => plugin.toggleStarCard(id),
                         appendRevlog: (e: any) => plugin.appendRevlog(e),
                         rollbackRevlog: (cardID?: string) => plugin.rollbackRevlog(cardID),
-                        tagErrorReason: (cardID: string, reason: string) => {
-                            plugin.tagErrorReason(cardID, reason as ErrorReason);
+                        tagErrorReason: (cardID: string, reason: string, blockID?: string) => {
+                            plugin.tagErrorReason(cardID, reason as ErrorReason, blockID);
                         },
                         getKOBySource: (blockID: string) => {
                             const obj = findBySource(plugin.knowledgeObjects, blockID);

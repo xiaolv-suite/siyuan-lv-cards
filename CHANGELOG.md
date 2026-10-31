@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.225.0 2026-10-31 · 思源文档深度联动第一批（D1）：块属性镜像、来源双向块引与原位制卡、《闪卡动态看板与错题本》
+
+- **新增 (Added)**：
+  - **思源块属性镜像联动（`src/core/block-attributes.ts` & `src/index.ts`）**：星标状态（`custom-lv-starred`）、水蛭疑难卡（`custom-lv-leech`、`custom-lv-lapses`）与错因归因（`custom-lv-error-reason`）实时同步写入思源底层笔记块属性，打通思源原生搜索、原生属性视图（Attribute View）与 SQL 嵌入块动态汇总；
+  - **来源双向块引与原位制卡（`src/core/card-operations.ts`、`src/ui/quick-card.svelte`、`src/ui/marker-cards.svelte`、`src/ui/ai-wizard.svelte`）**：快速制卡自动感知当前活动笔记，支持一键附带指向原笔记的反链引用（`> 来源：((id "title"))`）或直接“就地追加到当前笔记末尾”；标记制卡问答块自动回链原标记块；AI 制卡自动继承来源文档身份并建立来源反链与血缘属性，让原笔记的反向链接面板和关系图直接显示提炼出的卡片；
+  - **《闪卡动态看板与错题本》原生 SQL 活文档（`src/core/dynamic-notebook.ts`、`src/bootstrap/commands.ts`、`src/ui/maintenance-page.svelte`、`src/ui/settings.svelte`）**：一键生成/打开利用思源原生 SQL 嵌入块（`{{SELECT * FROM blocks WHERE ...}}`）聚合的动态错题与重点看板，在思源正文中直接查看水蛭错题与星标卡，并在命令面板（`Ctrl+K`）、维护债务页与设置页提供直达入口。
+- **优化与细节打磨 (Changed)**：
+  - **快速制卡来源文档联动卡片（`src/ui/quick-card.svelte`）**：活动笔记标题以长春花紫目标徽章紧凑呈现，附带“关联笔记反链”与“就地追加到本文档”双复选开关，符合 R54 设计系统规范；
+  - **命令面板与设置页直达（`src/core/palette-navigation.ts` & `src/ui/settings.svelte`）**：命令面板新增“动态看板与错题本”动作条目，设置页数据分区新增看板文档快捷入口。
+
 ## v0.224.0 2026-10-31 · 阶段 C：制卡可学性把关与一键拆卡、来源变更并排对比与版本回退修卡闭环
 
 - **修复 (Fixed)**：

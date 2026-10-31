@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.224.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.225.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -25,14 +25,15 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.224.0 (Latest)
-* **Pre-Entry Learnability Guard & 1-Click Card Splitting (C1)**: Added soft learnability checks (multi-question, overlong content/answer, ambiguous pronoun, answer leak, excessive clozes) across Quick Card, Marker Cards, and AI Candidate Review, with 1-click atomic card splitting and inline ungrounded-assertion hints.
-* **Source-Change Side-by-Side Diff & Repair Loop (C2)**: Recorded baseline Markdown on card enrollment (including block/slash menu deck picker); Maintenance now shows side-by-side `Baseline vs. Current` diffs with in-place repair, automatically recording version history and resolving source-change alerts upon repair.
-* **1-Click Historical Version Restore in Card Detail**: Preserves the initial pre-edit markdown on first edit and adds a "Restore this version" action in the Card Detail version history list.
+### v0.225.0 (Latest)
+* **SiYuan Block Attributes Mirroring (D1)**: Starred status (`custom-lv-starred`), leech card quarantine (`custom-lv-leech`, `custom-lv-lapses`), and error reasons (`custom-lv-error-reason`) are now synced in real time to native SiYuan block attributes, making cards queryable via native SiYuan search, Attribute Views, and embedded SQL blocks.
+* **Bi-directional Source Block Backlinks & In-Place Authoring**: Quick Card now detects the active document in SiYuan, offering 1-click source backlink attachment (`> 来源：((id "title"))`) or appending the card directly into the current note; Marker Cards and AI Wizard automatically inherit source block and document provenance so flashcards appear directly in the original note's native Backlinks panel.
+* **Dynamic Dashboard & Leech Document**: 1-click generation and opening of a live SiYuan note utilizing native SQL embedded blocks (`{{SELECT * FROM blocks WHERE ...}}`) to dynamically aggregate leech cards, starred cards, error tags, and recent cards in real time, accessible via Command Palette, Maintenance, and Settings.
 
 <details>
-<summary>📜 View Historical Releases (v0.223.0 ~ v0.210.0)</summary>
+<summary>📜 View Historical Releases (v0.224.0 ~ v0.210.0)</summary>
 
+* **v0.224.0**: Pre-entry learnability guard & 1-click card splitting (Quick Card/Marker Cards/AI); source-change side-by-side diff & repair loop with version history; 1-click historical version restore in Card Detail.
 * **v0.223.0**: Relocated Hub sub-navigation by task, slimmed Today deep-stats, promoted deck actions to first screen, and fixed Onboarding Step 1 & topbar landing.
 * **v0.222.0**: Streamlined review toolbar to 5 core buttons, unified Session Preferences and the 3-way Remove from Review modal, fixed cloze focus hijack, and kept the rating bar above the fold at 1024px and 150% zoom.
 * **v0.221.0**: Fixed SuperBlock QA authoring & Maintenance false positives; archived 42 unreachable experimental core modules and aligned bilingual docs.

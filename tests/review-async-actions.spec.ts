@@ -373,7 +373,7 @@ describe("review async action guards", () => {
         const markBtn = screen.getByRole("button", { name: "t.review.tbMarkIssue" });
         await fireEvent.click(markBtn);
 
-        expect(testCtx.tagErrorReason).toHaveBeenCalledWith("card-a", "question-unclear");
+        expect(testCtx.tagErrorReason).toHaveBeenCalledWith("card-a", "question-unclear", "block-a");
         expect(screen.getAllByText("t.review.issueChip")).toHaveLength(1);
         await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
         const markBtnAfter = screen.getByRole("button", { name: "t.review.tbMarkIssue" });

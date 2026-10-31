@@ -1,6 +1,6 @@
 {
   "name": "siyuan-lv-cards",
-  "version": "0.224.0",
+  "version": "0.225.0",
   "type": "module",
   "description": "Lv Cards (Beta) / 小驴闪卡（内测版） - a local-first, full-lifecycle flashcard learning platform for SiYuan, built on the native FSRS scheduler",
   "repository": "https://github.com/ai68298100/siyuan-lv-cards",
@@ -12,6 +12,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "posttest": "node scripts/cleanup-tmp-workspaces.cjs --since-snapshot --quiet",
+    "pretest": "node scripts/cleanup-tmp-workspaces.cjs && node scripts/cleanup-tmp-workspaces.cjs --snapshot",
     "dev": "run-p dev:app dev:kernel",
     "dev:app": "cross-env NODE_ENV=development VITE_SOURCEMAP=inline VITE_BUILD_TARGET=app vite build --watch",
     "dev:kernel": "cross-env NODE_ENV=development VITE_SOURCEMAP=inline VITE_BUILD_TARGET=kernel vite build --watch",

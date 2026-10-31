@@ -223,8 +223,8 @@ describe("card detail preview loading", () => {
 
         await screen.findByText("Current V2");
         await fireEvent.click(screen.getByRole("button", { name: "History ▾" }));
-        const restoreBtn = await screen.findByRole("button", { name: "恢复此版本" });
-        await fireEvent.click(restoreBtn);
+        const restoreBtns = await screen.findAllByRole("button", { name: "恢复此版本" });
+        await fireEvent.click(restoreBtns[1]);
 
         await waitFor(() => expect(save).toHaveBeenCalledWith("Initial V1 ==A1=="));
         await waitFor(() => expect(onSaved).toHaveBeenCalledWith("card-a"));

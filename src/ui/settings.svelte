@@ -85,6 +85,7 @@
         /** 笔记本清单（605 落盘笔记本选择） */
         getNotebooks: () => Promise<{ id: string; name: string }[]>;
         exportRevlogCsv: () => void;
+        openDynamicBoardDoc?: () => void | Promise<void>;
         importRevlogCsv: (fileText: string) => Promise<{ added: number; skipped: number }>;
         importRevlogMerge: (fileText: string, onFork?: "skip" | "preferImport") => Promise<{ added: number; skipped: number; forks: number }>;
     }
@@ -1584,6 +1585,16 @@
             {/snippet}
         </LvRow>
         {#if restoreSuspendedError}<div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive">{restoreSuspendedError} <button class="b3-button b3-button--text" disabled={restoreSuspendedBusy} onclick={restoreAllSuspended}>{t.settings.retry ?? "重试"}</button></div>{/if}
+        {#if ctx.openDynamicBoardDoc}
+            <LvRow label={t.settings.dynamicBoardDoc} hint={t.settings.dynamicBoardDocHint}>
+                {#snippet children()}
+                    <button type="button" class="b3-button b3-button--outline lv-btn-tool" onclick={() => ctx.openDynamicBoardDoc?.()}>
+                        <LvIcon name="book" size={12} />
+                        <span>{t.settings.openDynamicBoardBtn}</span>
+                    </button>
+                {/snippet}
+            </LvRow>
+        {/if}
         <LvRow label={t.settings.exportRevlog} hint={t.settings.storageNote}>
             {#snippet children()}
                 <button class="b3-button b3-button--outline lv-btn-tool" aria-label={`${t.settings.exportRevlog} · JSON`} onclick={ctx.exportRevlog}>

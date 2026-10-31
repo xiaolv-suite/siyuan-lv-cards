@@ -129,8 +129,8 @@
         initialCram?: boolean;
         appendRevlog: (entry: { cardID: string; deckID: string; blockID: string; rating: number; source: "plugin" }) => void;
         rollbackRevlog?: (cardID?: string) => void;
-        /** BJ-4：遗忘卡错误原因标注（旁路增强） */
-        tagErrorReason?: (cardID: string, reason: string) => void;
+        /** BJ-4：遗忘卡错误原因标注（旁路增强，支持块属性同步） */
+        tagErrorReason?: (cardID: string, reason: string, blockID?: string) => void;
         /** BK-1↔BJ-2：按来源块查知识对象（提示内容优先来源） */
         getKOBySource?: (blockID: string) => { fact: string; capability: string | null } | null;
         getRevlog: () => RevlogData;
@@ -201,6 +201,7 @@
     // BJ-4：遗忘卡错误原因标注（评分后可选旁路动作；标签走 i18n errReasons 段）
     let showErrTags = $state(false);
     let errTagCardID = $state("");
+    let errTagBlockID = $state("");
     let errTagged = $state(false);
     let cardHtml = $state("");
     let maskedCardHtml = $derived(maskMarkedAnswersForQuestion(cardHtml));
@@ -559,7 +560,7 @@
         if (!current || actionBusy || markedIssueCardIDs.has(current.cardID)) return;
         const res = toggleCardIssue(markedIssueCardIDs, current.cardID);
         markedIssueCardIDs = res.nextMarkedIDs;
-        ctx.tagErrorReason?.(current.cardID, "question-unclear");
+        ctx.tagErrorReason?.(current.cardID, "question-unclear", current.blockID);
         showMessage(t.review.issueMarked, 2500, "info");
         announce(t.review.issueMarked, "polite");
     }
@@ -1396,12 +1397,14 @@
             persistSession();
             announce(t.review.liveRated, "polite");
             const forgotCardID = rating === 1 ? current.cardID : null;
+            const forgotBlockID = rating === 1 ? current.blockID : null;
             await next();
             // BJ-4：遗忘后显示错误原因标注（旁路增强，不阻塞下一张）。
             // 必须在 next() 之后置位——next() 开头会重置 showErrTags（F-3 审计修复：
             // 原先在 next() 前置位导致 chips 行被立即清除、从不显示）
             if (forgotCardID && ctx.tagErrorReason) {
                 errTagCardID = forgotCardID;
+                errTagBlockID = forgotBlockID ?? "";
                 errTagged = false;
                 showErrTags = true;
             }
@@ -2480,7 +2483,7 @@
             open={showErrTags && !errTagged && Boolean(ctx.tagErrorReason)}
             {t}
             onTagError={(rid) => {
-                ctx.tagErrorReason?.(errTagCardID, rid);
+                ctx.tagErrorReason?.(errTagCardID, rid, errTagBlockID);
                 errTagged = true;
                 announce(`${t.review.errTagDone}: ${t.review.ko.errReasons[rid] ?? rid}`, "polite");
             }}

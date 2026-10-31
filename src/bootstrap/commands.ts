@@ -25,6 +25,7 @@ export interface CommandHost {
     openPairing: () => Promise<void>;
     openHelpDoc: () => void;
     createSampleWorkspace: () => Promise<void>;
+    openDynamicBoard?: () => void;
     togglePresentationPrivacy?: () => void;
 }
 
@@ -44,6 +45,7 @@ export const REGISTERED_COMMAND_KEYS = [
     "pairing",
     "openHelp",
     "sampleWorkspace",
+    "dynamicBoard",
 ] as const;
 
 export type RegisteredCommandKey = typeof REGISTERED_COMMAND_KEYS[number];
@@ -144,6 +146,14 @@ export function registerPluginCommands(host: CommandHost): void {
         hotkey: "",
         callback: () => host.createSampleWorkspace(),
     });
+    if (typeof host.openDynamicBoard === "function") {
+        host.addCommand({
+            langKey: "dynamicBoard",
+            langText: host.i18n.cmdDynamicBoard ?? "打开《闪卡动态看板与错题本》",
+            hotkey: "",
+            callback: () => host.openDynamicBoard!(),
+        });
+    }
 
     if (typeof host.togglePresentationPrivacy === "function") {
         host.addCommand({

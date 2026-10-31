@@ -36,8 +36,8 @@
         initialSources?: { label: string; content: string; docId?: string; nbId?: string; inboxId?: string }[];
         /** 调用方实现：构造 prompt → 调 AI → 解析卡片（ADR-7：返回 cards + jobId 供断点续传）；第三参为取消信号（AQ-14）+ 来源 provenance（BW-9 禁止外发判定）；gen 为生成环境快照（BU-15） */
         generate: (source: string, cfg: { count: number; language: string; type: "qa" | "cloze" }, opts?: { signal?: AbortSignal; provenance?: { notebookIds?: string[]; docIds?: string[] } }) => Promise<{ cards: { q: string; a: string; d?: number }[]; jobId: string; gen?: { mode: "siyuan" | "custom"; modelId: string | null; templateHash: string } }>;
-        /** ADR-7：逐卡提交——卡片携带 origIndex 指向作业 candidates 原位（✕ 移除后仍正确） */
-        onCreate: (cards: { q: string; a: string; origIndex: number }[], deckID: string, deckName: string, jobId: string) => Promise<void>;
+        /** ADR-7：逐卡提交——卡片携带 origIndex 指向作业 candidates 原位（✕ 移除后仍正确），第五参为来源文档元数据 */
+        onCreate: (cards: { q: string; a: string; origIndex: number }[], deckID: string, deckName: string, jobId: string, sourceMeta?: { docId?: string; label?: string }) => Promise<void>;
         onClose: () => void;
         closeLabel?: string;
         embedded?: boolean;
@@ -704,7 +704,9 @@
                 errorMsg = t.quickCardNeedDeck;
                 return;
             }
-            await onCreate(picked, deckID, deckName, currentJobId);
+            const primaryDocSource = sources.find(s => s.docId);
+            const sourceMeta = primaryDocSource ? { docId: primaryDocSource.docId, label: primaryDocSource.label } : undefined;
+            await onCreate(picked, deckID, deckName, currentJobId, sourceMeta);
             if (disposed) {
                 return;
             }

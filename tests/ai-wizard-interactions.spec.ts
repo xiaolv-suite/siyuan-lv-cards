@@ -186,4 +186,39 @@ describe("AI wizard advanced interactions (R54 Parity)", () => {
         await fireEvent.keyDown(window, { key: "Escape" });
         expect(onClose).toHaveBeenCalledOnce();
     });
+
+    it("passes source document provenance to onCreate when importing cards", async () => {
+        const onCreate = vi.fn().mockResolvedValue(undefined);
+        render(AIWizard, {
+            i18n: mockI18n,
+            generate: vi.fn(),
+            onCreate,
+            onClose: vi.fn(),
+            closeLabel: "Close",
+            initialSources: [
+                { label: "操作系统导论", content: "进程与线程的区别", docId: "20261031-doc-os" },
+            ],
+            recoveryJob: {
+                id: "review-job-3",
+                sourceLabel: "操作系统",
+                candidates: [{ q: "进程与线程的区别？", a: "进程是资源分配单位，线程是调度单位", origIndex: 0 }],
+            },
+        });
+
+        // 接受卡片
+        const acceptBtn = await screen.findByRole("button", { name: /acceptVer/ });
+        await fireEvent.click(acceptBtn);
+
+        // 点击导入
+        const importBtn = screen.getByRole("button", { name: /createAcceptedN/ });
+        await fireEvent.click(importBtn);
+
+        expect(onCreate).toHaveBeenCalledWith(
+            expect.any(Array),
+            "deck-a",
+            "Default",
+            "review-job-3",
+            { docId: "20261031-doc-os", label: "操作系统导论" },
+        );
+    });
 });

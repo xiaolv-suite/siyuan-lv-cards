@@ -261,7 +261,12 @@ async function main() {
                 check("建卡包+制卡", false, JSON.stringify(deck).slice(0, 160));
             } else {
                 scratchDeckId = deck.data?.id ?? deck.data?.deck?.id ?? "";
-                const added = await api("/api/riff/addRiffCards", { deckID: scratchDeckId, blockIDs: [docID] });
+                let added = { code: -1, msg: "" };
+                for (let retry = 0; retry < 5; retry++) {
+                    added = await api("/api/riff/addRiffCards", { deckID: scratchDeckId, blockIDs: [docID] });
+                    if (added.code === 0) break;
+                    await new Promise(r => setTimeout(r, 600));
+                }
                 if (added.code !== 0) {
                     check("建卡包+制卡", false, JSON.stringify(added).slice(0, 160));
                 } else {

@@ -22,6 +22,7 @@ import {
 } from "./core/ai-jobs";
 import {
     appendRevlog, rollbackLastRevlogEntry, calcStreak, emptyRevlog, localDate, normalizeRevlog, mergeRevlog,
+    DEFAULT_LEECH_THRESHOLD,
     type RevlogData, type RevlogEntry,
 } from "./core/revlog";
 import { detectFlashcardV2, type MigrationStatus } from "./api/flashcardV2";
@@ -39,7 +40,9 @@ import { addInboxItem, emptyInbox, normalizeInbox, removeInboxItem, type InboxDa
 import { emptyGoals, type LearningGoalsData, type LearningGoal } from "./core/learning-goal";
 import { emptyEntryContexts, upsertContext, type EntryContextData, type EntryKind } from "./core/entry-context";
 import { ensureLifecycle, emptyLifecycles, transition, type ContentLifecyclesData, type ContentState } from "./core/content-lifecycle";
-import { appendBlock, createDocWithMd, getNotebooks, getBlockAttrs, exportMdContent, sqlQuery, kernelVersion, updateBlock, probeAssetRefs } from "./api/siyuan";
+import { appendBlock, createDocWithMd, getNotebooks, getBlockAttrs, exportMdContent, sqlQuery, kernelVersion, updateBlock, probeAssetRefs, setBlockAttrs, findDocIDByHPath } from "./api/siyuan";
+import { buildStarredAttrs, buildLeechAttrs, buildErrorReasonAttrs } from "./core/block-attributes";
+import { buildDynamicBoardMarkdown, DYNAMIC_BOARD_DOC_PATH } from "./core/dynamic-notebook";
 import { aiChat, estimateTokens, parseCards, isAICanceled } from "./api/ai";
 import { rollDateIfNeeded, type SuspendTodayData } from "./core/suspend-today";
 import { createSuspendTodayMutations } from "./core/suspend-today-persistence";
@@ -1057,6 +1060,7 @@ export default class LvCardsPlugin extends Plugin {
             openPairing: () => this.openPairing(),
             openHelpDoc: () => this.openHelpDoc(),
             createSampleWorkspace: () => this.createSampleWorkspace(),
+            openDynamicBoard: () => this.openOrCreateDynamicBoardDoc(),
             togglePresentationPrivacy: () => this.togglePresentationPrivacy(),
         });
 
@@ -1556,7 +1560,52 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
-    private async createQuickCard(markdown: string, deckID: string, _deckName: string, q?: string, a?: string, docID?: string) {
+    /** 动态错题看板文档（D1）：生成或打开通过思源原生 SQL 嵌入块动态汇总的活文档 */
+    public async openOrCreateDynamicBoardDoc(): Promise<string> {
+        const nb = await this.targetNotebook();
+        if (!nb) {
+            showMessage(this.i18n.onboardingNoNotebook, 2500, "error");
+            throw new Error(this.i18n.onboardingNoNotebook);
+        }
+        const docPath = DYNAMIC_BOARD_DOC_PATH;
+        let docID = await findDocIDByHPath(nb.id, `/${docPath}`);
+        if (!docID) {
+            const md = buildDynamicBoardMarkdown(this.i18n);
+            docID = await createDocWithMd(nb.id, docPath, md);
+        }
+        if (!docID) {
+            showMessage(this.i18n.quickCardFail, 2500, "error");
+            throw new Error(this.i18n.quickCardFail);
+        }
+        openTab({ app: this.app, doc: { id: docID } });
+        showMessage((this.i18n as any).dynamicBoardOpened ?? "已打开《闪卡动态看板与错题本》", 2500, "info");
+        return docID;
+    }
+
+    /** 切换星标重点卡状态并同步镜像至思源块属性 custom-lv-starred */
+    public async toggleStarCard(id: string): Promise<boolean> {
+        const s = new Set(this.settings.starredCards);
+        const added = !s.delete(id);
+        if (added) s.add(id);
+        this.settings.starredCards = [...s];
+        this.saveSettingsSoon();
+        try {
+            await setBlockAttrs(id, buildStarredAttrs(added));
+        } catch {
+            // 块属性同步为旁路增强
+        }
+        return added;
+    }
+
+    private async createQuickCard(
+        markdown: string,
+        deckID: string,
+        _deckName: string,
+        q?: string,
+        a?: string,
+        docID?: string,
+        options?: { sourceDocID?: string; sourceTitle?: string; inPlace?: boolean },
+    ) {
         const nb = await this.targetNotebook();
         if (!nb) {
             throw new Error(this.i18n.onboardingNoNotebook);
@@ -1569,10 +1618,13 @@ export default class LvCardsPlugin extends Plugin {
             q,
             a,
             docID,
+            sourceDocID: options?.sourceDocID,
+            sourceTitle: options?.sourceTitle,
+            inPlaceDocID: options?.inPlace && options.sourceDocID ? options.sourceDocID : undefined,
             mutateKnowledgeObjects: (mutator) => this.knowledgeObjectsMutations(mutator),
         });
         await this.rememberSourceFingerprint(created.blockID, created.docID, markdown);
-        showMessage(this.i18n.quickCardDone, 2000, "info");
+        showMessage(options?.inPlace ? (this.i18n.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组") : this.i18n.quickCardDone, 2000, "info");
         return created;
     }
 
@@ -1580,13 +1632,15 @@ export default class LvCardsPlugin extends Plugin {
         const view: { Component: any; mount?: (comp: any, target: HTMLElement, props: Record<string, any>) => { destroy(): void } } = embedded
             ? await loadQuickCardEmbedded()
             : { Component: await loadQuickCard() };
+        const activeDoc = await this.loadCurrentDoc().catch(() => null);
         return {
             Component: view.Component,
             ...(view.mount ? { mount: view.mount } : {}),
             props: {
                 i18n: this.i18n,
-                onCreate: (markdown: string, deckID: string, deckName: string, q?: string, a?: string, docID?: string) =>
-                    this.createQuickCard(markdown, deckID, deckName, q, a, docID),
+                activeDoc: activeDoc ? { name: activeDoc.name, docId: activeDoc.docId } : null,
+                onCreate: (markdown: string, deckID: string, deckName: string, q?: string, a?: string, docID?: string, options?: { sourceDocID?: string; sourceTitle?: string; inPlace?: boolean }) =>
+                    this.createQuickCard(markdown, deckID, deckName, q, a, docID, options),
                 onClose: () => { /* 宿主或 Hub 管理视图生命周期 */ },
             },
         };
@@ -1674,13 +1728,24 @@ export default class LvCardsPlugin extends Plugin {
                     }
                     const qaIds: string[] = [];
                     for (const it of picked.filter(p => p.kind === "qa")) {
-                        // 单块问答：软换行分隔问/答（与快速制卡同构）
-                        const ids = await appendBlock("markdown", serializeQaCard(it.front, it.back), docID);
+                        // 单块问答：附带指向标记原块的反链引用与块属性
+                        const rawQa = serializeQaCard(it.front, it.back);
+                        const cardMarkdown = `${rawQa}\n\n> 来源：(( ${it.blockID} "原笔记" ))`;
+                        const ids = await appendBlock("markdown", cardMarkdown, docID);
                         if (ids?.length) {
                             qaIds.push(ids[0]);
+                            void setBlockAttrs(ids[0], {
+                                "custom-lv-source-doc": rootID,
+                                "custom-lv-source-block": it.blockID,
+                            }).catch(() => {});
                         }
                     }
                     const wholePicked = picked.filter(p => p.kind === "whole").map(p => p.blockID);
+                    for (const id of wholePicked) {
+                        void setBlockAttrs(id, {
+                            "custom-lv-source-doc": rootID,
+                        }).catch(() => {});
+                    }
                     const all = [...qaIds, ...wholePicked];
                     if (all.length > 0) {
                         try {
@@ -1891,9 +1956,10 @@ export default class LvCardsPlugin extends Plugin {
                 authoring: () => this.openTabOf(TAB_DASHBOARD, { tab: "authoring" }),
                 goals: () => this.openTabOf(TAB_DASHBOARD, { tab: "goals" }),
                 inbox: () => this.openTabOf(TAB_DASHBOARD, { tab: "inbox" }),
-                exam: () => this.openTabOf(TAB_DASHBOARD, { tab: "exam" }),
-                maintenance: () => this.openTabOf(TAB_DASHBOARD, { tab: "maintenance" }),
-            };
+                    exam: () => this.openTabOf(TAB_DASHBOARD, { tab: "exam" }),
+                    maintenance: () => this.openTabOf(TAB_DASHBOARD, { tab: "maintenance" }),
+                    "dynamic-board": () => this.openOrCreateDynamicBoardDoc(),
+                };
             const handle = svelteDialog({
                 ...createView({ modules: this.settings.modules, uiMode: this.settings.uiMode, i18n: this.i18n },
                     (cmd: PaletteCommand) => {
@@ -2156,8 +2222,8 @@ export default class LvCardsPlugin extends Plugin {
                         throw e;
                     }
                 },
-                onCreate: async (cards: { q: string; a: string; origIndex: number }[], deckID: string, deckName: string, jobId: string) => {
-                    const r = await this.createAICards(cards, deckID, deckName, jobId);
+                onCreate: async (cards: { q: string; a: string; origIndex: number }[], deckID: string, deckName: string, jobId: string, sourceMeta?: { docId?: string; label?: string }) => {
+                    const r = await this.createAICards(cards, deckID, deckName, jobId, sourceMeta);
                     // BI-4：收件箱制卡成功回调（清收件箱 + 记内容生命周期，失败不影响制卡结果）
                     if (onCreated) {
                         try {
@@ -2223,11 +2289,11 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** ADR-7 第 3 步：逐卡提交 + 断点记录——每卡 appendBlock+入组成功即持久化，中断续传只处理 pending */
-    private async createAICards(cards: { q: string; a: string; origIndex: number }[], deckID: string, _deckName: string, jobId: string) {
+    private async createAICards(cards: { q: string; a: string; origIndex: number }[], deckID: string, _deckName: string, jobId: string, sourceMeta?: { docId?: string; label?: string }) {
         const operationID = jobId || `cards:${deckID}:${cards.map(card => card.origIndex).join(",")}`;
         const existing = this.aiCommitFlights.get(operationID);
         if (existing) return existing;
-        const operation = this.createAICardsOnce(cards, deckID, _deckName, jobId);
+        const operation = this.createAICardsOnce(cards, deckID, _deckName, jobId, sourceMeta);
         this.aiCommitFlights.set(operationID, operation);
         operation.finally(() => {
             if (this.aiCommitFlights.get(operationID) === operation) this.aiCommitFlights.delete(operationID);
@@ -2235,7 +2301,7 @@ export default class LvCardsPlugin extends Plugin {
         return operation;
     }
 
-    private async createAICardsOnce(cards: { q: string; a: string; origIndex: number }[], deckID: string, _deckName: string, jobId: string) {
+    private async createAICardsOnce(cards: { q: string; a: string; origIndex: number }[], deckID: string, _deckName: string, jobId: string, sourceMeta?: { docId?: string; label?: string }) {
         const qualityIssues = findAiCardGateIssues(cards);
         if (qualityIssues.some(issues => issues.length > 0)) {
             throw new Error((this.i18n as any).aiWizard.qualityBlocked);
@@ -2294,13 +2360,22 @@ export default class LvCardsPlugin extends Plugin {
                     // 查询不可用时仍允许继续写入；成功后候选状态会阻止同一进程内重复。
                 }
             }
-            const cardMarkdown = buildAiCardBlockMarkdown(card.q, card.a, marker);
+            let cardMarkdown = buildAiCardBlockMarkdown(card.q, card.a, marker);
+            if (sourceMeta?.docId) {
+                const cleanLabel = (sourceMeta.label || "原笔记").replace(/["\n\r]/g, " ").trim();
+                cardMarkdown += `\n\n> 来源：(( ${sourceMeta.docId} "${cleanLabel}" ))`;
+            }
             if (!blockID) {
                 const ids = await appendBlock("markdown", cardMarkdown, docID);
                 blockID = ids[0] ?? "";
             }
             if (!blockID) throw new Error(this.i18n.quickCardFail);
             blockIDs.push(blockID);
+            if (sourceMeta?.docId) {
+                void setBlockAttrs(blockID, {
+                    "custom-lv-source-doc": sourceMeta.docId,
+                }).catch(() => {});
+            }
             // 微小缓冲，避免连续高频写锁造成内核 SQLite 元数据未就绪
             await new Promise(r => setTimeout(r, 60));
             // ADR-7：逐卡入组成功即记账（单卡批），origIndex 指向作业 candidates 原位（✕ 移除后仍正确）
@@ -2447,6 +2522,15 @@ export default class LvCardsPlugin extends Plugin {
         appendRevlog(this.revlog, { ts: entry.ts ?? Date.now(), ...entry } as RevlogEntry);
         const streakAfter = calcStreak(this.revlog);
         this.scheduleRevlogSave();
+        const entryBlockID = entry.blockID;
+        if (entryBlockID) {
+            const { lapsesMap } = this.getRevlogBlockIndex();
+            const lapses = lapsesMap[entryBlockID] ?? 0;
+            const threshold = this.settings.leechThreshold || DEFAULT_LEECH_THRESHOLD;
+            if (lapses >= threshold) {
+                void setBlockAttrs(entryBlockID, buildLeechAttrs(true, lapses)).catch(() => {});
+            }
+        }
         // AT-4：评分事实先失效共享 due 缓存（插件/原生两路都经此漏斗），badge/总览下一次读取即拉新
         invalidateDueCache();
         this.refreshDueBadge();
@@ -2524,8 +2608,8 @@ export default class LvCardsPlugin extends Plugin {
         return this.persist.save(CARD_RELATIONS_DATA, cloneStore(this.cardRelations)).catch(() => { /* onFail 已记录 */ });
     }
 
-    /** BJ-4：遗忘卡错误原因标注（旁路增强；persist 队列承担重试与失败记录） */
-    tagErrorReason(cardID: string, reason: ErrorReason) {
+    /** BJ-4：遗忘卡错误原因标注（旁路增强；同步写入思源块属性 custom-lv-error-reason） */
+    tagErrorReason(cardID: string, reason: ErrorReason, blockID?: string) {
         const previous = cloneStore(this.persistedErrorTagsSnapshot ?? normalizeErrorTags(cloneStore(this.errorTags)));
         if (tagError(this.errorTags, cardID, reason, todayDate())) {
             const version = ++this.errorTagMutationVersion;
@@ -2536,6 +2620,10 @@ export default class LvCardsPlugin extends Plugin {
                 if (version === this.errorTagMutationVersion) this.errorTags = cloneStore(this.persistedErrorTagsSnapshot ?? previous);
                 this.showStorageFail();
             });
+            const targetBlockID = blockID || (this.revlog.entries.slice().reverse().find(e => e.cardID === cardID)?.blockID);
+            if (targetBlockID) {
+                void setBlockAttrs(targetBlockID, buildErrorReasonAttrs(reason)).catch(() => {});
+            }
         }
     }
 
@@ -2963,6 +3051,7 @@ export default class LvCardsPlugin extends Plugin {
                         }
                     },
                     exportRevlogCsv: () => this.exportRevlogCsv(),
+                    openDynamicBoardDoc: () => this.openOrCreateDynamicBoardDoc(),
                     importRevlogCsv: async (fileText: string) => {
                         const imported = parseRevlogCsv(fileText);
                         const previous = this.revlog;

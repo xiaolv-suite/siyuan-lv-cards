@@ -5,7 +5,8 @@
 
 import { addRiffCards, invalidateDueCache } from "../api/due-shared";
 import { getRiffCardsByBlockIDs, removeRiffCards } from "../api/riff";
-import { appendBlock, createDocWithMd } from "../api/siyuan";
+import { appendBlock, createDocWithMd, setBlockAttrs } from "../api/siyuan";
+import { attachCardSourceBacklink, buildSourceLinkAttrs } from "./block-attributes";
 import { detachCard, type CardRelationsData } from "./card-relations";
 import { validateCardEntry } from "./card-entry-gate";
 import { validateFlashcardMarkdown } from "./flashcard-quality";
@@ -67,6 +68,12 @@ export interface QuickCardFlowInput {
     a?: string;
     /** 已创建的快速制卡文档；双向卡第二面复用，避免重复创建同一路径文档。 */
     docID?: string;
+    /** 来源文档或来源块 ID，用于写入双向反链与属性 */
+    sourceDocID?: string;
+    sourceBlockID?: string;
+    sourceTitle?: string;
+    /** 是否就地存入原文档（直接在原文档追加） */
+    inPlaceDocID?: string;
     mutateKnowledgeObjects?: (mutator: (next: KnowledgeObjectsData) => void) => Promise<unknown>;
 }
 
@@ -78,16 +85,32 @@ export async function executeQuickCardCreation(
 ): Promise<{ docID: string; blockID: string }> {
     const draftDecision = validateCardEntry({ blockID: "quick-card-draft", markdown: input.markdown });
     if (!draftDecision.ok || validateFlashcardMarkdown(input.markdown)) throw new Error(input.qualityErrorMessage || "quickCardInvalid");
-    const docID = input.docID ?? await createDocWithMd(input.nbId, "小驴闪卡/快速制卡", "");
+
+    // 如果指定了原文档就地追加（inPlaceDocID），直接使用该文档 ID；否则在快速制卡目录下创建或复用
+    const docID = input.docID ?? (input.inPlaceDocID || await createDocWithMd(input.nbId, "小驴闪卡/快速制卡", ""));
     if (!docID) {
         throw new Error("quickCardFail");
     }
-    const ids = await appendBlock("markdown", input.markdown, docID);
+
+    // 若指定了来源文档且不是就地追加原文档，且卡片尚未包含反链，则自动附带思源原生反链引用
+    const cardMarkdown = (input.sourceDocID && !input.inPlaceDocID)
+        ? attachCardSourceBacklink(input.markdown, input.sourceBlockID || input.sourceDocID, input.sourceTitle)
+        : input.markdown;
+
+    const ids = await appendBlock("markdown", cardMarkdown, docID);
     if (!ids || ids.length === 0) {
         throw new Error("quickCardFail");
     }
     const blockID = ids[0];
     await addRiffCards(input.deckID, [blockID]);
+
+    if (input.sourceDocID || input.sourceBlockID || input.inPlaceDocID) {
+        try {
+            await setBlockAttrs(blockID, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
+        } catch {
+            // 属性写入旁路容错
+        }
+    }
 
     if (input.q && input.mutateKnowledgeObjects) {
         try {

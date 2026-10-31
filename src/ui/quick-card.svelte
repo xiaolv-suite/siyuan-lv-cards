@@ -5,14 +5,27 @@
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
-    let { i18n, onCreate, onClose, embedded = false }: {
+    let { i18n, onCreate, onClose, embedded = false, activeDoc = null }: {
         i18n: any;
         /** markdown（问题 + ==答案== 挖空式单块）与目标卡组 */
-        onCreate: (markdown: string, deckID: string, deckName: string, q?: string, a?: string, docID?: string) => Promise<{ docID: string; blockID: string } | void>;
+        onCreate: (
+            markdown: string,
+            deckID: string,
+            deckName: string,
+            q?: string,
+            a?: string,
+            docID?: string,
+            options?: { sourceDocID?: string; sourceTitle?: string; inPlace?: boolean },
+        ) => Promise<{ docID: string; blockID: string } | void>;
         onClose: () => void;
         embedded?: boolean;
+        activeDoc?: { name: string; docId: string } | null;
     } = $props();
     const t = $derived(i18n);
+
+    // svelte-ignore state_referenced_locally -- 来源文档在快速制卡打开时固化初值
+    let linkSourceDoc = $state(Boolean(activeDoc?.docId));
+    let insertInPlace = $state(false);
 
     let q = $state("");
     let a = $state("");
@@ -99,16 +112,25 @@
                 return;
             }
             const drafts = overloadNotice.splitDrafts;
-            let sharedDocID: string | undefined;
+            const docOpts = (linkSourceDoc && activeDoc?.docId) ? {
+                sourceDocID: activeDoc.docId,
+                sourceTitle: activeDoc.name,
+                inPlace: insertInPlace,
+            } : undefined;
+            let sharedDocID: string | undefined = insertInPlace ? activeDoc?.docId : undefined;
             for (const draft of drafts) {
-                const res = await onCreate(
+                const splitArgs: any[] = [
                     serializeDraftByTemplate(draft),
                     deckID,
                     deckName,
                     draft.q.trim(),
                     draft.a.trim(),
-                    sharedDocID,
-                );
+                ];
+                if (sharedDocID || docOpts) {
+                    splitArgs.push(sharedDocID);
+                    if (docOpts) splitArgs.push(docOpts);
+                }
+                const res = await (onCreate as any)(...splitArgs);
                 if (!sharedDocID && res && res.docID) {
                     sharedDocID = res.docID;
                 }
@@ -120,7 +142,9 @@
                 a = "";
                 isBidirectional = false;
                 previewAnswer = false;
-                createdNotice = (t.quickCardSplitDone ?? "已拆分为 ${n} 张原子卡并加入卡组").replace("${n}", String(drafts.length));
+                createdNotice = insertInPlace
+                    ? (t.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组")
+                    : (t.quickCardSplitDone ?? "已拆分为 ${n} 张原子卡并加入卡组").replace("${n}", String(drafts.length));
             } else {
                 onClose();
             }
@@ -182,15 +206,33 @@
             }
             const question = q.trim();
             const answer = a.trim();
+            const docOpts = (linkSourceDoc && activeDoc?.docId) ? {
+                sourceDocID: activeDoc.docId,
+                sourceTitle: activeDoc.name,
+                inPlace: insertInPlace,
+            } : undefined;
+            const targetDocID = insertInPlace ? activeDoc?.docId : undefined;
             if (template === "qa" && isBidirectional) {
                 // 双向卡片：互为问答生成两张卡片（A -> B 与 B -> A）
                 // 生产回调返回首面落点后，第二面复用同一文档；旧宿主/组件测试
                 // 返回 void 时仍保持兼容，但生产路径不会再次 createDocWithMd。
-                const first = await onCreate(serializeQaCard(question, answer), deckID, deckName, question, answer);
+                const firstArgs: any[] = [serializeQaCard(question, answer), deckID, deckName, question, answer];
+                if (targetDocID || docOpts) {
+                    firstArgs.push(targetDocID);
+                    if (docOpts) firstArgs.push(docOpts);
+                }
+                const first = await (onCreate as any)(...firstArgs);
                 if (first && first.docID) {
-                    await onCreate(serializeQaCard(answer, question), deckID, deckName, answer, question, first.docID);
+                    const secondArgs: any[] = [serializeQaCard(answer, question), deckID, deckName, answer, question, first.docID];
+                    if (docOpts) secondArgs.push(docOpts);
+                    await (onCreate as any)(...secondArgs);
                 } else {
-                    await onCreate(serializeQaCard(answer, question), deckID, deckName, answer, question);
+                    const altArgs: any[] = [serializeQaCard(answer, question), deckID, deckName, answer, question];
+                    if (targetDocID || docOpts) {
+                        altArgs.push(targetDocID);
+                        if (docOpts) altArgs.push(docOpts);
+                    }
+                    await (onCreate as any)(...altArgs);
                 }
                 if (disposed) return;
                 if (embedded) {
@@ -198,7 +240,9 @@
                     a = "";
                     isBidirectional = false;
                     previewAnswer = false;
-                    createdNotice = t.quickCardBidiDone ?? "双向卡片已生成（2 张）并加入卡组";
+                    createdNotice = insertInPlace
+                        ? (t.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组")
+                        : (t.quickCardBidiDone ?? "双向卡片已生成（2 张）并加入卡组");
                 } else {
                     onClose();
                 }
@@ -208,13 +252,20 @@
                     : template === "superblock"
                     ? `{{{col\n${question}\n\n${answer}\n}}}`
                     : serializeQaCard(question, answer);
-                await onCreate(markdown, deckID, deckName, question, answer);
+                const callArgs: any[] = [markdown, deckID, deckName, question, answer];
+                if (targetDocID || docOpts) {
+                    callArgs.push(targetDocID);
+                    if (docOpts) callArgs.push(docOpts);
+                }
+                await (onCreate as any)(...callArgs);
                 if (disposed) return;
                 if (embedded) {
                     q = "";
                     a = "";
                     previewAnswer = false;
-                    createdNotice = t.quickCardDone;
+                    createdNotice = insertInPlace
+                        ? (t.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组")
+                        : t.quickCardDone;
                 } else {
                     onClose();
                 }
@@ -278,6 +329,26 @@
             {/if}
         </div>
     </div>
+    {#if activeDoc && activeDoc.docId}
+        <div class="lv-qc-doc-banner" role="group" aria-label={t.quickCardDocLink ?? "来源文档联动"}>
+            <div class="lv-qc-doc-info">
+                <LvIcon name="target" size={13} />
+                <span class="lv-qc-doc-title" title={activeDoc.name}>{t.quickCardDocCurrent ?? "当前笔记"}：{activeDoc.name.replace(/^\//, "") || activeDoc.docId.slice(0, 8)}</span>
+            </div>
+            <div class="lv-qc-doc-controls">
+                <label class="lv-qc-doc-checkbox" title={t.quickCardDocLinkTip ?? "制卡时自动附带指向当前笔记的反向链接"}>
+                    <input type="checkbox" class="lv-check" bind:checked={linkSourceDoc} disabled={busy} />
+                    <span>{t.quickCardDocLink ?? "关联笔记反链"}</span>
+                </label>
+                {#if linkSourceDoc}
+                    <label class="lv-qc-doc-checkbox" title={t.quickCardDocInPlaceTip ?? "直接在当前笔记末尾追加卡片块，卡片与笔记正文融为一体"}>
+                        <input type="checkbox" class="lv-check" bind:checked={insertInPlace} disabled={busy} />
+                        <span>{t.quickCardDocInPlace ?? "就地追加到本文档"}</span>
+                    </label>
+                {/if}
+            </div>
+        </div>
+    {/if}
     <div class="lv-qc-content">
         <section class="lv-qc-editor" aria-label={t.quickCardEditorLabel}>
             <label class="lv-qc-field">
@@ -460,6 +531,42 @@
     .lv-quickcard {
         padding: var(--lv-sp-4);
         container: lv-quickcard / inline-size;
+    }
+    .lv-qc-doc-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-2);
+        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 6);
+        margin-bottom: var(--lv-sp-3);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-primary-soft) 40%, var(--lv-color-surface));
+        border: 1px solid var(--lv-primary-border);
+        font-size: var(--lv-type-meta-size);
+    }
+    .lv-qc-doc-info {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--lv-color-brand);
+        font-weight: var(--lv-fw-medium);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 60%;
+    }
+    .lv-qc-doc-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--lv-space-unit) * 4);
+    }
+    .lv-qc-doc-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        user-select: none;
     }
     .lv-qc-overload-tip {
         margin: var(--lv-sp-2) 0;

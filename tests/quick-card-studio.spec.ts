@@ -331,4 +331,34 @@ describe("R54 manual card workspace", () => {
             "第一定律：惯性定律。\n\n第二定律：F=ma 加速度定律。\n\n第三定律：作用力与反作用力定律。"
         ));
     });
+
+    it("检测到活动笔记时渲染来源联动条，并支持关联反链与就地追加", async () => {
+        const onCreate = vi.fn(async () => undefined);
+        render(QuickCard, {
+            i18n,
+            onCreate,
+            onClose: vi.fn(),
+            embedded: true,
+            activeDoc: { name: "/生物/细胞生物学", docId: "20261031-doc-cell" },
+        });
+
+        expect(await screen.findByText(/当前笔记：生物\/细胞生物学/)).toBeTruthy();
+        expect(screen.getByText("关联笔记反链")).toBeTruthy();
+        expect(screen.getByText("就地追加到本文档")).toBeTruthy();
+
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "线粒体的功能？" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "产生ATP" } });
+
+        // 默认关联笔记反链 (inPlace 为 false)
+        await fireEvent.click(screen.getByRole("button", { name: /制卡/ }));
+        await waitFor(() => expect(onCreate).toHaveBeenCalledWith(
+            "线粒体的功能？ ==产生ATP==",
+            "deck-1",
+            "默认卡组",
+            "线粒体的功能？",
+            "产生ATP",
+            undefined,
+            { sourceDocID: "20261031-doc-cell", sourceTitle: "/生物/细胞生物学", inPlace: false },
+        ));
+    });
 });
