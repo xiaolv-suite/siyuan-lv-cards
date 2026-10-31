@@ -3,6 +3,7 @@
     import LvIcon from "@/ui/kit/LvIcon.svelte";
     import { getMotionDuration } from "@/ui/kit/motion";
     import { maskMarkedAnswersForQuestion } from "@/core/card-face";
+    import { trapFocus } from "@/libs/focus-trap";
 
     let {
         helpOpen = false,
@@ -44,6 +45,7 @@
         { k: "p / q", d: t.review?.helpUndo ?? "撤销上一张评分" },
         { k: "x / 0", d: t.review?.helpSkip ?? "跳过此卡" },
         { k: "s", d: t.review?.helpSuspend ?? "今日暂停" },
+        { k: "Ctrl+D / ⌘+D", d: t.review?.helpDismiss ?? "归档隐藏此卡（可按 P/Q 撤销）" },
         { k: "m", d: t.review?.tbMemo ?? "助记便签" },
         { k: "[", d: t.review?.helpPeek ?? "回看上一张" },
         { k: "f", d: t.review?.helpReschedule ?? "快速改期" },
@@ -59,6 +61,7 @@
         class="lv-help lv-glass"
         tabindex="-1"
         bind:this={helpEl}
+        use:trapFocus={{ onEscape: onCloseHelp }}
         transition:fade={{ duration: getMotionDuration("normal") }}
         onclick={(e: Event) => e.stopPropagation()}
         onkeydown={(e) => { if (e.key === "Escape" || e.key === "?") { e.stopPropagation(); onCloseHelp(); } }}
@@ -95,6 +98,7 @@
     <div
         class="lv-peek lv-glass"
         tabindex="-1"
+        use:trapFocus={{ onEscape: onClosePeek }}
         transition:fade={{ duration: getMotionDuration("normal") }}
         onclick={(e: Event) => e.stopPropagation()}
         onkeydown={(e) => { if (e.key === "Escape" || e.key === "[") { e.stopPropagation(); onClosePeek(); } }}

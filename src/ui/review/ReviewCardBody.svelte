@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { fade } from "svelte/transition";
-    import { getMotionDuration } from "../kit/motion";
     import LvIcon from "../kit/LvIcon.svelte";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace, scopeCustomCardCss } from "@/core/card-face";
     import { cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
@@ -130,7 +128,6 @@
             onclick={onCardContentClick}
             ondblclick={onCardContentDblClick}
             style={`font-size: ${cardFontScale || 1}em`}
-            in:fade={{ duration: getMotionDuration("standard") }}
             data-testid="review-card-content"
         >
             {#if cardCssTag}

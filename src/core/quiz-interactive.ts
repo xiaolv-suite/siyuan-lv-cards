@@ -236,10 +236,9 @@ export function parseInteractiveQuiz(params: {
         };
     }
 
-    // 4. 检查是否为填空题
+    // 4. 检查是否为显式填空题（仅限考试填空属性或连续下划线填空符；普通 ==挖空== 闪卡走自由回忆，除非用户显式开启打字模式）
     const hasUnderline = /_{3,}/.test(fullContent);
-    const hasClozeMark = fullContent.includes("==") || domHtml.includes("data-type=\"mark\"");
-    if (examType === "fill" || hasUnderline || hasClozeMark) {
+    if (examType === "fill" || hasUnderline) {
         return {
             kind: "fill",
             stem: cleanText(markdown || domHtml),
@@ -248,7 +247,7 @@ export function parseInteractiveQuiz(params: {
             judgeAnswer: null,
             fillExpected: examAnswer || expectedText || cardMemo,
             analysis: examAnalysis,
-            hasInteractiveWidgets: Boolean(examAnswer || expectedText || cardMemo || hasUnderline || hasClozeMark),
+            hasInteractiveWidgets: Boolean(examAnswer || expectedText || cardMemo || hasUnderline),
         };
     }
 

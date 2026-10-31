@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.222.0 2026-10-31 · 阶段 B 上半场：专注复习顶栏五键减负、单偏好面板合并、移出复习三选一弹窗与首屏常驻评分栏
+
+- **修复 (Fixed)**：
+  - **普通挖空卡强制弹出填空输入框并劫持快捷键焦点（`src/core/quiz-interactive.ts`）**：`parseInteractiveQuiz` 原先将所有含 `==` 或 `<mark>` 的普通挖空闪卡误归入考试填空题型（`kind: "fill"`），导致未开启打字练习时仍渲染自动抢焦点的输入框，使空格翻面与 `h`/`p`/`x`/`s`/`*` 快捷键失灵。现仅在显式考试填空属性（`custom-exam-type="fill"`）或连续下划线填空符（`___`）时渲染交互填空框；
+  - **撤销（`P`/`Q`）切卡瞬间闪白与语境面包屑丢失（`src/ui/review/ReviewCardBody.svelte` & `src/ui/review.svelte`）**：移除卡面切换时的透明淡入等待，并在撤销恢复卡面后异步刷新来源面包屑与助记便签；
+  - **复习“在编辑器中打开”快捷键属性错标为 `o` 与帮助/回看浮层焦点逃逸（`src/ui/review/ReviewToolbar.svelte` & `src/ui/review/ReviewHelpAndPeek.svelte`）**：修正 `aria-keyshortcuts="e"`，为帮助（`?`）与回看（`[`）对话框补齐 `trapFocus` 与 `Ctrl+D` 快捷键说明，并为更多菜单增加上下方向键与 `Home`/`End` 键盘导航。
+- **优化 (Changed)**：
+  - **专注复习顶栏精简为 5 个高频按钮并合并双“本场偏好”入口（`src/ui/review/ReviewToolbar.svelte` & `src/ui/review/ReviewSessionPrefs.svelte`）**：顶栏右侧仅常驻“撤销、跳过、编辑、星标、更多” 5 项，左侧合并为安静的范围/目的胶囊；将范围、会话目的、作答方式统一收入单一“本场偏好”面板，消除顶栏横向滚动与同名双偏好弹窗；
+  - **“今天不学 / 归档隐藏 / 移出卡组”收口为统一的“移出复习…”三选一弹窗（`src/ui/review/ReviewActionModals.svelte`）**：经隔离内核实测确认 `removeRiffCards` 会清空卡片的内核 FSRS 排期与复习进度（再次入组按新卡重学），在统一弹窗中并列呈现三种去向的真实后果与思源原生闪卡可见性边界；
+  - **卡面高度随内容自适应、评分栏首屏粘性常驻（`src/ui/review.svelte` & `src/ui/review/ReviewRatingBar.svelte`）**：收紧卡面过大的最小高度与内边距，评分栏底部粘性常驻，在 1440×900、1024×768 窄窗与 150% 系统缩放下均无需滚动即可直接评分。
+
 ## v0.221.0 2026-10-31 · 阶段 A 收官：超级块问答入组与维护误判修复、42 个孤儿核心模块归档及中英文档如实校正
 
 - **修复 (Fixed)**：

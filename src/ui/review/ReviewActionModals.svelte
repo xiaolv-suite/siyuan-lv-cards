@@ -15,6 +15,7 @@
         memoDraft = "",
         memoSaving = false,
         retireBusy = false,
+        dismissBusy = false,
         onClosePause,
         onConfirmPause,
         onCloseSessionOptions,
@@ -23,6 +24,8 @@
         onSaveMemo,
         onCloseRetireModal,
         onConfirmRetire,
+        onSuspendToday,
+        onDismissCard,
         onCloseZoomedImage,
     }: {
         t: any;
@@ -37,6 +40,7 @@
         memoDraft?: string;
         memoSaving?: boolean;
         retireBusy?: boolean;
+        dismissBusy?: boolean;
         onClosePause: () => void;
         onConfirmPause: () => void;
         onCloseSessionOptions: () => void;
@@ -45,6 +49,8 @@
         onSaveMemo: (memo: string) => void;
         onCloseRetireModal: () => void;
         onConfirmRetire: () => void;
+        onSuspendToday?: () => void;
+        onDismissCard?: () => void;
         onCloseZoomedImage: () => void;
     } = $props();
 
@@ -195,22 +201,45 @@
 
 {#if showRetireModal}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={onCloseRetireModal}>
+    <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={() => { if (!retireBusy && !dismissBusy) onCloseRetireModal(); }}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出卡组"} tabindex="-1" use:trapFocus={{ onEscape: onCloseRetireModal }} onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出复习"} tabindex="-1" use:trapFocus={{ onEscape: () => { if (!retireBusy && !dismissBusy) onCloseRetireModal(); } }} onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
-                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="ban" size={17} /> {t.review?.retireCardTitle ?? "移出复习卡组"}</span>
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="ban" size={17} /> {t.review?.retireCardTitle ?? "将此卡移出复习"}</span>
                 <div class="fn__flex-1"></div>
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy} aria-label={cancelLabel} onclick={onCloseRetireModal}><LvIcon name="close" size={13} /></button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy || dismissBusy} aria-label={cancelLabel} onclick={onCloseRetireModal}><LvIcon name="close" size={13} /></button>
             </div>
-            <div style="padding: var(--lv-sp-3) 0">
-                <p class="ft__smaller ft__on-surface" style="line-height: var(--lv-lh-reading)">{t.review?.retireCardDesc ?? "将此卡移出当前复习卡组，不再参与复习调度。思源笔记正文内容不会受到任何修改。确认移出？"}</p>
+            <div style="padding: var(--lv-sp-3) 0; display: flex; flex-direction: column; gap: var(--lv-sp-2)">
+                {#if onSuspendToday}
+                    <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-border); border-radius: var(--lv-r-s);">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size);">{t.review?.suspendToday ?? "今天不学"} <span class="ft__smaller ft__on-surface">(S)</span></div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 2px;">仅今日暂缓，明日自动回到到期队列，保留全部 FSRS 复习进度。</div>
+                        </div>
+                        <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy} onclick={() => { onSuspendToday(); onCloseRetireModal(); }}>{t.review?.suspendToday ?? "今天不学"}</button>
+                    </div>
+                {/if}
+                {#if onDismissCard}
+                    <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-border); border-radius: var(--lv-r-s);">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size);">归档隐藏 <span class="ft__smaller ft__on-surface">(Ctrl+D)</span></div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 2px;">保留内核 FSRS 进度，在本插件日常复习中不再出题（可按 P/Q 撤销或在卡库恢复；思源原生闪卡面板仍可见）。</div>
+                        </div>
+                        <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy} onclick={() => { onDismissCard(); onCloseRetireModal(); }}>归档隐藏</button>
+                    </div>
+                {/if}
+                <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid color-mix(in srgb, var(--lv-color-danger) 30%, var(--lv-border)); border-radius: var(--lv-r-s); background: color-mix(in srgb, var(--lv-color-danger) 4%, transparent);">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size); color: var(--lv-color-danger);">移出卡组（清空排期进度）</div>
+                        <div class="ft__smaller ft__on-surface" style="margin-top: 2px;">{t.review?.retireCardDesc ?? "从思源卡组彻底移除并清空该卡的内核 FSRS 复习进度（再次入组将按新卡从零重学；原笔记正文不受影响）。"}</div>
+                    </div>
+                    <button type="button" class="b3-button lv-btn-danger b3-button--small" disabled={retireBusy || dismissBusy} onclick={onConfirmRetire}>
+                        {retireBusy ? "处理中…" : (t.review?.retireCardConfirm ?? "确认移出")}
+                    </button>
+                </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3)">
-                <button class="b3-button b3-button--text" disabled={retireBusy} onclick={onCloseRetireModal}>取消</button>
-                <button class="b3-button lv-btn-danger" disabled={retireBusy} onclick={onConfirmRetire}>
-                    {retireBusy ? "处理中…" : (t.review?.retireCardConfirm ?? "确认移出")}
-                </button>
+            <div style="display: flex; justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-1)">
+                <button class="b3-button b3-button--text" disabled={retireBusy || dismissBusy} onclick={onCloseRetireModal}>取消</button>
             </div>
         </div>
     </div>

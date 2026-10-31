@@ -1,12 +1,20 @@
 <script lang="ts">
+    import { tick } from "svelte";
     import LvIcon from "@/ui/kit/LvIcon.svelte";
     import LvSwitch from "@/ui/kit/LvSwitch.svelte";
+    import type { RiffDeck } from "@/api/riff";
+    import { SESSION_PURPOSES, type SessionPurpose } from "@/core/session-purpose";
     import type { ReviewSettings } from "../review.svelte";
 
     const BUDGET_PRESETS = [5, 10, 15, 20, 25, 30, 45, 60] as const;
 
     let {
         open = false,
+        scopeKey = $bindable("all"),
+        purpose = $bindable("review" as SessionPurpose),
+        decks = [],
+        notebooks = [],
+        answerVariant = "normal",
         ratingStyle = "four",
         reverseOrder = false,
         mixedRotation = false,
@@ -15,12 +23,19 @@
         budgetEstimate = null,
         hasOverrides = false,
         t,
+        onScopeChange,
+        onSetAnswerVariant,
         onSetOverride,
         onSetBudget,
         onResetOverrides,
         onClose,
     }: {
         open?: boolean;
+        scopeKey?: string;
+        purpose?: SessionPurpose;
+        decks?: RiffDeck[];
+        notebooks?: { id: string; name: string }[];
+        answerVariant?: "normal" | "choice" | "typing";
         ratingStyle?: "four" | "three";
         reverseOrder?: boolean;
         mixedRotation?: boolean;
@@ -29,11 +44,20 @@
         budgetEstimate?: { done: number; left: number } | null;
         hasOverrides?: boolean;
         t: any;
+        onScopeChange?: () => void;
+        onSetAnswerVariant?: (variant: "normal" | "choice" | "typing") => void;
         onSetOverride: (key: keyof ReviewSettings, value: unknown) => void;
         onSetBudget: (min: number) => void;
         onResetOverrides: () => void;
         onClose?: () => void;
     } = $props();
+
+    let scopeSelectEl = $state<HTMLSelectElement | null>(null);
+
+    export async function focusScope() {
+        await tick();
+        scopeSelectEl?.focus();
+    }
 
     function clampBudgetMinutes(value: unknown): number {
         const n = Number(value);
@@ -68,6 +92,62 @@
                 </button>
             {/if}
         </div>
+        {#if onScopeChange}
+            <div class="lv-prefs-row">
+                <span>{t.review?.scopeTitle ?? "复习范围"}</span>
+                <div class="fn__flex-1"></div>
+                <select
+                    class="b3-select b3-select--small lv-scope"
+                    bind:this={scopeSelectEl}
+                    bind:value={scopeKey}
+                    aria-label={t.review?.scopeTitle ?? "复习范围"}
+                    onchange={onScopeChange}
+                >
+                    <option value="all">{t.review?.scopeAll ?? "全部卡片"}</option>
+                    <option value="new">{t.review?.scopeNew ?? "仅新卡"}</option>
+                    <option value="old">{t.review?.scopeOld ?? "仅旧卡"}</option>
+                    {#if decks.length > 0}
+                        <optgroup label={t.dashboard?.decks ?? "卡组"}>
+                            {#each decks as d (d.id)}
+                                <option value={`deck:${d.id}`}>{d.name}</option>
+                            {/each}
+                        </optgroup>
+                    {/if}
+                    {#if notebooks.length > 0}
+                        <optgroup label={t.review?.scopeNotebooks ?? "笔记本"}>
+                            {#each notebooks as n (n.id)}
+                                <option value={`notebook:${n.id}`}>{n.name}</option>
+                            {/each}
+                        </optgroup>
+                    {/if}
+                </select>
+                <select
+                    class="b3-select b3-select--small"
+                    bind:value={purpose}
+                    aria-label={t.review?.purposeTitle ?? "会话目的"}
+                >
+                    {#each SESSION_PURPOSES as p (p)}
+                        <option value={p}>{t.purpose?.[p]?.name ?? p}</option>
+                    {/each}
+                </select>
+            </div>
+        {/if}
+        {#if onSetAnswerVariant}
+            <div class="lv-prefs-row">
+                <span>{t.review?.answerModeLabel ?? "作答方式"}</span>
+                <div class="fn__flex-1"></div>
+                <select
+                    class="b3-select b3-select--small"
+                    aria-label={t.review?.answerModeLabel ?? "作答方式"}
+                    value={answerVariant}
+                    onchange={(e: Event) => onSetAnswerVariant((e.target as HTMLSelectElement).value as "normal" | "choice" | "typing")}
+                >
+                    <option value="normal">{t.review?.modeRecall ?? "自由回忆"}</option>
+                    <option value="choice">{t.review?.modeChoice ?? "选择题"}</option>
+                    <option value="typing">{t.review?.modeTyping ?? "打字练习"}</option>
+                </select>
+            </div>
+        {/if}
         <div class="lv-prefs-row">
             <span>{t.settings?.ratingStyle ?? "评分制"}</span>
             <div class="fn__flex-1"></div>
@@ -169,50 +249,39 @@
                 font-weight: var(--lv-fw-semibold);
                 display: inline-flex;
                 align-items: center;
-                gap: calc(var(--lv-space-unit) * 2);
+                gap: var(--lv-sp-1);
+                text-wrap: balance;
             }
         }
-        .b3-button {
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
 
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-            }
-        }
-        .b3-select,
-        .b3-text-field {
-            touch-action: manipulation;
-            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
-
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-                border-color: var(--lv-color-brand);
-            }
-        }
-        .lv-budget-custom {
-            width: 72px;
-            font-size: var(--lv-type-control-size);
-            padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
-            box-sizing: border-box;
-            vertical-align: middle;
-        }
         .lv-prefs-row {
             display: flex;
             align-items: center;
             gap: var(--lv-sp-2);
-            padding: var(--lv-sp-1) 0;
-            & > span:first-child {
-                color: var(--lv-color-text-muted);
+            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) 0;
+            flex-wrap: wrap;
+
+            .lv-budget-custom {
+                width: 68px;
             }
-            span {
-                font-variant-numeric: tabular-nums;
+
+            .lv-scope {
+                height: 28px;
+                min-height: 28px;
+                line-height: var(--lv-lh-control-lg);
+                text-align-last: center;
+                vertical-align: middle;
             }
-            .b3-select {
-                min-width: 9em;
+        }
+
+        .b3-button,
+        .b3-select,
+        .b3-text-field {
+            touch-action: manipulation;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
             }
         }
     }

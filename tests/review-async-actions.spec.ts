@@ -298,7 +298,8 @@ describe("review async action guards", () => {
         const view = render(Review, { ctx: testCtx });
         await screen.findByText("block-a body");
 
-        // 打开暂停弹窗
+        // 打开更多菜单并点击暂停弹窗
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
         const pauseBtn = screen.getByRole("button", { name: "t.review.pauseTitle" });
         await fireEvent.click(pauseBtn);
         expect(screen.getByText("t.review.pauseDesc")).toBeTruthy();
@@ -343,6 +344,7 @@ describe("review async action guards", () => {
 
         // 等待下一张卡片加载完毕并退出提交忙碌态，此时 audioCtx 处于活跃状态
         await screen.findByText("block-b body");
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
         const pauseBtn = screen.getByRole("button", { name: "t.review.pauseTitle" }) as HTMLButtonElement;
         await waitFor(() => expect(pauseBtn.disabled).toBe(false));
 
@@ -366,14 +368,17 @@ describe("review async action guards", () => {
         const view = render(Review, { ctx: testCtx });
         await screen.findByText("block-a body");
 
-        // 点击标记疑问
+        // 打开更多菜单并点击标记疑问
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
         const markBtn = screen.getByRole("button", { name: "t.review.tbMarkIssue" });
         await fireEvent.click(markBtn);
 
         expect(testCtx.tagErrorReason).toHaveBeenCalledWith("card-a", "question-unclear");
-        expect(screen.getAllByText("t.review.issueChip")).toHaveLength(2);
-        expect(markBtn.hasAttribute("disabled")).toBe(true);
-        await fireEvent.click(markBtn);
+        expect(screen.getAllByText("t.review.issueChip")).toHaveLength(1);
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
+        const markBtnAfter = screen.getByRole("button", { name: "t.review.tbMarkIssue" });
+        expect(markBtnAfter.hasAttribute("disabled")).toBe(true);
+        await fireEvent.click(markBtnAfter);
         expect(testCtx.tagErrorReason).toHaveBeenCalledOnce();
         view.unmount();
     });
@@ -383,6 +388,7 @@ describe("review async action guards", () => {
         if (navigationFails) testCtx.openDashboard.mockImplementation(() => { throw new Error("tab unavailable"); });
         const view = render(Review, { ctx: testCtx });
         await screen.findByText("block-a body");
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
         await fireEvent.click(screen.getByRole("button", { name: "t.review.pauseTitle" }));
         await fireEvent.click(screen.getByRole("button", { name: "t.review.pauseConfirm" }));
         await fireEvent.keyDown(window, { key: "x" });
@@ -402,9 +408,9 @@ describe("review async action guards", () => {
     it("preserves native toolbar activation keys without revealing or rating a card", async () => {
         const view = mountReview();
         await screen.findByText("block-a body");
-        const pause = screen.getByRole("button", { name: "t.review.pauseTitle" });
+        const skipBtn = screen.getByRole("button", { name: "t.review.skip" });
         const event = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true });
-        await fireEvent(pause, event);
+        await fireEvent(skipBtn, event);
         expect(event.defaultPrevented).toBe(false);
         expect(view.container.querySelector(".lv-btn-rate")).toBeNull();
         expect(reviewRiffCard).not.toHaveBeenCalled();
@@ -438,10 +444,11 @@ describe("review async action guards", () => {
         expect(screen.queryByRole("button", { name: /^[A-Z]\. old answer$/ })).toBeNull();
     });
 
-    it.each(["t.review.pauseTitle", "t.review.sessionOptionsTitle"])("blocks review shortcuts while %s is open and closes it with Escape", async (opener) => {
+    it("blocks review shortcuts while t.review.pauseTitle is open and closes it with Escape", async () => {
         mountReview();
         await screen.findByText("block-a body");
-        await fireEvent.click(screen.getByRole("button", { name: opener }));
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.pauseTitle" }));
 
         await fireEvent.keyDown(window, { key: "x" });
         await fireEvent.keyDown(window, { key: " ", code: "Space" });
@@ -451,7 +458,7 @@ describe("review async action guards", () => {
         expect(reviewRiffCard).not.toHaveBeenCalled();
         expect(screen.getByText("block-a body")).toBeTruthy();
         await fireEvent.keyDown(window, { key: "Escape" });
-        expect(screen.queryByText(opener === "t.review.pauseTitle" ? "t.review.pauseDesc" : "t.review.sessionOptionsHint")).toBeNull();
+        expect(screen.queryByText("t.review.pauseDesc")).toBeNull();
     });
 
     it("restores the original answer and skip exclusions when undoing a skip", async () => {
@@ -476,6 +483,7 @@ describe("review async action guards", () => {
     it("does not reveal the current answer when dismissing an overlay scrim", async () => {
         const view = mountReview();
         await screen.findByText("block-a body");
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.tbMoreDesc" }));
         await fireEvent.click(screen.getByRole("button", { name: "t.review.pauseTitle" }));
         await fireEvent.click(view.container.querySelector(".lv-modal-backdrop")!);
         expect(view.container.querySelector(".lv-btn-rate")).toBeNull();
@@ -512,9 +520,9 @@ describe("review async action guards", () => {
         await screen.findByText("block-a body");
 
         // 默认核心高频按钮处于常驻显示状态
-        expect(screen.getByRole("button", { name: "t.review.pauseTitle" })).toBeTruthy();
-        expect(screen.getByRole("button", { name: "t.review.tbMarkIssue" })).toBeTruthy();
         expect(screen.getByRole("button", { name: "t.review.undoTitle" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "t.review.skip" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "t.review.openInEditor" })).toBeTruthy();
 
         // 初始状态下二级操作气泡未展开
         const moreBtn = screen.getByRole("button", { name: /(t\.review\.tbMore|t\.review\.tbMoreDesc)/ });

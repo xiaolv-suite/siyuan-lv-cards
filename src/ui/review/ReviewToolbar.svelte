@@ -1,7 +1,7 @@
 <script lang="ts">
     import LvIcon from "@/ui/kit/LvIcon.svelte";
     import type { RiffDeck } from "@/api/riff";
-    import { SESSION_PURPOSES, PURPOSE_PROFILES, type SessionPurpose } from "@/core/session-purpose";
+    import type { SessionPurpose } from "@/core/session-purpose";
 
     let {
         scopeKey = $bindable("all"),
@@ -13,7 +13,6 @@
         isStarred = false,
         isMarkedIssue = false,
         actionBusy = false,
-        dismissBusy = false,
         lastAnswered = null,
         reversedRecall = $bindable(false),
         zenMode = $bindable(false),
@@ -21,9 +20,7 @@
         prefsOpen = false,
         hasOverrides = false,
         t,
-        onScopeChange,
         onAdjustFontScale,
-        onOpenSessionOptions,
         onOpenCanvasInEditor,
         onToggleStar,
         onToggleMarkIssue,
@@ -35,11 +32,10 @@
         onTogglePeek,
         onOpenInEditor,
         onRefreshCard,
-        onSuspendToday,
         onOpenMemoEditor,
-        onDismissCard,
         onOpenRetireModal,
         onOpenHelp,
+        onFocusScope,
     }: {
         scopeKey?: string;
         purpose?: SessionPurpose;
@@ -58,9 +54,9 @@
         prefsOpen?: boolean;
         hasOverrides?: boolean;
         t: any;
-        onScopeChange: () => void;
+        onScopeChange?: () => void;
         onAdjustFontScale: (delta: number) => void;
-        onOpenSessionOptions: () => void;
+        onOpenSessionOptions?: () => void;
         onOpenCanvasInEditor?: () => void;
         onToggleStar: () => void;
         onToggleMarkIssue: () => void;
@@ -72,15 +68,32 @@
         onTogglePeek: () => void;
         onOpenInEditor: () => void;
         onRefreshCard: () => void;
-        onSuspendToday: () => void;
+        onSuspendToday?: () => void;
         onOpenMemoEditor: () => void;
-        onDismissCard: () => void;
+        onDismissCard?: () => void;
         onOpenRetireModal: () => void;
         onOpenHelp: () => void;
+        onFocusScope?: () => void;
     } = $props();
 
     let showMoreToolbar = $state(false);
-    let scopeEl = $state<HTMLSelectElement | null>(null);
+    let moreMenuEl = $state<HTMLDivElement | null>(null);
+
+    const scopeSummaryLabel = $derived.by(() => {
+        if (scopeKey === "new") return t.review?.scopeNew ?? "仅新卡";
+        if (scopeKey === "old") return t.review?.scopeOld ?? "仅旧卡";
+        if (scopeKey.startsWith("deck:")) {
+            const id = scopeKey.slice(5);
+            return decks.find(d => d.id === id)?.name ?? (t.dashboard?.decks ?? "卡组");
+        }
+        if (scopeKey.startsWith("notebook:")) {
+            const id = scopeKey.slice(9);
+            return notebooks.find(n => n.id === id)?.name ?? (t.review?.scopeNotebooks ?? "笔记本");
+        }
+        return t.review?.scopeAll ?? "全部卡片";
+    });
+
+    const purposeLabel = $derived(t.purpose?.[purpose]?.name ?? "");
 
     function handleWindowKeydown(e: KeyboardEvent) {
         if (showMoreToolbar && e.key === "Escape") {
@@ -89,92 +102,95 @@
         }
     }
 
+    function handleMoreMenuKeydown(e: KeyboardEvent) {
+        if (!moreMenuEl) return;
+        if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+        const items = [...moreMenuEl.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
+        if (items.length === 0) return;
+        e.preventDefault();
+        const curIdx = items.indexOf(document.activeElement as HTMLButtonElement);
+        let nextIdx = 0;
+        if (e.key === "Home") nextIdx = 0;
+        else if (e.key === "End") nextIdx = items.length - 1;
+        else if (e.key === "ArrowDown") nextIdx = curIdx < 0 ? 0 : (curIdx + 1) % items.length;
+        else if (e.key === "ArrowUp") nextIdx = curIdx <= 0 ? items.length - 1 : curIdx - 1;
+        items[nextIdx]?.focus();
+    }
+
     export function focusScope() {
-        scopeEl?.focus();
+        if (onFocusScope) onFocusScope();
+        else onTogglePrefs();
+    }
+
+    function handleEditClick() {
+        if (hasSvgCanvas && onOpenCanvasInEditor) onOpenCanvasInEditor();
+        else onOpenInEditor();
     }
 </script>
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <div class="lv-head-row lv-head-tools">
-    <select
-        class="b3-select lv-scope"
-        bind:this={scopeEl}
-        bind:value={scopeKey}
-        onchange={onScopeChange}
-        title={t.review?.scopeTitle ?? "复习范围"}
-        aria-label={t.review?.scopeTitle ?? "复习范围"}
+    <!-- 左侧安静的范围/目的胶囊：点击直接展开统一的“本场偏好”切换范围或目的，避免顶栏常驻两个下拉框 -->
+    <button
+        type="button"
+        class="b3-button b3-button--small lv-btn-ghost lv-scope-summary"
+        class:lv-active={prefsOpen || hasOverrides}
+        title={`${t.review?.scopeTitle ?? "复习范围"}：${scopeSummaryLabel}${purposeLabel ? ` · ${purposeLabel}` : ""}（点击调整本场偏好）`}
+        aria-label={t.review?.prefsTitle ?? "本场偏好"}
+        aria-expanded={prefsOpen}
+        onclick={onTogglePrefs}
     >
-        <option value="all">{t.review?.scopeAll ?? "全部卡片"}</option>
-        <option value="new">{t.review?.scopeNew ?? "仅新卡"}</option>
-        <option value="old">{t.review?.scopeOld ?? "仅旧卡"}</option>
-        {#if decks.length > 0}
-            <optgroup label={t.dashboard?.decks ?? "卡组"}>
-                {#each decks as d (d.id)}
-                    <option value={`deck:${d.id}`}>{d.name}</option>
-                {/each}
-            </optgroup>
-        {/if}
-        {#if notebooks.length > 0}
-            <optgroup label={t.review?.scopeNotebooks ?? "笔记本"}>
-                {#each notebooks as n (n.id)}
-                    <option value={`notebook:${n.id}`}>{n.name}</option>
-                {/each}
-            </optgroup>
-        {/if}
-    </select>
-
-    <!-- BI-2：本次会话目的（结束条件随目的显示；informal 不计入每日目标） -->
-    <select
-        class="b3-select lv-scope"
-        bind:value={purpose}
-        title={t.review?.purposeTitle ?? "会话目的"}
-        aria-label={t.review?.purposeTitle ?? "会话目的"}
-    >
-        {#each SESSION_PURPOSES as p (p)}
-            <option value={p}>{t.purpose?.[p]?.name ?? p}</option>
-        {/each}
-    </select>
-
-    <!-- R53 主色即动作：结束条件章是信息不是按钮——优雅胶囊态 + 目标语义前缀 + 提示解释 -->
-    <span
-        class="lv-chip2 lv-chip2--default lv-purpose-end-chip"
-        title={PURPOSE_PROFILES[purpose]?.grading === "formal" ? (t.review?.purposeFormal ?? "正式复习") : (t.review?.purposeInformal ?? "随性自测")}
-    >
-        <LvIcon name="target" size={12} /> {t.purpose?.[purpose]?.end ?? "完成"}
-    </span>
+        <LvIcon name="book" size={13} />
+        <span class="lv-scope-summary-text">{scopeSummaryLabel}{#if purposeLabel && purpose !== "review"} · {purposeLabel}{/if}</span>
+        {#if hasOverrides}<span aria-hidden="true">●</span>{/if}
+    </button>
 
     <div class="fn__flex-1"></div>
 
-    <!-- docs/13 §4：图标可读、操作不依赖 hover；常驻核心高频操作，二级动作折叠进更多气泡 -->
-    <div class="lv-font-scale-group" title={t.review?.fontScaleTitle ?? "调整卡面字号"}>
-        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="缩小卡面字号" aria-label="缩小卡面字号" onclick={() => onAdjustFontScale(-0.1)}>A−</button>
-        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-font-btn" title="放大卡面字号" aria-label="放大卡面字号" onclick={() => onAdjustFontScale(0.1)}>A+</button>
-    </div>
+    <!-- 阶段 B · I2：顶栏右侧严格只常驻 5 个高频按钮（撤销、跳过、编辑、星标、更多） -->
+    <button
+        type="button"
+        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
+        title={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
+        aria-label={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
+        aria-keyshortcuts="p q"
+        disabled={actionBusy}
+        onclick={onUndo}
+    >
+        <LvIcon name="refresh" size={13} />
+        <span class="lv-tool-btn-label">{t.review?.tbUndo ?? "撤销"}</span>
+    </button>
 
     <button
         type="button"
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={t.review?.sessionOptionsTitle ?? "本场偏好"}
-        aria-label={t.review?.sessionOptionsTitle ?? "本场偏好"}
-        onclick={onOpenSessionOptions}
+        title={`${t.review?.skip ?? "跳过"} (X)`}
+        aria-label={t.review?.skip ?? "跳过"}
+        aria-keyshortcuts="x 0"
+        disabled={actionBusy}
+        onclick={onSkip}
     >
-        <LvIcon name="zap" size={14} />
-        <span class="lv-tool-btn-label"> {(t.review?.sessionOptionsTitle ?? "偏好").slice(0, 4)}</span>
+        <LvIcon name="chevron-right" size={13} />
+        <span class="lv-tool-btn-label">{t.review?.skip ?? "跳过"}</span>
     </button>
 
-    {#if hasSvgCanvas && onOpenCanvasInEditor}
-        <button
-            type="button"
-            class="b3-button b3-button--small lv-btn-ghost lv-tool-btn lv-canvas-edit-btn"
-            title={t.review?.canvasDoubleClickTip ?? "编辑画布 (或双击画布)"}
-            aria-label="编辑画布"
-            onclick={onOpenCanvasInEditor}
-        >
-            <LvIcon name="edit" size={13} />
-            <span class="lv-tool-btn-label"> {t.review?.tbEditCanvas ?? "编辑画布"}</span>
-        </button>
-    {/if}
+    <button
+        type="button"
+        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
+        title={hasSvgCanvas && onOpenCanvasInEditor
+            ? (t.review?.canvasDoubleClickTip ?? "编辑画布 (E)")
+            : `${t.review?.openInEditor ?? "在编辑器中打开"} (E)`}
+        aria-label={hasSvgCanvas && onOpenCanvasInEditor
+            ? "编辑画布"
+            : (t.review?.openInEditor ?? "在编辑器中打开")}
+        aria-keyshortcuts="e"
+        disabled={!current || actionBusy}
+        onclick={handleEditClick}
+    >
+        <LvIcon name="edit" size={13} />
+        <span class="lv-tool-btn-label">{hasSvgCanvas && onOpenCanvasInEditor ? (t.review?.tbEditCanvas ?? "画布") : (t.review?.tbEdit ?? "编辑")}</span>
+    </button>
 
     <button
         type="button"
@@ -188,59 +204,7 @@
         onclick={onToggleStar}
     >
         <LvIcon name="star" size={14} />
-        <span class="lv-tool-btn-label"> {isStarred ? "已星标" : "星标"}</span>
-    </button>
-
-    <button
-        type="button"
-        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        class:lv-btn-primary={isMarkedIssue}
-        title={isMarkedIssue ? (t.review?.issueMarked ?? "已标记疑问") : (t.review?.tbMarkIssue ?? "标记疑问")}
-        aria-label={t.review?.tbMarkIssue ?? "标记疑问"}
-        aria-pressed={isMarkedIssue}
-        disabled={!current || actionBusy || isMarkedIssue}
-        onclick={onToggleMarkIssue}
-    >
-        <LvIcon name="flag" size={14} />
-        <span class="lv-tool-btn-label"> {isMarkedIssue ? (t.review?.issueChip ?? "待修") : (t.review?.tbMarkIssue ?? "标记")}</span>
-    </button>
-
-    <button
-        type="button"
-        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={t.review?.pauseTitle ?? "暂停这场复习"}
-        aria-label={t.review?.pauseTitle ?? "暂停这场复习"}
-        disabled={actionBusy}
-        onclick={onPause}
-    >
-        <LvIcon name="moon" size={14} />
-        <span class="lv-tool-btn-label"> {t.review?.tbPause ?? "暂停"}</span>
-    </button>
-
-    <button
-        type="button"
-        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
-        aria-label={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
-        aria-keyshortcuts="p q"
-        disabled={actionBusy}
-        onclick={onUndo}
-    >
-        <LvIcon name="refresh" size={13} />
-        <span class="lv-tool-btn-label"> {t.review?.tbUndo ?? "撤销"}</span>
-    </button>
-
-    <button
-        type="button"
-        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={`${t.review?.skip ?? "跳过"} (x)`}
-        aria-label={t.review?.skip ?? "跳过"}
-        aria-keyshortcuts="x 0"
-        disabled={actionBusy}
-        onclick={onSkip}
-    >
-        <LvIcon name="chevron-right" size={13} />
-        <span class="lv-tool-btn-label"> {t.review?.skip ?? "跳过"}</span>
+        <span class="lv-tool-btn-label">{isStarred ? "已星标" : "星标"}</span>
     </button>
 
     <div class="lv-toolbar-more-wrap">
@@ -253,35 +217,81 @@
             aria-expanded={showMoreToolbar}
             onclick={() => (showMoreToolbar = !showMoreToolbar)}
         >
-            ··· {t.review?.tbMore ?? "更多"}
+            ··· <span class="lv-tool-btn-label">{t.review?.tbMore ?? "更多"}</span>
         </button>
 
         {#if showMoreToolbar}
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
             <div class="lv-toolbar-more-scrim" onclick={() => (showMoreToolbar = false)}></div>
-            <div class="lv-toolbar-more-menu" role="menu">
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <div
+                class="lv-toolbar-more-menu"
+                role="group"
+                aria-label={t.review?.tbMoreDesc ?? "更多动作"}
+                bind:this={moreMenuEl}
+                onkeydown={handleMoreMenuKeydown}
+            >
                 <button
                     type="button"
                     class="lv-toolbar-menu-item"
-                    class:lv-active={reversedRecall}
-                    title={t.review?.enableReversed ?? "翻转问答自测 (R)"}
-                    aria-keyshortcuts="r"
-                    onclick={() => { reversedRecall = !reversedRecall; showMoreToolbar = false; }}
+                    class:lv-active={prefsOpen || hasOverrides}
+                    title={t.review?.prefsTitle ?? "本场偏好"}
+                    onclick={() => { onTogglePrefs(); showMoreToolbar = false; }}
                 >
-                    <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span>
-                    <span>{reversedRecall ? (t.review?.cancelReversed ?? "恢复正常顺序") : (t.review?.enableReversed ?? "翻转问答自测 (R)")}</span>
+                    <span class="lv-menu-icon"><LvIcon name="settings" size={16} /></span>
+                    <span>{t.review?.tbPrefs ?? "本场偏好"}{hasOverrides ? " ●" : ""}</span>
                 </button>
 
                 <button
                     type="button"
                     class="lv-toolbar-menu-item"
-                    class:lv-active={zenMode}
-                    title="沉浸专注模式 (z)"
-                    aria-keyshortcuts="z"
-                    onclick={() => { zenMode = !zenMode; showMoreToolbar = false; }}
+                    disabled={actionBusy}
+                    title={t.review?.pauseTitle ?? "暂停这场复习"}
+                    aria-label={t.review?.pauseTitle ?? "暂停这场复习"}
+                    onclick={() => { onPause(); showMoreToolbar = false; }}
                 >
-                    <span class="lv-menu-icon"><LvIcon name="eye" size={16} /></span>
-                    <span>{zenMode ? "退出专注模式 (z)" : "沉浸专注模式 (z)"}</span>
+                    <span class="lv-menu-icon"><LvIcon name="moon" size={16} /></span>
+                    <span>{t.review?.tbPause ?? "暂停本场"}</span>
+                </button>
+
+                <!-- 阶段 B · I1：将“今天不学 / 归档隐藏 / 移出卡组”收口为单一“移出复习…”入口 -->
+                <button
+                    type="button"
+                    class="lv-toolbar-menu-item lv-menu-danger"
+                    disabled={!current || actionBusy}
+                    title={t.review?.retireCard ?? "移出复习…"}
+                    onclick={() => { onOpenRetireModal(); showMoreToolbar = false; }}
+                >
+                    <span class="lv-menu-icon"><LvIcon name="ban" size={16} /></span>
+                    <span>{t.review?.retireCard ?? "移出复习…"}</span>
+                </button>
+
+                <div class="lv-toolbar-menu-divider"></div>
+
+                <button
+                    type="button"
+                    class="lv-toolbar-menu-item"
+                    class:lv-active={isMarkedIssue}
+                    disabled={!current || actionBusy || isMarkedIssue}
+                    title={isMarkedIssue ? (t.review?.issueMarked ?? "已标记疑问") : (t.review?.tbMarkIssue ?? "标记疑问")}
+                    aria-label={t.review?.tbMarkIssue ?? "标记疑问"}
+                    aria-pressed={isMarkedIssue}
+                    onclick={() => { onToggleMarkIssue(); showMoreToolbar = false; }}
+                >
+                    <span class="lv-menu-icon"><LvIcon name="flag" size={16} /></span>
+                    <span>{isMarkedIssue ? (t.review?.issueMarked ?? "已标记疑问") : (t.review?.tbMarkIssue ?? "标记疑问")}</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="lv-toolbar-menu-item"
+                    disabled={!current || actionBusy}
+                    title={`${t.review?.tbMemo ?? "助记便签"} (M)`}
+                    aria-keyshortcuts="m"
+                    onclick={() => { onOpenMemoEditor(); showMoreToolbar = false; }}
+                >
+                    <span class="lv-menu-icon"><LvIcon name="lightbulb" size={16} /></span>
+                    <span>{t.review?.tbMemo ?? "助记便签"}</span>
                 </button>
 
                 <button
@@ -298,34 +308,37 @@
                 <button
                     type="button"
                     class="lv-toolbar-menu-item"
-                    class:lv-active={prefsOpen || hasOverrides}
-                    title={t.review?.prefsTitle ?? "本场偏好"}
-                    onclick={() => { onTogglePrefs(); showMoreToolbar = false; }}
+                    class:lv-active={reversedRecall}
+                    title={t.review?.enableReversed ?? "翻转问答自测 (R)"}
+                    aria-keyshortcuts="r"
+                    onclick={() => { reversedRecall = !reversedRecall; showMoreToolbar = false; }}
                 >
-                    <span class="lv-menu-icon"><LvIcon name="settings" size={16} /></span>
-                    <span>{t.review?.tbPrefs ?? "本场偏好"}{hasOverrides ? " ●" : ""}</span>
+                    <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span>
+                    <span>{reversedRecall ? (t.review?.cancelReversed ?? "恢复正常顺序") : (t.review?.enableReversed ?? "翻转问答自测 (R)")}</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="lv-toolbar-menu-item"
+                    class:lv-active={zenMode}
+                    title="沉浸专注模式 (Z)"
+                    aria-keyshortcuts="z"
+                    onclick={() => { zenMode = !zenMode; showMoreToolbar = false; }}
+                >
+                    <span class="lv-menu-icon"><LvIcon name="eye" size={16} /></span>
+                    <span>{zenMode ? "退出专注模式 (Z)" : "沉浸专注模式 (Z)"}</span>
                 </button>
 
                 <button
                     type="button"
                     class="lv-toolbar-menu-item"
                     disabled={!lastAnswered}
-                    title={t.review?.peekPrev ?? "回看上一张"}
+                    title={`${t.review?.peekPrev ?? "回看上一张"} ([)`}
+                    aria-keyshortcuts="["
                     onclick={() => { onTogglePeek(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="eye" size={16} /></span>
                     <span>{t.review?.peekPrev ?? "回看上一张"}</span>
-                </button>
-
-                <button
-                    type="button"
-                    class="lv-toolbar-menu-item"
-                    title={t.review?.openInEditor ?? "在编辑器中打开"}
-                    aria-keyshortcuts="o"
-                    onclick={() => { onOpenInEditor(); showMoreToolbar = false; }}
-                >
-                    <span class="lv-menu-icon"><LvIcon name="edit" size={16} /></span>
-                    <span>{t.review?.openInEditor ?? (t.review?.open ?? "在编辑器中打开")}</span>
                 </button>
 
                 <button
@@ -338,50 +351,12 @@
                     <span>{t.review?.tbRefresh ?? "刷新卡面"}</span>
                 </button>
 
-                <button
-                    type="button"
-                    class="lv-toolbar-menu-item"
-                    disabled={actionBusy}
-                    title={`${t.review?.suspendToday ?? "今日不再复习此卡"} (s)`}
-                    aria-keyshortcuts="s"
-                    onclick={() => { onSuspendToday(); showMoreToolbar = false; }}
-                >
-                    <span class="lv-menu-icon"><LvIcon name="moon" size={16} /></span>
-                    <span>{t.review?.suspendToday ?? (t.review?.tbSuspend ?? "今日暂停")}</span>
-                </button>
-
-                <button
-                    type="button"
-                    class="lv-toolbar-menu-item"
-                    disabled={!current || actionBusy}
-                    title={t.review?.tbMemo ?? "助记便签"}
-                    onclick={() => { onOpenMemoEditor(); showMoreToolbar = false; }}
-                >
-                    <span class="lv-menu-icon"><LvIcon name="lightbulb" size={16} /></span>
-                    <span>{t.review?.tbMemo ?? "助记便签"}</span>
-                </button>
-
-                <button
-                    type="button"
-                    class="lv-toolbar-menu-item"
-                    disabled={!current || actionBusy || dismissBusy}
-                    title={t.review?.tbDismiss ?? "解散归档 (Ctrl+D)"}
-                    onclick={() => { onDismissCard(); showMoreToolbar = false; }}
-                >
-                    <span class="lv-menu-icon"><LvIcon name="close" size={16} /></span>
-                    <span>{t.review?.tbDismiss ?? "解散归档 (Ctrl+D)"}</span>
-                </button>
-
-                <button
-                    type="button"
-                    class="lv-toolbar-menu-item lv-menu-danger"
-                    disabled={!current || actionBusy}
-                    title={t.review?.retireCard ?? "移出当前卡组"}
-                    onclick={() => { onOpenRetireModal(); showMoreToolbar = false; }}
-                >
-                    <span class="lv-menu-icon"><LvIcon name="ban" size={16} /></span>
-                    <span>{t.review?.retireCard ?? "移出卡组"}</span>
-                </button>
+                <div class="lv-toolbar-font-row" role="group" aria-label={t.review?.fontScaleTitle ?? "调整卡面字号"}>
+                    <span class="lv-toolbar-font-label">{t.review?.fontScaleTitle ?? "卡面字号"}</span>
+                    <div class="fn__flex-1"></div>
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-font-btn" title="缩小卡面字号" aria-label="缩小卡面字号" onclick={() => onAdjustFontScale(-0.1)}>A−</button>
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-font-btn" title="放大卡面字号" aria-label="放大卡面字号" onclick={() => onAdjustFontScale(0.1)}>A+</button>
+                </div>
 
                 <div class="lv-toolbar-menu-divider"></div>
 
@@ -389,6 +364,7 @@
                     type="button"
                     class="lv-toolbar-menu-item"
                     title={t.review?.helpTitle ?? "快捷键帮助"}
+                    aria-keyshortcuts="?"
                     onclick={() => { onOpenHelp(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="question" size={16} /></span>
@@ -403,12 +379,13 @@
     .lv-head-tools {
         display: flex;
         align-items: center;
-        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
+        gap: calc(var(--lv-space-unit) * 2);
         min-width: 0;
         flex-wrap: nowrap;
 
         .b3-button,
         .lv-tool-btn,
+        .lv-scope-summary,
         .lv-font-btn,
         .lv-toolbar-menu-item {
             touch-action: manipulation;
@@ -421,85 +398,40 @@
             }
         }
 
-        .lv-scope {
+        .lv-scope-summary {
             height: 28px;
-            min-height: 28px;
-            line-height: var(--lv-lh-control-lg);
-            min-width: 6em;
-            max-width: 135px;
-            padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3);
+            max-width: 220px;
+            box-sizing: border-box;
+            padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
             border-radius: var(--lv-r-pill);
-            border: 1px solid var(--lv-border);
             background: var(--lv-color-surface);
-            color: var(--lv-color-text);
-            font-size: var(--lv-type-meta-size);
-            text-align: center;
-            text-align-last: center;
-            vertical-align: middle;
-            box-sizing: border-box;
-            box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-            flex-shrink: 1;
-            touch-action: manipulation;
-            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
-
-            &:focus-visible {
-                outline: none;
-                box-shadow: var(--lv-focus-ring);
-                border-color: var(--lv-color-brand);
-            }
-
-            option {
-                text-align: left;
-                line-height: normal;
-            }
-        }
-
-        .lv-purpose-end-chip {
-            height: 28px;
-            box-sizing: border-box;
-            padding: 0 calc(var(--lv-space-unit) * 4);
-            font-size: var(--lv-type-meta-size);
-            font-weight: var(--lv-fw-medium);
+            border: 1px solid var(--lv-border);
+            color: var(--lv-color-text-muted);
             display: inline-flex;
             align-items: center;
             gap: calc(var(--lv-space-unit) * 2);
-            white-space: nowrap;
-            border-radius: var(--lv-r-pill);
-            border: 1px solid var(--lv-border);
-            background: var(--lv-color-surface);
-            box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-            flex-shrink: 0;
-        }
+            font-size: var(--lv-type-meta-size);
+            min-width: 0;
+            flex-shrink: 1;
 
-        .lv-font-scale-group {
-            height: 28px;
-            box-sizing: border-box;
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-pill);
-            background: var(--lv-color-surface);
-            box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-            overflow: hidden;
-            flex-shrink: 0;
-            .lv-font-btn {
-                height: 26px;
-                padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
-                font-size: var(--lv-type-meta-size);
-                border: none;
-                border-radius: 0;
-                color: var(--lv-color-text-muted);
-                &:hover:not(:disabled) {
-                    color: var(--lv-color-brand);
-                    background: var(--lv-primary-soft);
-                }
+            .lv-scope-summary-text {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            &:hover,
+            &.lv-active {
+                border-color: var(--lv-color-brand);
+                color: var(--lv-color-brand);
+                background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
             }
         }
 
         .lv-tool-btn {
             height: 28px;
             box-sizing: border-box;
-            padding: 0 calc(var(--lv-space-unit) * 4);
+            padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
             border-radius: var(--lv-r-pill);
             background: var(--lv-color-surface);
             border: 1px solid var(--lv-border);
@@ -508,7 +440,7 @@
             flex-shrink: 0;
             display: inline-flex;
             align-items: center;
-            gap: calc(var(--lv-space-unit) * 2);
+            gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
             font-size: var(--lv-type-meta-size);
             box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
             transition: all var(--lv-dur-1) var(--lv-ease);
@@ -537,7 +469,7 @@
             top: calc(100% + var(--lv-sp-2));
             right: 0;
             z-index: calc(var(--lv-z-popover) + 1);
-            min-width: 180px;
+            min-width: 200px;
             padding: var(--lv-sp-2);
             border: 1px solid var(--lv-border);
             border-radius: var(--lv-r-m);
@@ -579,6 +511,21 @@
             }
         }
 
+        .lv-toolbar-font-row {
+            display: flex;
+            align-items: center;
+            gap: var(--lv-sp-1);
+            padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
+            font-size: var(--lv-type-control-size);
+            color: var(--lv-color-text-muted);
+
+            .lv-font-btn {
+                min-width: 30px;
+                height: 24px;
+                padding: 0 calc(var(--lv-space-unit) * 2);
+            }
+        }
+
         .lv-toolbar-menu-divider {
             height: 1px;
             background: var(--lv-border);
@@ -601,13 +548,13 @@
         }
     }
 
-    @media (max-width: 740px) {
+    @media (max-width: 640px) {
         .lv-head-tools {
             .lv-tool-btn-label { display: none; }
             .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
         }
     }
-    @container (max-width: 740px) {
+    @container (max-width: 640px) {
         .lv-head-tools {
             .lv-tool-btn-label { display: none; }
             .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }

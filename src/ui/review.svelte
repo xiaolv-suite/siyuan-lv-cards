@@ -342,6 +342,12 @@
     // svelte-ignore state_referenced_locally
     let purpose = $state<SessionPurpose>(initialCram ? "practice" : "review");
     let toolbarRef = $state<any>(null);
+    let prefsRef = $state<any>(null);
+
+    function focusScopeInPrefs() {
+        prefsOpen = true;
+        void prefsRef?.focusScope?.();
+    }
 
     // 撤销历史栈（M3·FR7，ZY 技法：快照恢复 + 内核重评时按官方缓存恢复原状态）
     let history = $state<ReviewHistorySnapshot<QueueCard>[]>([]);
@@ -1297,6 +1303,9 @@
         expectedText = snap.expectedText;
         faceError = snap.faceError;
         occl = snap.occlusion;
+        if (snap.current?.blockID) {
+            void loadBlockDOM(snap.current.blockID);
+        }
         cardShownAt = Date.now();
         sessionNew = snap.counters.new;
         sessionReview = snap.counters.review;
@@ -2312,8 +2321,32 @@
                 onDismissCard={() => void dismissCurrentCard()}
                 onOpenRetireModal={() => (showRetireModal = true)}
                 onOpenHelp={() => (helpOpen = true)}
+                onFocusScope={focusScopeInPrefs}
             />
         </div>
+        <ReviewSessionPrefs
+            bind:this={prefsRef}
+            open={prefsOpen}
+            bind:scopeKey
+            bind:purpose
+            {decks}
+            {notebooks}
+            answerVariant={getInitialSessionVariant(eff())}
+            ratingStyle={eff().ratingStyle}
+            reverseOrder={eff().reverseOrder}
+            mixedRotation={eff().mixedRotation === true}
+            timeoutMode={eff().timeoutMode}
+            {budgetMin}
+            {budgetEstimate}
+            {hasOverrides}
+            {t}
+            onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
+            onSetAnswerVariant={(v) => { tempAnswerVariant = v; applySessionOptions(); }}
+            onSetOverride={setOverride}
+            onSetBudget={setBudget}
+            onResetOverrides={() => (sessionOverride = {})}
+            onClose={() => (prefsOpen = false)}
+        />
         <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%; margin:0 auto;`}>
             {#if current && isLeechCard(current, eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD)}
                 <div class="lv-leech-warning-banner" role="alert" aria-live="assertive" data-testid="review-leech-warning">
@@ -2417,21 +2450,6 @@
             {t}
             onClose={() => (ctxOpen = false)}
         />
-        <ReviewSessionPrefs
-            open={prefsOpen}
-            ratingStyle={eff().ratingStyle}
-            reverseOrder={eff().reverseOrder}
-            mixedRotation={eff().mixedRotation === true}
-            timeoutMode={eff().timeoutMode}
-            {budgetMin}
-            {budgetEstimate}
-            {hasOverrides}
-            {t}
-            onSetOverride={setOverride}
-            onSetBudget={setBudget}
-            onResetOverrides={() => (sessionOverride = {})}
-            onClose={() => (prefsOpen = false)}
-        />
         <ReviewCountdownBanner
             {budgetMin}
             {budgetExpired}
@@ -2491,6 +2509,7 @@
         {memoDraft}
         {memoSaving}
         {retireBusy}
+        {dismissBusy}
         onClosePause={() => (showPauseModal = false)}
         onConfirmPause={pauseSessionAndReturn}
         onCloseSessionOptions={() => (showSessionOptionsModal = false)}
@@ -2499,6 +2518,8 @@
         onSaveMemo={(m) => { memoDraft = m; void saveCardMemo(); }}
         onCloseRetireModal={closeRetireModal}
         onConfirmRetire={retireCurrentCard}
+        onSuspendToday={suspendToday}
+        onDismissCard={() => void dismissCurrentCard()}
         onCloseZoomedImage={closeZoomedImage}
     />
 </div>
@@ -2543,7 +2564,7 @@
         }
 
         .lv-card {
-            flex: 1;
+            flex: 0 1 auto;
             box-sizing: border-box;
             position: relative;
             overflow: auto;
@@ -2551,10 +2572,10 @@
             border: 1px solid var(--lv-border);
             border-radius: var(--lv-r-dialog);
             box-shadow: var(--lv-shadow-review-card), var(--lv-inset-shine);
-            /* R54 卡面规范：48/44 内边距、min-height 320，窄屏收窄 */
-            padding: clamp(calc(var(--lv-space-unit) * 10), 3.5vw, calc(var(--lv-space-unit) * 18)) clamp(calc(var(--lv-space-unit) * 10), 4vw, calc(var(--lv-space-unit) * 20));
-            min-height: 280px;
-            @media (max-width: 740px) { padding: calc(var(--lv-space-unit) * 9) calc(var(--lv-space-unit) * 8); }
+            /* 阶段 B · I3：卡面高度随内容自适应，紧凑内边距让评分栏在窄窗与 150% 缩放下始终留在首屏 */
+            padding: clamp(calc(var(--lv-space-unit) * 6), 2.5vw, calc(var(--lv-space-unit) * 11)) clamp(calc(var(--lv-space-unit) * 7), 3vw, calc(var(--lv-space-unit) * 13));
+            min-height: 148px;
+            @media (max-width: 740px) { padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 6); }
             position: relative;
             background: var(--lv-color-surface);
             box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);

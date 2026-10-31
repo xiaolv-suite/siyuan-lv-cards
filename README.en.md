@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.221.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.222.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -19,13 +19,15 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.221.0 (Latest)
-* **Fixed SuperBlock QA authoring & maintenance false positives**: SuperBlock QA cards (`{{{row` / `{{{col`) now pass card-entry validation cleanly—fixing Quick Card's SuperBlock template, native SuperBlock deck enrollment, Card Library filtering, and false broken-card flags in Maintenance.
-* **Archived 42 unreachable experimental modules & aligned docs**: Moved 42 unwired core modules (10,360 lines) and their unit tests to `archive/`, removed phantom settings rows, and aligned bilingual shortcut references with real runtime behavior—completing Stage A (Trustworthiness).
+### v0.222.0 (Latest)
+* **Streamlined 5-button review toolbar & unified session preferences**: Kept only Undo, Skip, Edit, Star, and More on the review topbar; merged scope, session purpose, and answer mode into a single Session Preferences panel.
+* **Unified 3-way "Remove from Review…" modal**: Consolidated Suspend Today, Archive/Hide, and Remove from Deck into one clear modal explaining the empirically verified FSRS progress reset and native flashcard visibility boundaries.
+* **Fixed cloze focus hijack & above-the-fold rating bar**: Stopped ordinary cloze cards from auto-rendering an exam fill input that hijacked Space and review shortcuts when typing mode is off; eliminated undo flash; made card height content-adaptive with a sticky rating bar visible without scrolling at 1024px width and 150% zoom.
 
 <details>
-<summary>📜 View Historical Releases (v0.220.0 ~ v0.210.0)</summary>
+<summary>📜 View Historical Releases (v0.221.0 ~ v0.210.0)</summary>
 
+* **v0.221.0**: Fixed SuperBlock QA authoring & Maintenance false positives; archived 42 unreachable experimental core modules and aligned bilingual docs.
 * **v0.220.0**: Fixed second-card "document path is ambiguous" errors, onboarding sample-card empty false positives, image-occlusion target/opacity/edit-readback bugs, review settings forwarding, scoped custom card CSS, timed-challenge answer masking, version-acceptance refresh, and `.lvcards` conflict strategy selection.
 * **v0.219.0**: Undo no longer rolls back historical revlog entries for skipped/requeued/Cram cards; `Ctrl+D` dismissal can be undone; Cram sessions isolated from formal daily state; starred-card persistence, dismissed-card filtering and done-screen targeted Cram.
 * **v0.218.0**: Added Leech card warning banner, H-key graded cueing, breadcrumb block locator, sibling card dispersal, 7-day workload forecast bar chart, Cram quick review, and R54 design system refinement.

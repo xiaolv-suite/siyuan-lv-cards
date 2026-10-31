@@ -108,20 +108,35 @@ describe("ReviewActionModals 模态弹窗与灯箱组件", () => {
         expect(onSaveMemo).toHaveBeenCalledWith("记忆线索");
     });
 
-    it("正确渲染移出卡组弹窗并触发确认移出", async () => {
+    it("正确渲染统一移出复习三选一弹窗，支持今天不学、归档隐藏与彻底移出卡组", async () => {
         const onConfirmRetire = vi.fn();
-        const { getByText } = render(ReviewActionModals, {
+        const onSuspendToday = vi.fn();
+        const onDismissCard = vi.fn();
+        const onCloseRetireModal = vi.fn();
+        const { getByText, getByRole } = render(ReviewActionModals, {
             props: {
                 ...defaultProps,
                 showRetireModal: true,
                 onConfirmRetire,
+                onSuspendToday,
+                onDismissCard,
+                onCloseRetireModal,
             },
         });
 
         expect(getByText("移出卡组")).toBeTruthy();
+        expect(getByText(/思源原生闪卡面板仍可见/)).toBeTruthy();
+
+        await fireEvent.click(getByRole("button", { name: "今天不学" }));
+        expect(onSuspendToday).toHaveBeenCalledOnce();
+        expect(onCloseRetireModal).toHaveBeenCalledTimes(1);
+
+        await fireEvent.click(getByRole("button", { name: "归档隐藏" }));
+        expect(onDismissCard).toHaveBeenCalledOnce();
+        expect(onCloseRetireModal).toHaveBeenCalledTimes(2);
 
         await fireEvent.click(getByText("确认移出"));
-        expect(onConfirmRetire).toHaveBeenCalled();
+        expect(onConfirmRetire).toHaveBeenCalledOnce();
     });
 
     it("正确渲染图片灯箱并能触发关闭", async () => {

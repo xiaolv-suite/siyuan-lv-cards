@@ -201,9 +201,18 @@
         justify-content: center;
         max-width: 640px;
         width: 100%;
-        margin: var(--lv-sp-2) auto 0;
+        margin: var(--lv-sp-1) auto 0;
+        padding-top: var(--lv-sp-2);
         padding-bottom: max(var(--lv-sp-2), env(safe-area-inset-bottom));
         box-sizing: border-box;
+        position: sticky;
+        bottom: 0;
+        z-index: calc(var(--lv-z-card-control) + 1);
+        background: linear-gradient(
+            to bottom,
+            color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 78%, transparent),
+            var(--lv-bg-page, var(--b3-theme-background)) 28%
+        );
 
         .lv-step-wrap {
             width: 100%;

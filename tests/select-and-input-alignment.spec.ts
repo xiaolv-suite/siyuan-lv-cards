@@ -31,9 +31,9 @@ describe("选择框与输入控件文字垂直/水平居中规范审查", () => 
         expect(svelte).toMatch(/\.lv-filter\s*\{[\s\S]*?line-height:\s*var\(--lv-lh-control-lg\);/);
     });
 
-    it("ReviewToolbar / review.svelte 中 lv-scope 下拉框严格设置 min-height、行高与文字居中", () => {
-        const path = existsSync("src/ui/review/ReviewToolbar.svelte")
-            ? "src/ui/review/ReviewToolbar.svelte"
+    it("ReviewSessionPrefs / ReviewToolbar 中 lv-scope 下拉框严格设置 min-height、行高与文字居中", () => {
+        const path = existsSync("src/ui/review/ReviewSessionPrefs.svelte")
+            ? "src/ui/review/ReviewSessionPrefs.svelte"
             : "src/ui/review.svelte";
         const svelte = readFileSync(path, "utf8");
 
