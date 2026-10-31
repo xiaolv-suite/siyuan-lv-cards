@@ -92,7 +92,7 @@ describe("workspace-samples 示例与引导工作区生成", () => {
             createDocWithMd.mockResolvedValueOnce("doc-onboarding-1");
             sqlQuery.mockResolvedValueOnce([]); // 尚无已存在标记块
             appendBlock.mockImplementation((_type, md, _doc) => {
-                const marker = md.match(/lv-cards-sample:([a-z0-9-]+)/)?.[1] ?? "unknown";
+                const marker = md.match(/custom-lv-sample="([a-z0-9-]+)"/)?.[1] ?? "unknown";
                 return Promise.resolve([`block-${marker}`]);
             });
             getRiffCards.mockResolvedValueOnce({ blocks: [] }); // 卡组中尚无卡
@@ -103,6 +103,11 @@ describe("workspace-samples 示例与引导工作区生成", () => {
             expect(docID).toBe("doc-onboarding-1");
             expect(createDocWithMd).toHaveBeenCalledWith("nb-1", "小驴闪卡/示例卡", "");
             expect(appendBlock).toHaveBeenCalledTimes(5);
+            // 回归：示例标记写进块属性，正文不再带 HTML 注释（思源 3.8 会把注释原样显示在卡面上）
+            for (const call of appendBlock.mock.calls) {
+                expect(call[1]).not.toContain("<!--");
+                expect(call[1]).toMatch(/\n\{: custom-lv-sample="[a-z0-9-]+"\}$/);
+            }
             expect(addRiffCards).toHaveBeenCalledWith("deck-1", [
                 "block-qa",
                 "block-cloze",
@@ -116,12 +121,13 @@ describe("workspace-samples 示例与引导工作区生成", () => {
             getRiffDecks.mockResolvedValueOnce([{ id: "deck-1", name: "示例卡组" }]);
             createDocWithMd.mockResolvedValueOnce("doc-onboarding-1");
             // 假设 qa 与 cloze 之前已写入成功
+            // qa 是旧版写在正文里的注释标记，cloze 是新版块属性标记，两种都要识别
             sqlQuery.mockResolvedValueOnce([
-                { id: "block-qa-exist", markdown: "<!-- lv-cards-sample:qa -->内容" },
-                { id: "block-cloze-exist", markdown: "<!-- lv-cards-sample:cloze -->内容" },
+                { id: "block-qa-exist", markdown: "<!-- lv-cards-sample:qa -->内容", ial: "" },
+                { id: "block-cloze-exist", markdown: "内容", ial: '{: id="block-cloze-exist" custom-lv-sample="cloze"}' },
             ]);
             appendBlock.mockImplementation((_type, md) => {
-                const marker = md.match(/lv-cards-sample:([a-z0-9-]+)/)?.[1] ?? "unknown";
+                const marker = md.match(/custom-lv-sample="([a-z0-9-]+)"/)?.[1] ?? "unknown";
                 return Promise.resolve([`block-${marker}`]);
             });
             // 假设 block-qa-exist 已经在卡组里，其余不在

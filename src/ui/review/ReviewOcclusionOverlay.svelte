@@ -42,6 +42,7 @@
     }
 </script>
 
+<!-- 未揭晓的遮挡框必须完全不透明：半透明会让框下的文字/标注透出来，等于提前看到答案 -->
 {#if occl && occlBox}
     <!-- 遮罩 overlay：问题态实心（点击逐框显隐），答案态半透明全显 -->
     <svg
@@ -59,7 +60,7 @@
                 width={r.w * 100}
                 height={r.h * 100}
                 fill="var(--lv-color-brand)"
-                opacity={revealed ? (showAnswer ? 0.12 : 0.05) : 0.55}
+                opacity={revealed ? (showAnswer ? 0.12 : 0.05) : 1}
                 stroke="var(--lv-primary-border)"
                 stroke-width="0.3"
                 role="button"
@@ -88,7 +89,6 @@
                 outline: none;
                 stroke: var(--lv-color-brand);
                 stroke-width: 0.8;
-                opacity: 0.85;
             }
         }
     }

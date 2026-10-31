@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isLeechCard } from "@/core/revlog";
+import { DEFAULT_LEECH_THRESHOLD, isLeechCard } from "@/core/revlog";
+import { defaultSettings } from "@/core/settings";
 import { stepLadderHint, advanceCardHint } from "@/core/hint-ladder";
 import { parseHPathToBreadcrumbs, formatHPathDisplay } from "@/core/review-breadcrumbs";
 import { disperseSiblings, filterBurySiblings, type SiblingCardLike } from "@/core/sibling-cards";
@@ -8,26 +9,32 @@ import { get7DayForecast, smoothForecastLoad, type ForecastCardInput, type Forec
 import { resolveReviewKeyAction } from "@/core/review-shortcuts";
 
 describe("[TASK-20261031-github-benchmark-fusion] GitHub 三大对标产品融合闭环验证", () => {
-    describe("改造项 A：水蛭卡（Leech，lapses >= 5）自动识别与按 H 键渐进线索揭示", () => {
-        it("lapses >= 5 准确判定为水蛭卡，lapses < 5 不触发水蛭警示", () => {
-            expect(isLeechCard({ lapses: 5 })).toBe(true);
+    describe("改造项 A：水蛭卡（Leech）自动识别与按 H 键渐进线索揭示", () => {
+        it("缺省阈值与设置页默认值一致（8 次），传入用户阈值时按用户阈值判定", () => {
+            // v0.220.0：此前复习页写死 5、进度条写死 4、设置页写 8，三处不一致；统一为 DEFAULT_LEECH_THRESHOLD
+            expect(DEFAULT_LEECH_THRESHOLD).toBe(defaultSettings().leechThreshold);
             expect(isLeechCard({ lapses: 8 })).toBe(true);
-            expect(isLeechCard({ lapses: 4 })).toBe(false);
+            expect(isLeechCard({ lapses: 7 })).toBe(false);
+            expect(isLeechCard({ lapses: 5 }, 5)).toBe(true);
+            expect(isLeechCard({ lapses: 4 }, 5)).toBe(false);
             expect(isLeechCard({ lapses: 0 })).toBe(false);
             expect(isLeechCard(null)).toBe(false);
             expect(isLeechCard(undefined)).toBe(false);
         });
 
-        it("队列管道处理时自动注入 isLeech 标记", () => {
+        it("队列管道按用户设置的阈值注入 isLeech 标记", () => {
             const cards: QueuePipelineCard[] = [
                 { cardID: "c1", state: 1, lapses: 2 },
                 { cardID: "c2", state: 1, lapses: 5 },
                 { cardID: "c3", state: 2, lapses: 9 },
             ];
-            const pipelineRes = applyQueuePipeline(cards, { scopeKey: "all" });
-            expect(pipelineRes.find(c => c.cardID === "c1")?.isLeech).toBe(false);
-            expect(pipelineRes.find(c => c.cardID === "c2")?.isLeech).toBe(true);
-            expect(pipelineRes.find(c => c.cardID === "c3")?.isLeech).toBe(true);
+            const byDefault = applyQueuePipeline(cards, { scopeKey: "all" });
+            expect(byDefault.find(c => c.cardID === "c2")?.isLeech).toBe(false);
+            expect(byDefault.find(c => c.cardID === "c3")?.isLeech).toBe(true);
+            const byUser = applyQueuePipeline(cards, { scopeKey: "all", leechThreshold: 5 });
+            expect(byUser.find(c => c.cardID === "c1")?.isLeech).toBe(false);
+            expect(byUser.find(c => c.cardID === "c2")?.isLeech).toBe(true);
+            expect(byUser.find(c => c.cardID === "c3")?.isLeech).toBe(true);
         });
 
         it("复习正面按 H / h 键触发 advance-hint 快捷键动作，不直接翻面", () => {

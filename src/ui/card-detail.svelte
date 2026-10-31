@@ -25,7 +25,7 @@
         /** T05 内容版本快照（最新在前；可选——旧宿主不传则不显示版本） */
         versions?: { md: string; at: number; via: "editor" | "ai"; accepted?: boolean }[];
         /** T05：用户核对确认某版本（可选） */
-        acceptVersion?: (at: number) => void;
+        acceptVersion?: (at: number) => void | Promise<void>;
         /** BI-5/6/7：内容状态面板数据与操作（宿主注入；缺省=不显示内容状态区） */
         lcCtx?: {
             snapshot: LcSnapshot | null;
@@ -46,7 +46,7 @@
             onregister: () => void | Promise<void>;
             ontoggle: (cardID: string, disabled: boolean) => void | Promise<void>;
             onremove: (cardID: string) => void | Promise<void>;
-            onderive: (cardType: string) => void;
+            onderive?: (cardType: string) => void | Promise<void>;
         };
         /** BX-2 W2：卡片内容编辑（宿主注入；缺省=不显示编辑入口） */
         editorCtx?: {
@@ -71,6 +71,23 @@
     let diffError = $state(false);
     let koRegisterBusy = $state(false);
     let koRegisterError = $state("");
+    let acceptBusyAt = $state<number | null>(null);
+    let acceptError = $state("");
+
+    async function handleAcceptVersion(at: number) {
+        if (!acceptVersion || acceptBusyAt !== null) return;
+        acceptBusyAt = at;
+        acceptError = "";
+        try {
+            await acceptVersion(at);
+        } catch (error) {
+            acceptError = error instanceof Error && error.message
+                ? error.message
+                : (t.detail?.acceptFailed ?? "版本核对保存失败，请重试。");
+        } finally {
+            acceptBusyAt = null;
+        }
+    }
     async function compareWithCurrent(at: number, versionMd: string) {
         if (diffBusy) return;
         if (diffAt === at) { diffAt = null; diffError = false; return; }
@@ -294,6 +311,9 @@
                 </button>
             </div>
             {#if versionsOpen}
+                {#if acceptError}
+                    <div class="lv-detail-preview-error" role="alert" aria-live="assertive">{acceptError}</div>
+                {/if}
                 <div class="lv-ver-list">
                     {#each versions as v (v.at)}
                         <div class="lv-ver-row">
@@ -304,10 +324,11 @@
                                 {#if v.accepted}<LvChip tone="primary">{t.detail.accepted}</LvChip>{/if}
                                 <button
                                     class="b3-button b3-button--small"
-                                    disabled={v.accepted || !acceptVersion}
+                                    disabled={v.accepted || !acceptVersion || acceptBusyAt !== null}
+                                    aria-busy={acceptBusyAt === v.at}
                                     title={v.accepted ? t.detail.accepted : acceptVersion ? t.detail.acceptVer : t.detail.acceptUnavailable}
                                     aria-label={`${v.accepted ? t.detail.accepted : acceptVersion ? t.detail.acceptVer : t.detail.acceptUnavailable}: ${new Date(v.at).toLocaleString()}`}
-                                    onclick={() => acceptVersion?.(v.at)}
+                                    onclick={() => void handleAcceptVersion(v.at)}
                                 >
                                     <LvIcon name="check" size={12} />
                                 </button>

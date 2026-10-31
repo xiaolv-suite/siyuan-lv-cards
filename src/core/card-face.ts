@@ -454,3 +454,19 @@ export function parseCardAttrsMetadata<TOccl = any>(
     };
 }
 
+
+/**
+ * 把用户填写的自定义卡面 CSS 限定在卡面容器内，避免 `.b3-button { display:none }` 之类的规则
+ * 波及设置弹窗和思源界面；同时去掉能闭合 <style> 或引入外部资源的片段。
+ * 用 CSS 原生嵌套包裹：`.lv-card-content {…}` 会变成「作用域内的 .lv-card-content」，
+ * 直接写的声明（如 `font-family: serif;`）作用于作用域容器本身。
+ */
+export function scopeCustomCardCss(rawCss: string | undefined | null, scopeSelector: string): string {
+    const css = String(rawCss ?? "")
+        .replace(/<\/?\s*style[^>]*>/gi, "")
+        .replace(/<\s*\/?\s*script[^>]*>/gi, "")
+        .replace(/@import[^;]*;?/gi, "")
+        .trim();
+    if (!css) return "";
+    return `${scopeSelector} { ${css} }`;
+}

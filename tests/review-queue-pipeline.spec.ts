@@ -62,8 +62,8 @@ describe("review-queue-pipeline 复习队列处理与排序管道", () => {
             expect(res.map(c => c.cardID)).toEqual(["c-4", "c-3", "c-2", "c-1"]);
         });
 
-        it("自动标记水蛭卡 (lapses >= 5)", () => {
-            const res = applyQueuePipeline(mockCards, { scopeKey: "all" });
+        it("按用户设置的阈值标记水蛭卡（此前写死 5，与设置页默认 8 不一致）", () => {
+            const res = applyQueuePipeline(mockCards, { scopeKey: "all", leechThreshold: 5 });
             const c4 = res.find(c => c.cardID === "c-4");
             const c2 = res.find(c => c.cardID === "c-2");
             expect(c4?.isLeech).toBe(true);

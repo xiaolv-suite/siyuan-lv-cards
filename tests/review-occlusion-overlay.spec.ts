@@ -57,7 +57,7 @@ describe("ReviewOcclusionOverlay 图片遮挡交互蒙版组件", () => {
         expect(rect0.getAttribute("y")).toBe("10");
         expect(rect0.getAttribute("width")).toBe("20");
         expect(rect0.getAttribute("height")).toBe("10");
-        expect(rect0.getAttribute("opacity")).toBe("0.55");
+        expect(rect0.getAttribute("opacity")).toBe("1");
     });
 
     it("问题态下点击矩形逐框翻开与遮回，并触发回调", async () => {
@@ -75,7 +75,7 @@ describe("ReviewOcclusionOverlay 图片遮挡交互蒙版组件", () => {
         });
 
         const rect0 = getByTestId("review-occl-rect-0");
-        expect(rect0.getAttribute("opacity")).toBe("0.55");
+        expect(rect0.getAttribute("opacity")).toBe("1");
 
         // 第一次点击：翻开第 0 块
         await fireEvent.click(rect0);
@@ -85,7 +85,7 @@ describe("ReviewOcclusionOverlay 图片遮挡交互蒙版组件", () => {
         // 第二次点击：重新盖上第 0 块
         await fireEvent.click(rect0);
         expect(onToggleRect).toHaveBeenCalledTimes(2);
-        expect(rect0.getAttribute("opacity")).toBe("0.55");
+        expect(rect0.getAttribute("opacity")).toBe("1");
     });
 
     it("答案态下所有遮挡框全显为半透明且不可交互", async () => {

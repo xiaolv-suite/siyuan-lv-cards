@@ -351,9 +351,8 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             }
                         },
                         contentVersionsOf: (blockID: string) => versionsOf(plugin.contentVersions, blockID),
-                        acceptContentAt: (blockID: string, at: number) => {
-                            void plugin.acceptContentVersion(blockID, at)
-                                .catch(() => {});
+                        acceptContentAt: async (blockID: string, at: number) => {
+                            await plugin.acceptContentVersion(blockID, at);
                         },
                     },
                     exam: plugin.settings.modules.exam ? {
@@ -594,6 +593,9 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
                             typingStrict: plugin.settings.typingStrict,
                             answerTimeCapSec: plugin.settings.answerTimeCapSec,
                             burySiblings: plugin.settings.burySiblings,
+                            customCardCss: plugin.settings.customCardCss,
+                            checkinItemId: plugin.settings.checkinItemId,
+                            leechThreshold: plugin.settings.leechThreshold,
                         }),
                         getStarredCardIDs: () => plugin.settings.starredCards,
                         toggleStarCard: async (id: string) => {

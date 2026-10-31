@@ -46,9 +46,11 @@ export async function createOnboardingSampleCards(
         throw new Error(i18n.quickCardFail ?? "创建示例卡文档失败");
     }
 
+    // 示例标记写在块属性 custom-lv-sample 里：此前用 HTML 注释写在正文里，思源 3.8 会把注释原样显示在卡面上。
+    // 仍兼容识别旧版写在正文里的注释标记，避免重复创建。
     const escapedDoc = docID.replace(/'/g, "''");
     const existing = await sqlQuery(
-        `SELECT id, markdown FROM blocks WHERE root_id='${escapedDoc}' AND markdown LIKE '%lv-cards-sample:%'`,
+        `SELECT id, markdown, ial FROM blocks WHERE root_id='${escapedDoc}' AND (ial LIKE '%custom-lv-sample=%' OR markdown LIKE '%lv-cards-sample:%')`,
     );
 
     const samples = [
@@ -61,13 +63,14 @@ export async function createOnboardingSampleCards(
 
     const ids: string[] = [];
     for (const [kind, content] of samples) {
-        const marker = `lv-cards-sample:${kind}`;
-        const found = existing.find(row => String(row.markdown ?? "").includes(marker));
+        const found = existing.find(row =>
+            String(row.ial ?? "").includes(`custom-lv-sample="${kind}"`)
+            || String(row.markdown ?? "").includes(`lv-cards-sample:${kind} `));
         if (found?.id) {
             ids.push(String(found.id));
             continue;
         }
-        const created = await appendBlock("markdown", `<!-- ${marker} -->${content}`, docID);
+        const created = await appendBlock("markdown", `${content}\n{: custom-lv-sample="${kind}"}`, docID);
         if (created?.[0]) {
             ids.push(created[0]);
         }

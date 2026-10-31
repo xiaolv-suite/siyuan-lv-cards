@@ -87,6 +87,22 @@ describe("card detail preview loading", () => {
         expect(compare.title).toBe("Current content is unavailable for comparison");
     });
 
+    it("surfaces a readable alert when version acceptance fails instead of swallowing the error", async () => {
+        // 回归 docs/53 TODO-06：核对确认版本持久化失败须显式提示
+        getBlockDOM.mockResolvedValue("<p>Preview</p>");
+        const acceptVersion = vi.fn().mockRejectedValueOnce(new Error("storage write failed"));
+        render(CardDetail, {
+            ...props("card-a", "Fallback A"),
+            versions: [{ md: "Older content", at: 1700000000000, via: "editor" }],
+            acceptVersion,
+        });
+        await screen.findByText("Preview");
+        await fireEvent.click(screen.getByRole("button", { name: "History ▾" }));
+        await fireEvent.click(screen.getByRole("button", { name: /^Accept version:/ }));
+        const alert = await screen.findByRole("alert");
+        expect(alert.textContent).toContain("storage write failed");
+    });
+
     it("notifies the host after a successful edit and preview refresh", async () => {
         getBlockDOM.mockResolvedValue("<p>Preview</p>");
         const load = vi.fn().mockResolvedValue("原卡面");

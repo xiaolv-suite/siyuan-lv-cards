@@ -32,7 +32,7 @@
         /** T05 内容版本快照（最新在前；可选——旧宿主不传则不显示版本） */
         contentVersionsOf?: (blockID: string) => { md: string; at: number; via: "editor" | "ai"; accepted?: boolean }[];
         /** T05：用户核对确认某版本 */
-        acceptContentAt?: (blockID: string, at: number) => void;
+        acceptContentAt?: (blockID: string, at: number) => void | Promise<void>;
         deleteFilter: (name: string) => void;
         getLeechCards: () => { blockID: string; lapses: number }[];
         /** 星标收藏卡片 ID 集合（对标 Quizlet Starred / Anki Flagged） */
@@ -151,7 +151,7 @@
     let detail: SearchBlock | null = $state(null);
     let detailRelations: { relation: { from: string; to: string; type: string; createdAt: number }; direction: "outgoing" | "incoming" }[] = $state([]);
     let detailKo: { registered: boolean; fact: string; instances: { cardID: string; cardType: string; capability: string | null; disabled: boolean }[] } | null = $state(null);
-    let koDeriving = $state(false);
+    let detailVersions: { md: string; at: number; via: "editor" | "ai"; accepted?: boolean }[] = $state([]);
     let detailLc: import("@/core/content-lifecycle").ContentLifecycle | null = $state(null);
     let initialDetailOpened = "";
     let detailRequestSeq = 0;
@@ -688,6 +688,7 @@
         // BK-2：详情打开时载入该块的关系视图（本地镜像，增删后经 ctx 刷新）
         detailRelations = ctx.relationsOfBlock?.(b.id) ?? [];
         detailKo = ctx.ko ? ctx.ko.snapshot(b.id) : null;
+        detailVersions = ctx.contentVersionsOf?.(b.id) ?? [];
         // BI-5：详情打开时载入内容状态快照（null=未开档）
         detailLc = ctx.lc ? ctx.lc.snapshot(b.id) : null;
     }
@@ -742,6 +743,9 @@
             }
         }
         await ctx.onCardContentSaved?.(blockID);
+        if (detail?.id === blockID) {
+            detailVersions = ctx.contentVersionsOf?.(blockID) ?? [];
+        }
     }
 
     function openDoc(block: SearchBlock) {
@@ -1190,8 +1194,13 @@
         onClose={() => { detailRequestSeq += 1; detail = null; }}
         historyEntries={ctx.getBlockHistory?.(detail!.id) ?? []}
         issues={ctx.getBlockIssues?.(detail!.id) ?? []}
-        versions={ctx.contentVersionsOf?.(detail!.id) ?? []}
-        acceptVersion={(at) => ctx.acceptContentAt?.(detail!.id, at)}
+        versions={detailVersions}
+        acceptVersion={ctx.acceptContentAt ? async (at) => {
+            const blockID = detail?.id;
+            if (!blockID) return;
+            await ctx.acceptContentAt!(blockID, at);
+            if (detail?.id === blockID) detailVersions = ctx.contentVersionsOf?.(blockID) ?? [];
+        } : undefined}
         lcCtx={ctx.lc ? {
             snapshot: detailLc,
             onopen: async () => {
@@ -1241,7 +1250,7 @@
         } : undefined}
         koCtx={ctx.ko ? {
             snapshot: detailKo ?? { registered: false, fact: "", instances: [] },
-            deriving: koDeriving,
+            deriving: false,
             onregister: async () => {
                 const blockID = detail?.id;
                 if (!blockID) return;
@@ -1259,17 +1268,6 @@
                 if (!blockID) return;
                 await ctx.ko?.remove(blockID, cardID);
                 if (detail?.id === blockID) detailKo = ctx.ko!.snapshot(blockID);
-            },
-            onderive: async (cardType) => {
-                const blockID = detail?.id;
-                if (!blockID) return;
-                koDeriving = true;
-                try {
-                    await ctx.ko?.derive(blockID, cardType);
-                } finally {
-                    koDeriving = false;
-                    if (detail?.id === blockID) detailKo = ctx.ko!.snapshot(blockID);
-                }
             },
         } : undefined}
         editorCtx={ctx.blockContent && ctx.saveBlockContent ? {

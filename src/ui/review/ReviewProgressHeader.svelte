@@ -2,6 +2,7 @@
     import LvIcon from "../kit/LvIcon.svelte";
     import { isSuperBlockHtml } from "@/core/card-face";
     import { hasDelimitedQa } from "@/core/delimited-qa";
+    import { DEFAULT_LEECH_THRESHOLD } from "@/core/revlog";
 
     interface Props {
         headScopeLabel?: string;
@@ -49,7 +50,7 @@
         cardHtml = "",
         cardMemo = "",
         isCustomPluginAnswer = false,
-        leechThreshold = 4,
+        leechThreshold = DEFAULT_LEECH_THRESHOLD,
         isMarkedIssue = false,
         currentProgress = 1,
         reviewedCount = 0,

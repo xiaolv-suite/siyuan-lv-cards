@@ -588,8 +588,11 @@ export interface LeechItem {
     lapses: number;
 }
 
-/** 判定是否为水蛭卡（对标 Anki Leech 机制，遗忘次数 >= 5 时自动标记为水蛭卡） */
-export function isLeechCard(card: { lapses?: number } | null | undefined, threshold: number = 5): boolean {
+/** 水蛭卡遗忘次数阈值的唯一默认值；设置页、复习队列和进度条都从这里取，避免各处写死不同数字 */
+export const DEFAULT_LEECH_THRESHOLD = 8;
+
+/** 判定是否为水蛭卡（对标 Anki Leech 机制，遗忘次数达到阈值时标记为水蛭卡） */
+export function isLeechCard(card: { lapses?: number } | null | undefined, threshold: number = DEFAULT_LEECH_THRESHOLD): boolean {
     if (!card || typeof card.lapses !== "number") return false;
     return card.lapses >= threshold;
 }

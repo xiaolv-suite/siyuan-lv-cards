@@ -6,7 +6,7 @@
  */
 import { addRiffCards as kernelAddRiffCards, getRiffDueCardsForScope, type RiffDueCardsData } from "./riff";
 import { createDueCache } from "../libs/due-cache";
-import { getBlockAttrs, SQL_QUERY_CHUNK_SIZE, SQL_QUERY_CONCURRENCY, sqlQuery } from "./siyuan";
+import { flushTransaction, getBlockAttrs, getBlockMarkdown, SQL_QUERY_CHUNK_SIZE, SQL_QUERY_CONCURRENCY, sqlQuery } from "./siyuan";
 import { hasQuestionMediaContent, validateFlashcardMarkdown } from "../core/flashcard-quality";
 import { validateCardEntries, type CardEntryDecision } from "../core/card-entry-gate";
 import { mapChunksOrdered } from "../core/query-chunks";
@@ -53,8 +53,13 @@ export const riffCardEntryIssueKey = (issue: CardEntryDecision["issue"]): string
     return "qualityInvalidMarkup";
 };
 
+/** 主包与各 UI 分包各自打包了这个类，跨包抛出的错误 instanceof 不成立，按名称和字段识别。 */
+const isRiffCardEntryGateError = (error: unknown): error is RiffCardEntryGateError =>
+    error instanceof RiffCardEntryGateError
+    || (error instanceof Error && error.name === "RiffCardEntryGateError" && Array.isArray((error as RiffCardEntryGateError).decisions));
+
 export const formatRiffCardEntryError = (error: unknown, i18n: Record<string, any>, fallback?: string): string => {
-    if (!(error instanceof RiffCardEntryGateError)) return error instanceof Error ? error.message : String(error);
+    if (!isRiffCardEntryGateError(error)) return error instanceof Error ? error.message : String(error);
     const first = error.decisions[0];
     const key = riffCardEntryIssueKey(first?.issue);
     return i18n[key] ?? i18n.editor?.[key] ?? fallback ?? i18n.qualityInvalidMarkup ?? i18n.editor?.qualityInvalidMarkup ?? "卡片结构无效，请先修复后再入组。";
@@ -66,9 +71,9 @@ async function validateRiffCardEntries(blockIDs: string[]): Promise<CardEntryDec
     const markdownByID = new Map<string, string>();
     let remainingIDs = [...queryIDs];
 
-    // 新块插入思源后，SQLite 可能存在毫秒级异步写入/索引延迟；
-    // 若首轮未查齐所有 ID，自动带退避重试（最高 3 次），避免将刚落盘的新块误判为 missing-block。
-    for (let attempt = 0; attempt < 3; attempt++) {
+    // 新块刚写入时 SQL 索引尚未提交（实测立即查询为 0 行，内核批量提交间隔可达数秒）：
+    // 首轮未查齐就请内核立即提交索引再查一次。
+    for (let attempt = 0; attempt < 2; attempt++) {
         const chunks = Array.from({ length: Math.ceil(remainingIDs.length / SQL_QUERY_CHUNK_SIZE) }, (_, index) =>
             remainingIDs.slice(index * SQL_QUERY_CHUNK_SIZE, (index + 1) * SQL_QUERY_CHUNK_SIZE),
         );
@@ -81,23 +86,21 @@ async function validateRiffCardEntries(blockIDs: string[]): Promise<CardEntryDec
             if (row?.id) markdownByID.set(String(row.id), String(row.markdown ?? ""));
         }
         remainingIDs = queryIDs.filter(id => !markdownByID.has(id));
-        if (remainingIDs.length === 0) break;
-        if (attempt < 2) {
-            await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+        if (remainingIDs.length === 0 || attempt > 0) break;
+        try {
+            await flushTransaction();
+        } catch {
+            await new Promise(r => setTimeout(r, 300));
         }
     }
 
-    // 若极罕见情况下 SQLite 索引极慢，通过在线块属性兜底验证块的存在性
-    if (remainingIDs.length > 0) {
-        for (const id of remainingIDs) {
-            try {
-                const attrs = await getBlockAttrs(id);
-                if (attrs && typeof attrs === "object" && Object.keys(attrs).length > 0) {
-                    markdownByID.set(id, attrs.markdown ?? attrs.memo ?? "");
-                }
-            } catch {
-                // 忽略异常
-            }
+    // 仍查不到的块直接读 kramdown：块存在就拿到真实内容，块不存在则内核报错，按缺失处理
+    for (const id of remainingIDs) {
+        try {
+            const markdown = await getBlockMarkdown(id);
+            if (markdown) markdownByID.set(id, markdown);
+        } catch {
+            // 块不存在：保持缺失，由门禁判为 missing-block
         }
     }
 

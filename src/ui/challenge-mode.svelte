@@ -3,6 +3,7 @@
     import { type RiffDueCard } from "@/api/riff";
     import { dueCache } from "@/api/due-shared";
     import { getBlockDOM } from "@/api/siyuan";
+    import { maskMarkedAnswersForQuestion } from "@/core/card-face";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -18,6 +19,8 @@
     let unknown = $state(0);
     let cards: { blockID: string; dom: string }[] = $state([]);
     let idx = $state(0);
+    /** 当前卡是否已揭晓答案；问题态遮住挖空和超级块答案，与正式复习一致 */
+    let revealed = $state(false);
     let timer: ReturnType<typeof setInterval> | null = null;
     let disposed = false;
     let loadSeq = 0;
@@ -118,6 +121,7 @@
     function mark(ok: boolean) {
         if (ok) known += 1; else unknown += 1;
         idx += 1;
+        revealed = false;
         if (idx >= cards.length) finish();
     }
 
@@ -148,6 +152,9 @@
             } else if (e.key === "2" || e.key === "ArrowRight" || e.key === " " || e.key === "Enter") {
                 e.preventDefault();
                 mark(true);
+            } else if (e.key.toLowerCase() === "v") {
+                e.preventDefault();
+                revealed = true;
             }
         } else if (phase === "idle" && (e.key === " " || e.key === "Enter")) {
             e.preventDefault();
@@ -239,9 +246,17 @@
             </div>
         {/if}
         {#if cards[idx]}
-            <div class="lv-chal-card lv-card2 b3-typography">
-                {@html cards[idx].dom}
+            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+            <div class="lv-chal-card lv-card2 b3-typography" data-testid="challenge-card" onclick={() => (revealed = true)}>
+                {@html revealed ? cards[idx].dom : maskMarkedAnswersForQuestion(cards[idx].dom)}
             </div>
+            {#if !revealed}
+                <div class="lv-chal-reveal">
+                    <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" aria-keyshortcuts="v" onclick={() => (revealed = true)}>
+                        <LvIcon name="eye" size={12} /> <span>{t.review?.showAnswer ?? "显示答案"}</span> <LvKbd k="V" />
+                    </button>
+                </div>
+            {/if}
             <div class="lv-chal-actions">
                 <button
                     class="b3-button lv-chal-btn lv-chal-unknown"
@@ -339,6 +354,8 @@
         }
     }
     .lv-chal-actions { display: flex; gap: var(--lv-sp-3); justify-content: center; }
+    .lv-chal-reveal { display: flex; justify-content: center; margin-bottom: var(--lv-sp-2); }
+    .lv-chal-card { cursor: pointer; }
     .lv-chal-btn {
         flex: 1;
         max-width: 160px;

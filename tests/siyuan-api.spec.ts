@@ -9,6 +9,7 @@ vi.mock("siyuan", () => ({
 }));
 
 import {
+    createDocWithMd,
     getBlockDocMap,
     getDocTitles,
     probeAssetRefs,
@@ -216,6 +217,65 @@ describe("siyuan.ts: 通用思源 API 契约与大库韧性测试", () => {
 
             const v = await kernelVersion();
             expect(v).toBe("?");
+        });
+    });
+
+    describe("createDocWithMd: 父级先查后建，容器文档复用", () => {
+        /** 模拟思源 3.8.9 文档树：按路径建文档时父级同名多于一个就报歧义 */
+        function fakeKernel(initial: Record<string, string[]> = {}) {
+            const docs = new Map<string, string[]>(Object.entries(initial));
+            let seq = 0;
+            const created: { path: string; parentID?: string }[] = [];
+            mocks.fetchSyncPost.mockImplementation(async (endpoint: string, payload: any) => {
+                if (endpoint === "/api/filetree/getIDsByHPath") return { code: 0, data: docs.get(payload.path) ?? [] };
+                if (endpoint === "/api/filetree/createDocWithMd") {
+                    const parentPath = payload.path.split("/").slice(0, -1).join("/");
+                    if (parentPath && !payload.parentID && (docs.get(parentPath)?.length ?? 0) > 1) {
+                        return { code: -1, msg: "document path is ambiguous; use a document ID or resolveDocPath" };
+                    }
+                    const id = `2026103110${String(++seq).padStart(4, "0")}-doc${seq}`;
+                    docs.set(payload.path, [...(docs.get(payload.path) ?? []), id]);
+                    created.push({ path: payload.path, parentID: payload.parentID });
+                    return { code: 0, data: id };
+                }
+                return { code: 0, data: null };
+            });
+            return { docs, created };
+        }
+
+        it("父级已存在时复用，不再新建同名父文档", async () => {
+            const k = fakeKernel({ "/小驴闪卡": ["20260101000000-root"] });
+            await createDocWithMd("nb", "小驴闪卡/学习报告/2026-10-31", "# 报告");
+            expect(k.docs.get("/小驴闪卡")).toEqual(["20260101000000-root"]);
+            expect(k.created).toEqual([
+                { path: "/小驴闪卡/学习报告", parentID: "20260101000000-root" },
+                { path: "/小驴闪卡/学习报告/2026-10-31", parentID: k.docs.get("/小驴闪卡/学习报告")![0] },
+            ]);
+        });
+
+        it("空内容的容器文档同路径已存在时直接复用（快速制卡连续两次落在同一文档）", async () => {
+            // 回归：v0.219.0 走查中第二次制卡报 “document path is ambiguous”
+            const k = fakeKernel();
+            const first = await createDocWithMd("nb", "小驴闪卡/快速制卡", "");
+            const second = await createDocWithMd("nb", "小驴闪卡/快速制卡", "");
+            expect(second).toBe(first);
+            expect(k.docs.get("/小驴闪卡")).toHaveLength(1);
+            expect(k.docs.get("/小驴闪卡/快速制卡")).toHaveLength(1);
+        });
+
+        it("已有重复的同名父文档时取最早的一个并带 parentID 创建，不再触发歧义错误", async () => {
+            const k = fakeKernel({ "/小驴闪卡": ["20261031094036-later", "20261031093431-earlier"] });
+            const id = await createDocWithMd("nb", "小驴闪卡/标记制卡", "");
+            expect(id).toBeTruthy();
+            expect(k.created.at(-1)).toEqual({ path: "/小驴闪卡/标记制卡", parentID: "20261031093431-earlier" });
+        });
+
+        it("带内容的文档每次新建", async () => {
+            const k = fakeKernel();
+            const a = await createDocWithMd("nb", "Anki/牌组 2026-10-31", "# a");
+            const b = await createDocWithMd("nb", "Anki/牌组 2026-10-31", "# b");
+            expect(a).not.toBe(b);
+            expect(k.docs.get("/Anki/牌组 2026-10-31")).toHaveLength(2);
         });
     });
 });

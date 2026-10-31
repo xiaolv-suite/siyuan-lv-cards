@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseOcclusion, serializeOcclusion, emptyOcclusion, calculateOcclusionBox } from "../src/core/occlusion";
+import { parseOcclusion, serializeOcclusion, emptyOcclusion, calculateOcclusionBox, findOcclusionTarget } from "../src/core/occlusion";
 
 describe("occlusion 数据契约（M4·FR4）", () => {
     const valid = { v: 1 as const, rects: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.4 }] };
@@ -42,6 +42,23 @@ describe("occlusion 数据契约（M4·FR4）", () => {
             const div = document.createElement("div");
             div.innerHTML = "<p>无图内容</p>";
             expect(calculateOcclusionBox(div, true)).toBeNull();
+        });
+
+        it("卡面外层的界面图标（来源面包屑 svg）排在图片前面时，仍定位到卡面内容区里的图片", () => {
+            // 回归：v0.219.0 走查发现遮挡层被贴到 16×16 的面包屑图标上，图片在问题态完整露出
+            const card = document.createElement("div");
+            card.innerHTML = `<div class="crumb"><svg class="icon"></svg></div><div class="lv-card-content"><p><img src="a.png"></p></div>`;
+            const img = card.querySelector("img")!;
+            expect(findOcclusionTarget(card)).toBe(img);
+            card.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 600, right: 800, bottom: 600, x: 0, y: 0, toJSON: () => {} });
+            img.getBoundingClientRect = () => ({ left: 40, top: 90, width: 256, height: 256, right: 296, bottom: 346, x: 40, y: 90, toJSON: () => {} });
+            expect(calculateOcclusionBox(card, true)).toEqual({ l: 40, t: 90, w: 256, h: 256 });
+        });
+
+        it("内容区里没有图片时才退回画布或绘图 svg", () => {
+            const card = document.createElement("div");
+            card.innerHTML = `<svg class="icon"></svg><div class="lv-card-content"><svg class="drawing"></svg></div>`;
+            expect(findOcclusionTarget(card)?.getAttribute("class")).toBe("drawing");
         });
 
         it("正确计算相对坐标与尺寸", () => {

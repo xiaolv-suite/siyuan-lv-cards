@@ -2,7 +2,7 @@
     import { fade } from "svelte/transition";
     import { getMotionDuration } from "../kit/motion";
     import LvIcon from "../kit/LvIcon.svelte";
-    import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
+    import { isSuperBlockHtml, renderSuperBlockAnswerFace, scopeCustomCardCss } from "@/core/card-face";
     import { cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
     import ReviewInteractiveQuiz from "./ReviewInteractiveQuiz.svelte";
 
@@ -55,6 +55,12 @@
         onFillCheck = () => {},
         onTypingInput = () => {},
     }: Props = $props();
+
+    /** 自定义卡面 CSS 限定在复习卡面内（docs/53 TODO-09）；在脚本里拼好整段样式标签再交给模板 */
+    const cardCssTag = $derived.by(() => {
+        const scoped = scopeCustomCardCss(customCardCss, ".lv-review .lv-card");
+        return scoped ? `<style>${scoped}</style>` : "";
+    });
 
     let displayHtml = $derived(
         interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2
@@ -127,8 +133,8 @@
             in:fade={{ duration: getMotionDuration("standard") }}
             data-testid="review-card-content"
         >
-            {#if customCardCss}
-                {@html `<style>${customCardCss}</style>`}
+            {#if cardCssTag}
+                {@html cardCssTag}
             {/if}
             {@html displayHtml}
         </div>

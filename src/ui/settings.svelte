@@ -2,6 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { showMessage } from "siyuan";
     import { MODULE_DEFS } from "@/core/modules";
+    import { scopeCustomCardCss } from "@/core/card-face";
     import { PERSONA_PRESETS, type PersonaPreset } from "@/core/personas";
     import { confirmDialog, confirmDialogBool } from "@/libs/dialog";
     import { trapFocus } from "@/libs/focus-trap";
@@ -30,7 +31,7 @@
     import { validateCardEntry } from "@/core/card-entry-gate";
     import { parseLvCardsPackage, previewLvCardsImport } from "@/core/lvcards-package";
     import { LvCardsImportError, pairLvCardsBlocks, readLvCardsDeckIDs, readLvCardsExisting, sqlString, applyPackageCardMetadata } from "@/core/lvcards-import";
-    import { inspectLvCardsImportDiff, buildImportExecutionPlan } from "@/core/lvcards-diff-inspector";
+    import { inspectLvCardsImportDiff, buildImportExecutionPlan, type ImportResolveAction } from "@/core/lvcards-diff-inspector";
     // Obsidian SR 导入（v0.202.0）：块级解析 → 计划（去重/剥 tag）→ 一卡一段落落库 → 按序对位
     import { planObsidianImport, composeObsidianImportMarkdown, deckNameFor, groupByDeckHint, partitionByLedger, normalizeObLedger, mergeObLedger, type ObLedgerEntry } from "@/core/obsidian-import";
     import { getBridgeSafely, type CheckinBridgeApi, type CheckinItem } from "@/libs/ecosystem-bridge-kit";
@@ -114,6 +115,11 @@
     // 初值语义：draft 是打开设置时的快照，保存前不随源变化
     // svelte-ignore state_referenced_locally
     let draft: LvCardsSettings = $state(JSON.parse(JSON.stringify(ctx.settings)));
+    /** 外观预览里的自定义卡面 CSS，只作用于预览卡片，输错选择器也不会影响设置弹窗本身 */
+    const previewCssTag = $derived.by(() => {
+        const scoped = scopeCustomCardCss(draft.customCardCss, ".lv-settings-card-preview");
+        return scoped ? `<style>${scoped}</style>` : "";
+    });
 
     // Anki M3：本地 .apkg 导入（docs/39 §3）——解析/预览/建文档/配对/制卡/台账，幂等重导
     let ankiBusy = $state(false);
@@ -267,9 +273,10 @@
             }
             const preview = previewLvCardsImport(pkg, existingCards);
             let toImportCards = preview.newCards;
+            let toUpdateMeta: { blockId: string; markdown: string; memo?: string; tags?: string[] }[] = [];
             let retainedLocalMemo = 0;
 
-            // BX-12：冲突卡片差异比对与保护性合并
+            // BX-12 / docs/53 TODO-08：冲突卡片差异摘要与可选解决策略（默认保留本地，可选另存新卡或合并便签）
             if (preview.updatedCards.length > 0) {
                 const diffSummary = inspectLvCardsImportDiff({
                     deckName: pkg.deck.name,
@@ -277,12 +284,29 @@
                     existingCards,
                 });
 
+                const conflictSamples = diffSummary.reports
+                    .filter(r => r.status === "modified-content" || r.status === "modified-metadata")
+                    .slice(0, 5)
+                    .map(r => escapeDialogHtml(r.packageCard.markdown.replace(/\s+/g, " ").trim().slice(0, 48)));
+
+                const dialogBody = document.createElement("div");
+                dialogBody.className = "b3-typography";
+                dialogBody.innerHTML = `
+                    <p>分享包中有 <strong>${diffSummary.modifiedContentCount + diffSummary.modifiedMetadataCount}</strong> 张卡片在本地已存在修改（另有 ${diffSummary.newCount} 张全新卡片）。</p>
+                    ${conflictSamples.length > 0 ? `<ul style="margin: var(--lv-sp-2) 0; padding-left: 1.25em; font-size: var(--lv-type-caption-size); color: var(--lv-color-text-muted);">${conflictSamples.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
+                    <label style="display: block; margin-top: var(--lv-sp-2); font-size: var(--lv-type-caption-size);">
+                        <span>冲突处理方式：</span>
+                        <select class="b3-select" data-testid="lvcards-conflict-strategy" style="margin-top: var(--lv-sp-1); width: 100%;">
+                            <option value="keep-local">保留本地修改，仅导入全新卡片（推荐）</option>
+                            <option value="fork-new">保留本地原卡，冲突卡片另存为新卡</option>
+                            <option value="merge-memo">保留本地正文，合并双方便签与标签</option>
+                        </select>
+                    </label>
+                `;
+
                 const confirmDiff = await confirmDialogBool({
                     title: t.settings.lvcardsConflictTitle ?? "发现卡片内容冲突",
-                    content: `<div class="b3-typography">
-                        <p>分享包中有 <strong>${diffSummary.modifiedContentCount + diffSummary.modifiedMetadataCount}</strong> 张卡片在本地已存在修改。</p>
-                        <p style="color: var(--lv-color-text-muted); font-size: 12px;">默认执行【安全合并】：优先保留您本地的卡片正文与私有便签，仅导入 ${diffSummary.newCount} 张全新卡片。是否继续？</p>
-                    </div>`,
+                    content: dialogBody,
                 });
 
                 if (!confirmDiff) {
@@ -290,20 +314,37 @@
                     return;
                 }
 
+                const picked = dialogBody.querySelector<HTMLSelectElement>("select")?.value;
+                const chosenStrategy: ImportResolveAction =
+                    picked === "fork-new" || picked === "merge-memo" ? picked : "keep-local";
+
                 const plan = buildImportExecutionPlan({
                     reports: diffSummary.reports,
-                    defaultAction: "keep-local",
+                    defaultAction: chosenStrategy,
                 });
                 toImportCards = plan.toCreate;
+                toUpdateMeta = plan.toUpdate;
                 retainedLocalMemo = plan.retainedLocalMemoCount;
             }
 
-            if (toImportCards.length === 0) {
+            if (toImportCards.length === 0 && toUpdateMeta.length === 0) {
                 lvcardsStatus = {
                     kind: "info",
                     text: (t.settings.lvcardsImportDuplicate ?? "全部 ${n} 张卡片在「${deck}」中均已存在。")
                         .replace("${n}", String(preview.total)).replace("${deck}", pkg.deck.name)
                         + (retainedLocalMemo > 0 ? ` 已保护 ${retainedLocalMemo} 条本地私有便签。` : ""),
+                };
+                return;
+            }
+            if (toImportCards.length === 0 && toUpdateMeta.length > 0) {
+                const mergedCount = await applyPackageCardMetadata(
+                    toUpdateMeta.map(u => ({ id: u.blockId, markdown: u.markdown, kind: "qa" as const, memo: u.memo, tags: u.tags })),
+                    toUpdateMeta.map(u => u.blockId),
+                    setBlockAttrs,
+                );
+                lvcardsStatus = {
+                    kind: "info",
+                    text: `已为 ${mergedCount} 张本地卡片合并分享包便签与标签（正文保持本地不变）。`,
                 };
                 return;
             }
@@ -346,8 +387,15 @@
             await addRiffCards(deckID, blockIDs);
             const enrolledIDs = new Set(await readLvCardsDeckIDs(deckID, getRiffCards));
             if (blockIDs.some(id => !enrolledIDs.has(id))) throw new LvCardsImportError("enrollment-mismatch");
-            // 恢复可选元数据（助记便签 memo、标签 tags）至新块属性，旁路增强不阻断主流程
-            await applyPackageCardMetadata(preview.newCards, blockIDs, setBlockAttrs);
+            // 恢复可选元数据（助记便签 memo、标签 tags）至新块属性，必须与实际落盘的 toImportCards 对齐（TODO-08）
+            await applyPackageCardMetadata(toImportCards, blockIDs, setBlockAttrs);
+            if (toUpdateMeta.length > 0) {
+                await applyPackageCardMetadata(
+                    toUpdateMeta.map(u => ({ id: u.blockId, markdown: u.markdown, kind: "qa" as const, memo: u.memo, tags: u.tags })),
+                    toUpdateMeta.map(u => u.blockId),
+                    setBlockAttrs,
+                );
+            }
             lvcardsStatus = {
                 kind: "info",
                 text: (t.settings.lvcardsImportDone ?? "已成功导入 ${n} 张新卡片（自动跳过 ${dup} 张重复项）")
@@ -473,7 +521,6 @@
         studyVoice: ["studyVoice", "ttsEnabled", "ttsRate"],
         studyNotify: ["studyNotify", "notifyDue", "dailyTipEnabled"],
         aiSection: ["aiSection", "aiEndpoint", "aiModel", "aiPromptTemplate", "aiKillTitle"],
-        exam: ["exam"],
         ankiSection: ["ankiSection", "ankiSectionHint", "ankiImport", "ankiImportHint", "ankiImportPick", "lvcardsImportLabel", "lvcardsImportHint", "obImportLabel", "obImportHint", "obImportPick"],
         appearance: ["appearance", "cardFontScale", "uiMode"],
         dataSection: ["dataSection", "importMerge", "importMergeHint", "importCsv", "backupExport", "backupHint", "exportRevlog", "exportSettings"],
@@ -1356,18 +1403,6 @@
     </LvSection>
     {/if}
 
-    {#if sectionMatches("exam")}
-    <LvSection title={t.settings.exam}>
-        <LvRow label={t.settings.examEnabled}>
-            <LvSwitch bind:checked={draft.examEnabled} />
-        </LvRow>
-        <LvRow label={t.settings.examDate}>
-            <input class="b3-text-field fn__size-200" type="date" bind:value={draft.examDate} disabled={!draft.examEnabled} />
-        </LvRow>
-        <div class="ft__smaller ft__on-surface">{t.settings.examHint}</div>
-    </LvSection>
-    {/if}
-
     {#if sectionMatches("ankiSection")}
     <LvSection id="sec-ankiSection" title={t.settings.ankiSection} sub={t.settings.ankiSectionHint}>
         <LvRow label={t.settings.ankiUrl}>
@@ -1466,12 +1501,14 @@
                 <div class="lv-eyebrow">{t.settings.previewTitle}</div>
                 <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewSub}</div>
             </div>
-            <div class="lv-card2" style={`max-width: 340px; font-size: ${draft.cardFontScale || 1}em; flex: 1; padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);`}>
-                {#if draft.customCardCss}
-                    {@html `<style>${draft.customCardCss}</style>`}
+            <div class="lv-card2 lv-settings-card-preview" style={`max-width: 340px; font-size: ${draft.cardFontScale || 1}em; flex: 1; padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);`}>
+                {#if previewCssTag}
+                    {@html previewCssTag}
                 {/if}
-                <strong>{t.settings.previewQ}</strong>
-                <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewA}</div>
+                <div class="lv-card-content">
+                    <strong>{t.settings.previewQ}</strong>
+                    <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">{t.settings.previewA}</div>
+                </div>
                 <div class="lv-settings-preview-rating" style="margin-top: var(--lv-sp-3); display: flex; gap: var(--lv-sp-1); flex-wrap: wrap;">
                     {#if draft.ratingStyle === "three"}
                         <span class="lv-chip2 lv-chip2--warn">{t.review?.unknown ?? "不认识"}</span>
@@ -1625,13 +1662,16 @@
                 {#snippet children()}
                     <button class="b3-button b3-button--outline" onclick={ctx.costLedger.export}>JSON</button>
                     <button
-                        class="b3-button b3-button--outline"
+                        class="b3-button b3-button--outline lv-btn-tool lv-menu-danger"
                         onclick={() => confirmDialog({
                             title: t.settings.clearCostLedger,
                             content: `<div class="b3-typography">${t.settings.clearCostLedgerConfirm}</div>`,
                             confirm: () => ctx.costLedger!.clear(),
                         })}
-                    >{t.settings.clearCostLedger}</button>
+                    >
+                        <LvIcon name="trash" size={12} />
+                        <span>{t.settings.clearCostLedger}</span>
+                    </button>
                 {/snippet}
             </LvRow>
         {/if}

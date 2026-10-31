@@ -80,37 +80,18 @@ export function isMetadataNotReadyError(error: unknown): boolean {
 }
 
 /**
- * 确保多级文档树的父级路径存在
- * 例如创建 /a/b/c 时，如果 /a 不存在则先创建 /a，如果 /a/b 不存在则创建 /a/b
- * 彻底消除思源内核因深层未建立父文档导致的 "document metadata is not ready"
+ * 按人类可读路径查找文档；同名文档有多个时取最早创建的一个（ID 以创建时间开头），保证每次落到同一处。
+ * getIDsByHPath 读文档树而非 SQL 索引，刚建好的文档也能立即查到。
  */
-async function ensureParentDocsExist(notebook: string, normalizedPath: string): Promise<void> {
-    const parts = normalizedPath.split("/").filter(Boolean);
-    if (parts.length <= 1) return; // 单级文档无需父级
-    let currentPath = "";
-    for (let i = 0; i < parts.length - 1; i++) {
-        currentPath += `/${parts[i]}`;
-        try {
-            await kernelPost<string | null>("/api/filetree/createDocWithMd", {
-                notebook,
-                path: currentPath,
-                markdown: "",
-            });
-        } catch {
-            // 父文档已存在或创建报错时忽略，继续向下逐级构建
-        }
-    }
+async function findDocIDByHPath(notebook: string, hpath: string): Promise<string | null> {
+    const ids = await kernelPost<string[] | null>("/api/filetree/getIDsByHPath", { notebook, path: hpath });
+    if (!Array.isArray(ids) || ids.length === 0) return null;
+    return [...ids].sort()[0];
 }
 
-/** Markdown 创建文档，返回文档块 ID（快速制卡/示例卡落点） */
-export const createDocWithMd = async (notebook: string, path: string, markdown: string): Promise<string | null> => {
-    // 1. 规范化路径：思源 API 必须以 / 开头，杜绝新版内核因相对路径解析失败触发 metadata not ready
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-
-    // 2. 自动逐级自愈多级文档父路径，根治三级深层路径在冷启动时父级不存在抛出的 metadata not ready
-    await ensureParentDocsExist(notebook, normalizedPath);
-
-    // 3. 抗抖动与内核元数据就绪重试（借鉴 e2e-isolated.mjs 实践，最多 5 次退避）
+/** 在指定父文档下（或笔记本根部）新建文档；带 parentID 时内核不再按路径解析父级，同名父文档不会造成歧义。 */
+async function createDocUnder(notebook: string, hpath: string, markdown: string, parentID?: string): Promise<string | null> {
+    // 内核冷启动时可能返回 metadata not ready，按退避重试
     let lastError: unknown;
     for (let attempt = 0; attempt < 5; attempt++) {
         if (attempt > 0) {
@@ -119,8 +100,9 @@ export const createDocWithMd = async (notebook: string, path: string, markdown: 
         try {
             const docID = await kernelPost<string | null>("/api/filetree/createDocWithMd", {
                 notebook,
-                path: normalizedPath,
+                path: hpath,
                 markdown,
+                ...(parentID ? { parentID } : {}),
             });
             if (docID) return docID;
         } catch (e: any) {
@@ -132,6 +114,47 @@ export const createDocWithMd = async (notebook: string, path: string, markdown: 
     }
     if (lastError) throw lastError;
     return null;
+}
+
+/**
+ * Markdown 创建文档，返回文档块 ID（快速制卡/示例卡/报告落点）。
+ * 父级逐级“先查后建”：已存在就复用，不存在才新建，避免重复的同名父文档让后续按路径建文档失败。
+ * markdown 为空时视为容器文档（快速制卡、标记制卡、示例卡等），同路径已存在则直接复用；
+ * 带内容的文档（报告、导入）每次新建。
+ */
+export const createDocWithMd = async (notebook: string, path: string, markdown: string): Promise<string | null> => {
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length === 0) return null;
+    let parentID: string | undefined;
+    let currentPath = "";
+    for (const part of parts.slice(0, -1)) {
+        currentPath += `/${part}`;
+        parentID = (await findDocIDByHPath(notebook, currentPath))
+            ?? (await createDocUnder(notebook, currentPath, "", parentID))
+            ?? undefined;
+        if (!parentID) return null;
+    }
+    const fullPath = `/${parts.join("/")}`;
+    if (!markdown) {
+        const existing = await findDocIDByHPath(notebook, fullPath);
+        if (existing) return existing;
+    }
+    return createDocUnder(notebook, fullPath, markdown, parentID);
+};
+
+/** 让内核立即提交待写入的 SQL 索引（刚写入的块否则要等内核下一次批量提交才查得到） */
+export const flushTransaction = async (): Promise<void> => {
+    await kernelPost<unknown>("/api/sqlite/flushTransaction", {});
+};
+
+/** 读块的 kramdown 并去掉 IAL 属性行，作为 SQL 索引不可用时的 markdown 兜底 */
+export const getBlockMarkdown = async (id: string): Promise<string> => {
+    const data = await kernelPost<{ kramdown?: string } | null>("/api/block/getBlockKramdown", { id });
+    return String(data?.kramdown ?? "")
+        .split("\n")
+        .filter(line => !/^\{:\s[^}]*\}$/.test(line.trim()))
+        .join("\n")
+        .trim();
 };
 
 /** 在指定父块下追加块（快速制卡问答对） */

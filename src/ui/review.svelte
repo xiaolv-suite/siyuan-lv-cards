@@ -9,9 +9,9 @@
     } from "@/api/riff";
     import { getNotebooks, getBlockAttrs, getBlockDOM, type Notebook } from "@/api/siyuan";
     import * as siyuanApi from "@/api/siyuan";
-    import { isCardNew, calcStreak, type RevlogData } from "@/core/revlog";
+    import { isCardNew, calcStreak, isLeechCard, DEFAULT_LEECH_THRESHOLD, type RevlogData } from "@/core/revlog";
     import type { Rating1to4 } from "@/core/card-types";
-    import { parseOcclusion, calculateOcclusionBox, type OcclusionData } from "@/core/occlusion";
+    import { parseOcclusion, calculateOcclusionBox, findOcclusionTarget, type OcclusionData } from "@/core/occlusion";
     import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, shouldRestartTimeoutOnOverrides, type SessionVariantOption } from "@/core/session-prefs";
@@ -887,6 +887,7 @@
                 reverseOrder: eff().reverseOrder,
                 randomOrder: eff().randomOrder,
                 shuffleFn: shuffleArray,
+                leechThreshold: eff().leechThreshold,
             });
             // BI-27 返场分流：跨天返场且上日有收工原因 → 今日方案横幅（展示性，不自动改预算/队列）。
             if (!recovery) {
@@ -2087,7 +2088,7 @@
         const html = cardHtml;
         positionOcclusion();
         if (!activeOcclusion || !target || !html) return;
-        const image = target.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occl-overlay), canvas");
+        const image = findOcclusionTarget(target);
         if (!image) return;
         const throttledRemeasure = rafThrottle(() => {
             if (isDisposed) return;
@@ -2262,7 +2263,7 @@
                 {cardHtml}
                 {cardMemo}
                 {isCustomPluginAnswer}
-                leechThreshold={eff().leechThreshold ?? 4}
+                leechThreshold={eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD}
                 isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
                 currentProgress={reviewedIDs.length + 1}
                 reviewedCount={reviewedIDs.length}
@@ -2314,7 +2315,7 @@
             />
         </div>
         <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%; margin:0 auto;`}>
-            {#if current && (current.lapses ?? 0) >= 5}
+            {#if current && isLeechCard(current, eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD)}
                 <div class="lv-leech-warning-banner" role="alert" aria-live="assertive" data-testid="review-leech-warning">
                     <span class="lv-leech-icon"><LvIcon name="warning" size={15} /></span>
                     <span class="lv-leech-text">

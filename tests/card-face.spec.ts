@@ -13,7 +13,26 @@ import {
     hasSvgOrCanvasDrawing,
     deriveFaceHints,
     isCardFaceReady,
+    scopeCustomCardCss,
 } from "../src/core/card-face";
+
+describe("自定义卡面 CSS 作用域（docs/53 TODO-09）", () => {
+    it("把规则包进卡面作用域，不会命中设置弹窗或思源按钮", () => {
+        expect(scopeCustomCardCss(".b3-button { display: none; }", ".lv-review .lv-card"))
+            .toBe(".lv-review .lv-card { .b3-button { display: none; } }");
+    });
+
+    it("去掉能闭合 <style>、插入脚本或引入外部资源的片段", () => {
+        const scoped = scopeCustomCardCss("p{color:red}</style><script>alert(1)</script>@import url(x.css);", ".s");
+        expect(scoped).not.toMatch(/<\/style|<script|@import/i);
+        expect(scoped.startsWith(".s {")).toBe(true);
+    });
+
+    it("空内容返回空串", () => {
+        expect(scopeCustomCardCss("   ", ".s")).toBe("");
+        expect(scopeCustomCardCss(undefined, ".s")).toBe("");
+    });
+});
 
 // AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
 describe("card-face（AS-3 富内容分析）", () => {

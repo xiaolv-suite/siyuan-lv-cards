@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { getBlockDOM, setBlockAttrs } from "@/api/siyuan";
+    import { getBlockAttrs, getBlockDOM, setBlockAttrs } from "@/api/siyuan";
     import { rafThrottle } from "@/libs/throttle";
-    import { emptyOcclusion, serializeOcclusion, type OcclusionRect } from "@/core/occlusion";
+    import { emptyOcclusion, parseOcclusion, serializeOcclusion, type OcclusionRect } from "@/core/occlusion";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -19,6 +19,8 @@
     let content: HTMLDivElement | null = $state(null);
     let overlay: SVGSVGElement | null = $state(null);
     let rects = $state<OcclusionRect[]>([]);
+    /** 打开时块上已保存的遮挡框（JSON），用于判断退出前是否有未保存改动 */
+    let savedRectsJson = "[]";
     let drawing = $state<OcclusionRect | null>(null);
     let errorMsg = $state("");
     let loading = $state(true);
@@ -117,8 +119,12 @@
         if (content) content.innerHTML = "";
         try {
             // AQ-20：统一内核响应校验，非 0/缺字段直接进错误态
-            const dom = await getBlockDOM(blockID);
+            const [dom, attrs] = await Promise.all([getBlockDOM(blockID), getBlockAttrs(blockID)]);
             if (disposed || seq !== loadSeq) return;
+            // 编辑已有遮挡卡：先读回已存的遮挡框，保存时在其基础上增删，而不是从空白覆盖
+            const saved = parseOcclusion(attrs ?? {})?.rects ?? [];
+            rects = saved.map(r => ({ ...r }));
+            savedRectsJson = JSON.stringify(saved);
             if (content) {
                 content.innerHTML = dom;
                 image = content.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occed-overlay), canvas");
@@ -218,9 +224,24 @@
         rects = rects.filter((_, j) => j !== index);
     }
 
+    function removeRectDirect(index: number) {
+        if (busy) return;
+        rects = rects.filter((_, j) => j !== index);
+    }
+
+    /** 键盘与触屏免拖拽替代路径（docs/53 TODO-11）：一键插入居中标准遮挡框 */
+    function addPresetRect() {
+        if (busy || loading || !!errorMsg) return;
+        const offset = (rects.length % 5) * 0.06;
+        const x = Math.min(0.64, Math.round((0.28 + offset) * 1000) / 1000);
+        const y = Math.min(0.68, Math.round((0.32 + offset) * 1000) / 1000);
+        rects = [...rects, { x, y, w: 0.32, h: 0.2 }];
+    }
+
     function close() {
         if (busy) return;
-        if (rects.length > 0 && !window.confirm(t.occlusion.discardConfirm ?? "已绘制的遮挡区域尚未保存，确定退出吗？")) return;
+        const changed = JSON.stringify(rects) !== savedRectsJson;
+        if (changed && rects.length > 0 && !window.confirm(t.occlusion.discardConfirm ?? "已绘制的遮挡区域尚未保存，确定退出吗？")) return;
         onClose();
     }
 
@@ -252,6 +273,17 @@
         <span class="lv-ob-step">{t.occlusion.title}</span>
         <span class="ft__smaller ft__on-surface">{t.occlusion.drawHint}</span>
         <div class="fn__flex-1"></div>
+        <button
+            type="button"
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            onclick={addPresetRect}
+            disabled={loading || !!errorMsg || busy}
+            title={t.occlusion?.addPreset ?? "添加标准遮挡框"}
+            data-testid="occlusion-add-preset"
+        >
+            <LvIcon name="plus" size={12} />
+            <span>{t.occlusion?.addPreset ?? "标准框"}</span>
+        </button>
         <button
             class="b3-button b3-button--small b3-button--outline lv-btn-tool"
             onclick={() => (rects = rects.slice(0, -1))}
@@ -301,6 +333,13 @@
                     <rect x={r.x * 100} y={r.y * 100} width={r.w * 100} height={r.h * 100}
                         fill="var(--lv-color-brand)" opacity="0.45"
                         ondblclick={() => removeRect(i)} />
+                    <text
+                        x={(r.x + 0.01) * 100}
+                        y={Math.min(98, (r.y + 0.04) * 100)}
+                        font-size="3.4"
+                        fill="var(--lv-color-on-brand, #fff)"
+                        pointer-events="none"
+                    >#{i + 1}</text>
                 {/each}
                 {#if drawing}
                     <rect
@@ -313,6 +352,23 @@
                 {/if}
         </svg>
     </div>
+    {#if rects.length > 0 && !loading && !errorMsg}
+        <div class="lv-occed-chips" role="group" aria-label={t.occlusion?.rectListAria ?? "已绘遮挡区域"}>
+            {#each rects as _r, i (i)}
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-occed-chip"
+                    disabled={busy}
+                    aria-label={`${t.occlusion?.removeRectAria ?? "删除遮挡框"} #${i + 1}`}
+                    data-testid={`occlusion-rect-chip-${i}`}
+                    onclick={() => removeRectDirect(i)}
+                >
+                    <span style="font-variant-numeric: tabular-nums;">#{i + 1}</span>
+                    <LvIcon name="close" size={11} />
+                </button>
+            {/each}
+        </div>
+    {/if}
     <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-3)">
         <button
             class="b3-button b3-button--cancel"
@@ -366,6 +422,12 @@
         margin-bottom: var(--lv-sp-3);
     }
     .lv-occed .lv-ob-step { font-weight: var(--lv-fw-bold); text-wrap: balance; }
+    .lv-occed-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-1);
+        margin-top: var(--lv-sp-2);
+    }
     .lv-occed-stage {
         position: relative;
         width: 100%;

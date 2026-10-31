@@ -3,6 +3,7 @@
  */
 import { MODULE_DEFS, MODULE_IDS, LEGACY_MODULE_IDS } from "./modules";
 import type { PersonaId } from "./personas";
+import { DEFAULT_LEECH_THRESHOLD } from "./revlog";
 
 export interface LvCardsSettings {
     version: number;
@@ -208,7 +209,7 @@ export function defaultSettings(): LvCardsSettings {
         ratingDensity: "cozy",
         hideMetaUntilAnswer: false,
         reverseOrder: false,
-        leechThreshold: 8,
+        leechThreshold: DEFAULT_LEECH_THRESHOLD,
         ttsEnabled: true,
         ttsRate: 1,
         ttsVoice: "",
@@ -258,7 +259,7 @@ const INT_FIELDS: [keyof LvCardsSettings, number, number, number][] = [
     ["dailyReviewTarget", 200, 0, 9999],
     ["timeoutSeconds", 60, 5, 3600],
     ["batchLimit", 0, 0, 500],
-    ["leechThreshold", 8, 1, 100],
+    ["leechThreshold", DEFAULT_LEECH_THRESHOLD, 1, 100],
     ["backlogDays", 3, 1, 90],
     ["cardMaxWidth", 880, 320, 1600],
     ["answerTimeCapSec", 60, 5, 3600],

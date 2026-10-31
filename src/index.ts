@@ -1102,7 +1102,7 @@ export default class LvCardsPlugin extends Plugin {
     /** 考试里程碑提醒（X·372/382）：30/7/1 天各提醒一次，同日同计划去重 */
     private checkExamMilestones() {
         const decision = decideExamMilestoneReminder({
-            examEnabled: this.settings.examEnabled,
+            examEnabled: Boolean(this.settings.modules.exam && (this.settings.examEnabled || this.examPlans.plans.some(p => p.enabled))),
             reminderEnabled: this.settings.reminderEnabled,
             inQuiet: this.inQuietHours(),
             plans: this.examPlans.plans,

@@ -344,6 +344,38 @@ describe("Settings .lvcards import integration", () => {
         expect(fakes.addCards).not.toHaveBeenCalled();
     });
 
+    it("allows choosing fork-new on conflict and restores metadata aligned with forked cards", async () => {
+        // 回归 docs/53 TODO-08：冲突弹窗支持选择 fork-new，且元数据与 toImportCards 一一对齐
+        existingMarkdown.set(existingId(0), "Old question ==Old answer==");
+        fakes.getCards.mockResolvedValueOnce({ blocks: [{ id: existingId(0), content: "Rendered old question" }], total: 1, pageCount: 1 });
+        fakes.sqlQuery.mockImplementation(async (sql: string) => {
+            if (/where\s+root_id\s*=/i.test(sql)) return [row(ID, "Updated question ==Updated answer==")];
+            return [row(existingId(0), "Old question ==Old answer==")];
+        });
+        fakes.confirm
+            .mockImplementationOnce(async ({ content }: { content: HTMLElement }) => {
+                const select = content.querySelector<HTMLSelectElement>("select[data-testid='lvcards-conflict-strategy']")!;
+                expect(select).toBeTruthy();
+                select.value = "fork-new";
+                return true;
+            })
+            .mockResolvedValueOnce(true);
+
+        const view = render(Settings, { ctx: makeCtx(), initialSection: "imports" });
+        const pkgWithMemo = JSON.stringify({
+            format: "lvcards.v1",
+            version: 1,
+            createdAt: Date.now(),
+            generator: "component-test",
+            deck: { id: "pkg-deck", name: "Demo" },
+            cards: [{ id: existingId(0), markdown: "Updated question ==Updated answer==", kind: "qa", memo: "Forked memo" }],
+        });
+        await choose(view, pkgWithMemo);
+
+        await waitFor(() => expect(fakes.setBlockAttrs).toHaveBeenCalledWith(ID, expect.objectContaining({ memo: "Forked memo" })));
+        expect(fakes.addCards).toHaveBeenCalledWith(DECK_ID, [ID]);
+    });
+
     it("does not write when confirmation is cancelled", async () => {
         fakes.confirm.mockResolvedValue(false);
         const view = render(Settings, { ctx: makeCtx(), initialSection: "imports" });

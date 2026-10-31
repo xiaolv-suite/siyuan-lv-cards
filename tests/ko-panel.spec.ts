@@ -139,5 +139,13 @@ describe("ko-panel 修订模式（BK-1 验收）", () => {
         });
         expect(second.queryByText("修订事实")).toBeNull();
         second.unmount();
+
+        // 未传 onderive：隐藏二次派生下拉与按钮（阶段 A F2 TODO-05）
+        const third = render(KoPanel, {
+            fact: "F", instances, t, ontoggle: vi.fn(), onremove: vi.fn(),
+        });
+        expect(third.queryByText("派生实例")).toBeNull();
+        expect(third.container.querySelector(".lv-ko-derive")).toBeNull();
+        third.unmount();
     });
 });

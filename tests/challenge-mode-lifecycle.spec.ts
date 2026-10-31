@@ -76,6 +76,29 @@ describe("challenge loading lifecycle", () => {
         interval.mockRestore();
     });
 
+    it("问题态遮住挖空答案，按 V 或点卡面才揭晓；判分后下一张回到问题态", async () => {
+        // 回归 docs/53 TODO-02：此前直接渲染原始块 DOM，挖空答案出题即可见
+        dueGet.mockResolvedValueOnce({ cards: [{ blockID: "a" }, { blockID: "b" }] });
+        getBlockDOM
+            .mockResolvedValueOnce('<div data-type="NodeParagraph"><div>法国的首都是 <span data-type="mark">巴黎</span></div></div>')
+            .mockResolvedValueOnce('<div data-type="NodeParagraph"><div>日本的首都是 <span data-type="mark">东京</span></div></div>');
+        renderChallenge();
+        await fireEvent.click(screen.getByRole("button", { name: /Start/ }));
+        const card = await screen.findByTestId("challenge-card");
+        expect(card.textContent).toContain("法国的首都是");
+        expect(card.textContent).not.toContain("巴黎");
+
+        await fireEvent.keyDown(window, { key: "v" });
+        expect(screen.getByTestId("challenge-card").textContent).toContain("巴黎");
+
+        await fireEvent.keyDown(window, { key: "2" });
+        const next = screen.getByTestId("challenge-card");
+        expect(next.textContent).toContain("日本的首都是");
+        expect(next.textContent).not.toContain("东京");
+        await fireEvent.click(next);
+        expect(screen.getByTestId("challenge-card").textContent).toContain("东京");
+    });
+
     it("supports keyboard controls: 1 for unknown, 2 for known, and Escape to finish", async () => {
         dueGet.mockResolvedValueOnce({ cards: [{ blockID: "a" }, { blockID: "b" }] });
         getBlockDOM.mockImplementation(async (id: string) => `<p>Question ${id}</p>`);

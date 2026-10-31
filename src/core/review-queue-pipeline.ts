@@ -5,7 +5,7 @@
  */
 
 import { filterBurySiblings, disperseSiblings } from "./sibling-cards";
-import { isLeechCard } from "./revlog";
+import { DEFAULT_LEECH_THRESHOLD, isLeechCard } from "./revlog";
 
 export interface QueuePipelineCard {
     cardID: string;
@@ -25,6 +25,8 @@ export interface QueuePipelineOptions<TCard> {
     reverseOrder?: boolean;
     randomOrder?: boolean;
     shuffleFn?: (cards: TCard[]) => TCard[];
+    /** 水蛭卡遗忘次数阈值，取自用户设置；缺省用全局唯一默认值 */
+    leechThreshold?: number;
 }
 
 /**
@@ -36,7 +38,7 @@ export function applyQueuePipeline<TCard extends QueuePipelineCard>(
 ): TCard[] {
     let result: TCard[] = cards.map(c => ({
         ...c,
-        isLeech: isLeechCard(c, 5),
+        isLeech: isLeechCard(c, options.leechThreshold ?? DEFAULT_LEECH_THRESHOLD),
     }) as TCard);
 
     // 1. 仅新卡 / 仅旧卡模式（睡前巩固包）

@@ -61,6 +61,18 @@ export interface OcclusionBox {
 }
 
 /**
+ * 找到卡面里被遮挡的图片/画布。只在卡面内容区里找，且图片优先：
+ * 卡面外层还有来源面包屑、按钮等界面图标（同样是 svg），排在图片前面会被误当成遮挡目标。
+ */
+export function findOcclusionTarget(container: HTMLElement | null): HTMLElement | SVGElement | null {
+    if (!container) return null;
+    const scope = container.querySelector<HTMLElement>(".lv-card-content") ?? container;
+    return scope.querySelector<HTMLElement>("img")
+        ?? scope.querySelector<HTMLElement>("canvas")
+        ?? scope.querySelector<SVGElement>("svg:not(.lv-occl-overlay)");
+}
+
+/**
  * 计算容器内部图片/画布相对容器滚动可视区的几何包围盒
  */
 export function calculateOcclusionBox(
@@ -68,7 +80,7 @@ export function calculateOcclusionBox(
     hasOcclusion: boolean
 ): OcclusionBox | null {
     if (!container || !hasOcclusion) return null;
-    const img = container.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occl-overlay), canvas");
+    const img = findOcclusionTarget(container);
     if (!img) return null;
 
     const cardRect = container.getBoundingClientRect();

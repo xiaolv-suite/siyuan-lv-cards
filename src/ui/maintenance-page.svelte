@@ -768,12 +768,14 @@
                 {/each}
             </section>
         {/if}
-        <!-- BT-3 误解簇交互地图 -->
-        <MisconceptionPanel
-            clusters={misconceptionClusters}
-            i18n={i18n}
-            onOpenCard={(id) => maintenance.openCard(id)}
-        />
+        <!-- BT-3 误解簇交互地图：阶段 A 裁决隐藏未接线无数据源空面板（docs/54 F2 TODO-03），仅当宿主注入数据源且存在真实聚类时展示 -->
+        {#if maintenance.getMisconceptionClusters && misconceptionClusters.length > 0}
+            <MisconceptionPanel
+                clusters={misconceptionClusters}
+                i18n={i18n}
+                onOpenCard={(id) => maintenance.openCard(id)}
+            />
+        {/if}
     {/if}
 </LvPage>
 

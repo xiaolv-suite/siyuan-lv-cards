@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.219.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.220.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -19,14 +19,15 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.219.0 (Latest)
-* **Undo & Session Isolation Fixes**: Prevented undoing a skipped, requeued, or Cram card from rolling back historical formal `revlog` entries; added full `p`/`q` Undo support for `Ctrl+D` card dismissal; isolated Cram sessions from formal daily `session-state.json` and kernel skip mutations.
-* **Starred Persistence, Dismiss Filtering & Done-Screen Targeted Cram**: Persisted review-time starred cards (`*`) to `settings.starredCards` for seamless Manager filtering; excluded `custom-lv-dismissed` cards across sessions; completed Done-screen targeted Cram for forgotten/starred cards and fixed the skipped-cards Manager navigation button.
-* **7-Day Forecast Smoothing & Version/Token Convergence**: Persisted the 7-day load smoothing toggle and synchronized it with the 14-day calendar forecast; completed bilingual i18n strings and 4-source version verification.
+### v0.220.0 (Latest)
+* **Card creation and image occlusion blockers fixed**: creating a second card in the same notebook no longer fails with "document path is ambiguous"; onboarding sample cards are no longer rejected as empty; image-occlusion cards are masked again during review; editing an existing occlusion card keeps its saved masks; sample cards no longer show internal markers and occlusion masks are fully opaque.
+* **Settings take effect, challenge mode no longer spoils answers**: custom card CSS, check-in link and leech threshold now reach the review view; custom CSS is scoped to the card face; the default leech threshold is unified at 8 lapses; timed challenge shows the question first and reveals the answer with V.
+* **Half-finished entries cleaned up & occlusion controls improved**: added numbered mask chips for single-click deletion and a preset mask button in the occlusion editor; fixed version-acceptance refresh/error feedback and `.lvcards` conflict strategy selection; removed the unused settings exam-date field and hid unwired misconception/secondary-derive panels.
 
 <details>
-<summary>📜 View Historical Releases (v0.218.0 ~ v0.210.0)</summary>
+<summary>📜 View Historical Releases (v0.219.0 ~ v0.210.0)</summary>
 
+* **v0.219.0**: Undo no longer rolls back historical revlog entries for skipped/requeued/Cram cards; `Ctrl+D` dismissal can be undone; Cram sessions isolated from formal daily state; starred-card persistence, dismissed-card filtering and done-screen targeted Cram.
 * **v0.218.0**: Added Leech card warning banner, H-key graded cueing, breadcrumb block locator, sibling card dispersal, 7-day workload forecast bar chart, Cram quick review, and R54 design system refinement.
 * **v0.217.0**: Landed 22-slot immutable snapshot persistence queue, cross-tab deck scope propagation, incremental revlog rollback, and global command registration.
 * **v0.212.4**: Added scalar numeric answer policy, presentation privacy mode, `.lvcards` diff inspector, and misconception cluster panel.

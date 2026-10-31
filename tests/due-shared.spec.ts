@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { addRiffCards, getBlockAttrs, getRiffDueCards, getRiffDueCardsForScope, sqlQuery } = vi.hoisted(() => {
+const { addRiffCards, flushTransaction, getBlockAttrs, getBlockMarkdown, getRiffDueCards, getRiffDueCardsForScope, sqlQuery } = vi.hoisted(() => {
     const getRiffDueCards = vi.fn();
     return {
         addRiffCards: vi.fn(),
+        flushTransaction: vi.fn(),
         getBlockAttrs: vi.fn(),
+        getBlockMarkdown: vi.fn(),
         getRiffDueCards,
         getRiffDueCardsForScope: vi.fn(async (scope, rev) => getRiffDueCards(scope, rev)),
         sqlQuery: vi.fn(),
@@ -18,7 +20,9 @@ vi.mock("../src/api/riff", () => ({
 }));
 
 vi.mock("../src/api/siyuan", () => ({
+    flushTransaction,
     getBlockAttrs,
+    getBlockMarkdown,
     sqlQuery,
     SQL_QUERY_CHUNK_SIZE: 400,
     SQL_QUERY_CONCURRENCY: 3,
@@ -31,7 +35,9 @@ describe("cachedDueBlockIDs", () => {
         invalidateDueCache();
         getRiffDueCards.mockReset();
         addRiffCards.mockReset();
+        flushTransaction.mockReset().mockResolvedValue(undefined);
         getBlockAttrs.mockReset();
+        getBlockMarkdown.mockReset().mockRejectedValue(new Error("block not found"));
         sqlQuery.mockReset();
     });
 
@@ -90,5 +96,39 @@ describe("cachedDueBlockIDs", () => {
     it("门禁错误在 UI 边缘映射为本地化提示", () => {
         const error = new RiffCardEntryGateError([{ blockID: "bad", ok: false, issue: "invalid-occlusion" }]);
         expect(formatRiffCardEntryError(error, { editor: { qualityInvalidOcclusion: "遮挡区域无效" } })).toBe("遮挡区域无效");
+    });
+
+    it("跨分包抛出的门禁错误（instanceof 不成立）同样映射为本地化提示，而不是英文原文", () => {
+        // 回归：引导页在 dialogs 分包里，捕获到主包抛出的错误时曾直接显示 “Flashcard entry blocked: …”
+        const foreign = Object.assign(new Error("Flashcard entry blocked: x (empty-card)"), {
+            name: "RiffCardEntryGateError",
+            decisions: [{ blockID: "x", ok: false, issue: "empty-card" }],
+        });
+        expect(formatRiffCardEntryError(foreign, { qualityEmpty: "卡片内容为空" })).toBe("卡片内容为空");
+    });
+
+    it("刚写入的块 SQL 尚未索引时，先请内核提交索引再查，不误判为空卡", async () => {
+        // 回归：v0.219.0 走查中引导示例卡 5 张全部被判 empty-card
+        sqlQuery
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([{ id: "fresh", markdown: "Question ==Answer==" }]);
+        addRiffCards.mockResolvedValueOnce({ id: "deck" });
+        await expect(addCards("deck", ["fresh"])).resolves.toEqual({ id: "deck" });
+        expect(flushTransaction).toHaveBeenCalledTimes(1);
+        expect(getBlockMarkdown).not.toHaveBeenCalled();
+    });
+
+    it("提交索引后仍查不到时读块 kramdown 兜底；块确实不存在则判为缺失", async () => {
+        sqlQuery.mockResolvedValue([]);
+        getBlockMarkdown.mockImplementation(async (id: string) => {
+            if (id === "fresh") return "Question ==Answer==";
+            throw new Error("block not found");
+        });
+        addRiffCards.mockResolvedValueOnce({ id: "deck" });
+        await expect(addCards("deck", ["fresh"])).resolves.toEqual({ id: "deck" });
+
+        const rejected = await addCards("deck", ["gone"]).catch(e => e);
+        expect(rejected).toBeInstanceOf(RiffCardEntryGateError);
+        expect(rejected.decisions[0].issue).toBe("missing-block");
     });
 });

@@ -12,7 +12,8 @@
         t: any;
         ontoggle: (cardID: string, disabled: boolean) => void | Promise<void>;
         onremove: (cardID: string) => void | Promise<void>;
-        onderive: (cardType: string) => void | Promise<void>;
+        /** 阶段 A 裁决（docs/54 F2 TODO-05）：未注入 onderive 时隐藏二次派生入口，仅保留查看与既有实例管理 */
+        onderive?: (cardType: string) => void | Promise<void>;
         /** BK-1 验收：核心事实修订（宿主落盘后刷新快照） */
         onrevise?: (newFact: string) => void;
     } = $props();
@@ -39,7 +40,7 @@
     }
 
     async function deriveSelected() {
-        if (deriving) return;
+        if (deriving || !onderive) return;
         deriveError = "";
         try {
             await onderive(deriveType);
@@ -147,22 +148,24 @@
         {/each}
     {/if}
 
-    {#if deriveError}<div class="lv-ko-derive-error" role="alert" aria-live="assertive">{deriveError}</div>{/if}
     {#if actionError}
         <div class="lv-ko-derive-error" role="alert" aria-live="assertive">{actionError}
             {#if retryAction}<button class="b3-button b3-button--text" disabled={actionBusy !== null} onclick={() => retryAction && void runAction(actionBusy ?? "retry", retryAction)}>{t.review.ko.retryAction ?? "重试"}</button>{/if}
         </div>
     {/if}
-    <div class="lv-ko-derive">
-        <select class="b3-select" aria-label={t.review.ko.deriveLabel} bind:value={deriveType}>
-            {#each CARD_CATALOG.filter(c => !instances.some(i => i.cardType === c.id)) as c (c.id)}
-                <option value={c.id}>{typeName(c.id)}</option>
-            {/each}
-        </select>
-        <button class="b3-button lv-btn-primary lv-btn-tool" disabled={deriving} aria-busy={deriving} onclick={deriveSelected}>
-            {deriving ? t.review.ko.deriving : deriveError ? (t.review.ko.retryDerive ?? "重试派生") : t.review.ko.derive}
-        </button>
-    </div>
+    {#if onderive}
+        {#if deriveError}<div class="lv-ko-derive-error" role="alert" aria-live="assertive">{deriveError}</div>{/if}
+        <div class="lv-ko-derive">
+            <select class="b3-select" aria-label={t.review.ko.deriveLabel} bind:value={deriveType}>
+                {#each CARD_CATALOG.filter(c => !instances.some(i => i.cardType === c.id)) as c (c.id)}
+                    <option value={c.id}>{typeName(c.id)}</option>
+                {/each}
+            </select>
+            <button class="b3-button lv-btn-primary lv-btn-tool" disabled={deriving} aria-busy={deriving} onclick={deriveSelected}>
+                {deriving ? t.review.ko.deriving : deriveError ? (t.review.ko.retryDerive ?? "重试派生") : t.review.ko.derive}
+            </button>
+        </div>
+    {/if}
 </div>
 
 <style>
