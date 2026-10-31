@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.219.0 2026-10-31 · 复习历史回滚安全守卫、Cram 会话物理隔离、星标与归档全链路持久化及完成屏专项突击闭环
+
+- **修复 (Fixed)**：
+  - **撤销（Undo）误回滚历史 `revlog` 数据缺陷（`src/core/review-history.ts` & `src/ui/review.svelte`）**：在复习历史快照中引入 `revlogAppended` 精确标记，仅当正式评分实际写入 `revlog` 时才允许撤销时回滚，根除在跳过（`skip`）、遗忘重现卡（`lvRequeue`）或 Cram 突击模式下执行撤销时误删历史正式复习记录的问题；
+  - **`Ctrl+D` 解散归档卡片支持一键撤销（`src/ui/review.svelte`）**：解散归档动作纳入撤销历史栈（`dismissedBlockID`），误按 `Ctrl+D` 后按 `p`/`q` 可即时恢复卡片并清空 `custom-lv-dismissed` 块属性；同时将 `dismissBusy` 纳入全局动作锁 `actionBusy`；
+  - **Cram 考前突击快刷模式污染正式每日会话与内核跳过（`src/ui/review.svelte` & `src/index.ts`）**：隔离 Cram 模式与正式复习的 `session-state.json` 读写及跳过动作，防止突击快刷过的卡片在当日正式复习中被漏滤，或正式已复习卡在突击模式中被屏蔽；
+  - **完成屏“去管理器”按钮误跳首页（`src/ui/review/ReviewDonePanel.svelte`）**：修复“本场跳过 N 张 -> 去管理器”按钮错绑为返回首页的交互走样，准确跳转至卡片管理器；
+  - **复习设置 `burySiblings` 透传补齐（`src/bootstrap/tab-registrars.ts`）**：补齐复习页签挂载时 `burySiblings` 设置项映射。
+- **补全与新增 (Completed & Added)**：
+  - **复习端星标收藏跨会话持久化（`src/ui/review.svelte` & `src/bootstrap/tab-registrars.ts`）**：打通复习端星标按钮/快捷键 `*` 与 `settings.starredCards` 的持久化同步，实现复习端收藏与卡片管理器“星标卡”筛选双向联动；
+  - **解散归档卡（`custom-lv-dismissed`）跨会话队列过滤（`src/core/review-queue-quality.ts`）**：出题质量检查阶段识别 `blocks.ial` 中的 `custom-lv-dismissed="true"` 属性并自动移出日常复习队列，且不计入结构坏卡；
+  - **完成屏遗忘卡/星标卡一键专项突击闭环（`src/ui/review.svelte`）**：维护本场卡片字典 `sessionCardMap` 与遗忘/星标集合，点击完成屏“强化这批遗忘卡”或“立即专项练习星标卡”即可直接拉起对应卡片的无排期污染突击队列；并补全 Cram 模式按卡组/笔记本/文档/全局全范围合并拉取。
+- **优化 (Changed)**：
+  - **总览 7 日负载平滑持久化与日历联动（`src/ui/dashboard.svelte`）**：持久化“负载平滑”开关状态，开启时同步更新 14 日预测日历，补齐中英双语 i18n 文案与 `aria-pressed` 无障碍状态；
+  - **设计令牌收敛与四处版本号强校验（`src/core/lvcards-package.ts` & `scripts/check-versions.mjs`）**：导出 `PLUGIN_VERSION` 代码常量并纳入 `check-versions.mjs` 门禁，保持 `package.json`、`plugin.json`、`README.md` 与代码常量四处一致；收敛面包屑与总览非令牌样式声明。
+
 ## v0.218.0 2026-10-30 · R54 统一设计令牌与现代质感重塑、全域功能闭环审计与信息架构深化里程碑
 
 - **新增 (Added)**：

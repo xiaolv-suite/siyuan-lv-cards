@@ -103,7 +103,7 @@
             {#if sessionQuizTotal > 0}
                 <div class="lv-done-quiz-bubble" class:lv-quiz-high={quizAccuracy >= 80} class:lv-quiz-mid={quizAccuracy >= 60 && quizAccuracy < 80}>
                     <LvIcon name="check" size={13} />
-                    <span>实战命中率 {quizAccuracy}% ({sessionQuizCorrect}/{sessionQuizTotal})</span>
+                    <span>{(t.review?.doneQuizAccuracy ?? "实战命中率 ${rate}% (${correct}/${total})").replace("${rate}", String(quizAccuracy)).replace("${correct}", String(sessionQuizCorrect)).replace("${total}", String(sessionQuizTotal))}</span>
                 </div>
             {/if}
         </div>
@@ -160,22 +160,22 @@
                 {#if sessionSkip > 0}
                     <div class="lv-next-row">
                         <span>{(t.review?.nextSkipped ?? "跳过了 ${n} 张卡片").replace("${n}", String(sessionSkip))}</span>
-                        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onReturnHome}><LvIcon name="home" size={12} /> <span>{t.review?.nextAct ?? "去处理"}</span></button>
+                        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenManager} data-testid="done-open-manager-skipped-btn"><LvIcon name="cards" size={12} /> <span>{t.review?.nextAct ?? "去管理器"}</span></button>
                     </div>
                 {/if}
                 {#if sessionForget > 0}
                     <div class="lv-next-row" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                         <span>{(t.review?.nextForgotten ?? "遗忘了 ${n} 张卡片").replace("${n}", String(sessionForget))}</span>
-                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={onCramForgotten}>
+                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={onCramForgotten} data-testid="done-cram-forgotten-btn">
                             <LvIcon name="flame" size={13} /> {t.review?.reinforceMistakes ?? "强化这批遗忘卡"}
                         </button>
                     </div>
                 {/if}
                 {#if starredCardCount > 0}
                     <div class="lv-next-row" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                        <span style="display: inline-flex; align-items: center; gap: var(--lv-sp-1); font-variant-numeric: tabular-nums;"><LvIcon name="star" size={13} /> <span>本场共星标了 {starredCardCount} 张重点卡片</span></span>
-                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={onCramStarred}>
-                            <LvIcon name="star" size={13} /> 立即专项练习星标卡
+                        <span style="display: inline-flex; align-items: center; gap: var(--lv-sp-1); font-variant-numeric: tabular-nums;"><LvIcon name="star" size={13} /> <span>{(t.review?.starredSummary ?? "本场共星标了 ${n} 张重点卡片").replace("${n}", String(starredCardCount))}</span></span>
+                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={onCramStarred} data-testid="done-cram-starred-btn">
+                            <LvIcon name="star" size={13} /> {t.review?.cramStarredNow ?? "立即专项练习星标卡"}
                         </button>
                     </div>
                 {/if}

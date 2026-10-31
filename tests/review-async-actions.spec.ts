@@ -759,4 +759,90 @@ describe("review async action guards", () => {
         expect(testCtx.openDashboard).toHaveBeenCalledWith();
         view.unmount();
     });
+
+    it("does not call rollbackRevlog when undoing a skip or Cram rating, but calls rollbackRevlog when undoing a formal rating", async () => {
+        const testCtx = { ...ctx(), rollbackRevlog: vi.fn() };
+        const view = render(Review, { ctx: testCtx });
+        await screen.findByText("block-a body");
+
+        // 1. 跳过卡片 A 后撤销：未写入 revlog，因此绝不能调用 rollbackRevlog 误删历史记录
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.skip" }));
+        await screen.findByText("block-b body");
+        await waitFor(() => expect(screen.getByRole("button", { name: "t.review.undoTitle" }).hasAttribute("disabled")).toBe(false));
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.undoTitle" }));
+        await screen.findByText("block-a body");
+        expect(testCtx.rollbackRevlog).not.toHaveBeenCalled();
+
+        // 2. 正式评分卡片 A 后撤销：实际写入了 revlog，此时应调用 rollbackRevlog("card-a")
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.showAnswer" }));
+        await fireEvent.click(view.container.querySelector(".lv-btn-rate")!);
+        await screen.findByText("block-b body");
+        await waitFor(() => expect(screen.getByRole("button", { name: "t.review.undoTitle" }).hasAttribute("disabled")).toBe(false));
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.undoTitle" }));
+        await screen.findByText("block-a body");
+        expect(testCtx.rollbackRevlog).toHaveBeenCalledOnce();
+        expect(testCtx.rollbackRevlog).toHaveBeenCalledWith("card-a");
+        view.unmount();
+    });
+
+    it("allows undoing Ctrl+D card dismissal and reverts custom-lv-dismissed block attribute", async () => {
+        const testCtx = { ...ctx(), rollbackRevlog: vi.fn() };
+        const view = render(Review, { ctx: testCtx });
+        await screen.findByText("block-a body");
+        const reviewRoot = view.container.querySelector(".lv-review")!;
+
+        // 按 Ctrl+D 归档当前卡片 A
+        await fireEvent.keyDown(reviewRoot, { key: "d", ctrlKey: true });
+        await screen.findByText("block-b body");
+        expect(setBlockAttrs).toHaveBeenCalledWith("block-a", { "custom-lv-dismissed": "true" });
+
+        // 等待动作锁释放后撤销归档，应恢复卡片 A 并清空 custom-lv-dismissed 属性，且不回滚 revlog
+        await waitFor(() => expect(screen.getByRole("button", { name: "t.review.undoTitle" }).hasAttribute("disabled")).toBe(false));
+        await fireEvent.keyDown(reviewRoot, { key: "p" });
+        await screen.findByText("block-a body");
+        expect(setBlockAttrs).toHaveBeenCalledWith("block-a", { "custom-lv-dismissed": "" });
+        expect(testCtx.rollbackRevlog).not.toHaveBeenCalled();
+        view.unmount();
+    });
+
+    it("isolates Cram session from formal sessionState/skipReviewRiffCard and supports Done panel Cram for forgotten/starred cards", async () => {
+        getRiffDueCards.mockReset()
+            .mockResolvedValueOnce({ cards: [cardA, cardB], unreviewedCount: 2 })
+            .mockResolvedValue({ cards: [], unreviewedCount: 0 });
+        const toggleStarCard = vi.fn().mockResolvedValue(true);
+        const testCtx = {
+            ...ctx(),
+            getStarredCardIDs: () => [],
+            toggleStarCard,
+            rollbackRevlog: vi.fn(),
+        };
+        const view = render(Review, { ctx: testCtx });
+        await screen.findByText("block-a body");
+
+        // 星标卡片 A（验证持久化调用 toggleStarCard("block-a")）并评为遗忘(1)
+        await fireEvent.click(screen.getByRole("button", { name: "星标重点卡片" }));
+        expect(toggleStarCard).toHaveBeenCalledWith("block-a");
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.showAnswer" }));
+        const rateBtns = view.container.querySelectorAll(".lv-btn-rate");
+        await fireEvent.click(rateBtns[0]!); // rating 1 (Again)
+
+        // 卡片 B 评为良好(3) 进入完成屏
+        await screen.findByText("block-b body");
+        await waitFor(() => expect(screen.getByRole("button", { name: "t.review.undoTitle" }).hasAttribute("disabled")).toBe(false));
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.showAnswer" }));
+        const rateBtnsB = view.container.querySelectorAll(".lv-btn-rate");
+        await fireEvent.click(rateBtnsB[2]!); // rating 3 (Good)
+
+        // 完成屏点击「强化这批遗忘卡」进入专项 Cram，此时应加载刚才遗忘的 block-a
+        const cramForgotBtn = await screen.findByTestId("done-cram-forgotten-btn");
+        testCtx.saveSessionState.mockClear();
+        await fireEvent.click(cramForgotBtn);
+        await screen.findByText("block-a body");
+
+        // 在 Cram 模式下跳过不调用内核 skipReviewRiffCard，也不污染正式 saveSessionState
+        await fireEvent.click(screen.getByRole("button", { name: "t.review.skip" }));
+        expect(skipReviewRiffCard).not.toHaveBeenCalled();
+        expect(testCtx.saveSessionState).not.toHaveBeenCalled();
+        view.unmount();
+    });
 });

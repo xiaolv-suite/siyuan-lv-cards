@@ -12,7 +12,7 @@
     import { downloadFile } from "@/core/data-transfer";
     import { getFlashcardStatistics, summarizeStatistics, type MigrationStatus } from "@/api/flashcardV2";
     import { calcStreak, lastNDays, localDate, studySecondsOn, coverageStats, deckCoverage, computeRetention, computeRetentionCurve, reviewStatsFor, weekCompare, calcMilestones, calcXp, type RevlogData, type RetentionResult, type CurvePoint, type WeekDelta, type Milestones, type XpResult, type CoverageStats, type DeckCoverage } from "@/core/revlog";
-    import { buildForecast, buildMonthGrid, dueMapFromForecast, get7DayForecast, type ForecastResult, type CalendarCell, type ForecastCardInput, type ForecastDay } from "@/core/forecast";
+    import { buildForecast, buildMonthGrid, dueMapFromForecast, get7DayForecast, smoothForecastLoad, type ForecastResult, type CalendarCell, type ForecastCardInput, type ForecastDay } from "@/core/forecast";
     import { renderDashboardReportMarkdown, computeWeekOverview, computeCurveSvgPaths } from "@/core/report-writer";
     import { openTab, showMessage } from "siyuan";
     import { friendlyError } from "@/api/errors";
@@ -452,22 +452,44 @@
     let calSeq = 0;
 
     // ---- 未来 7 日复习负载预报（FSRS4Anki 对标 · 支持负载平滑削峰填谷） ----
+    const SMOOTH_LOAD_STORAGE_KEY = "lv-cards-smooth-forecast";
+    function readPersistedSmoothLoad(): boolean {
+        try {
+            return typeof localStorage !== "undefined" && localStorage.getItem(SMOOTH_LOAD_STORAGE_KEY) === "1";
+        } catch {
+            return false;
+        }
+    }
     let forecastRawCards = $state<ForecastCardInput[]>([]);
-    let smoothLoadEnabled = $state(false);
+    let smoothLoadEnabled = $state(readPersistedSmoothLoad());
     let forecast7Days = $state<ForecastDay[]>([]);
     let forecast7Max = $state(1);
     let forecast7Total = $state(0);
 
-    function update7DayForecast() {
-        const now = new Date();
-        const f7 = get7DayForecast(forecastRawCards, { today: now, dailyNewTarget: targets.new, smooth: smoothLoadEnabled });
+    function update7DayForecast(baseNow = new Date()) {
+        const f7 = get7DayForecast(forecastRawCards, { today: baseNow, dailyNewTarget: targets.new, smooth: smoothLoadEnabled });
         forecast7Days = f7.days;
         forecast7Max = f7.maxCount;
         forecast7Total = f7.totalDue;
+        if (forecastRawCards.length > 0) {
+            const rawCal = buildForecast(forecastRawCards, { today: baseNow, horizonDays: 14, dailyNewTarget: targets.new });
+            const calDays = smoothLoadEnabled ? smoothForecastLoad(rawCal.days) : rawCal.days;
+            calForecast = { ...rawCal, days: calDays };
+            const dueByDate = dueMapFromForecast(calDays);
+            const reviewsByDate = new Map(heat.map(h => [h.date, h.stat.review]));
+            calCells = buildMonthGrid(baseNow.getFullYear(), baseNow.getMonth() + 1, baseNow, reviewsByDate, dueByDate);
+        }
     }
 
     function toggleSmoothLoad() {
         smoothLoadEnabled = !smoothLoadEnabled;
+        try {
+            if (typeof localStorage !== "undefined") {
+                localStorage.setItem(SMOOTH_LOAD_STORAGE_KEY, smoothLoadEnabled ? "1" : "0");
+            }
+        } catch {
+            /* 忽略存储受限环境 */
+        }
         update7DayForecast();
     }
 
@@ -602,10 +624,12 @@
             if (seq !== calSeq) return;
             forecastRawCards = cards;
             calForecast = buildForecast(cards, { today: now, horizonDays: 14, dailyNewTarget: targets.new });
-            update7DayForecast();
-            const dueByDate = dueMapFromForecast(calForecast.days);
-            const reviewsByDate = new Map(heat.map(h => [h.date, h.stat.review]));
-            calCells = buildMonthGrid(now.getFullYear(), now.getMonth() + 1, now, reviewsByDate, dueByDate);
+            update7DayForecast(now);
+            if (!smoothLoadEnabled) {
+                const dueByDate = dueMapFromForecast(calForecast.days);
+                const reviewsByDate = new Map(heat.map(h => [h.date, h.stat.review]));
+                calCells = buildMonthGrid(now.getFullYear(), now.getMonth() + 1, now, reviewsByDate, dueByDate);
+            }
             calLoadedOnce = true;
         } catch (e) {
             if (seq === calSeq) calError = friendlyError(e, t);
@@ -1208,12 +1232,13 @@
                         class="b3-button b3-button--small lv-btn-tool"
                         class:lv-btn-primary={smoothLoadEnabled}
                         class:b3-button--outline={!smoothLoadEnabled}
+                        aria-pressed={smoothLoadEnabled}
                         title={smoothLoadEnabled ? (t.dashboard.smoothLoadOn ?? "平滑已开启") : (t.dashboard.smoothLoadOff ?? "平滑已关闭")}
                         onclick={toggleSmoothLoad}
                         data-testid="dashboard-smooth-toggle-btn"
                     >
                         <LvIcon name="swap" size={12} />
-                        <span>{t.dashboard.smoothLoad ?? "负载平滑"}: {smoothLoadEnabled ? "开" : "关"}</span>
+                        <span>{t.dashboard.smoothLoad ?? "负载平滑"}: {smoothLoadEnabled ? (t.dashboard.stateOn ?? "开") : (t.dashboard.stateOff ?? "关")}</span>
                     </button>
                 </div>
             </div>
@@ -1237,9 +1262,9 @@
                     {/each}
                 </div>
                 <div class="lv-today-week-summary">
-                    <span>总预计到期 <strong>{forecast7Total}</strong> 张</span>
+                    <span>{(t.dashboard.forecast7TotalDue ?? "总预计到期 ${n} 张").replace("${n}", String(forecast7Total))}</span>
                     {#if smoothLoadEnabled}
-                        <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> 削峰填谷已优化</span>
+                        <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> {t.dashboard.smoothLoadBadge ?? "削峰填谷已优化"}</span>
                     {/if}
                 </div>
             {:else}
@@ -2110,7 +2135,7 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 3);
         line-height: var(--lv-lh-body);
-        strong { color: var(--lv-color-text); font-weight: 600; white-space: nowrap; }
+        strong { color: var(--lv-color-text); font-weight: var(--lv-fw-heading); white-space: nowrap; }
     }
     .lv-today-forecast {
         display: flex;
@@ -2149,7 +2174,7 @@
         font-size: var(--lv-type-caption-size);
         color: var(--lv-color-text-muted);
         font-variant-numeric: tabular-nums;
-        line-height: 1;
+        line-height: var(--lv-lh-tight, 1);
     }
     .lv-forecast-bar-track {
         flex: 1;

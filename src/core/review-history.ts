@@ -29,6 +29,10 @@ export interface ReviewHistorySnapshot<TCard = any> {
     faceError: string;
     occlusion: OcclusionData | null;
     counters: ReviewCounters;
+    /** 仅当本次操作实际写入了正式 revlog 时为 true；跳过、重现卡与 Cram 模式均为 false，防止撤销时误删历史记录 */
+    revlogAppended?: boolean;
+    /** 若本次操作为 Ctrl+D 解散归档卡片，记录被归档的 blockID 以供撤销时恢复 */
+    dismissedBlockID?: string;
 }
 
 export const MAX_REVIEW_HISTORY_DEPTH = 50;
@@ -48,6 +52,8 @@ export function createReviewHistorySnapshot<TCard>(input: {
     faceError: string;
     occlusion: OcclusionData | null;
     counters: ReviewCounters;
+    revlogAppended?: boolean;
+    dismissedBlockID?: string;
 }): ReviewHistorySnapshot<TCard> {
     return {
         queue: [...input.queue],
@@ -61,6 +67,8 @@ export function createReviewHistorySnapshot<TCard>(input: {
         faceError: input.faceError,
         occlusion: input.occlusion ? { v: input.occlusion.v, rects: [...input.occlusion.rects] } : null,
         counters: { ...input.counters },
+        ...(input.revlogAppended !== undefined ? { revlogAppended: input.revlogAppended } : {}),
+        ...(input.dismissedBlockID ? { dismissedBlockID: input.dismissedBlockID } : {}),
     };
 }
 

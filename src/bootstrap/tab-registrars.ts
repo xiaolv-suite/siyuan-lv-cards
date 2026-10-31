@@ -593,7 +593,17 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
                             typingEnabled: plugin.settings.typingEnabled,
                             typingStrict: plugin.settings.typingStrict,
                             answerTimeCapSec: plugin.settings.answerTimeCapSec,
+                            burySiblings: plugin.settings.burySiblings,
                         }),
+                        getStarredCardIDs: () => plugin.settings.starredCards,
+                        toggleStarCard: async (id: string) => {
+                            const s = new Set(plugin.settings.starredCards);
+                            const added = !s.delete(id);
+                            if (added) s.add(id);
+                            plugin.settings.starredCards = [...s];
+                            plugin.saveSettingsSoon();
+                            return added;
+                        },
                         appendRevlog: (e: any) => plugin.appendRevlog(e),
                         rollbackRevlog: (cardID?: string) => plugin.rollbackRevlog(cardID),
                         tagErrorReason: (cardID: string, reason: string) => {

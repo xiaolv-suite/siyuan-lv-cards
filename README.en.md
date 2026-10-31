@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.218.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.219.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -14,6 +14,25 @@ Built on SiYuan's native FSRS algorithm · Block-level bi-directional context tr
 Knowledge workers and students often struggle with three universal learning pains: **"notes are forgotten once written, cards are made but abandoned, and backlog reviews accumulate like an insurmountable debt."**
 
 Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间隔重复 (Free Spaced Repetition Scheduler)** as the single source of truth. It establishes a complete, closed-loop learning journey: from ambient reading material capture and atomic authoring, to multi-sensory active recall testing, leech card quarantine, and loss-free cross-platform export.
+
+---
+
+## 🆕 What's New
+
+### v0.219.0 (Latest)
+* **Undo & Session Isolation Fixes**: Prevented undoing a skipped, requeued, or Cram card from rolling back historical formal `revlog` entries; added full `p`/`q` Undo support for `Ctrl+D` card dismissal; isolated Cram sessions from formal daily `session-state.json` and kernel skip mutations.
+* **Starred Persistence, Dismiss Filtering & Done-Screen Targeted Cram**: Persisted review-time starred cards (`*`) to `settings.starredCards` for seamless Manager filtering; excluded `custom-lv-dismissed` cards across sessions; completed Done-screen targeted Cram for forgotten/starred cards and fixed the skipped-cards Manager navigation button.
+* **7-Day Forecast Smoothing & Version/Token Convergence**: Persisted the 7-day load smoothing toggle and synchronized it with the 14-day calendar forecast; completed bilingual i18n strings and 4-source version verification.
+
+<details>
+<summary>📜 View Historical Releases (v0.218.0 ~ v0.210.0)</summary>
+
+* **v0.218.0**: Added Leech card warning banner, H-key graded cueing, breadcrumb block locator, sibling card dispersal, 7-day workload forecast bar chart, Cram quick review, and R54 design system refinement.
+* **v0.217.0**: Landed 22-slot immutable snapshot persistence queue, cross-tab deck scope propagation, incremental revlog rollback, and global command registration.
+* **v0.212.4**: Added scalar numeric answer policy, presentation privacy mode, `.lvcards` diff inspector, and misconception cluster panel.
+* See [CHANGELOG.md](./CHANGELOG.md) for full details.
+
+</details>
 
 ---
 

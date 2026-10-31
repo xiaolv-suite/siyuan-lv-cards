@@ -100,6 +100,18 @@ describe("ReviewDonePanel 复习完成面板组件", () => {
         expect(onCramStarred).toHaveBeenCalled();
     });
 
+    it("点击跳过建议中的「去处理/去管理器」按钮触发 onOpenManager 而非误跳返回主页", async () => {
+        const onReturnHome = vi.fn();
+        const onOpenManager = vi.fn();
+        const { getByTestId } = render(ReviewDonePanel, {
+            props: { ...defaultProps, sessionSkip: 3, onReturnHome, onOpenManager },
+        });
+
+        await fireEvent.click(getByTestId("done-open-manager-skipped-btn"));
+        expect(onOpenManager).toHaveBeenCalledOnce();
+        expect(onReturnHome).not.toHaveBeenCalled();
+    });
+
     it("底部主操作按钮（返回主页、卡片管理、再来一组）点击正常响应", async () => {
         const onReturnHome = vi.fn();
         const onOpenManager = vi.fn();

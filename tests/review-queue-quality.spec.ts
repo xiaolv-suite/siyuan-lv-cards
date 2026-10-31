@@ -56,4 +56,19 @@ describe("review-queue-quality 出题队列卡片质量过滤", () => {
         expect(res.valid).toEqual([]);
         expect(res.invalid).toEqual([]);
     });
+
+    it("已解散归档（custom-lv-dismissed=true）的卡片自动从复习队列过滤且不计入结构坏卡", async () => {
+        const cardsWithDismissed: ReviewQualityCard[] = [
+            { cardID: "c1", blockID: "b1" },
+            { cardID: "c2", blockID: "b2" },
+        ];
+        const queryBlocks = async () => [
+            { id: "b1", markdown: "正常卡片 ==答案==", ial: '{: id="b1"}' },
+            { id: "b2", markdown: "已归档卡片 ==答案==", ial: '{: id="b2" custom-lv-dismissed="true"}' },
+        ];
+        const res = await filterReviewQueueByQuality(cardsWithDismissed, queryBlocks, async () => ({}), () => null);
+        expect(res.valid.map(c => c.cardID)).toEqual(["c1"]);
+        expect(res.invalid).toEqual([]);
+        expect(res.dismissedBlockIDs).toEqual(["b2"]);
+    });
 });

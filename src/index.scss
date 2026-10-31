@@ -2519,7 +2519,7 @@ pre,
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 32%, transparent), var(--lv-shadow-card) !important;
     transform: translateY(-2px);
     @media (prefers-reduced-motion: no-preference) {
-        animation: lv-pulse-suggest 2s infinite ease-in-out;
+        animation: lv-pulse-suggest var(--lv-dur-shimmer) infinite var(--lv-ease);
     }
 }
 @keyframes lv-pulse-suggest {

@@ -2722,10 +2722,12 @@ export default class LvCardsPlugin extends Plugin {
                 existing.panelElement
                     ?.querySelector(".lv-hub")
                     ?.dispatchEvent(new CustomEvent("lv-switch-tab", { detail: { tab: data.tab, focusBlockID: data.focusBlockID } }));
-            } else if (type === TAB_REVIEW && data) {
+            } else if (type === TAB_REVIEW) {
                 existing.panelElement
                     ?.querySelector(".lv-review")
-                    ?.dispatchEvent(new CustomEvent("lv-switch-scope", { detail: data }));
+                    ?.dispatchEvent(new CustomEvent("lv-switch-scope", {
+                        detail: { ...(data ?? {}), cram: Boolean(data?.cram) },
+                    }));
             }
             return;
         }

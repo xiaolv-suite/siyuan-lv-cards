@@ -43,6 +43,7 @@
             class="lv-breadcrumb-btn"
             title={(breadcrumbs.formattedText || hpath) + " · " + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
             aria-label={(breadcrumbs.formattedText || hpath) + "，" + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
+            onclick={(e) => { e.stopPropagation(); onToggleContext(); }}
             data-testid="review-breadcrumb-locate-btn"
         >
             <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
@@ -89,6 +90,7 @@
             class="lv-breadcrumb-btn"
             title={t.review?.breadcrumbHint ?? "点击查阅来源文档上下文"}
             aria-label={hpath + "，" + (t.review?.breadcrumbHint ?? "点击查阅来源文档上下文")}
+            onclick={(e) => { e.stopPropagation(); onToggleContext(); }}
             data-testid="review-breadcrumb-locate-btn"
         >
             <span class="lv-breadcrumb-icon"><LvIcon name="book" size={16} /></span>
@@ -112,7 +114,8 @@
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 1);
-        max-width: clamp(200px, 44vw, 440px);
+        max-width: min(calc(100% - var(--lv-sp-2)), 520px);
+        box-sizing: border-box;
         padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
@@ -120,7 +123,7 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-meta-size);
         margin-bottom: var(--lv-sp-3);
-        margin-right: var(--lv-sp-4);
+        margin-right: var(--lv-sp-2);
         box-shadow: var(--lv-shadow-1);
         user-select: none;
         -webkit-user-select: none;
@@ -185,7 +188,7 @@
         }
         .lv-breadcrumb-sep {
             opacity: 0.4;
-            font-weight: 300;
+            font-weight: var(--lv-fw-regular, 400);
             padding: 0 var(--lv-space-hairline);
         }
         .lv-breadcrumb-toggle {

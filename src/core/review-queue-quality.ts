@@ -1,6 +1,7 @@
 import { validateCardEntry, type CardEntryIssue } from "./card-entry-gate";
 import { mapChunksOrdered } from "./query-chunks";
 import { hasQuestionMediaContent, validateFlashcardMarkdown } from "./flashcard-quality";
+import { ATTR_LV_DISMISSED, filterDismissedFromQueue, isDismissedCard } from "./incremental-learning";
 
 export interface ReviewQualityCard {
     blockID: string;
@@ -10,16 +11,29 @@ export interface ReviewQualityCard {
 export interface ReviewQualityRow {
     id: string;
     markdown: string;
+    ial?: string;
+    attrs?: Record<string, string>;
 }
 
 export interface ReviewQualityResult<T extends ReviewQualityCard> {
     valid: T[];
     invalid: Array<{ blockID: string; cardID: string; issue: CardEntryIssue }>;
+    dismissedBlockIDs?: string[];
+}
+
+export function isRowDismissed(row?: { ial?: string; attrs?: Record<string, string> } | null): boolean {
+    if (!row) return false;
+    if (row.attrs && isDismissedCard(row.attrs)) return true;
+    if (typeof row.ial === "string" && new RegExp(`${ATTR_LV_DISMISSED}=["']true["']`).test(row.ial)) {
+        return true;
+    }
+    return false;
 }
 
 /**
  * 保留内核队列顺序，隔离结构无效或无法映射到来源块的存量卡。
  * 这是本场呈现过滤，不会评分、跳过或改动内核 due。
+ * 若块带有 custom-lv-dismissed="true" 归档属性，直接从复习队列过滤且不计入结构坏卡。
  */
 export function partitionReviewCardsByQuality<T extends ReviewQualityCard>(
     cards: T[],
@@ -27,10 +41,17 @@ export function partitionReviewCardsByQuality<T extends ReviewQualityCard>(
     validOcclusionBlockIDs: ReadonlySet<string> = new Set(),
     options: { allowLegacyFormat?: boolean } = {},
 ): ReviewQualityResult<T> {
+    const dismissedSet = new Set<string>();
+    for (const row of rows) {
+        if (isRowDismissed(row)) {
+            dismissedSet.add(String(row.id));
+        }
+    }
+    const activeCards = dismissedSet.size > 0 ? filterDismissedFromQueue(cards, dismissedSet) : cards;
     const markdownByID = new Map(rows.map(row => [String(row.id), String(row.markdown ?? "")]));
     const valid: T[] = [];
     const invalid: Array<{ blockID: string; cardID: string; issue: CardEntryIssue }> = [];
-    for (const card of cards) {
+    for (const card of activeCards) {
         const blockID = String(card.blockID ?? "");
         const exists = markdownByID.has(blockID);
         const decision = validateCardEntry({
@@ -43,7 +64,11 @@ export function partitionReviewCardsByQuality<T extends ReviewQualityCard>(
         if (decision.ok) valid.push(card);
         else invalid.push({ blockID, cardID: String(card.cardID ?? ""), issue: decision.issue ?? "missing-block" });
     }
-    return { valid, invalid };
+    return {
+        valid,
+        invalid,
+        ...(dismissedSet.size > 0 ? { dismissedBlockIDs: [...dismissedSet] } : {}),
+    };
 }
 
 /**
@@ -51,7 +76,7 @@ export function partitionReviewCardsByQuality<T extends ReviewQualityCard>(
  */
 export async function filterReviewQueueByQuality<T extends ReviewQualityCard>(
     cards: T[],
-    queryBlocks: (sql: string) => Promise<Array<{ id?: string; markdown?: string }>>,
+    queryBlocks: (sql: string) => Promise<Array<{ id?: string; markdown?: string; ial?: string; attrs?: Record<string, string> }>>,
     getBlockAttrs: (id: string) => Promise<Record<string, string>>,
     parseOcclusionFn: (attrs: Record<string, string>) => { rects: any[] } | null
 ): Promise<ReviewQualityResult<T>> {
@@ -70,12 +95,17 @@ export async function filterReviewQueueByQuality<T extends ReviewQualityCard>(
         chunks,
         (ids: string[]) => {
             const safeIDs = ids.map(id => `'${String(id).replace(/'/g, "''")}'`).join(",");
-            return queryBlocks(`SELECT id, markdown FROM blocks WHERE id IN (${safeIDs})`);
+            return queryBlocks(`SELECT id, ial, markdown FROM blocks WHERE id IN (${safeIDs})`);
         },
         concurrency
     );
 
-    const rows = rowsByChunk.flat().map(row => ({ id: String(row.id ?? ""), markdown: String(row.markdown ?? "") }));
+    const rows: ReviewQualityRow[] = rowsByChunk.flat().map(row => ({
+        id: String(row.id ?? ""),
+        markdown: String(row.markdown ?? ""),
+        ...(typeof row.ial === "string" ? { ial: row.ial } : {}),
+        ...(row.attrs ? { attrs: row.attrs } : {}),
+    }));
     const markdownByID = new Map(rows.map(row => [row.id, row.markdown]));
 
     const occlusionCandidates = blockIDs.filter(id => {
