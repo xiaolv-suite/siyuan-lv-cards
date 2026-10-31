@@ -111,15 +111,18 @@
                 {:else}
                     <div class="lv-forecast">
                         {#each forecast as d (d.date)}
+                            {@const total = d.reviews + d.news}
                             {@const forecastLabel = accessibleForecastLabel(d)}
-                            <i
-                                aria-hidden="true"
-                                class:lv-forecast-hi={d.reviews + d.news >= 18}
-                                style={`height:${Math.max(6, Math.round((d.reviews + d.news) / maxLoad * 100))}%`}
-                                title={forecastLabel}
-                                aria-label={forecastLabel}
-                                role="img"
-                            ><span class="lv-visually-hidden">{forecastLabel}</span></i>
+                            <div class="lv-forecast-col" title={forecastLabel} aria-label={forecastLabel} role="img">
+                                <span class="lv-forecast-count">{total}</span>
+                                <i
+                                    aria-hidden="true"
+                                    class:lv-forecast-hi={total >= 18}
+                                    class:lv-forecast-zero={total === 0}
+                                    style={`height:${Math.max(total === 0 ? 3 : 10, Math.round(total / maxLoad * 100))}%`}
+                                ></i>
+                                <span class="lv-forecast-date">{d.date.slice(8)}</span>
+                            </div>
                         {/each}
                     </div>
                     <ul class="lv-cal-forecast-text lv-visually-hidden" aria-label={labels.forecastTitle ?? "Forecast"}>
@@ -140,10 +143,10 @@
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
         gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
-        margin-top: calc(var(--lv-space-unit) * 4);
-        /* 密度护栏：撑满 1200px 卡时格子会变成 158×117 的巨块——限宽保持原型 .cal 的紧凑比例 */
-        max-width: 640px;
+        /* 宽卡自适应铺满，但限制单格上限避免巨块；窄容器自然收缩 */
         width: 100%;
+        max-width: min(100%, 780px);
+        margin: calc(var(--lv-space-unit) * 4) auto 0;
         min-width: 0;
     }
     .lv-cal-wd {
@@ -250,28 +253,53 @@
     .lv-cal-sw.future2 { background: color-mix(in srgb, var(--lv-color-warning) 24%, var(--lv-color-surface)); }
     .lv-forecast {
         display: flex;
-        gap: calc(var(--lv-space-unit) * 2);
-        align-items: flex-end;
-        height: 74px;
-        margin-top: calc(var(--lv-space-unit) * 5);
+        gap: calc(var(--lv-space-unit) * 1);
+        align-items: stretch;
+        height: 92px;
+        margin-top: calc(var(--lv-space-unit) * 4);
     }
-    .lv-forecast i {
+    .lv-forecast-col {
         flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+    }
+    .lv-forecast-count {
+        font-size: var(--lv-type-caption-size);
+        line-height: 1;
+        color: var(--lv-color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+    .lv-forecast-col i {
+        flex: 1;
+        width: min(60%, 22px);
+        align-self: flex-end;
         background: color-mix(in srgb, var(--lv-color-warning) 22%, var(--lv-color-surface));
         border-top: 2px solid var(--lv-color-warning);
         border-radius: var(--lv-r-pill) var(--lv-r-pill) 0 0;
-        min-height: 6px;
-        transition: transform var(--lv-dur-2) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), filter var(--lv-dur-2) var(--lv-ease);
+        transition: background var(--lv-dur-1) var(--lv-ease);
         cursor: pointer;
 
         &:hover {
-            transform: scaleY(1.08);
             background: color-mix(in srgb, var(--lv-color-warning) 50%, var(--lv-color-surface));
-            filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--lv-color-warning) 40%, transparent));
         }
     }
-    .lv-forecast i.lv-forecast-hi {
+    .lv-forecast-col i.lv-forecast-hi {
         background: color-mix(in srgb, var(--lv-color-warning) 40%, var(--lv-color-surface));
+    }
+    .lv-forecast-col i.lv-forecast-zero {
+        background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+        border-top: none;
+        border-radius: var(--lv-r-xs);
+    }
+    .lv-forecast-date {
+        font-size: 10px;
+        line-height: 1;
+        color: var(--lv-color-text-muted);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
     }
     .lv-visually-hidden {
         position: absolute;

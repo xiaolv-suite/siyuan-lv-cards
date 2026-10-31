@@ -131,6 +131,8 @@ export interface LvCardsSettings {
     /** 记忆：上次所在中心子页 / 上次复习范围 */
     lastHubTab: string;
     lastReviewScope: string;
+    /** R58 记忆：快速制卡上次成功使用的卡组（打开时自动预选） */
+    lastQuickCardDeck: string;
     /** BI-17（v0.181.0）：管理器视图状态 JSON（filter/sort/leechOnly/status——返回时恢复筛选） */
     lastManagerView: string;
     /** Onboarding 已完成 */
@@ -247,6 +249,7 @@ export function defaultSettings(): LvCardsSettings {
         cardMaxWidth: 880,
         lastHubTab: "overview",
         lastReviewScope: "all",
+        lastQuickCardDeck: "",
         lastManagerView: "",
         onboarded: false,
         topbarDirectReview: false,
@@ -288,7 +291,7 @@ const BOOL_FIELDS: (keyof LvCardsSettings)[] = [
 const STR_FIELDS: (keyof LvCardsSettings)[] = [
     "weeklyReportLast", "customCardCss", "checkinItemId",
     "gatewayState", "ttsVoice", "aiEndpoint", "aiKey", "aiModel", "aiFallbackEndpoint", "aiFallbackKey",
-    "aiFallbackModel", "aiSensitiveTerms", "aiPromptTemplate", "targetNotebookId", "ankiClientKey", "lastHubTab", "lastReviewScope", "lastManagerView",
+    "aiFallbackModel", "aiSensitiveTerms", "aiPromptTemplate", "targetNotebookId", "ankiClientKey", "lastHubTab", "lastReviewScope", "lastManagerView", "lastQuickCardDeck",
 ];
 
 export function normalizeSettings(raw: unknown): LvCardsSettings {

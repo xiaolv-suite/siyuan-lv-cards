@@ -83,12 +83,13 @@ describe("LvIcon", () => {
         expect(svg).toBeTruthy();
         expect(svg?.getAttribute("width")).toBe("20");
         expect(svg?.getAttribute("height")).toBe("20");
+        // R57 空心图标体系：单测环境无思源 symbol 库，走 24x24 Lucide 空心兜底路径
         expect(svg?.querySelector("path")?.getAttribute("d")).toBe("M18 6 6 18M6 6l12 12");
 
         const swap = render(LvIcon, { name: "swap", size: 16 });
         const swapSvg = swap.container.querySelector("svg");
         expect(swapSvg).toBeTruthy();
-        expect(swapSvg?.querySelector("path")?.getAttribute("d")).toContain("M8 7h12");
+        expect(swapSvg?.querySelector("path")?.getAttribute("d")).toContain("M20 7H4");
 
         const left = render(LvIcon, { name: "chevron-left", size: 14 });
         expect(left.container.querySelector("path")?.getAttribute("d")).toBe("m15 18-6-6 6-6");

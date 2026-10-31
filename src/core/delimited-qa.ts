@@ -8,7 +8,7 @@
  * 4. 纯文本卡（自由回忆/自评卡）
  */
 
-export type DelimitedQaFormat = "triple-colon" | "double-colon" | "qa-prefix" | "qa-chinese";
+export type DelimitedQaFormat = "triple-colon" | "double-colon" | "qa-prefix" | "qa-chinese" | "dash";
 
 export interface DelimitedQaResult {
     question: string;
@@ -84,6 +84,18 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
             answer: zhMatch[2].trim(),
             format: "qa-chinese",
         };
+    }
+
+    // 5. —— 破折号分隔（中文笔记常见第三方约定，如「词——释义」；单行且仅一处时生效）
+    if (raw.includes("——")) {
+        const parts = raw.split("——");
+        if (parts.length === 2 && parts[0]?.trim() && parts[1]?.trim()) {
+            return {
+                question: parts[0].trim(),
+                answer: parts[1].trim(),
+                format: "dash",
+            };
+        }
     }
 
     return null;

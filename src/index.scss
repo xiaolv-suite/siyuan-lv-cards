@@ -296,17 +296,17 @@ body[data-theme-mode="dark"],
 .lv-page {
     max-width: 1240px;
     margin: 0 auto;
-    padding: calc(var(--lv-space-unit) * 14) calc(var(--lv-space-unit) * 15) calc(var(--lv-space-unit) * 16);
-    height: 100%;
-    overflow: auto;
+    padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 8) calc(var(--lv-space-unit) * 10);
     box-sizing: border-box;
+    width: 100%;
+    min-height: 0;
 
     // R54 主工作区边距按插件容器宽度变化，不受宿主窗口外层尺寸影响。
     @container lv-hub (max-width: 1040px) {
-        padding: calc(var(--lv-space-unit) * 12);
+        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
     }
     @container lv-hub (max-width: 780px) {
-        padding: calc(var(--lv-space-unit) * 11 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 9 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 13 + var(--lv-space-hairline));
+        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 4);
     }
 }
 
@@ -1335,13 +1335,12 @@ pre,
 .lv-hero {
     position: relative;
     overflow: hidden;
-    min-height: 220px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lv-sp-5);
-    padding: calc(var(--lv-space-unit) * 15);
-    margin-bottom: var(--lv-sp-5);
+    gap: var(--lv-sp-4);
+    padding: var(--lv-sp-4) var(--lv-sp-5);
+    margin-bottom: var(--lv-sp-4);
     border: 1px solid var(--lv-border);
     border-radius: var(--lv-r-l);
     background: var(--lv-primary-soft);
@@ -1353,19 +1352,19 @@ pre,
         z-index: var(--lv-z-card-control);
         min-width: 0;
         flex: 1;
-        max-width: 68%;
+        max-width: 100%;
     }
 
-    // R54 矢量工坊艺术图元：半透明交叠纸质闪卡与金色点缀
+    // R54 矢量工坊艺术图元：半透明交叠纸质闪卡与金色点缀（轻量紧凑）
     .lv-hero-art {
         position: absolute;
-        right: 14px;
-        bottom: 8px;
-        width: 205px;
-        height: 205px;
+        right: 12px;
+        bottom: 4px;
+        width: 110px;
+        height: 110px;
         pointer-events: none;
         color: var(--lv-color-brand);
-        opacity: 0.85;
+        opacity: 0.4;
         z-index: var(--lv-z-base);
 
         svg {
@@ -1378,15 +1377,15 @@ pre,
     .lv-hero-ring {
         position: relative;
         z-index: var(--lv-z-card-control);
-        width: 92px;
-        height: 92px;
+        width: 72px;
+        height: 72px;
         flex: none;
 
         svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 
         circle {
             fill: none;
-            stroke-width: 7;
+            stroke-width: 6;
             &.lv-hero-ring-track { stroke: color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
             &.lv-hero-ring-fill {
                 stroke: var(--lv-color-brand);
@@ -1402,7 +1401,7 @@ pre,
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: var(--lv-type-section-lg-size);
+            font-size: var(--lv-type-section-size);
             font-weight: var(--lv-fw-heading);
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.02em;
@@ -1425,30 +1424,29 @@ pre,
         flex-wrap: wrap;
     }
     .lv-hero-title {
-        margin: calc(var(--lv-space-unit) * 7) 0 calc(var(--lv-space-unit) * 4);
-        font-size: var(--lv-type-display-size);
-        line-height: var(--lv-lh-reading-tight);
-        letter-spacing: -0.025em;
+        margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 1.5);
+        font-size: var(--lv-type-section-lg-size);
+        line-height: var(--lv-lh-tight);
+        letter-spacing: -0.015em;
         font-weight: var(--lv-fw-heading);
         text-wrap: balance;
     }
     .lv-hero-desc {
-        margin: 0 0 calc(var(--lv-space-unit) * 10);
+        margin: 0 0 calc(var(--lv-space-unit) * 3);
         max-width: 48em;
-        font-size: var(--lv-type-body-size);
+        font-size: var(--lv-type-control-size);
         color: var(--lv-color-text-muted);
         text-wrap: pretty;
-        line-height: var(--lv-lh-reading, 1.65);
+        line-height: var(--lv-lh-body);
     }
     .lv-hero-cta {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: var(--lv-sp-3);
         flex-wrap: wrap;
         .lv-hero-remaining { font-size: var(--lv-type-control-size); color: var(--lv-color-text-muted); }
-        /* 原型主动作：48px 高的明确主按钮 */
-        .lv-btn-primary { min-height: 48px; padding: 0 22px; }
+        .lv-btn-primary { min-height: 38px; padding: 0 18px; }
     }
 
     @media (max-width: 740px) {

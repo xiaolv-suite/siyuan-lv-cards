@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.225.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.226.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -25,7 +25,12 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.225.0 (Latest)
+### v0.226.0 (Latest)
+* **Isolated Web Testing Environment & Native Hollow Icons**: Dedicated isolated SiYuan desktop web instance at `D:\siyuan-isolated-lv-cards` (port 43930); all icons aligned to SiYuan native 24x24 outline Lucide SVG symbol sprites.
+* **Authoring & Onboarding Flow Enhancements**: Fixed empty deck selection deadlock; added dedicated Single/Multi-Choice and True/False card form, in-editor selection authoring menu, shortcut template switching, and click-to-flip preview; streamlined 3-step zero-friction onboarding.
+* **All-Type Sample Decks & KaTeX Formula Rendering**: 14 flashcard types covered in sample deck; dynamic host KaTeX asset injection fixing blank formulas; 100% feature coverage survey of native SiYuan flashcard APIs.
+
+### v0.225.0
 * **SiYuan Block Attributes Mirroring (D1)**: Starred status (`custom-lv-starred`), leech card quarantine (`custom-lv-leech`, `custom-lv-lapses`), and error reasons (`custom-lv-error-reason`) are now synced in real time to native SiYuan block attributes, making cards queryable via native SiYuan search, Attribute Views, and embedded SQL blocks.
 * **Bi-directional Source Block Backlinks & In-Place Authoring**: Quick Card now detects the active document in SiYuan, offering 1-click source backlink attachment (`> 来源：((id "title"))`) or appending the card directly into the current note; Marker Cards and AI Wizard automatically inherit source block and document provenance so flashcards appear directly in the original note's native Backlinks panel.
 * **Dynamic Dashboard & Leech Document**: 1-click generation and opening of a live SiYuan note utilizing native SQL embedded blocks (`{{SELECT * FROM blocks WHERE ...}}`) to dynamically aggregate leech cards, starred cards, error tags, and recent cards in real time, accessible via Command Palette, Maintenance, and Settings.

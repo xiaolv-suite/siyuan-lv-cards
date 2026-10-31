@@ -2160,6 +2160,14 @@
     ontouchend={onTouchEnd}
     tabindex="-1"
 >
+    <!-- R57 复习顶栏：独立复习页签缺少 Hub 外壳时的固定返回路径（完成屏也可见） -->
+        <div class="lv-review-topbar">
+            <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openDashboard()} title={t.review?.returnHome ?? "返回闪卡主页"}>
+                <LvIcon name="chevron-left" size={13} />
+                <span>{t.review?.backToHub ?? "返回闪卡中心"}</span>
+            </button>
+            <span class="lv-review-topbar-crumb">{t.review?.panelTitle ?? "复习"}</span>
+        </div>
     {#if zenMode}
         <ReviewZenIsland
             {t}
@@ -2559,6 +2567,21 @@
 
         .lv-center { margin: auto; color: var(--lv-color-text-muted); }
         .lv-error-wrap { width: min(560px, 92vw); }
+
+        /* R57 复习顶栏：独立页签的固定返回路径，评分中与完成屏均可见 */
+        .lv-review-topbar {
+            display: flex;
+            align-items: center;
+            gap: var(--lv-sp-2);
+            flex: none;
+            max-width: 760px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .lv-review-topbar-crumb {
+            color: var(--lv-color-text-muted);
+            font-size: var(--lv-type-control-size);
+        }
 
         .lv-head {
             /* R52 review 面：三行结构（身份行 / 进度条 / 控制行），行距 8px、条底 1px 分隔 */

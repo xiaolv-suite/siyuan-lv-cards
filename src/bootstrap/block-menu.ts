@@ -22,7 +22,7 @@ export function extractBlockIDs(elements?: BlockElementLike[]): string[] {
 }
 
 export interface BlockMenuItemDescriptor {
-    id: "add-to-deck" | "add-to-inbox" | "make-cloze" | "make-occlusion" | "remove-from-deck";
+    id: "add-to-deck" | "add-to-inbox" | "make-cloze" | "make-occlusion" | "remove-from-deck" | "make-from-selection";
     icon: string;
     label: string;
     click: () => void | Promise<void>;
@@ -58,14 +58,18 @@ export interface BlockMenuConfig {
         makeCloze?: (blockID: string) => void;
         makeOcclusion?: (blockID: string) => void;
         removeFromDeck: (blockIDs: string[]) => void;
+        /** R59 用编辑器选中文本打开快速制卡（题面预填），便于原位无缝制卡 */
+        makeFromSelection?: (blockID: string, selectionText: string) => void;
     };
+    /** R59 编辑器当前选区文本（菜单弹出会抢焦点，须在构建期捕获） */
+    selectionText?: string;
 }
 
 /**
  * 计算块图标菜单项列表（纯逻辑）
  */
 export function computeBlockMenuItems(config: BlockMenuConfig): BlockMenuItemDescriptor[] {
-    const { blockIDs, modules, i18n, actions } = config;
+    const { blockIDs, modules, i18n, actions, selectionText } = config;
     if (blockIDs.length === 0) {
         return [];
     }
@@ -79,6 +83,16 @@ export function computeBlockMenuItems(config: BlockMenuConfig): BlockMenuItemDes
         label: (i18n.menuAddToDeck ?? "添加到卡组") + countSuffix,
         click: () => actions.addToDeck(blockIDs),
     });
+
+    // R59 选中文本一键带起草稿：选区非空且单块时，用选中文本预填快速制卡题面
+    if (blockIDs.length === 1 && actions.makeFromSelection && selectionText && selectionText.length >= 2) {
+        items.push({
+            id: "make-from-selection",
+            icon: "iconLvCards",
+            label: i18n.menuMakeFromSelection ?? "用选中文本制卡",
+            click: () => actions.makeFromSelection?.(blockIDs[0], selectionText),
+        });
+    }
 
     if (modules.inbox && actions.addToInbox) {
         items.push({

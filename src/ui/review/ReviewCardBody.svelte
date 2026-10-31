@@ -2,6 +2,7 @@
     import LvIcon from "../kit/LvIcon.svelte";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace, scopeCustomCardCss } from "@/core/card-face";
     import { cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
+    import { mathTokensPresent, renderMathIn } from "@/libs/math-render";
     import ReviewInteractiveQuiz from "./ReviewInteractiveQuiz.svelte";
 
     interface Props {
@@ -77,13 +78,15 @@
 
     $effect(() => {
         if (!cardHtml) return;
-        if (cardHtml.includes("katex") || cardHtml.includes("MathJax") || cardHtml.includes("language-math") || cardHtml.includes("language-mermaid")) {
+        // 数学公式：旧宿主 initKaTeX 优先；3.8.x 网页端无此 API，回落到宿主自带 KaTeX 资产渲染空壳节点
+        if (mathTokensPresent(cardHtml)) {
             const timer = setTimeout(() => {
                 try {
                     if (contentEl && typeof (window as any).siyuan?.initKaTeX === "function") {
                         (window as any).siyuan.initKaTeX(contentEl);
                     }
                 } catch {}
+                void renderMathIn(contentEl);
             }, 50);
             return () => clearTimeout(timer);
         }

@@ -78,6 +78,25 @@ describe("block-menu 块图标与选区制卡菜单", () => {
             expect(config.actions.makeCloze).toHaveBeenCalledWith("b-1");
         });
 
+        it("单块且包含有效选区时：显示「用选中文本制卡」菜单项并传递参数", () => {
+            const makeFromSelection = vi.fn();
+            const config: BlockMenuConfig = {
+                ...createConfig(["b-1"]),
+                actions: {
+                    ...createConfig(["b-1"]).actions,
+                    makeFromSelection,
+                },
+                selectionText: "这是选中的重要概念",
+            };
+            const items = computeBlockMenuItems(config);
+
+            const makeItem = items.find(i => i.id === "make-from-selection");
+            expect(makeItem).toBeDefined();
+            expect(makeItem?.label).toBe("用选中文本制卡");
+            makeItem?.click();
+            expect(makeFromSelection).toHaveBeenCalledWith("b-1", "这是选中的重要概念");
+        });
+
         it("多块选中时（如 3 块）：显示数量后缀，并隐藏单块专用的挖空与图片遮挡", () => {
             const config = createConfig(["b-1", "b-2", "b-3"]);
             const items = computeBlockMenuItems(config);

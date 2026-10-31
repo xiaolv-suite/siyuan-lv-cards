@@ -67,6 +67,8 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                     uiMode: plugin.settings.uiMode,
                     openWizard: () => plugin.openAIWizard(),
                     openDrill: () => plugin.openRepairDrill(),
+                    openChallenge: () => plugin.openChallenge(),
+                    openPairing: () => plugin.openPairing(),
                     openQuickCard: () => plugin.openQuickCard(),
                     loadWizardView: (sources?: { label: string; content: string; docId?: string; nbId?: string; inboxId?: string }[], onImportComplete?: (ids: string[]) => void, recoveryJobId?: string) =>
                         plugin.createAIWizardView("", undefined, sources, onImportComplete, recoveryJobId, true),

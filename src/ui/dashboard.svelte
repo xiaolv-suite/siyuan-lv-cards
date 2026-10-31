@@ -402,14 +402,6 @@
         }
     }
 
-    /** hero 环首绘（灵动感）：先画 0 弧，下一帧过渡到目标值；reduced-motion 时 --lv-dur-3=0 直落 */
-    let ringDrawn = $state(false);
-    onMount(() => {
-        requestAnimationFrame(() => {
-            ringDrawn = true;
-        });
-    });
-
     /** R53 统计瓦片走势（docs/42 §3.4）：近 7 天正式复习量——只喂真实数据，无记录不补 0 走势 */
     function studySpark(): number[] {
         return heat.slice(-7).map(h => h.stat.review);
@@ -736,27 +728,9 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<LvPage eyebrow={`TODAY / ${heroDateText()}`} title={t.dashboard.title} subtitle={revlogNote ? `${t.dashboard.since} ${revlogNote}` : ""}>
+<LvPage eyebrow={`TODAY / ${heroDateText()}`} title={t.dashboard.title}>
     {#snippet actions()}
-        <!-- 现代化操作区：清晰轮廓微底色 + 矢量图标 + 规范间距 -->
         <div class="lv-dashboard-action-group">
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" disabled={loading && !hasLoadedSnapshot} onclick={downloadReport}>
-                <LvIcon name="book" size={13} />
-                <span>{t.dashboard.report}</span>
-            </button>
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-action" disabled={writeBusy || (loading && !hasLoadedSnapshot)} title={writeError || undefined} onclick={writeDocReport}>
-                <LvIcon name="edit" size={13} />
-                <span>{writeBusy ? "…" : t.dashboard.writeDoc}</span>
-            </button>
-            <button
-                class="b3-button b3-button--small b3-button--outline lv-btn-action"
-                title={`${t.menuManager} (m)`}
-                aria-keyshortcuts="m"
-                onclick={() => ctx.openManager()}
-            >
-                <LvIcon name="cards" size={13} />
-                <span>{t.menuManager}</span>
-            </button>
             <button
                 class="b3-button b3-button--small b3-button--outline lv-btn-action"
                 data-testid="dashboard-refresh-btn"
@@ -863,15 +837,12 @@
 
         <!-- AR-8 错误态优先级：首次加载失败（无任何成功数据）时只显示错误+重试，
              不同时展示「空库→引导」误导与全 0 统计；有旧数据时横幅叠加旧值可见（标注上次刷新） -->
-        <!-- T01 今日行动 hero（R52 .hero 结构）：徽章行 / 大标题 / muted 描述 / CTA 行 -->
-        <div class="lv-today-overview">
-        <div class="lv-today-primary">
+        <!-- T01 今日行动 + 本周节奏左右均衡主卡（填平右侧留白、收束左侧按钮堆叠） -->
         <div class="lv-hero">
             <div class="lv-hero-text">
                 <div class="lv-hero-badge-row">
                     <div class="lv-hero-tags-group">
                         <span class="lv-tag lv-tag--brand">{todayDecision.tag}</span>
-                        <!-- T01 可用时间（R52 hero「可用时间 [15 分钟▾]」）：选择落偏好，复习开场生效 -->
                         <div class="lv-hero-budget-pill">
                             <span class="lv-hero-budget-label"><LvIcon name="timer" size={13} /> {t.dashboard.heroTimeBudget}</span>
                             <select
@@ -904,16 +875,17 @@
                     >
                         {heroActionLabel()}
                     </button>
-                    <button
-                        type="button"
-                        class="b3-button b3-button--outline lv-btn-tool"
-                        onclick={copyTodayTask}
-                        title={t.dashboard?.copyDailyTaskTitle ?? "复制今日复习待办（支持一键挂载到日记或任务视界 Task Horizon）"}
-                    >
-                        <LvIcon name="check" size={13} />
-                        <span>{t.dashboard?.copyDailyTask ?? "复制待办"}</span>
-                    </button>
-                    {#if todayDecision.primaryAction !== "start-review" && todayDecision.primaryAction !== "continue-review"}
+                    {#if todayDecision.primaryAction === "start-review" || todayDecision.primaryAction === "continue-review"}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--outline lv-btn-tool"
+                            onclick={copyTodayTask}
+                            title={t.dashboard?.copyDailyTaskTitle ?? "复制今日复习待办（支持一键挂载到日记或任务视界 Task Horizon）"}
+                        >
+                            <LvIcon name="check" size={13} />
+                            <span>{t.dashboard?.copyDailyTask ?? "复制待办"}</span>
+                        </button>
+                    {:else}
                         <button
                             type="button"
                             class="b3-button b3-button--outline lv-btn-tool"
@@ -931,49 +903,43 @@
                             <span>制作新卡</span>
                         </button>
                     {/if}
-                    <!-- R53 .hero .cta 右侧说明：有到期或目标才展示（不堆 0 值） -->
-                    {#if dueCount > 0 || targets.review > 0}
-                <span class="lv-hero-remaining">{t.dashboard.todayDue} {dueCount}{#if targets.review > 0} · {targetPct()}%{/if}</span>
+                </div>
+            </div>
+
+            <div class="lv-hero-week" aria-label={t.dashboard.weekTitle}>
+                <div class="lv-hero-week-head">
+                    <span class="lv-hero-week-streak">
+                        <LvIcon name="flame" size={14} />
+                        <span>{t.dashboard.streak ?? "连续学习"} <b>{streak}</b> {t.dashboard.streakUnit ?? "天"}</span>
+                    </span>
+                    {#if targetPct() >= 0}
+                        <span class="lv-hero-week-meta">{t.dashboard.heroRingLabel} {targetPct()}%</span>
+                    {:else}
+                        <span class="lv-hero-week-meta">{weekDateLabel}</span>
                     {/if}
                 </div>
-                <p class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 4); opacity: 0.85;">{todayDecision.reason}</p>
-            </div>
-            <!-- R54 矢量工坊艺术图元：半透明交叠纸质闪卡与金色点缀，营造纸质温度感 -->
-            <div class="lv-hero-art" aria-hidden="true">
-                <svg viewBox="0 0 220 220" fill="none" focusable="false">
-                    <circle cx="132" cy="119" r="83" fill="currentColor" opacity=".05"/>
-                    <path d="M55 187h132" stroke="currentColor" opacity=".16" stroke-linecap="round"/>
-                    <g transform="rotate(12 145 115)">
-                        <rect x="93" y="47" width="93" height="129" rx="14" fill="var(--lv-color-surface)" stroke="currentColor" stroke-opacity=".14"/>
-                        <path d="M110 69h39M110 79h24" stroke="currentColor" opacity=".2" stroke-width="5" stroke-linecap="round"/>
-                        <circle cx="139" cy="125" r="25" fill="var(--lv-color-warning)"/>
-                        <path d="M130 124l6 6 12-14" stroke="var(--lv-color-on-warning)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                    </g>
-                    <g transform="rotate(-12 86 128)">
-                        <rect x="40" y="73" width="91" height="125" rx="14" fill="var(--lv-color-surface)" stroke="currentColor" stroke-opacity=".18"/>
-                        <rect x="55" y="88" width="61" height="44" rx="9" fill="currentColor" opacity=".09"/>
-                        <path d="M66 110h38M77 102v16M93 102v16" stroke="currentColor" opacity=".55" stroke-width="3" stroke-linecap="round"/>
-                        <path d="M57 151h41M57 163h27" stroke="currentColor" opacity=".2" stroke-width="5" stroke-linecap="round"/>
-                    </g>
-                    <path d="M180 33v14M173 40h14M30 62v10M25 67h10" stroke="currentColor" opacity=".55" stroke-width="3" stroke-linecap="round"/>
-                    <circle cx="172" cy="190" r="5" fill="var(--lv-color-warning)"/>
-                    <path d="M28 165c-11-16-6-25 4-30 9 15 5 23-4 30z" fill="currentColor" opacity=".22"/>
-                </svg>
-            </div>
-            <!-- R53 hero 目标环（docs/42 §4 T01）：今日目标完成度，无目标时不渲染 -->
-            {#if targetPct() >= 0}
-                <div class="lv-hero-ring" aria-hidden="true">
-                    <svg viewBox="0 0 92 92" focusable="false">
-                        <circle class="lv-hero-ring-track" cx="46" cy="46" r="40"></circle>
-                        <circle
-                            class="lv-hero-ring-fill"
-                            cx="46" cy="46" r="40"
-                            stroke-dasharray={`${(2 * Math.PI * 40 * Math.min(100, targetPct()) / 100 * (ringDrawn ? 1 : 0)).toFixed(1)} ${(2 * Math.PI * 40).toFixed(1)}`}
-                        ></circle>
-                    </svg>
-                    <b>{targetPct()}%<i>{t.dashboard.heroRingLabel}</i></b>
+                <div class="lv-today-week-grid" role="list" aria-label={t.dashboard.weekDaysLabel}>
+                    {#each currentWeek.days as day (day.index)}
+                        {@const label = t.dashboard.weekdays[day.index]}
+                        <div class="lv-today-week-day" class:lv-today-week-day-active={day.active} class:lv-today-week-day-today={day.today} class:lv-today-week-day-future={day.future} role="listitem" aria-label={t.dashboard.weekDayAria.replace("${weekday}", label).replace("${date}", String(day.date.getDate())).replace("${state}", day.active ? t.dashboard.weekDayActivity.replace("${review}", String(day.reviews)).replace("${new}", String(day.newCards)) : day.future ? t.dashboard.weekFuture : t.dashboard.weekDayEmpty)}>
+                            <span class="lv-week-day-label">{label}</span>
+                            <i aria-hidden="true">
+                                {#if day.active}
+                                    <LvIcon name="check" size={12} />
+                                {:else if day.today}
+                                    {day.date.getDate()}
+                                {:else}
+                                    ·
+                                {/if}
+                            </i>
+                        </div>
+                    {/each}
                 </div>
-            {/if}
+                <div class="lv-today-week-summary">
+                    <span>{t.dashboard.weekActiveDays.replace("${n}", String(currentWeek.activeDays))}</span>
+                    <strong>{currentWeek.reviews} <small>{t.dashboard.weekReviews}</small></strong>
+                </div>
+            </div>
         </div>
 
         <div class="lv-today-stats" role="region" aria-label={t.dashboard.todayStatsAriaLabel ?? "今日关键学习指标"}>
@@ -997,198 +963,6 @@
                     spark={studySpark()}
                 />
             </div>
-        </div>
-
-        <!-- 核心功能全景工作台（Feature Matrix Bento Grid） -->
-        <div class="lv-feature-grid" role="region" aria-label="核心功能导航">
-            <button
-                type="button"
-                class="lv-feature-card"
-                onclick={() => ctx.openManager()}
-            >
-                <div class="lv-feature-icon-badge lv-feature-badge--manage">
-                    <LvIcon name="cards" size={17} />
-                </div>
-                <div class="lv-feature-content">
-                    <div class="lv-feature-title-row">
-                        <span class="lv-feature-title">{t.menuManager ?? "闪卡管理器"}</span>
-                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
-                    </div>
-                    <span class="lv-feature-sub">检索全库卡片、按卡组标签批量流转与导出</span>
-                    <div class="lv-feature-tags">
-                        <span class="lv-feature-tag">全库检索</span>
-                        <span class="lv-feature-tag">批量流转</span>
-                    </div>
-                </div>
-            </button>
-
-            <button
-                type="button"
-                class="lv-feature-card"
-                onclick={() => ctx.openQuickCard ? ctx.openQuickCard() : ctx.openHubTab?.("authoring")}
-            >
-                <div class="lv-feature-icon-badge lv-feature-badge--studio">
-                    <LvIcon name="plus" size={17} />
-                </div>
-                <div class="lv-feature-content">
-                    <div class="lv-feature-title-row">
-                        <span class="lv-feature-title">{t.hubTabStudio ?? "闪卡制作工坊"}</span>
-                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
-                    </div>
-                    <span class="lv-feature-sub">选中文本一键挖空 (Ctrl+H)、问答卡与 AI 制卡</span>
-                    <div class="lv-feature-tags">
-                        <span class="lv-feature-tag">一键挖空 Ctrl+H</span>
-                        <span class="lv-feature-tag">智能 AI 制卡</span>
-                    </div>
-                </div>
-            </button>
-
-            <button
-                type="button"
-                class="lv-feature-card"
-                onclick={() => ctx.openHubTab?.("learning")}
-            >
-                <div class="lv-feature-icon-badge lv-feature-badge--practice">
-                    <LvIcon name="timer" size={17} />
-                </div>
-                <div class="lv-feature-content">
-                    <div class="lv-feature-title-row">
-                        <span class="lv-feature-title">趣味练习与挑战</span>
-                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
-                    </div>
-                    <span class="lv-feature-sub">挖空配对消除、限时挑战冲刺与盲打记忆</span>
-                    <div class="lv-feature-tags">
-                        <span class="lv-feature-tag">配对消除</span>
-                        <span class="lv-feature-tag">限时挑战</span>
-                    </div>
-                </div>
-            </button>
-
-            <button
-                type="button"
-                class="lv-feature-card"
-                onclick={() => ctx.openHubTab?.("learning")}
-            >
-                <div class="lv-feature-icon-badge lv-feature-badge--exam">
-                    <LvIcon name="graduation" size={17} />
-                </div>
-                <div class="lv-feature-content">
-                    <div class="lv-feature-title-row">
-                        <span class="lv-feature-title">考试冲刺与计划</span>
-                        <span class="lv-feature-action-link" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>
-                    </div>
-                    <span class="lv-feature-sub">倒计时管理、每日学习步调、考前高压复习</span>
-                    <div class="lv-feature-tags">
-                        <span class="lv-feature-tag">倒计时管理</span>
-                        <span class="lv-feature-tag">Cram 突击</span>
-                    </div>
-                </div>
-            </button>
-        </div>
-        </div>
-        <section class="lv-today-week lv-card2" aria-labelledby="lv-today-week-title">
-            <div class="lv-today-week-head">
-                <h2 id="lv-today-week-title">{t.dashboard.weekTitle}</h2>
-                <span class="lv-today-week-range">{weekDateLabel}</span>
-            </div>
-
-            <!-- 汲取自参考图：暖橙连击卡片（Streak Card） -->
-            <div class="lv-streak-card" aria-label={`连续学习 ${streak} 天`}>
-                <div class="lv-streak-icon-box" aria-hidden="true">
-                    <LvIcon name="flame" size={22} />
-                </div>
-                <div class="lv-streak-details">
-                    <span class="lv-streak-eyebrow">{t.dashboard.streak ?? "连续学习"}</span>
-                    <strong class="lv-streak-count">{streak} <span class="lv-streak-unit">{t.dashboard.streakUnit ?? "天"}</span></strong>
-                </div>
-                {#if streak >= 3}
-                    <span class="lv-streak-badge"><LvIcon name="flame" size={12} /> {streak} Days</span>
-                {:else if streak > 0}
-                    <span class="lv-streak-badge"><LvIcon name="zap" size={12} /> 良好起步</span>
-                {/if}
-            </div>
-
-            <div class="lv-today-week-grid" role="list" aria-label={t.dashboard.weekDaysLabel}>
-                {#each currentWeek.days as day (day.index)}
-                    {@const label = t.dashboard.weekdays[day.index]}
-                    <div class="lv-today-week-day" class:lv-today-week-day-active={day.active} class:lv-today-week-day-today={day.today} class:lv-today-week-day-future={day.future} role="listitem" aria-label={t.dashboard.weekDayAria.replace("${weekday}", label).replace("${date}", String(day.date.getDate())).replace("${state}", day.active ? t.dashboard.weekDayActivity.replace("${review}", String(day.reviews)).replace("${new}", String(day.newCards)) : day.future ? t.dashboard.weekFuture : t.dashboard.weekDayEmpty)}>
-                        <span class="lv-week-day-label">{label}</span>
-                        <i aria-hidden="true">
-                            {#if day.active}
-                                <LvIcon name="check" size={12} />
-                            {:else if day.today}
-                                {day.date.getDate()}
-                            {:else}
-                                ·
-                            {/if}
-                        </i>
-                    </div>
-                {/each}
-            </div>
-            <div class="lv-today-week-summary">
-                <span>{t.dashboard.weekActiveDays.replace("${n}", String(currentWeek.activeDays))}</span>
-                <strong>{currentWeek.reviews} <small>{t.dashboard.weekReviews}</small></strong>
-            </div>
-            <div class="lv-today-week-note">
-                <LvIcon name="lightbulb" size={14} />
-                <span><strong>{t.dashboard.weekPaceTitle}</strong> · {t.dashboard.weekPaceDesc}</span>
-            </div>
-        </section>
-
-        <!-- 未来 7 日复习负载预报（FSRS4Anki 对标 · 支持负载平滑削峰填谷） -->
-        <section class="lv-today-forecast lv-card2" aria-labelledby="lv-forecast-title" data-testid="dashboard-7day-forecast">
-            <div class="lv-today-week-head">
-                <div class="lv-forecast-title-group">
-                    <h2 id="lv-forecast-title">{t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}</h2>
-                    <span class="lv-today-week-range">{t.dashboard.forecast7Sub ?? "每日到期量预测与平滑削峰"}</span>
-                </div>
-                <div class="lv-forecast-head-actions">
-                    <button
-                        type="button"
-                        class="b3-button b3-button--small lv-btn-tool"
-                        class:lv-btn-primary={smoothLoadEnabled}
-                        class:b3-button--outline={!smoothLoadEnabled}
-                        aria-pressed={smoothLoadEnabled}
-                        title={smoothLoadEnabled ? (t.dashboard.smoothLoadOn ?? "平滑已开启") : (t.dashboard.smoothLoadOff ?? "平滑已关闭")}
-                        onclick={toggleSmoothLoad}
-                        data-testid="dashboard-smooth-toggle-btn"
-                    >
-                        <LvIcon name="swap" size={12} />
-                        <span>{t.dashboard.smoothLoad ?? "负载平滑"}: {smoothLoadEnabled ? (t.dashboard.stateOn ?? "开") : (t.dashboard.stateOff ?? "关")}</span>
-                    </button>
-                </div>
-            </div>
-
-            {#if forecast7Days.length > 0}
-                <div class="lv-forecast-bars-row" role="region" aria-label={t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}>
-                    {#each forecast7Days as day, idx}
-                        {@const totalDay = day.reviews + day.news}
-                        {@const barHeightPct = Math.max(6, Math.min(100, Math.round((totalDay / Math.max(1, forecast7Max)) * 100)))}
-                        <div class="lv-forecast-col" title={`${day.date}：复习 ${day.reviews} + 新卡 ${day.news}（共 ${totalDay} 张）`}>
-                            <span class="lv-forecast-count">{totalDay}</span>
-                            <div class="lv-forecast-bar-track">
-                                <div class="lv-forecast-bar-fill" style={`height: ${barHeightPct}%;`}>
-                                    {#if day.reviews > 0}
-                                        <div class="lv-forecast-seg-review" style={`height: ${Math.round((day.reviews / Math.max(1, totalDay)) * 100)}%;`}></div>
-                                    {/if}
-                                </div>
-                            </div>
-                            <span class="lv-forecast-label">{idx === 0 ? (t.dashboard.todayLabel ?? "今天") : idx === 1 ? (t.dashboard.tomorrowLabel ?? "明天") : day.date.slice(5)}</span>
-                        </div>
-                    {/each}
-                </div>
-                <div class="lv-today-week-summary">
-                    <span>{(t.dashboard.forecast7TotalDue ?? "总预计到期 ${n} 张").replace("${n}", String(forecast7Total))}</span>
-                    {#if smoothLoadEnabled}
-                        <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> {t.dashboard.smoothLoadBadge ?? "削峰填谷已优化"}</span>
-                    {/if}
-                </div>
-            {:else}
-                <div class="lv-today-week-summary">
-                    <span class="ft__smaller ft__on-surface">{calLoading ? (t.dashboard.loading ?? "计算预测中...") : (t.dashboard.calEmpty ?? "预测窗口内没有到期卡片")}</span>
-                </div>
-            {/if}
-        </section>
         </div>
 
         {#if ctx.openManagerDeck && decks.length > 0}
@@ -1246,7 +1020,7 @@
                                     <LvIcon name="edit" size={13} />
                                 </button>
                                 <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={`${t.dashboard.ddShareBtn} ${deck.name}`} onclick={() => exportDeckShare(deck.id, deck.name)}>
-                                    <LvIcon name="cards" size={13} />
+                                    <LvIcon name="eye" size={13} />
                                 </button>
                                 <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={`${t.dashboard.deleteDeck ?? "删除卡组"} ${deck.name}`} onclick={() => removeDeckConfirm(deck.id, deck.name)}>
                                     <LvIcon name="trash" size={13} />
@@ -1270,29 +1044,25 @@
             </section>
         {/if}
 
-        <!-- AQ-12：本地证据口径的覆盖视图——首屏只留一行 caption；分卡组/分文档明细在深度统计区 -->
-        {#if coverage && coverage.coverage !== null}
-            <div class="ft__smaller ft__on-surface lv-cov-line">
-                {t.dashboard.coverageLine
-                    .replace("${a}", String(coverage.seenCards))
-                    .replace("${b}", String(coverage.totalCards))
-                    .replace("${pct}", String(Math.round(coverage.coverage * 100)))
-                    .replace("${since}", coverage.sinceDate ?? "")}
-            </div>
-        {/if}
-
-        <!-- T08 待处理与恢复（阶段 B · U1：待处理与恢复并入今日页） -->
-        <LvSection title={t.dashboard.todoTitle}>
-            {#snippet actions()}
+        <!-- T08 待处理与恢复：有待办才展开卡片，空态只用一行静默底栏，不堆空盒子 -->
+        {#if inboxOpen === 0 && suspended === 0 && !unfinishedAI && dormantCount === 0}
+            <div class="lv-todo-quiet">
+                <span>{t.dashboard.todoNone}</span>
                 {#if ctx.openHubTab}
                     <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => ctx.openHubTab?.("recovery")}>
                         <span>{t.hubTabRecovery ?? "待处理与恢复"}</span>
                     </button>
                 {/if}
-            {/snippet}
-            {#if inboxOpen === 0 && suspended === 0 && !unfinishedAI && dormantCount === 0}
-                <div class="lv-hint">{t.dashboard.todoNone}</div>
-            {:else}
+            </div>
+        {:else}
+            <LvSection title={t.dashboard.todoTitle}>
+                {#snippet actions()}
+                    {#if ctx.openHubTab}
+                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => ctx.openHubTab?.("recovery")}>
+                            <span>{t.hubTabRecovery ?? "待处理与恢复"}</span>
+                        </button>
+                    {/if}
+                {/snippet}
                 {#if inboxOpen > 0}
                     <div class="lv-todo-row">
                         <span>{t.dashboard.todoInbox.replace("${n}", String(inboxOpen))}</span>
@@ -1328,17 +1098,93 @@
                         </button>
                     </div>
                 {/if}
-            {/if}
-        </LvSection>
+            </LvSection>
+        {/if}
 
-        <!-- T01 渐进展开（docs/13 §1.3）：行动与今日统计留在首屏，深度统计默认折叠 -->
+        <!-- T01 渐进展开：行动、今日四指标与卡组留在首屏；未来负载预测、报告导出与深度统计按需展开 -->
         <button class="b3-button b3-button--outline lv-deep-toggle" onclick={() => { deepOpen = !deepOpen; ctx.setDeepStatsOpen?.(deepOpen); }}>
             <span>{t.dashboard.deepToggle}</span>
             <LvIcon name={deepOpen ? "chevron-up" : "chevron-down"} size={13} />
         </button>
         {#if deepOpen}
-        <!-- 展开入场：180ms 单次淡入（R53 动效纪律），折叠即时收起不打断 -->
         <div in:fade={{ duration: getMotionDuration("emphasis") }}>
+        <div class="lv-deep-report-bar">
+            {#if coverage && coverage.coverage !== null}
+                <span class="ft__smaller ft__on-surface">
+                    {t.dashboard.coverageLine
+                        .replace("${a}", String(coverage.seenCards))
+                        .replace("${b}", String(coverage.totalCards))
+                        .replace("${pct}", String(Math.round(coverage.coverage * 100)))
+                        .replace("${since}", coverage.sinceDate ?? "")}
+                </span>
+            {:else}
+                <span></span>
+            {/if}
+            <div class="lv-dashboard-action-group">
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-action" disabled={loading && !hasLoadedSnapshot} onclick={downloadReport}>
+                    <LvIcon name="book" size={13} />
+                    <span>{t.dashboard.report}</span>
+                </button>
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-action" disabled={writeBusy || (loading && !hasLoadedSnapshot)} title={writeError || undefined} onclick={writeDocReport}>
+                    <LvIcon name="edit" size={13} />
+                    <span>{writeBusy ? "…" : t.dashboard.writeDoc}</span>
+                </button>
+            </div>
+        </div>
+
+        <section class="lv-today-forecast lv-card2" aria-labelledby="lv-forecast-title" data-testid="dashboard-7day-forecast" style="margin-bottom: var(--lv-sp-4);">
+            <div class="lv-today-week-head">
+                <div class="lv-forecast-title-group">
+                    <h2 id="lv-forecast-title">{t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}</h2>
+                    <span class="lv-today-week-range">{t.dashboard.forecast7Sub ?? "每日到期量预测与平滑削峰"}</span>
+                </div>
+                <div class="lv-forecast-head-actions">
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small lv-btn-tool"
+                        class:lv-btn-primary={smoothLoadEnabled}
+                        class:b3-button--outline={!smoothLoadEnabled}
+                        aria-pressed={smoothLoadEnabled}
+                        title={smoothLoadEnabled ? (t.dashboard.smoothLoadOn ?? "平滑已开启") : (t.dashboard.smoothLoadOff ?? "平滑已关闭")}
+                        onclick={toggleSmoothLoad}
+                        data-testid="dashboard-smooth-toggle-btn"
+                    >
+                        <LvIcon name="swap" size={12} />
+                        <span>{t.dashboard.smoothLoad ?? "负载平滑"}: {smoothLoadEnabled ? (t.dashboard.stateOn ?? "开") : (t.dashboard.stateOff ?? "关")}</span>
+                    </button>
+                </div>
+            </div>
+            {#if forecast7Days.length > 0}
+                <div class="lv-forecast-bars-row" role="region" aria-label={t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}>
+                    {#each forecast7Days as day, idx}
+                        {@const totalDay = day.reviews + day.news}
+                        {@const barHeightPct = Math.max(6, Math.min(100, Math.round((totalDay / Math.max(1, forecast7Max)) * 100)))}
+                        <div class="lv-forecast-col" title={`${day.date}：复习 ${day.reviews} + 新卡 ${day.news}（共 ${totalDay} 张）`}>
+                            <span class="lv-forecast-count">{totalDay}</span>
+                            <div class="lv-forecast-bar-track">
+                                <div class="lv-forecast-bar-fill" style={`height: ${barHeightPct}%;`}>
+                                    {#if day.reviews > 0}
+                                        <div class="lv-forecast-seg-review" style={`height: ${Math.round((day.reviews / Math.max(1, totalDay)) * 100)}%;`}></div>
+                                    {/if}
+                                </div>
+                            </div>
+                            <span class="lv-forecast-label">{idx === 0 ? (t.dashboard.todayLabel ?? "今天") : idx === 1 ? (t.dashboard.tomorrowLabel ?? "明天") : day.date.slice(5)}</span>
+                        </div>
+                    {/each}
+                </div>
+                <div class="lv-today-week-summary">
+                    <span>{(t.dashboard.forecast7TotalDue ?? "总预计到期 ${n} 张").replace("${n}", String(forecast7Total))}</span>
+                    {#if smoothLoadEnabled}
+                        <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> {t.dashboard.smoothLoadBadge ?? "削峰填谷已优化"}</span>
+                    {/if}
+                </div>
+            {:else}
+                <div class="lv-today-week-summary">
+                    <span class="ft__smaller ft__on-surface">{calLoading ? (t.dashboard.loading ?? "计算预测中...") : (t.dashboard.calEmpty ?? "预测窗口内没有到期卡片")}</span>
+                </div>
+            {/if}
+        </section>
+
         <!-- 深度统计首行：连续/用时/总量瓦片（R53 T01 上限 4——次级指标折叠在此） -->
         <div class="fn__flex fn__flex-wrap lv-cards">
             <div class="lv-stat-cell">
@@ -1497,9 +1343,6 @@
         margin-bottom: var(--lv-sp-4);
     }
 
-    .lv-today-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 274px); align-items: stretch; gap: var(--lv-sp-5); }
-    .lv-today-primary { min-width: 0; }
-    .lv-today-primary .lv-hero { margin-bottom: var(--lv-sp-4); }
     // 规则三：统计优先指标通栏（竖分割线替代卡片包裹，44px大数字与小标签）
     .lv-today-stats {
         display: flex;
@@ -1524,7 +1367,7 @@
     :global(.lv-today-stats .lv-stat-cell .lv-card2) {
         flex: 1;
         min-width: 0;
-        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
+        padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 7);
         border-radius: 0;
         background: transparent;
         border: none;
@@ -1537,250 +1380,82 @@
         }
     }
 
-    .lv-feature-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--lv-sp-3);
-        margin-top: var(--lv-sp-3);
-    }
-    .lv-feature-card {
-        display: flex;
-        align-items: center;
-        gap: var(--lv-sp-3);
-        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7);
-        background: var(--lv-color-surface);
-        border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-m);
-        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
-        text-align: left;
-        cursor: pointer;
-        color: inherit;
-        transition: transform var(--lv-dur-2) var(--lv-ease),
-            border-color var(--lv-dur-1) var(--lv-ease),
-            box-shadow var(--lv-dur-2) var(--lv-ease);
-
-        &:hover {
-            transform: translateY(-2px);
-            border-color: var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
-
-            .lv-feature-title { color: var(--lv-color-brand); }
-            .lv-feature-action-link { transform: translateX(2px); color: var(--lv-color-brand); }
-        }
-
-        .lv-feature-icon-badge {
-            width: 36px;
-            height: 36px;
-            border-radius: var(--lv-r-circle);
-            display: grid;
-            place-items: center;
-            flex-shrink: 0;
-            background: var(--lv-primary-soft);
-            color: var(--lv-color-brand);
-            border: 1px solid var(--lv-primary-border);
-            box-shadow: var(--lv-shadow-1);
-        }
-        .lv-feature-badge--manage { background: var(--lv-primary-soft); color: var(--lv-color-brand); border-color: var(--lv-primary-border); }
-        .lv-feature-badge--studio { background: var(--lv-danger-soft); color: var(--lv-color-danger); border-color: var(--lv-danger-border); }
-        .lv-feature-badge--practice { background: var(--lv-good-soft); color: var(--lv-color-success); border-color: color-mix(in srgb, var(--lv-color-success) 30%, transparent); }
-        .lv-feature-badge--exam { background: var(--lv-warn-soft); color: var(--lv-color-warning); border-color: color-mix(in srgb, var(--lv-color-warning) 30%, transparent); }
-
-        .lv-feature-content {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: calc(var(--lv-space-unit) * 1);
-        }
-        .lv-feature-title-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: calc(var(--lv-space-unit) * 2);
-        }
-        .lv-feature-title {
-            font-size: var(--lv-type-body-size);
-            font-weight: var(--lv-fw-semibold);
-            color: var(--lv-color-text);
-            transition: color var(--lv-dur-1) var(--lv-ease);
-        }
-        .lv-feature-sub {
-            font-size: var(--lv-type-meta-size);
-            color: var(--lv-color-text-muted);
-            line-height: var(--lv-lh-body);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .lv-feature-action-link {
-            color: var(--lv-color-text-muted);
-            opacity: 0.7;
-            transition: all var(--lv-dur-1) var(--lv-ease);
-        }
-        .lv-feature-tags {
-            display: flex;
-            gap: calc(var(--lv-space-unit) * 2);
-            margin-top: calc(var(--lv-space-unit) * 2);
-        }
-        .lv-feature-tag {
-            font-size: var(--lv-type-caption-size);
-            font-weight: var(--lv-fw-medium);
-            color: var(--lv-color-text-muted);
-            background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);
-            padding: var(--lv-space-hairline) calc(var(--lv-space-unit) * 3);
-            border-radius: var(--lv-r-pill);
-            line-height: 1.3;
-        }
-    }
-    // 右侧上下文面板（Context Rail）——承载连续打卡重音卡片、周记录与步调
-    .lv-today-week {
-        display: flex;
+    // Hero 右侧内嵌本周节奏小面板（填平右侧大片空白，保持首屏紧凑呼吸感）
+    .lv-hero-week {
+        flex: 0 0 min(100%, 356px);
         min-width: 0;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-surface) 90%, transparent);
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-border));
+        display: flex;
         flex-direction: column;
-        padding: var(--lv-sp-4);
-        background: var(--lv-color-surface);
-        border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-l);
-        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
-        transition: transform var(--lv-dur-2) var(--lv-ease),
-            box-shadow var(--lv-dur-2) var(--lv-ease),
-            border-color var(--lv-dur-1) var(--lv-ease);
-
-        &:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
-            border-color: var(--lv-border-strong);
-        }
+        gap: 8px;
     }
-    .lv-today-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: calc(var(--lv-space-unit) * 1); }
-    .lv-today-week-head h2 { font-size: var(--lv-type-label-size); line-height: 1.5; font-weight: var(--lv-fw-heading); margin: 0; }
-    .lv-today-week-range { color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); font-variant-numeric: tabular-nums; }
-    
-    // 规律五：重点对比重音块（Dark Contrast Accent Block）——带主题色相近黑(明度12%)，形成呼吸节奏重音
-    .lv-streak-card {
+    .lv-hero-week-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-2);
-        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 7 + var(--lv-space-hairline));
-        margin: calc(var(--lv-space-unit) * 5) 0 calc(var(--lv-space-unit) * 7);
-        border-radius: var(--lv-r-m);
-        background: var(--lv-color-surface-accent-dark);
-        color: var(--lv-color-on-accent-dark);
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
-        box-shadow: 0 4px 18px -2px rgba(23, 23, 35, 0.28);
-        position: relative;
-        overflow: hidden;
-        transition: transform var(--lv-dur-2) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
-
-        &:hover {
-            transform: translateY(-1.5px);
-            box-shadow: 0 8px 24px -3px rgba(23, 23, 35, 0.38);
-            border-color: color-mix(in srgb, var(--lv-color-data) 36%, transparent);
-        }
-
-        .lv-streak-icon-box {
-            width: 36px;
-            height: 36px;
-            border-radius: var(--lv-r-circle);
-            background: color-mix(in srgb, var(--lv-color-data) 20%, transparent);
-            display: grid;
-            place-items: center;
-            color: var(--lv-color-data);
-            flex-shrink: 0;
-            box-shadow: none;
-        }
-
-        .lv-streak-details {
-            display: flex;
-            flex-direction: column;
-            gap: var(--lv-space-hairline);
-            margin-right: auto;
-            margin-left: calc(var(--lv-space-unit) * 5);
-        }
-
-        .lv-streak-eyebrow {
-            font-size: var(--lv-type-meta-size);
-            font-weight: var(--lv-fw-medium);
-            color: var(--lv-color-on-accent-dark-muted);
-            letter-spacing: 0.04em;
-        }
-
-        .lv-streak-count {
-            font-size: var(--lv-type-display-size);
+        font-size: var(--lv-type-meta-size);
+    }
+    .lv-hero-week-streak {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--lv-color-text);
+        font-weight: var(--lv-fw-medium);
+        b {
             font-weight: var(--lv-fw-bold);
-            line-height: 1.15;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.03em;
-            color: var(--lv-color-data);
-        }
-
-        .lv-streak-unit {
-            font-size: var(--lv-type-control-size);
-            font-weight: var(--lv-fw-normal);
-            color: var(--lv-color-on-accent-dark-muted);
-            margin-left: 2px;
-        }
-
-        .lv-streak-badge {
-            background: color-mix(in srgb, var(--lv-color-data) 18%, transparent);
-            border: 1px solid var(--lv-data-border);
-            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
-            border-radius: var(--lv-r-pill);
-            font-size: var(--lv-type-meta-size);
-            font-weight: var(--lv-fw-bold);
-            letter-spacing: 0.02em;
-            color: var(--lv-color-data);
-            white-space: nowrap;
+            color: var(--lv-color-brand);
         }
     }
+    .lv-hero-week-meta {
+        color: var(--lv-color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
 
-    // 形态语言：周签到胶囊排，嵌套圆角按层级递减，底色微差表达层级
+    .lv-today-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: calc(var(--lv-space-unit) * 1); }
+    .lv-today-week-head h2 { font-size: var(--lv-type-label-size); line-height: 1.5; font-weight: var(--lv-fw-heading); margin: 0; }
+    .lv-today-week-range { color: var(--lv-color-text-muted); font-size: var(--lv-type-caption-size); font-variant-numeric: tabular-nums; }
+
     .lv-today-week-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
-        margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 7);
+        gap: 6px;
+        margin: 0;
     }
     .lv-today-week-day {
         display: flex;
         min-width: 0;
         align-items: center;
         flex-direction: column;
-        gap: calc(var(--lv-space-unit) * 3);
-        padding: calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 4);
+        gap: 4px;
+        padding: 6px 2px;
         border-radius: var(--lv-r-s);
-        background: color-mix(in srgb, var(--lv-color-canvas) 70%, var(--lv-color-surface));
+        background: color-mix(in srgb, var(--lv-color-canvas) 65%, var(--lv-color-surface));
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-caption-size);
         cursor: default;
-        transition: transform var(--lv-dur-2) var(--lv-ease),
-            border-color var(--lv-dur-1) var(--lv-ease),
-            box-shadow var(--lv-dur-2) var(--lv-ease),
-            background var(--lv-dur-1) var(--lv-ease);
-
-        &:hover {
-            transform: translateY(-1.5px);
-            border-color: var(--lv-primary-border);
-            box-shadow: 0 4px 10px color-mix(in srgb, var(--lv-color-brand) 12%, transparent);
-            background: var(--lv-color-surface);
-        }
+        transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease);
 
         .lv-week-day-label {
-            font-size: var(--lv-type-meta-size);
+            font-size: 11px;
             font-weight: var(--lv-fw-semibold);
             letter-spacing: 0.02em;
         }
 
         i {
             display: grid;
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
             place-items: center;
             border-radius: var(--lv-r-circle);
             background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
-            font-size: var(--lv-type-meta-size);
+            font-size: 11px;
             font-style: normal;
             transition: all var(--lv-dur-1) var(--lv-ease);
         }
@@ -1788,7 +1463,6 @@
         &.lv-today-week-day-today {
             border-color: var(--lv-color-brand);
             background: color-mix(in srgb, var(--lv-color-brand) 8%, var(--lv-color-surface));
-            box-shadow: 0 0 0 1px var(--lv-primary-border);
             i {
                 background: var(--lv-primary-soft);
                 color: var(--lv-color-brand);
@@ -1800,7 +1474,6 @@
             background: var(--lv-color-data) !important;
             color: var(--lv-color-on-brand) !important;
             font-weight: var(--lv-fw-bold);
-            box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-data) 36%, transparent);
             outline: none !important;
         }
 
@@ -1808,23 +1481,9 @@
             opacity: 0.55;
         }
     }
-    .lv-today-week-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); font-size: var(--lv-type-control-size); }
+    .lv-today-week-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); }
     .lv-today-week-summary strong { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--lv-color-data); }
     .lv-today-week-summary small { color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); font-weight: var(--lv-fw-normal); }
-    .lv-today-week-note {
-        margin-top: auto;
-        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
-        border-radius: var(--lv-r-s);
-        background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
-        color: var(--lv-color-text-muted);
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-border));
-        font-size: var(--lv-type-meta-size);
-        display: flex;
-        align-items: center;
-        gap: calc(var(--lv-space-unit) * 3);
-        line-height: var(--lv-lh-body);
-        strong { color: var(--lv-color-text); font-weight: var(--lv-fw-heading); white-space: nowrap; }
-    }
     .lv-today-forecast {
         display: flex;
         flex-direction: column;
@@ -2079,17 +1738,18 @@
     .lv-today-decks-head h3 { margin: 0; font-size: var(--lv-type-body-size); text-wrap: balance; }
     .lv-today-decks-list {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
         gap: var(--lv-sp-3);
     }
     .lv-today-deck {
         display: flex;
+        flex-wrap: wrap;
         min-width: 0;
         min-height: 56px;
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-3);
-        padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 8);
+        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-l);
         background: var(--lv-color-surface);
@@ -2119,9 +1779,9 @@
         .lv-today-deck-main-btn {
             display: flex;
             align-items: center;
-            gap: calc(var(--lv-space-unit) * 5);
-            min-width: 0;
-            flex: 1;
+            gap: calc(var(--lv-space-unit) * 3);
+            min-width: 150px;
+            flex: 1 1 180px;
             background: transparent;
             border: none;
             padding: 0;
@@ -2151,14 +1811,11 @@
         }
         .lv-today-deck-actions {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            gap: calc(var(--lv-space-unit) * 4);
+            gap: var(--lv-sp-2);
+            margin-left: auto;
             flex-shrink: 0;
-        }
-        .lv-today-deck-count {
-            font-size: var(--lv-type-meta-size);
-            color: var(--lv-color-text-muted);
-            font-variant-numeric: tabular-nums;
         }
         .lv-deck-quick-btn {
             border-radius: var(--lv-r-pill);
@@ -2215,25 +1872,43 @@
     }
     .lv-today-deck:focus-visible { outline: 2px solid var(--lv-color-brand); outline-offset: 2px; }
 
-    @container lv-hub (max-width: 900px) {
-        .lv-today-overview { grid-template-columns: minmax(0, 1fr) 250px; gap: var(--lv-sp-4); }
+    @container lv-hub (max-width: 840px) {
+        :global(.lv-hero) {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .lv-hero-week {
+            flex: 1 1 auto;
+            width: 100%;
+        }
     }
     @container lv-hub (max-width: 780px) {
-        .lv-today-overview { grid-template-columns: minmax(0, 1fr); }
         .lv-today-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .lv-today-stats .lv-stat-cell:nth-child(2n) { border-right: none; }
         .lv-today-stats .lv-stat-cell:nth-child(-n+2) { border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
-        .lv-today-week { min-height: 230px; }
     }
     @container lv-hub (max-width: 560px) {
-        .lv-feature-grid { grid-template-columns: 1fr; }
         .lv-first-use-steps { grid-template-columns: 1fr; }
     }
 
-    /* AQ-12 覆盖：首屏一行 caption */
-    .lv-cov-line {
-        margin: calc(-1 * var(--lv-sp-2)) 0 var(--lv-sp-3);
-        opacity: 0.85;
+    .lv-todo-quiet {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--lv-sp-2);
+        padding: 8px 4px;
+        margin: var(--lv-sp-2) 0 var(--lv-sp-3);
+        color: var(--lv-color-text-muted);
+        font-size: var(--lv-type-control-size);
+        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+    }
+    .lv-deep-report-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--lv-sp-2);
+        flex-wrap: wrap;
+        margin: 0 0 var(--lv-sp-3);
     }
 
     /* T08 待处理行（docs/40 批 5）：行式布局 + 右侧动作 */

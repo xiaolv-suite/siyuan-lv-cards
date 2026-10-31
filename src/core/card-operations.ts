@@ -74,6 +74,8 @@ export interface QuickCardFlowInput {
     sourceTitle?: string;
     /** 是否就地存入原文档（直接在原文档追加） */
     inPlaceDocID?: string;
+    /** R59 题型属性（选择题/判断题/填空）：写入 custom-exam-* 块属性供复习端交互组件识别 */
+    examAttrs?: Record<string, string>;
     mutateKnowledgeObjects?: (mutator: (next: KnowledgeObjectsData) => void) => Promise<unknown>;
 }
 
@@ -107,6 +109,15 @@ export async function executeQuickCardCreation(
     if (input.sourceDocID || input.sourceBlockID || input.inPlaceDocID) {
         try {
             await setBlockAttrs(blockID, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
+        } catch {
+            // 属性写入旁路容错
+        }
+    }
+
+    // R59 题型属性（选择题/判断题/填空）——复习端 parseInteractiveQuiz 依赖这些键
+    if (input.examAttrs && Object.keys(input.examAttrs).length > 0) {
+        try {
+            await setBlockAttrs(blockID, input.examAttrs);
         } catch {
             // 属性写入旁路容错
         }

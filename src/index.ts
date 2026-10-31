@@ -347,7 +347,7 @@ function cloneStore<T>(value: T): T {
     }
 }
 
-const ICON_LV_CARDS_SVG = '<symbol id="iconLvCards" viewBox="0 0 32 32"><rect x="10.5" y="6" width="14" height="17" rx="3.5" transform="rotate(8 17.5 14.5)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-opacity="0.4"/><rect x="6" y="9" width="15" height="18" rx="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m14.5 12-3.5 5h3l-1.5 5 4.5-5.5h-3z" fill="currentColor"/><circle cx="22" cy="24" r="3" fill="currentColor"/></symbol>';
+const ICON_LV_CARDS_SVG = '<symbol id="iconLvCards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="14" height="16" rx="2.5" fill="none"/><path d="M4 18V5a2.5 2.5 0 0 1 2.5-2.5H17" fill="none"/><path d="m10 14 2.2 2.2 4.3-4.4" fill="none"/></symbol>';
 
 const noop = () => {};
 
@@ -1262,8 +1262,13 @@ export default class LvCardsPlugin extends Plugin {
                 blockIDs,
                 modules: this.settings.modules,
                 i18n: this.i18n,
+                selectionText: clozeText,
                 actions: {
                     addToDeck: (ids) => this.openDeckPicker(ids),
+                    makeFromSelection: (id, text) => {
+                        // R59 用选中文本打开快速制卡（题面预填），来源块自动关联
+                        void this.openQuickCardFromSelection(id, text);
+                    },
                     addToInbox: (ids) => {
                         const added = this.addInboxItems(ids);
                         showMessage(added > 0 ? this.i18n.inboxAdded.replace("${n}", String(added)) : this.i18n.inboxAlready, 2000, "info");
@@ -1604,7 +1609,7 @@ export default class LvCardsPlugin extends Plugin {
         q?: string,
         a?: string,
         docID?: string,
-        options?: { sourceDocID?: string; sourceTitle?: string; inPlace?: boolean },
+        options?: { sourceDocID?: string; sourceBlockID?: string; sourceTitle?: string; inPlace?: boolean; examAttrs?: Record<string, string> },
     ) {
         const nb = await this.targetNotebook();
         if (!nb) {
@@ -1619,8 +1624,10 @@ export default class LvCardsPlugin extends Plugin {
             a,
             docID,
             sourceDocID: options?.sourceDocID,
+            sourceBlockID: options?.sourceBlockID,
             sourceTitle: options?.sourceTitle,
             inPlaceDocID: options?.inPlace && options.sourceDocID ? options.sourceDocID : undefined,
+            examAttrs: options?.examAttrs,
             mutateKnowledgeObjects: (mutator) => this.knowledgeObjectsMutations(mutator),
         });
         await this.rememberSourceFingerprint(created.blockID, created.docID, markdown);
@@ -1628,7 +1635,7 @@ export default class LvCardsPlugin extends Plugin {
         return created;
     }
 
-    private async createQuickCardView(embedded = false) {
+    private async createQuickCardView(embedded = false, prefillQ = "") {
         const view: { Component: any; mount?: (comp: any, target: HTMLElement, props: Record<string, any>) => { destroy(): void } } = embedded
             ? await loadQuickCardEmbedded()
             : { Component: await loadQuickCard() };
@@ -1639,21 +1646,54 @@ export default class LvCardsPlugin extends Plugin {
             props: {
                 i18n: this.i18n,
                 activeDoc: activeDoc ? { name: activeDoc.name, docId: activeDoc.docId } : null,
-                onCreate: (markdown: string, deckID: string, deckName: string, q?: string, a?: string, docID?: string, options?: { sourceDocID?: string; sourceTitle?: string; inPlace?: boolean }) =>
+                // R58 记住上次卡组：打开时预选，成功制卡后持久化
+                initialDeckID: this.settings.lastQuickCardDeck ?? "",
+                // R59 选中文本制卡：题面预填
+                initialQ: prefillQ,
+                onDeckUsed: (deckID: string) => {
+                    if (!deckID || this.settings.lastQuickCardDeck === deckID) return;
+                    this.settings.lastQuickCardDeck = deckID;
+                    this.saveSettingsSoon();
+                },
+                onCreate: (markdown: string, deckID: string, deckName: string, q?: string, a?: string, docID?: string, options?: { sourceDocID?: string; sourceBlockID?: string; sourceTitle?: string; inPlace?: boolean; examAttrs?: Record<string, string> }) =>
                     this.createQuickCard(markdown, deckID, deckName, q, a, docID, options),
                 onClose: () => { /* 宿主或 Hub 管理视图生命周期 */ },
             },
         };
     }
 
-    private async openQuickCard() {
+    private async openQuickCard(prefillQ = "") {
         try {
-            const view = await this.createQuickCardView();
+            const view = await this.createQuickCardView(false, prefillQ);
             svelteDialog({
                 title: this.i18n.quickCardTitle,
                 component: view.Component,
                 width: "min(620px, 94vw)",
                 props: view.props,
+            });
+        } catch (e) {
+            this.reportDialogOpenFailure(this.i18n.quickCardTitle, e);
+        }
+    }
+
+    /** R59 选中文本制卡：题面预填选区文本，且自动关联来源块（就近原位制卡） */
+    private async openQuickCardFromSelection(blockID: string, selectionText: string) {
+        try {
+            const view = await this.createQuickCardView(false, selectionText);
+            svelteDialog({
+                title: this.i18n.quickCardTitle,
+                component: view.Component,
+                width: "min(620px, 94vw)",
+                props: {
+                    ...view.props,
+                    activeDoc: await this.loadCurrentDoc().then(d => d ? { name: d.name, docId: d.docId ?? "" } : null).catch(() => null),
+                    onCreate: (markdown: string, deckID: string, deckName: string, q?: string, a?: string, docID?: string, options?: { sourceDocID?: string; sourceTitle?: string; inPlace?: boolean; examAttrs?: Record<string, string> }) =>
+                        this.createQuickCard(markdown, deckID, deckName, q, a, docID, {
+                            ...options,
+                            sourceBlockID: blockID,
+                            sourceDocID: options?.sourceDocID,
+                        }),
+                },
             });
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.quickCardTitle, e);

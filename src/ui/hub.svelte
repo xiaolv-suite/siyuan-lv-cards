@@ -26,7 +26,7 @@
 
     let {
         i18n, dashboardBase, managerCtx, exam, inbox, goals, maintenance, recovery, uiMode = "advanced", initialTab = "overview", initialBlockID = "", onTabChange,
-        openWizard, openDrill, openQuickCard, loadWizardView, loadQuickCardView, openSettings, openPalette, getSettingsHealth,
+        openWizard, openDrill, openChallenge, openPairing, openQuickCard, loadWizardView, loadQuickCardView, openSettings, openPalette, getSettingsHealth,
     }: {
         i18n: any;
         /** 总览页上下文（不含 openManager，由 Hub 内部切换页签实现） */
@@ -35,6 +35,8 @@
         /** T02 工作台入口页：向导与修卡演练（可选——旧宿主不传则页签隐藏） */
         openWizard?: () => void;
         openDrill?: () => void;
+        openChallenge?: () => void;
+        openPairing?: () => void;
         /** 手工制卡入口：R54 制卡工作台的快速入口，仍复用现有 quick-card 业务。 */
         openQuickCard?: () => void;
         /** Hub 内嵌 AI 向导和手工制卡组件的懒加载构造器。 */
@@ -417,17 +419,25 @@
     <div class="lv-r54-shell">
         <aside class="lv-r54-sidebar" aria-label={i18n.hubPrimaryLabel ?? "主要导航"}>
             <div class="lv-r54-brand" title="小驴闪卡">
-                <svg class="lv-r54-brand-mark" viewBox="0 0 32 36" fill="none" aria-hidden="true" focusable="false">
-                    <rect x="8" y="3" width="21" height="28" rx="6" fill="currentColor" opacity=".2" transform="rotate(8 8 3)" />
-                    <rect x="2" y="7" width="21" height="28" rx="6" fill="currentColor" />
-                    <path d="M8 15h9M8 21h6" stroke="var(--lv-color-surface)" stroke-width="2" stroke-linecap="round" />
-                </svg>
+                <LvIcon name="cards" size={22} />
             </div>
-            <button class="b3-button lv-btn-primary lv-r54-new-card" disabled={!loadQuickCardView} aria-describedby={!loadQuickCardView ? "lv-r54-new-card-hint" : undefined} onclick={openStudioManual} title={i18n.hubStudioManualAction?.includes("手工") ? "新建闪卡" : (i18n.hubStudioManualAction ?? "新建闪卡")}>
-                <LvIcon name="plus" size={19} />
+            <button class="b3-button b3-button--outline lv-r54-new-card" disabled={!loadQuickCardView} aria-describedby={!loadQuickCardView ? "lv-r54-new-card-hint" : undefined} onclick={openStudioManual} title={i18n.hubStudioManualAction?.includes("手工") ? "新建闪卡" : (i18n.hubStudioManualAction ?? "新建闪卡")}>
+                <LvIcon name="plus" size={18} />
             </button>
             <LvTabs tabs={primaryTabs} active={primaryFor(active)} onchange={switchTab} panelId={active === "authoring" ? "lv-hub-studio-panel" : "lv-hub-panel"} orientation="vertical" />
             <div class="lv-r54-sidebar-divider"></div>
+            {#if openPalette}
+            <button class="lv-r54-sidebar-link" onclick={() => openPalette?.()} title={`${i18n.cmdPalette ?? "命令面板"} (${isMac ? "⌘K" : "Ctrl+K"})`}>
+                <span class="lv-r54-sidebar-icon"><LvIcon name="search" size={18} /></span>
+                <span class="lv-r54-sidebar-text">{isMac ? "⌘K" : "Ctrl+K"}</span>
+            </button>
+            {/if}
+            {#if inbox && inboxOpenCount > 0}
+            <button class="lv-r54-sidebar-link" class:lv-r54-sidebar-link-active={active === "inbox"} onclick={() => switchTab("inbox")} title={`${i18n.hubInboxOpen ?? "打开收件箱"} (${inboxOpenCount})`}>
+                <span class="lv-r54-sidebar-icon"><LvIcon name="inbox" size={18} /></span>
+                <span class="lv-r54-sidebar-text">{inboxOpenCount}</span>
+            </button>
+            {/if}
             <button class="lv-r54-sidebar-link" onclick={() => dashboardBase.openOnboarding()} title={i18n.hubStudioOnboarding ?? "上手与示例"}>
                 <span class="lv-r54-sidebar-icon"><LvIcon name="question" size={18} /></span>
                 <span class="lv-r54-sidebar-text">上手</span>
@@ -435,44 +445,7 @@
             {#if !loadQuickCardView}<span id="lv-r54-new-card-hint" class="lv-sr-only">{i18n.hubManualUnavailable ?? "当前宿主未提供手工制卡入口"}</span>{/if}
         </aside>
         <section class="lv-r54-content">
-            <header class="lv-r54-topbar">
-                <div class="lv-r54-workspace-context">
-                    <span>{i18n.hubWorkspaceLabel ?? "我的学习空间"}</span>
-                    <span class="lv-r54-beta-badge">{i18n.hubBetaStatus ?? "内测版"}</span>
-                </div>
-                <div class="lv-r54-topbar-actions">
-                    <button
-                        class="lv-r54-search"
-                        disabled={!openPalette}
-                        aria-describedby={!openPalette ? "lv-r54-search-hint" : undefined}
-                        onclick={() => openPalette?.()}
-                        aria-label={i18n.cmdPalette ?? "命令面板"}
-                        aria-keyshortcuts={isMac ? "Meta+k" : "Control+k"}
-                        title={`${i18n.cmdPalette ?? "命令面板"} (${isMac ? "⌘K" : "Ctrl+K"})`}
-                    >
-                        <LvIcon name="search" size={17} />
-                        <span class="lv-r54-search-text">{i18n.palettePlaceholder ?? "搜索动作、页面…"}</span>
-                        <kbd>{isMac ? "⌘ K" : "Ctrl K"}</kbd>
-                    </button>
-                    <span class="lv-r54-local-status"><i aria-hidden="true"></i>{i18n.hubLocalStatus ?? "本地优先"}</span>
-                    {#if inbox}
-                        <button
-                            class:lv-r54-inbox-action-active={active === "inbox"}
-                            class="lv-r54-inbox-action"
-                            aria-current={active === "inbox" ? "page" : undefined}
-                            aria-label={inboxOpenCount > 0
-                                ? `${i18n.hubInboxOpen ?? "打开收件箱"}，${(i18n.hubInboxCount ?? "${count} 项待处理").replace("${count}", String(inboxOpenCount))}`
-                                : (i18n.hubInboxOpen ?? "打开收件箱")}
-                            title={i18n.hubInboxOpen ?? "打开收件箱"}
-                            onclick={() => switchTab("inbox")}
-                        >
-                            <LvIcon name="inbox" size={18} />
-                            {#if inboxOpenCount > 0}<span class="lv-r54-action-count" aria-hidden="true">{inboxOpenCount}</span>{/if}
-                        </button>
-                    {/if}
-                </div>
-            </header>
-            {#if !openPalette}<span id="lv-r54-search-hint" class="lv-sr-only">{i18n.hubSearchUnavailable ?? "当前宿主未提供命令面板"}</span>{/if}
+            {#if (primaryFor(active) === "library" && uiMode !== "simple") || (primaryFor(active) === "studio" && inbox) || primaryFor(active) === "learning" || active === "recovery"}
             <div class="lv-hub-bar">
                 {#if primaryFor(active) === "library" && uiMode !== "simple"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡库"}>
@@ -496,10 +469,9 @@
                         <button class="lv-hub-subnav-btn" onclick={() => switchTab("today")}>{i18n.hubPrimaryToday ?? "今日"}</button>
                         <button class="lv-hub-subnav-btn lv-hub-subnav-active" aria-current="page" onclick={() => switchTab("recovery")}>{i18n.hubTabRecovery ?? "待处理与恢复"}</button>
                     </nav>
-                {:else}
-                    <div class="lv-r54-context-label">{primaryFor(active) === "today" ? (i18n.hubPrimaryToday ?? "今日") : primaryFor(active) === "library" ? (i18n.hubPrimaryLibrary ?? "卡库") : primaryFor(active) === "studio" ? (i18n.hubPrimaryStudio ?? "制卡") : (i18n.hubPrimarySettings ?? "设置")}</div>
                 {/if}
             </div>
+            {/if}
             <div class="lv-hub-body">
         <!-- 错误边界（450）：{#key} 使边界随页签重建，单子页崩溃不拖垮中心，切换自愈 -->
         {#key active}
@@ -560,6 +532,8 @@
                                 onStoresChanged={dashboardBase.onStoresChanged}
                                 onGoToday={() => switchTab("today")}
                                 onOpenExam={exam ? () => switchTab("exam") : undefined}
+                                onOpenChallenge={openChallenge}
+                                onOpenPairing={openPairing}
                                 onOpenBlock={(blockID: string) => { managerInitialBlockID = blockID; switchTab("manage"); }}
                                 onTabChange={(tab: string) => onTabChange?.(tab === "plans" ? "goals" : "learning")}
                                 initialTab={learningTabRequest}
@@ -718,6 +692,7 @@
     .lv-r54-shell {
         display: grid;
         grid-template-columns: 78px minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
         flex: 1;
         min-height: 0;
         margin: 10px 12px 12px;
@@ -732,6 +707,11 @@
         display: flex;
         width: 78px;
         min-width: 0;
+        height: 100%;
+        box-sizing: border-box;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
         flex-direction: column;
         align-items: center;
         gap: var(--lv-sp-3);
@@ -739,6 +719,7 @@
         border-right: 1px solid color-mix(in srgb, var(--lv-color-text) 6%, transparent);
         background: color-mix(in srgb, var(--lv-color-canvas) 85%, var(--lv-color-surface));
     }
+    .lv-r54-sidebar::-webkit-scrollbar { display: none; }
 
     .lv-r54-brand {
         display: flex;
@@ -746,38 +727,33 @@
         align-items: center;
         justify-content: center;
         gap: 2px;
-        min-height: 38px;
+        min-height: 36px;
         padding: 0;
-        color: var(--lv-color-text);
+        color: var(--lv-color-brand);
         font-size: var(--lv-type-meta-size);
         font-weight: var(--lv-fw-bold);
     }
 
-    .lv-r54-brand-mark {
-        display: block;
-        width: 26px;
-        height: 30px;
-        flex: none;
-        color: var(--lv-color-brand);
-    }
-
     .lv-r54-new-card {
-        width: 44px;
-        height: 44px;
-        min-height: 44px;
+        width: 38px;
+        height: 38px;
+        min-height: 38px;
         padding: 0;
         display: grid;
         place-items: center;
         border-radius: var(--lv-r-circle);
-        box-shadow: var(--lv-shadow-1);
+        background: transparent;
+        border: 1px solid var(--lv-border);
+        color: var(--lv-color-brand);
+        box-shadow: none;
         touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
-        transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+        transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease);
 
         &:hover {
-            transform: translateY(-1.5px) scale(1.04);
-            box-shadow: var(--lv-shadow-2);
+            border-color: var(--lv-primary-border);
+            background: var(--lv-primary-softer);
         }
 
         &:focus-visible {
@@ -829,6 +805,22 @@
     :global(.lv-r54-sidebar .lv-tab) { gap: 3px; }
     :global(.lv-r54-sidebar .lv-tab svg) { color: currentColor; }
     :global(.lv-r54-sidebar .lv-tab.lv-tab-active::after) { display: none; }
+    :global(.lv-r54-sidebar .lv-tab-badge) {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        margin-left: 0;
+        min-width: 16px;
+        min-height: 16px;
+        height: 16px;
+        padding: 0 4px;
+        border-radius: var(--lv-r-pill);
+        background: var(--lv-color-brand);
+        color: var(--lv-color-on-brand);
+        font-size: 10px;
+        font-weight: var(--lv-fw-bold);
+        line-height: 1;
+    }
     .lv-r54-sidebar-divider { height: 1px; width: 44px; margin: auto auto 4px; background: color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
 
     .lv-r54-sidebar-link {
@@ -858,95 +850,20 @@
         }
     }
 
-    .lv-r54-sidebar-link:hover { background: var(--lv-primary-softer); color: var(--lv-color-brand); }
+    .lv-r54-sidebar-link:hover,
+    .lv-r54-sidebar-link-active { background: var(--lv-primary-softer); color: var(--lv-color-brand); }
     .lv-r54-sidebar-icon { display: grid; width: 20px; height: 20px; flex: none; place-items: center; }
     .lv-r54-sidebar-text { font-size: 10px; line-height: 1.2; }
     .lv-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: calc(var(--lv-space-hairline) * -1); overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    .lv-r54-content { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
-    .lv-r54-topbar {
+    .lv-r54-content {
         display: flex;
-        min-height: 64px;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--lv-sp-4);
-        padding: 0 calc(var(--lv-space-unit) * 15);
-        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 6%, transparent);
-        background: var(--lv-color-surface);
-        box-shadow: 0 1px 3px rgba(39, 38, 53, 0.03);
-        position: sticky;
-        top: 0;
-        z-index: var(--lv-z-review-peek);
-
-        @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
-            background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
-            backdrop-filter: blur(12px) saturate(1.15);
-            -webkit-backdrop-filter: blur(12px) saturate(1.15);
-        }
+        min-width: 0;
+        min-height: 0;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
     }
 
-    @container lv-hub (max-width: 1040px) {
-        .lv-r54-shell { grid-template-columns: 156px minmax(0, 1fr); }
-        .lv-r54-topbar { padding-right: calc(var(--lv-space-unit) * 12); padding-left: 24px; }
-        :global(.lv-r54-sidebar .lv-tab) { padding-right: calc(var(--lv-space-unit) * 5); padding-left: 10px; }
-    }
-    .lv-r54-workspace-context { display: flex; min-width: 0; align-items: center; gap: 9px; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
-    .lv-r54-workspace-context > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .lv-r54-beta-badge { flex: none; border-radius: 7px; padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline)); background: var(--lv-primary-soft); color: var(--lv-color-brand); font-size: 10px; }
-    .lv-r54-topbar-actions { display: flex; min-width: 0; align-items: center; gap: var(--lv-sp-2); }
-    .lv-r54-search {
-        display: flex;
-        width: min(320px, 100%);
-        min-height: 38px;
-        align-items: center;
-        justify-content: flex-start;
-        gap: calc(var(--lv-space-unit) * 4);
-        padding: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 6);
-        border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-pill);
-        background: var(--lv-color-canvas);
-        color: var(--lv-color-text-muted);
-        font-size: var(--lv-type-control-size);
-        font-weight: var(--lv-fw-normal);
-        text-align: left;
-        touch-action: manipulation;
-        user-select: none;
-        -webkit-user-select: none;
-        transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
-    }
-    .lv-r54-search:not(:disabled):hover {
-        border-color: var(--lv-primary-border);
-        background: var(--lv-color-surface);
-        box-shadow: var(--lv-shadow-1);
-    }
-    .lv-r54-search:focus-visible {
-        outline: none;
-        box-shadow: var(--lv-focus-ring);
-        border-color: var(--lv-color-brand);
-    }
-    .lv-r54-search:disabled { cursor: not-allowed; opacity: .62; }
-    .lv-r54-search kbd {
-        margin-left: auto;
-        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
-        border-radius: var(--lv-r-pill);
-        background: var(--lv-color-surface);
-        border: 1px solid var(--lv-border);
-        font-size: var(--lv-type-caption-size);
-        font-family: inherit;
-        font-weight: var(--lv-fw-semibold);
-        box-shadow: 0 1px 2px color-mix(in srgb, black 4%, transparent);
-    }
-    .lv-r54-local-status { display: inline-flex; align-items: center; gap: calc(var(--lv-space-unit) * 3); color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); white-space: nowrap; }
-    .lv-r54-local-status i { width: 7px; height: 7px; border-radius: var(--lv-r-circle); background: var(--lv-color-success); }
-    .lv-r54-inbox-action { position: relative; display: grid; width: 44px; height: 44px; flex: none; place-items: center; padding: 0; border: 1px solid transparent; border-radius: var(--lv-r-m); background: transparent; color: var(--lv-color-text-muted); cursor: pointer; }
-    .lv-r54-inbox-action:hover,
-    .lv-r54-inbox-action-active { border-color: var(--lv-border); background: var(--lv-primary-softer); color: var(--lv-color-brand); }
-    .lv-r54-inbox-action:focus-visible {
-        outline: none;
-        box-shadow: var(--lv-focus-ring);
-        border-color: var(--lv-color-brand);
-    }
-    .lv-r54-action-count { position: absolute; top: 1px; right: 1px; display: grid; min-width: 17px; height: 17px; place-items: center; padding: 0 4px; border: 2px solid var(--lv-color-surface); border-radius: 999px; background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: var(--lv-type-micro-size); font-variant-numeric: tabular-nums; line-height: var(--lv-lh-tight); }
-    .lv-r54-context-label { min-height: 30px; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
     .lv-hub-bar {
         padding: var(--lv-sp-3) var(--lv-sp-5) 0;
         flex: none;
@@ -955,13 +872,25 @@
     .lv-hub-body {
         flex: 1;
         min-height: 0;
+        position: relative;
+    }
+    .lv-hub-panel {
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .lv-hub-panel[hidden] {
+        display: none !important;
     }
 
     .lv-hub-studio-panel {
         box-sizing: border-box;
         height: 100%;
         min-height: 0;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .lv-hub-mobile-nav { display: none; }
@@ -1060,11 +989,6 @@
     @container lv-hub (max-width: 780px) {
         .lv-r54-shell { grid-template-columns: 1fr; }
         .lv-r54-sidebar { display: none; }
-        .lv-r54-topbar { min-height: 57px; padding: 0 19px; }
-        .lv-r54-local-status { display: none; }
-        .lv-r54-workspace-context { max-width: 190px; flex: 0 1 auto; }
-        .lv-r54-topbar-actions { flex: none; }
-        .lv-r54-search { width: clamp(112px, calc(100cqi - 252px), 180px); flex: 0 1 auto; }
         .lv-r54-settings { padding: var(--lv-sp-4); }
         .lv-r54-health-grid { grid-template-columns: 1fr; }
         .lv-r54-settings-action { align-items: flex-start; flex-direction: column; }
@@ -1126,12 +1050,5 @@
     }
     @container lv-hub (max-width: 420px) {
         .lv-hub-bar { padding-left: var(--lv-sp-3); padding-right: var(--lv-sp-3); }
-        .lv-r54-topbar { gap: var(--lv-sp-2); padding-right: var(--lv-sp-3); padding-left: var(--lv-sp-3); }
-        .lv-r54-workspace-context { max-width: 104px; gap: 5px; }
-        .lv-r54-workspace-context > span:first-child { font-size: var(--lv-type-meta-size); }
-        .lv-r54-beta-badge { padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); font-size: 9px; }
-        .lv-r54-topbar-actions { gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)); }
-        .lv-r54-search { width: 42px; height: 40px; flex: 0 0 42px; justify-content: center; padding: calc(var(--lv-space-unit) * 4); }
-        .lv-r54-search-text, .lv-r54-search kbd { display: none; }
     }
 </style>

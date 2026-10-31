@@ -38,6 +38,16 @@ describe("delimited-qa & legacy card upgrade engine", () => {
         expect(hasDelimitedQa("问：质能方程？\n答：E = mc²")).toBe(true);
     });
 
+    it("parses —— dash delimiter cards for third-party note compatibility", () => {
+        const res = parseDelimitedQa("沉没成本——以往发生的但与当前决策无关的费用");
+        expect(res).toEqual({
+            question: "沉没成本",
+            answer: "以往发生的但与当前决策无关的费用",
+            format: "dash",
+        });
+        expect(hasDelimitedQa("沉没成本——以往发生的但与当前决策无关的费用")).toBe(true);
+    });
+
     it("ignores text that already contains standard == markers or lacks delimiters", () => {
         expect(parseDelimitedQa("普通段落文本")).toBeNull();
         expect(hasDelimitedQa("普通段落文本")).toBe(false);

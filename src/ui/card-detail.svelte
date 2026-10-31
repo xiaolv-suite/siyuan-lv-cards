@@ -2,6 +2,7 @@
     import { getBlockDOM } from "@/api/siyuan";
     import { diffLines, type DiffRow } from "@/core/line-diff";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
+    import { renderMathIn } from "@/libs/math-render";
     import type { SearchBlock } from "@/api/riff";
     import LvDrawer from "./kit/LvDrawer.svelte";
     import LvChip from "./kit/LvChip.svelte";
@@ -58,6 +59,12 @@
     } = $props();
 
     let html = $state("");
+    let previewEl = $state<HTMLElement | null>(null);
+
+    $effect(() => {
+        // 详情预览与复习卡面同源：内核数学空壳节点在此补渲染
+        if (html) void renderMathIn(previewEl);
+    });
     let previewLoading = $state(false);
     let previewError = $state(false);
     let loadSeq = 0;
@@ -417,7 +424,7 @@
                 <span class="lv-chip2 lv-chip2--default"><LvIcon name="cards" size={13} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}</span>
             </div>
         {/if}
-        <div class="lv-detail-preview lv-unified-face b3-typography">{@html (html && isSuperBlockHtml(html)) ? renderSuperBlockAnswerFace(html) : (html || (block.content ?? ""))}</div>
+        <div class="lv-detail-preview lv-unified-face b3-typography" bind:this={previewEl}>{@html (html && isSuperBlockHtml(html)) ? renderSuperBlockAnswerFace(html) : (html || (block.content ?? ""))}</div>
         {#if editing}
             <CardEditor t={t} original={editorMd} onsave={saveEdit} oncancel={() => (editing = false)} />
         {:else if editorLoadFail}

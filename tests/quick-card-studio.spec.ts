@@ -362,3 +362,104 @@ describe("R54 manual card workspace", () => {
         ));
     });
 });
+
+describe("R58 卡组选择与制卡页强化", () => {
+    beforeEach(() => {
+        getRiffDecks.mockReset().mockResolvedValue([{ id: "deck-1", name: "默认卡组", size: 0 }]);
+        createRiffDeck.mockReset();
+        Object.defineProperty(window, "siyuan", {
+            configurable: true,
+            value: { languages: { cancel: "取消" } },
+        });
+    });
+
+    afterEach(cleanup);
+
+    it("空库时不再渲染死下拉：显示创建引导，仅凭新名称即可制卡", async () => {
+        getRiffDecks.mockResolvedValue([]);
+        render(QuickCard, { i18n, onCreate: vi.fn(async () => undefined), onClose: vi.fn(), embedded: true });
+
+        // 引导文案出现，且没有（不可用的）卡组下拉
+        expect(await screen.findByText(/当前还没有卡组/)).toBeTruthy();
+        expect(screen.queryByRole("combobox", { name: "选择卡组" })).toBeNull();
+        // 仍然可以仅凭新名称完成制卡
+        await fireEvent.input(screen.getByRole("textbox", { name: "新建卡组名称" }), { target: { value: "我的第一个卡组" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "光速是多少？" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "每秒 30 万公里" } });
+        await fireEvent.click(screen.getByRole("button", { name: /制卡/ }));
+        await waitFor(() => expect(createRiffDeck).toHaveBeenCalledWith("我的第一个卡组"));
+    });
+
+    it("初始卡组与成功制卡回传：initialDeckID 预选，onDeckUsed 记录上次卡组", async () => {
+        getRiffDecks.mockResolvedValue([
+            { id: "deck-a", name: "卡组A", size: 1 },
+            { id: "deck-b", name: "卡组B", size: 1 },
+        ]);
+        const onDeckUsed = vi.fn();
+        const onCreate = vi.fn(async () => undefined);
+        render(QuickCard, { i18n, onCreate, onClose: vi.fn(), embedded: true, initialDeckID: "deck-b", onDeckUsed });
+
+        const select = (await screen.findByRole("combobox", { name: "选择卡组" })) as HTMLSelectElement;
+        await waitFor(() => expect(select.value).toBe("deck-b"));
+
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "Q" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "A" } });
+        await fireEvent.click(screen.getByRole("button", { name: /制卡/ }));
+        await waitFor(() => expect(onDeckUsed).toHaveBeenCalledWith("deck-b", "卡组B"));
+    });
+
+    it("填入示例仅在内容为空时可用，且随模板切换给出对应示例", async () => {
+        const onCreate = vi.fn(async () => undefined);
+        render(QuickCard, { i18n, onCreate, onClose: vi.fn(), embedded: true });
+
+        const sampleBtn = await screen.findByRole("button", { name: /填入示例/ });
+        await fireEvent.click(sampleBtn);
+        const qBox = screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement;
+        const aBox = screen.getByRole("textbox", { name: "答案" }) as HTMLTextAreaElement;
+        expect(qBox.value).toContain("FSRS");
+        expect(aBox.value.length).toBeGreaterThan(0);
+        // 已有内容后按钮消失（不可覆盖）
+        expect(screen.queryByRole("button", { name: /填入示例/ })).toBeNull();
+
+        // 清空后切到挖空模板，示例应包含 ____ 标记
+        await fireEvent.input(qBox, { target: { value: "" } });
+        await fireEvent.input(aBox, { target: { value: "" } });
+        // 快捷键目标须位于编辑器容器内（与真实焦点路径一致）
+        await fireEvent.keyDown(qBox, { key: "2", ctrlKey: true });
+        const sample2 = await screen.findByRole("button", { name: /填入示例/ });
+        await fireEvent.click(sample2);
+        expect((screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement).value).toContain("____");
+    });
+
+    it("Ctrl+1/2/3 快捷键切换表达模板且不改动已输入内容", async () => {
+        render(QuickCard, { i18n, onCreate: vi.fn(async () => undefined), onClose: vi.fn(), embedded: true });
+        const qBox = await screen.findByRole("textbox", { name: "问题" });
+        await fireEvent.input(qBox, { target: { value: "保持不变" } });
+
+        await fireEvent.keyDown(qBox, { key: "2", ctrlKey: true });
+        expect(screen.getByRole("button", { name: /挖空表达/ }).getAttribute("aria-pressed")).toBe("true");
+        expect((screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement).value).toBe("保持不变");
+
+        await fireEvent.keyDown(qBox, { key: "3", ctrlKey: true });
+        expect(screen.getByRole("button", { name: /超级块表达/ }).getAttribute("aria-pressed")).toBe("true");
+
+        await fireEvent.keyDown(qBox, { key: "1", ctrlKey: true });
+        expect(screen.getByRole("button", { name: /问答表达/ }).getAttribute("aria-pressed")).toBe("true");
+    });
+
+    it("预览卡面支持点击翻面查看答案", async () => {
+        render(QuickCard, { i18n, onCreate: vi.fn(async () => undefined), onClose: vi.fn(), embedded: true });
+        await fireEvent.input(await screen.findByRole("textbox", { name: "问题" }), { target: { value: "题面内容" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "答案内容" } });
+
+        // 预览面有独立 aria-label（与标题栏「查看答案」按钮区分）
+        const face = await screen.findByRole("button", { name: /卡面预览/ });
+        expect(face.getAttribute("aria-pressed")).toBe("false");
+        await fireEvent.click(face);
+        expect(face.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByText("答案内容")).toBeTruthy();
+        // 再点一次收起
+        await fireEvent.click(face);
+        expect(face.getAttribute("aria-pressed")).toBe("false");
+    });
+});

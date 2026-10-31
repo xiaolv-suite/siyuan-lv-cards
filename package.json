@@ -1,6 +1,6 @@
 {
   "name": "siyuan-lv-cards",
-  "version": "0.225.0",
+  "version": "0.226.0",
   "type": "module",
   "description": "Lv Cards (Beta) / 小驴闪卡（内测版） - a local-first, full-lifecycle flashcard learning platform for SiYuan, built on the native FSRS scheduler",
   "repository": "https://github.com/ai68298100/siyuan-lv-cards",
@@ -40,7 +40,11 @@
     "make-link-win": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/elevate.ps1 -scriptPath ./scripts/make_dev_link.js",
     "update-version": "node --no-warnings ./scripts/update_version.js",
     "migrate:tokens": "node scripts/migrate-design-tokens.mjs",
-    "make-install": "pnpm run build && node --no-warnings ./scripts/make_install.js"
+    "make-install": "pnpm run build && node --no-warnings ./scripts/make_install.js",
+    "serve:isolated": "node scripts/serve-isolated-web.mjs",
+    "serve:isolated:reload": "node scripts/serve-isolated-web.mjs --reload",
+    "serve:isolated:stop": "node scripts/serve-isolated-web.mjs --stop",
+    "serve:isolated:clean": "node scripts/serve-isolated-web.mjs --clean"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",

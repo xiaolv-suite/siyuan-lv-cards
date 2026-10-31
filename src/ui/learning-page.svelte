@@ -24,6 +24,8 @@
         onStoresChanged,
         onGoToday,
         onOpenExam,
+        onOpenChallenge,
+        onOpenPairing,
         onOpenBlock,
         initialTab = "recap",
         onTabChange,
@@ -36,6 +38,8 @@
         onStoresChanged?: (cb: () => void) => (() => void) | void;
         onGoToday?: () => void;
         onOpenExam?: () => void;
+        onOpenChallenge?: () => void;
+        onOpenPairing?: () => void;
         onOpenBlock?: (blockID: string) => void;
         initialTab?: LearningTab;
         onTabChange?: (tab: LearningTab) => void;
@@ -236,9 +240,13 @@
                     {#if recentEntries.length === 0}<div class="lv-learning-empty"><p>{copy.recentEmpty ?? "暂无正式评分记录。"}</p><button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onGoToday?.()}><LvIcon name="home" size={12} /> <span>{copy.goToday ?? "回到今日"}</span></button></div>{:else}<ul class="lv-learning-entry-list">{#each recentEntries as entry (entry.ts + entry.cardID)}<li><div><strong>{dateLabel(localDate(entry.ts))}</strong><span>{timeLabel(entry)} · {ratingLabel(entry)}</span></div>{#if entry.blockID && onOpenBlock}<button type="button" class="lv-link-button" onclick={() => onOpenBlock?.(entry.blockID)}><LvIcon name="target" size={12} /> <span>{copy.openSource ?? "回源"}</span></button>{/if}</li>{/each}</ul>{/if}
                 </section>
             </div>
-            <div class="lv-learning-actions"><button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => selectTab("plans")}><LvIcon name="target" size={12} /> <span>{copy.viewPlans ?? "查看目标与计划"}</span></button></div>
+            <div class="lv-learning-actions">
+                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => selectTab("plans")}><LvIcon name="target" size={12} /> <span>{copy.viewPlans ?? "查看目标与计划"}</span></button>
+                {#if onOpenPairing}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenPairing?.()}><LvIcon name="dice" size={12} /> <span>{i18n.pairing?.title ?? "配对消除"}</span></button>{/if}
+                {#if onOpenChallenge}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenChallenge?.()}><LvIcon name="timer" size={12} /> <span>{i18n.challenge?.title ?? "限时挑战"}</span></button>{/if}
+            </div>
         {:else if selectedTab === "plans"}
-            <div class="lv-learning-columns"><section class="lv-learning-plan"><GoalsPage {i18n} {goals} embedded={true} /></section><aside class="lv-card2 lv-learning-tool"><h2>{copy.examTitle ?? "考试与低频工具"}</h2><p>{copy.examBody ?? "确定范围与截止日期，再核对每天投入。"}</p><button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={!onOpenExam} onclick={() => onOpenExam?.()}><LvIcon name="graduation" size={12} /> <span>{copy.openExam ?? "查看考试计划"}</span></button></aside></div>
+            <div class="lv-learning-columns"><section class="lv-learning-plan"><GoalsPage {i18n} {goals} embedded={true} /></section><aside class="lv-card2 lv-learning-tool"><h2>{copy.examTitle ?? "考试与低频工具"}</h2><p>{copy.examBody ?? "确定范围与截止日期，再核对每天投入。"}</p><div style="display:flex;flex-wrap:wrap;gap:var(--lv-sp-2);"><button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={!onOpenExam} onclick={() => onOpenExam?.()}><LvIcon name="graduation" size={12} /> <span>{copy.openExam ?? "查看考试计划"}</span></button>{#if onOpenPairing}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenPairing?.()}><LvIcon name="dice" size={12} /> <span>{i18n.pairing?.title ?? "配对消除"}</span></button>{/if}{#if onOpenChallenge}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenChallenge?.()}><LvIcon name="timer" size={12} /> <span>{i18n.challenge?.title ?? "限时挑战"}</span></button>{/if}</div></aside></div>
         {:else}
             <div class="lv-learning-columns"><section class="lv-card2 lv-learning-calendar" aria-label={tabLabels.calendar}>
                 {#if calLoading}<div class="lv-learning-status" role="status" aria-live="polite">{copy.calendarLoading ?? "正在读取学习日历…"}</div>{/if}

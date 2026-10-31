@@ -166,6 +166,11 @@
 </div>
 
 <style>
+    .lv-deckpicker {
+        width: 100%;
+        box-sizing: border-box;
+        padding: var(--lv-sp-4) var(--lv-sp-5);
+    }
     .lv-deckpicker .b3-button {
         touch-action: manipulation;
         user-select: none;

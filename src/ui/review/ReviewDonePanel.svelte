@@ -94,22 +94,24 @@
                     {t.review?.doneNew ?? "新学"} {sessionNew} · {t.review?.doneReview ?? "复习"} {sessionReview} · {t.review?.doneForget ?? "遗忘"} {sessionForget} · {t.review?.doneSkip ?? "跳过"} {sessionSkip}
                 </div>
             </div>
-            {#if totalAnswered > 0}
-                <div class="lv-done-retention-bubble" class:lv-ret-high={retentionRate >= 80} class:lv-ret-mid={retentionRate >= 60 && retentionRate < 80}>
-                    <LvIcon name="zap" size={13} />
-                    <span>{t.review?.doneRetention ?? "留存率"} {retentionRate}%</span>
-                </div>
-            {/if}
-            {#if sessionQuizTotal > 0}
-                <div class="lv-done-quiz-bubble" class:lv-quiz-high={quizAccuracy >= 80} class:lv-quiz-mid={quizAccuracy >= 60 && quizAccuracy < 80}>
-                    <LvIcon name="check" size={13} />
-                    <span>{(t.review?.doneQuizAccuracy ?? "实战命中率 ${rate}% (${correct}/${total})").replace("${rate}", String(quizAccuracy)).replace("${correct}", String(sessionQuizCorrect)).replace("${total}", String(sessionQuizTotal))}</span>
-                </div>
-            {/if}
+            <div class="lv-done-bubbles">
+                {#if totalAnswered > 0}
+                    <div class="lv-done-retention-bubble" class:lv-ret-high={retentionRate >= 80} class:lv-ret-mid={retentionRate >= 60 && retentionRate < 80}>
+                        <LvIcon name="zap" size={13} />
+                        <span>{t.review?.doneRetention ?? "留存率"} {retentionRate}%</span>
+                    </div>
+                {/if}
+                {#if sessionQuizTotal > 0}
+                    <div class="lv-done-quiz-bubble" class:lv-quiz-high={quizAccuracy >= 80} class:lv-quiz-mid={quizAccuracy >= 60 && quizAccuracy < 80}>
+                        <LvIcon name="check" size={13} />
+                        <span>{(t.review?.doneQuizAccuracy ?? "实战命中率 ${rate}% (${correct}/${total})").replace("${rate}", String(quizAccuracy)).replace("${correct}", String(sessionQuizCorrect)).replace("${total}", String(sessionQuizTotal))}</span>
+                    </div>
+                {/if}
+            </div>
         </div>
         <div class="lv-done-stats">
             <div class="lv-done-stat">
-                <span class="lv-done-stat-label">{t.review?.doneReview ?? "复习"} · {t.review?.doneNew ?? "新学"}</span>
+                <span class="lv-done-stat-label">{t.review?.doneAnsweredLabel ?? "本场作答"}</span>
                 <span class="lv-hero-num" use:countUp={totalAnswered}>{totalAnswered}</span>
                 <p>{PURPOSE_PROFILES[purpose]?.grading === "informal" ? t.review?.purposeInformal : t.review?.doneConfirm}</p>
             </div>
@@ -125,7 +127,7 @@
             </div>
         </div>
         {#if budgetMin > 0}
-            <div class="lv-notice">{budgetExpired ? t.review?.budgetDoneTip : t.review?.budgetOn}</div>
+            <div class="lv-notice">{budgetExpired ? t.review?.budgetDoneTip : t.review?.budgetDoneRemind ?? "本场预算未用完，剩余卡片会保留在队列里，随时可以再来一批。"}</div>
         {/if}
         {#if remainingDue !== null && remainingDue > 0}
             <div class="lv-notice">{(t.review?.remainingDue ?? "还有 ${n} 张待复习").replace("${n}", String(remainingDue))}</div>
@@ -228,8 +230,15 @@
         margin-bottom: var(--lv-sp-4);
         flex-wrap: wrap;
     }
-    .lv-done-retention-bubble {
+    .lv-done-bubbles {
         margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .lv-done-retention-bubble {
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 2);

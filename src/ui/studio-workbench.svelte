@@ -392,6 +392,8 @@
 
 <style>
     .lv-studio {
+        width: 100%;
+        box-sizing: border-box;
         max-width: 1120px;
         margin: 0 auto;
         padding: var(--lv-sp-5);
