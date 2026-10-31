@@ -462,4 +462,58 @@ describe("R58 卡组选择与制卡页强化", () => {
         await fireEvent.click(face);
         expect(face.getAttribute("aria-pressed")).toBe("false");
     });
+
+    it("制卡必备要素实时核查与硬核阻断", async () => {
+        render(QuickCard, { i18n, onCreate: vi.fn(), onClose: vi.fn(), embedded: true });
+
+        // 初始状态：卡组已选默认卡组，题干和答案为空
+        expect(await screen.findByText(/卡组已指定/)).toBeTruthy();
+        expect(screen.getByText(/必须填写题干/)).toBeTruthy();
+        expect(screen.getByText(/必须填写答案内容/)).toBeTruthy();
+
+        const submitBtn = screen.getByRole("button", { name: /制卡/ }) as HTMLButtonElement;
+        expect(submitBtn.disabled).toBe(true);
+
+        // 填写题干后
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "何谓操作系统的并发性？" } });
+        expect(screen.getByText(/题干已填写/)).toBeTruthy();
+        expect(submitBtn.disabled).toBe(true); // 答案仍为空，依然阻断
+
+        // 填写答案后，全部满足
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "指两个或多个事件在同一时间间隔内发生。" } });
+        expect(screen.getByText(/答案已就绪/)).toBeTruthy();
+        expect(screen.getByText(/要素齐全，可立即制卡/)).toBeTruthy();
+        expect(submitBtn.disabled).toBe(false);
+    });
+
+    it("智能试题拆单与数理符号快捷输入", async () => {
+        render(QuickCard, { i18n, onCreate: vi.fn(), onClose: vi.fn(), embedded: true });
+
+        // 点击智能拆单打开拆单面板
+        const splitBtn = await screen.findByRole("button", { name: /智能拆单/ });
+        await fireEvent.click(splitBtn);
+
+        const pasteInput = screen.getByPlaceholderText(/直接粘贴整段试题文本/);
+        expect(pasteInput).toBeTruthy();
+
+        // 粘贴一道单选题并点击拆分
+        await fireEvent.input(pasteInput, {
+            target: {
+                value: "计算机网络中 HTTP 默认使用的端口是？\nA. 80\nB. 443\nC. 22\nD. 8080\n答案：A\n解析：HTTP 默认 80。",
+            },
+        });
+        await fireEvent.click(screen.getByRole("button", { name: /一键智能拆分填入/ }));
+
+        // 自动识别为单选题，题干与选项已填充
+        expect((screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement).value).toBe("计算机网络中 HTTP 默认使用的端口是？");
+        expect(screen.getByDisplayValue("80")).toBeTruthy();
+        expect(screen.getByDisplayValue("443")).toBeTruthy();
+
+        // 快捷插入数理符号
+        const mathTab = screen.getByRole("button", { name: "数理" });
+        await fireEvent.click(mathTab);
+        const piBtn = screen.getByRole("button", { name: "圆周率 π" });
+        await fireEvent.click(piBtn);
+        expect((screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement).value).toContain("\\pi");
+    });
 });

@@ -5,6 +5,7 @@
     import LvIcon, { type LvIconName } from "./kit/LvIcon.svelte";
     import Dashboard from "./dashboard.svelte";
     import Manager from "./manager.svelte";
+    import DeckManager from "./deck-manager.svelte";
     import StudioWorkbench from "./studio-workbench.svelte";
     import RecoveryPage from "./recovery-page.svelte";
     import type { DashboardCtx } from "./dashboard.svelte";
@@ -151,12 +152,12 @@
         { id: "recovery", label: i18n.hubTabRecovery ?? "待处理与恢复" },
     ];
     // 简洁模式隐藏高级导航，但今日建议与恢复中心仍可直达维护闭环。
-    const knownIds = new Set(["today", "library", "studio", "learning", "settings", "maintenance", ...legacyTabs.map(t => t.id)]);
+    const knownIds = new Set(["today", "library", "studio", "learning", "settings", "decks", "maintenance", ...legacyTabs.map(t => t.id)]);
     function initialRoute(id: string): string {
         if (id === "settings") return "settings";
         // 旧入口「goals」仍保留兼容，但落到完整学习页的目标与计划分面。
         if (id === "goals") return "learning";
-        if (knownIds.has(id) && (id === "overview" || id === "manage" || id === "authoring" || id === "goals" || id === "inbox" || id === "exam" || id === "maintenance" || id === "recovery")) return id;
+        if (knownIds.has(id) && (id === "overview" || id === "manage" || id === "authoring" || id === "goals" || id === "inbox" || id === "exam" || id === "decks" || id === "maintenance" || id === "recovery")) return id;
         if (id === "library") return "manage";
         if (id === "studio") return "authoring";
         if (id === "learning") return "learning";
@@ -172,7 +173,7 @@
     let managerInitialBlockID = $state(initialBlockID);
 
     function primaryFor(route: string): string {
-        if (route === "manage" || route === "maintenance") return "library";
+        if (route === "manage" || route === "decks" || route === "maintenance") return "library";
         if (route === "authoring" || route === "inbox") return "studio";
         if (route === "learning" || route === "goals" || route === "exam") return "learning";
         return route === "settings" ? "settings" : "today";
@@ -450,6 +451,7 @@
                 {#if primaryFor(active) === "library" && uiMode !== "simple"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡库"}>
                         <button class:lv-hub-subnav-active={active === "manage"} class="lv-hub-subnav-btn" aria-current={active === "manage" ? "page" : undefined} onclick={() => switchTab("manage")}>{i18n.hubTabManage ?? "卡片管理"}</button>
+                        <button class:lv-hub-subnav-active={active === "decks"} class="lv-hub-subnav-btn" aria-current={active === "decks" ? "page" : undefined} onclick={() => switchTab("decks")}>{i18n.hubTabDecks ?? "卡包管理"}</button>
                         <button class:lv-hub-subnav-active={active === "maintenance"} class="lv-hub-subnav-btn" aria-current={active === "maintenance" ? "page" : undefined} onclick={() => switchTab("maintenance")}>{i18n.hubTabMaintenance ?? "维护债务"}</button>
                     </nav>
                 {:else if primaryFor(active) === "studio" && inbox}
@@ -501,6 +503,13 @@
                     {#key managerDeckScope?.id ?? ""}
                     <Manager ctx={{ ...managerCtx, initialBlockID: managerInitialBlockID, onInitialBlockConsumed: () => (managerInitialBlockID = ""), onCardContentSaved: handleManagerCardSaved, deckScope: managerDeckScope, clearDeckScope: () => (managerDeckScope = null) }} />
                     {/key}
+                {:else if active === "decks"}
+                    <DeckManager
+                        i18n={i18n}
+                        openReviewScope={dctx.openReviewScope}
+                        openManagerDeck={openManagerDeck}
+                        getRevlog={dashboardBase.getRevlog}
+                    />
                 {:else if active === "settings"}
                     <div class="lv-r54-settings">
                         <div class="lv-pagehead">

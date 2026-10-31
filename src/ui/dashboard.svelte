@@ -978,8 +978,11 @@
                         >
                             <LvIcon name="zap" size={13} /> <span>{t.dashboard.cramAll ?? "考前突击快刷"}</span>
                         </button>
+                        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openHubTab?.("decks")}>
+                            <LvIcon name="cards" size={13} /> <span>{t.hubTabDecks ?? "卡包管理"}</span>
+                        </button>
                         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openManager()}>
-                            <LvIcon name="cards" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span>
+                            <LvIcon name="search" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span>
                         </button>
                     </div>
                 </div>

@@ -2,6 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
     import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
+    import { parsePastedQuestionText } from "@/core/question-splitter";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -49,8 +50,8 @@
     let previewAnswer = $state(false);
     let createdNotice = $state("");
 
-    // R59 选择/判断题表单（题型样态：与问答/挖空完全不同的表单结构）
-    type TemplateKind = "qa" | "cloze" | "superblock" | "choice";
+    // R59/R60 卡面表达支持问答/挖空/超级块/选择题/公式推导
+    type TemplateKind = "qa" | "cloze" | "superblock" | "choice" | "formula";
     type ChoiceMode = "single" | "multiple" | "judge";
     let choiceMode = $state<ChoiceMode>("single");
     let optionTexts = $state<{ text: string }[]>([
@@ -62,15 +63,15 @@
     let correctKeys = $state<string[]>([]);
     let analysis = $state("");
 
+    // 智能拆单与符号快捷工具条状态
+    let smartPasteModalOpen = $state(false);
+    let smartPasteInputText = $state("");
+    let symbolTab = $state<"math" | "pinyin" | "format">("math");
+    let lastFocusedField = $state<"q" | "a">("q");
+
     const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
     const nonEmptyOptions = $derived(optionTexts.map((o, i) => ({ key: OPTION_LETTERS[i], text: o.text.trim() })).filter(o => o.text.length > 0));
     const validCorrectKeys = $derived(correctKeys.filter(k => nonEmptyOptions.some(o => o.key === k)));
-    const canSubmitChoice = $derived(
-        template === "choice"
-            && q.trim().length > 0
-            && (choiceMode === "judge" || (nonEmptyOptions.length >= 2 && validCorrectKeys.length > 0))
-            && !(choiceMode === "judge" && !correctKeys.length),
-    );
 
     function setChoiceMode(mode: ChoiceMode) {
         choiceMode = mode;
@@ -140,6 +141,7 @@
     }
     let editorRoot: HTMLDivElement;
     let qTextareaEl: HTMLTextAreaElement | undefined = $state();
+    let aTextareaEl: HTMLTextAreaElement | undefined = $state();
     let newNameInputEl: HTMLInputElement | undefined = $state();
     let disposed = false;
     let deckAutoFocused = false;
@@ -169,19 +171,126 @@
         }, 0);
     }
 
+    function insertSnippet(snippet: string) {
+        const targetEl = lastFocusedField === "a" && aTextareaEl ? aTextareaEl : qTextareaEl;
+        if (!targetEl) return;
+        const start = targetEl.selectionStart ?? 0;
+        const end = targetEl.selectionEnd ?? 0;
+        const val = targetEl.value;
+        const newVal = val.slice(0, start) + snippet + val.slice(end);
+        if (targetEl === aTextareaEl) {
+            a = newVal;
+        } else {
+            q = newVal;
+        }
+        const nextPos = start + snippet.length;
+        setTimeout(() => {
+            targetEl.focus();
+            targetEl.setSelectionRange(nextPos, nextPos);
+        }, 0);
+    }
+
+    function applySmartSplit(rawText: string) {
+        const parsed = parsePastedQuestionText(rawText);
+        if (!parsed) {
+            errorMsg = "未能识别出题目结构，请确认文本包含题干、选项（A. ... B. ...）或答案。";
+            return;
+        }
+        q = parsed.stem;
+        analysis = parsed.analysis;
+        if (parsed.type === "single" || parsed.type === "multiple") {
+            template = "choice";
+            choiceMode = parsed.type;
+            optionTexts = parsed.options.map(o => ({ text: o.text }));
+            correctKeys = parsed.correctKeys;
+        } else if (parsed.type === "judge") {
+            template = "choice";
+            choiceMode = "judge";
+            optionTexts = [{ text: "对" }, { text: "错" }];
+            correctKeys = parsed.correctKeys;
+        } else if (parsed.type === "fill") {
+            template = "cloze";
+            a = parsed.answer;
+        } else {
+            template = "qa";
+            a = parsed.answer;
+        }
+        smartPasteModalOpen = false;
+        smartPasteInputText = "";
+        previewAnswer = false;
+        errorMsg = "";
+        createdNotice = `⚡ 已智能拆分填入「${parsed.type === "single" ? "单选题" : parsed.type === "multiple" ? "多选题" : parsed.type === "judge" ? "判断题" : parsed.type === "fill" ? "填空题" : "问答题"}」`;
+    }
+
     const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || navigator.platform || "");
 
     const canCreateDeck = $derived(decks.some(d => d.id === selected) || !!newName.trim());
     const clozeParts = $derived(q.split("____"));
     const hasClozeMarker = $derived(clozeParts.length > 1);
-    // 选择/判断题不走问答草稿校验（答案行由表单自动生成，校验在 canSubmitChoice）
+
+    // 制卡必须要素硬核核查（未满足不可完成制卡）
+    const deckReady = $derived(Boolean(decks.some(d => d.id === selected) || !!newName.trim()));
+    const stemReady = $derived(q.trim().length > 0);
+    const answerCheck = $derived.by(() => {
+        if (template === "choice") {
+            if (choiceMode === "judge") {
+                const hasAns = correctKeys.length > 0;
+                return {
+                    ready: hasAns,
+                    label: hasAns ? "判断答案已就绪" : "必须选择「对」或「错」",
+                    readyLabel: "判断项已指定",
+                    focusField: "judge",
+                };
+            }
+            if (choiceMode === "single") {
+                const optOk = nonEmptyOptions.length >= 2;
+                const ansOk = validCorrectKeys.length === 1;
+                return {
+                    ready: optOk && ansOk,
+                    label: !optOk ? "至少填写2个选项" : !ansOk ? "需选定1个正确答案" : "单选与答案已就绪",
+                    readyLabel: "单选与答案已就绪",
+                    focusField: !optOk ? "option" : "answerKey",
+                };
+            }
+            if (choiceMode === "multiple") {
+                const optOk = nonEmptyOptions.length >= 2;
+                const ansOk = validCorrectKeys.length >= 2;
+                return {
+                    ready: optOk && ansOk,
+                    label: !optOk ? "至少填写2个选项" : !ansOk ? "多选需指定≥2个正确项" : "多选与答案已就绪",
+                    readyLabel: "多选与答案已就绪",
+                    focusField: !optOk ? "option" : "answerKey",
+                };
+            }
+        }
+        if (template === "cloze") {
+            const hasMarker = q.includes("____") || q.includes("==");
+            const ansOk = a.trim().length > 0 || q.includes("==");
+            return {
+                ready: hasMarker && ansOk,
+                label: !hasMarker ? "题干需包含空位(____或==答案==)" : !ansOk ? "需填写挖空内容" : "挖空要素已就绪",
+                readyLabel: "挖空要素已就绪",
+                focusField: !hasMarker ? "q" : "a",
+            };
+        }
+        // qa, superblock, formula
+        const hasA = a.trim().length > 0;
+        return {
+            ready: hasA,
+            label: hasA ? "答案内容已就绪" : "必须填写答案内容",
+            readyLabel: "答案已就绪",
+            focusField: "a",
+        };
+    });
+
+    const isAllMandatorySatisfied = $derived(deckReady && stemReady && answerCheck.ready);
+
+    // 选择/判断题不走问答草稿校验（答案行由表单自动生成，校验在 answerCheck）
     const draftIssues = $derived(template === "choice" ? [] : validateQaDraft(q, a));
-    const overloadNotice = $derived(inspectCardLearnability({ question: q, answer: a, template: template === "choice" ? "qa" : template }));
+    const overloadNotice = $derived(inspectCardLearnability({ question: q, answer: a, template: template === "choice" || template === "formula" ? "qa" : template }));
     let showSplitPreview = $state(false);
     const canSubmit = $derived(
-        template === "choice"
-            ? !busy && canSubmitChoice && canCreateDeck
-            : !busy && draftIssues.length === 0 && canCreateDeck && (template !== "cloze" || hasClozeMarker),
+        !busy && isAllMandatorySatisfied && (template === "choice" || draftIssues.length === 0)
     );
 
     function serializeDraftByTemplate(draft: CardSplitDraft): string {
@@ -292,12 +401,13 @@
         }
     }
 
-    /** R58 一键示例：仅在内容为空时可用，避免覆盖用户已输入的草稿 */
+    /** R58/R60 一键示例：仅在内容为空时可用，避免覆盖用户已输入的草稿 */
     const SAMPLE_DRAFTS: Record<TemplateKind, { q: string; a: string }> = {
         qa: { q: "FSRS 调度模型中的 S 代表什么？", a: "稳定性（Stability），表示记忆当前的坚固程度。" },
         cloze: { q: "细胞进行有氧呼吸的主要场所是____。", a: "线粒体" },
         superblock: { q: "细胞呼吸分为哪三个阶段？\n\n糖酵解、柠檬酸循环、氧化磷酸化。", a: "" },
         choice: { q: "地球绕太阳公转一周大约需要多长时间？", a: "" },
+        formula: { q: "爱因斯坦质能方程的数学表达式是什么？", a: "E = mc^2" },
     };
     const CHOICE_SAMPLE = {
         mode: "single" as ChoiceMode,
@@ -330,7 +440,33 @@
         if (deckID) onDeckUsed?.(deckID, deckName);
     }
 
+    function reportMissingMandatory(): boolean {
+        if (!deckReady) {
+            errorMsg = t.quickCardMandatoryDeckMissing ?? "制卡失败：必须选择现有卡组或输入新卡组名称";
+            newNameInputEl?.focus();
+            return false;
+        }
+        if (!stemReady) {
+            errorMsg = t.quickCardMandatoryStemMissing ?? "制卡失败：必须填写题干（至少2字）";
+            qTextareaEl?.focus();
+            return false;
+        }
+        if (!answerCheck.ready) {
+            errorMsg = `制卡失败：${answerCheck.label}`;
+            if (answerCheck.focusField === "a") {
+                aTextareaEl?.focus();
+            } else if (answerCheck.focusField === "q") {
+                qTextareaEl?.focus();
+            }
+            return false;
+        }
+        return true;
+    }
+
     async function confirm() {
+        if (!reportMissingMandatory()) {
+            return;
+        }
         if (!canSubmit) {
             return;
         }
@@ -387,8 +523,6 @@
             const answer = a.trim();
             if (template === "qa" && isBidirectional) {
                 // 双向卡片：互为问答生成两张卡片（A -> B 与 B -> A）
-                // 生产回调返回首面落点后，第二面复用同一文档；旧宿主/组件测试
-                // 返回 void 时仍保持兼容，但生产路径不会再次 createDocWithMd。
                 const firstArgs: any[] = [serializeQaCard(question, answer), deckID, deckName, question, answer];
                 if (targetDocID || docOpts) {
                     firstArgs.push(targetDocID);
@@ -425,6 +559,8 @@
                     ? question.split("____").join(`==${answer}==`)
                     : template === "superblock"
                     ? `{{{col\n${question}\n\n${answer}\n}}}`
+                    : template === "formula"
+                    ? `${question}\n==${answer.startsWith("$") ? answer : `$${answer}$`}==`
                     : serializeQaCard(question, answer);
                 const callArgs: any[] = [markdown, deckID, deckName, question, answer];
                 if (targetDocID || docOpts) {
@@ -454,15 +590,15 @@
     }
 
     function onKeydown(e: KeyboardEvent) {
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat && !e.defaultPrevented && canSubmit
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat && !e.defaultPrevented
             && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
             e.preventDefault();
             confirm();
-        } else if ((e.ctrlKey || e.metaKey) && (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") && !e.repeat
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4" || e.key === "5") && !e.repeat
             && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
-            // R58/R59 模板快捷键：Ctrl+1/2/3/4 在问答/挖空/超级块/选择题间切换（不改输入内容）
+            // R58/R59/R60 模板快捷键：Ctrl+1/2/3/4/5 切换表达模板
             e.preventDefault();
-            setTemplate(e.key === "1" ? "qa" : e.key === "2" ? "cloze" : e.key === "3" ? "superblock" : "choice");
+            setTemplate(e.key === "1" ? "qa" : e.key === "2" ? "cloze" : e.key === "3" ? "superblock" : e.key === "4" ? "choice" : "formula");
         } else if (e.key === "Escape" && !busy && !embedded
             && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
             e.preventDefault();
@@ -495,6 +631,9 @@
             </button>
             <button type="button" class="lv-qc-tpl-btn" class:lv-qc-template-active={template === "choice"} aria-pressed={template === "choice"} disabled={busy} onclick={() => setTemplate("choice")} title={`${t.quickCardTemplateChoiceDesc ?? "选择题 / 多选题 / 判断题，复习时点选作答"} (Ctrl+4)`} aria-keyshortcuts="Control+4 Meta+4">
                 <LvIcon name="check" size={15} /> <strong>{t.quickCardTemplateChoice ?? "选择题"}</strong>
+            </button>
+            <button type="button" class="lv-qc-tpl-btn" class:lv-qc-template-active={template === "formula"} aria-pressed={template === "formula"} disabled={busy} onclick={() => setTemplate("formula")} title={`${t.quickCardTemplateFormulaDesc ?? "数理公式与推导，复习时自动 KaTeX 高保真渲染"} (Ctrl+5)`} aria-keyshortcuts="Control+5 Meta+5">
+                <LvIcon name="code" size={15} /> <strong>{t.quickCardTemplateFormula ?? "公式推导"}</strong>
             </button>
         </div>
         <div class="lv-qc-deck">
@@ -545,6 +684,80 @@
             {/if}
         </div>
     </div>
+
+    <!-- 制卡必备要素状态条（明确要素，未满足不可完成制卡） -->
+    <div class="lv-qc-mand-bar" role="group" aria-label={t.quickCardMandatoryCheck ?? "制卡必备要素"}>
+        <span class="lv-qc-mand-title">{t.quickCardMandatoryCheck ?? "制卡必备要素"}：</span>
+        <button
+            type="button"
+            class="lv-qc-mand-pill"
+            class:lv-qc-mand-ok={deckReady}
+            class:lv-qc-mand-err={!deckReady}
+            onclick={() => (newNameInputEl ? newNameInputEl.focus() : null)}
+            title={deckReady ? "卡组已指定" : "点击输入卡组名称"}
+        >
+            {#if deckReady}<LvIcon name="check" size={11} /> <span>{t.quickCardMandatoryDeckOk ?? "卡组已指定"}</span>{:else}<span>⚠️ {t.quickCardMandatoryDeckMissing ?? "必须选择或新建卡组"}</span>{/if}
+        </button>
+        <button
+            type="button"
+            class="lv-qc-mand-pill"
+            class:lv-qc-mand-ok={stemReady}
+            class:lv-qc-mand-err={!stemReady}
+            onclick={() => qTextareaEl?.focus()}
+            title={stemReady ? "题干已就绪" : "点击填写题干"}
+        >
+            {#if stemReady}<LvIcon name="check" size={11} /> <span>{t.quickCardMandatoryStemOk ?? "题干已填写"}</span>{:else}<span>⚠️ {t.quickCardMandatoryStemMissing ?? "必须填写题干（至少2字）"}</span>{/if}
+        </button>
+        <button
+            type="button"
+            class="lv-qc-mand-pill"
+            class:lv-qc-mand-ok={answerCheck.ready}
+            class:lv-qc-mand-err={!answerCheck.ready}
+            onclick={() => {
+                if (answerCheck.focusField === "a") aTextareaEl?.focus();
+                else if (answerCheck.focusField === "q") qTextareaEl?.focus();
+            }}
+            title={answerCheck.ready ? "答案要素就绪" : "点击完善答案要素"}
+        >
+            {#if answerCheck.ready}<LvIcon name="check" size={11} /> <span>{answerCheck.readyLabel}</span>{:else}<span>⚠️ {answerCheck.label}</span>{/if}
+        </button>
+        {#if !isAllMandatorySatisfied}
+            <span class="lv-qc-mand-status">{t.quickCardMandatoryPending ?? "需满足上述要素方可制卡"}</span>
+        {:else}
+            <span class="lv-qc-mand-status lv-qc-mand-status--ready"><LvIcon name="check" size={12} /> {t.quickCardMandatoryReady ?? "要素齐全，可立即制卡"}</span>
+        {/if}
+    </div>
+
+    <!-- 智能试题文本拆单卡片 -->
+    {#if smartPasteModalOpen}
+        <div class="lv-qc-smart-paste-card" role="dialog" aria-label={t.quickCardSmartSplitModalTitle ?? "智能试题文本拆单与识别填入"}>
+            <div class="lv-qc-smart-paste-head">
+                <span class="lv-qc-smart-paste-title">
+                    <LvIcon name="zap" size={14} /> <strong>{t.quickCardSmartSplitModalTitle ?? "智能试题文本拆单与识别填入"}</strong>
+                </span>
+                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => (smartPasteModalOpen = false)}>
+                    <LvIcon name="close" size={12} />
+                </button>
+            </div>
+            <textarea
+                class="b3-text-field fn__block lv-qc-smart-paste-input"
+                bind:value={smartPasteInputText}
+                placeholder={t.quickCardSmartSplitModalPlaceholder ?? "直接粘贴整段试题文本（支持任意排版：单选、多选、判断、填空、问答，自动拆分题干、A/B/C/D 选项、答案与解析）"}
+                rows="4"
+            ></textarea>
+            <div class="lv-qc-smart-paste-foot">
+                <button
+                    type="button"
+                    class="b3-button b3-button--small lv-btn-primary"
+                    disabled={!smartPasteInputText.trim()}
+                    onclick={() => applySmartSplit(smartPasteInputText)}
+                >
+                    <LvIcon name="zap" size={12} /> <span>{t.quickCardSmartSplitApply ?? "一键智能拆分填入"}</span>
+                </button>
+                <span class="ft__smaller ft__on-surface">粘贴后自动识别题型并分发到各输入框</span>
+            </div>
+        </div>
+    {/if}
     {#if activeDoc && activeDoc.docId}
         <div class="lv-qc-doc-banner" role="group" aria-label={t.quickCardDocLink ?? "来源文档联动"}>
             <div class="lv-qc-doc-info">
@@ -567,10 +780,20 @@
     {/if}
     <div class="lv-qc-content">
         <section class="lv-qc-editor" aria-label={t.quickCardEditorLabel}>
-            <label class="lv-qc-field">
+            <div class="lv-qc-field">
                 <div class="lv-qc-label-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                     <span class="lv-qc-label">{t.quickCardQ} <span class="lv-qc-count" class:lv-qc-count-warn={q.length > 60}>{q.length} 字</span></span>
                     <span style="display: inline-flex; gap: 6px; align-items: center;">
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            aria-label={t.quickCardSmartSplit ?? "智能拆单"}
+                            title={t.quickCardSmartSplitTip ?? "粘贴包含题干、选项与答案的整段文本，一键智能拆分填入"}
+                            onclick={(e) => { e.stopPropagation(); smartPasteModalOpen = !smartPasteModalOpen; }}
+                        >
+                            <LvIcon name="zap" size={12} />
+                            <span>{t.quickCardSmartSplit ?? "智能拆单"}</span>
+                        </button>
                         {#if template === "cloze"}
                             <button
                                 type="button"
@@ -598,6 +821,41 @@
                         {/if}
                     </span>
                 </div>
+                <!-- 快捷数理、拼音与格式工具栏 -->
+                <div class="lv-qc-symbol-dock" role="toolbar" aria-label="快捷符号工具条">
+                    <div class="lv-qc-symbol-tabs" role="tablist">
+                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "math"} onclick={() => (symbolTab = "math")}>{t.quickCardSymbolMath ?? "数理"}</button>
+                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "pinyin"} onclick={() => (symbolTab = "pinyin")}>{t.quickCardSymbolPinyin ?? "拼音"}</button>
+                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "format"} onclick={() => (symbolTab = "format")}>{t.quickCardSymbolFormat ?? "格式"}</button>
+                    </div>
+                    <div class="lv-qc-symbol-chips">
+                        {#if symbolTab === "math"}
+                            <button type="button" class="lv-chip-tool" title="上标 x²" aria-label="上标 x²" onclick={() => insertSnippet("x^2")}>x²</button>
+                            <button type="button" class="lv-chip-tool" title="根号 √x" aria-label="根号 √x" onclick={() => insertSnippet("\\sqrt{x}")}>√x</button>
+                            <button type="button" class="lv-chip-tool" title="分式 a/b" aria-label="分式 a/b" onclick={() => insertSnippet("\\frac{a}{b}")}>a/b</button>
+                            <button type="button" class="lv-chip-tool" title="求和 ∑" aria-label="求和 ∑" onclick={() => insertSnippet("\\sum_{i=1}^n")}>∑</button>
+                            <button type="button" class="lv-chip-tool" title="积分 ∫" aria-label="积分 ∫" onclick={() => insertSnippet("\\int")}>∫</button>
+                            <button type="button" class="lv-chip-tool" title="圆周率 π" aria-label="圆周率 π" onclick={() => insertSnippet("\\pi")}>π</button>
+                            <button type="button" class="lv-chip-tool" title="正负号 ±" aria-label="正负号 ±" onclick={() => insertSnippet("\\pm")}>±</button>
+                            <button type="button" class="lv-chip-tool" title="小于等于 ≤" aria-label="小于等于 ≤" onclick={() => insertSnippet("\\le")}>≤</button>
+                            <button type="button" class="lv-chip-tool" title="大于等于 ≥" aria-label="大于等于 ≥" onclick={() => insertSnippet("\\ge")}>≥</button>
+                            <button type="button" class="lv-chip-tool" title="无穷大 ∞" aria-label="无穷大 ∞" onclick={() => insertSnippet("\\infty")}>∞</button>
+                            <button type="button" class="lv-chip-tool" title="希腊字母 α" aria-label="希腊字母 α" onclick={() => insertSnippet("\\alpha")}>α</button>
+                            <button type="button" class="lv-chip-tool" title="希腊字母 β" aria-label="希腊字母 β" onclick={() => insertSnippet("\\beta")}>β</button>
+                        {:else if symbolTab === "pinyin"}
+                            {#each ["ā", "á", "ǎ", "à", "ō", "ó", "ǒ", "ò", "ē", "é", "ě", "è", "ī", "í", "ǐ", "ì", "ū", "ú", "ǔ", "ù", "ǖ", "ǘ", "ǚ", "ǜ"] as py (py)}
+                                <button type="button" class="lv-chip-tool" aria-label={`拼音 ${py}`} onclick={() => insertSnippet(py)}>{py}</button>
+                            {/each}
+                        {:else if symbolTab === "format"}
+                            <button type="button" class="lv-chip-tool" title="挖空标记" aria-label="挖空标记" onclick={() => insertSnippet("==答案==")}>==挖空==</button>
+                            <button type="button" class="lv-chip-tool" title="加粗" aria-label="加粗" onclick={() => insertSnippet("**加粗**")}>**粗体**</button>
+                            <button type="button" class="lv-chip-tool" title="行内代码" aria-label="行内代码" onclick={() => insertSnippet("`代码`")}>`代码`</button>
+                            <button type="button" class="lv-chip-tool" title="行内公式" aria-label="行内公式" onclick={() => insertSnippet("$公式$")}>$公式$</button>
+                            <button type="button" class="lv-chip-tool" title="块级公式" aria-label="块级公式" onclick={() => insertSnippet("\n$$\n公式\n$$\n")}>$$公式块$$</button>
+                            <button type="button" class="lv-chip-tool" title="引用" aria-label="引用" onclick={() => insertSnippet("> ")}>&gt; 引用</button>
+                        {/if}
+                    </div>
+                </div>
                 <textarea
                     bind:this={qTextareaEl}
                     class="b3-text-field fn__block"
@@ -607,6 +865,7 @@
                     placeholder={template === "cloze" ? t.quickCardClozeHint : t.quickCardQ}
                     disabled={busy}
                     spellcheck="false"
+                    onfocus={() => (lastFocusedField = "q")}
                     onkeydown={(e) => {
                         if (template === "cloze" && (e.ctrlKey || e.metaKey) && (e.key === "h" || e.key === "H")) {
                             e.preventDefault();
@@ -615,8 +874,22 @@
                         }
                     }}
                 ></textarea>
+                {#if q.length > 15 && (/(?:^|\n)\s*[A-D][.、:：\s]/m.test(q) || /(?:答案|解析)[:：]/i.test(q) || /[（(]\s*[A-D√×对错]\s*[)）]/.test(q))}
+                    <div class="lv-qc-split-prompt" role="alert">
+                        <span class="lv-qc-split-prompt-text">
+                            <LvIcon name="zap" size={13} /> {t.quickCardSmartSplitPrompt ?? "检测到题干中包含选项或答案内容"}
+                        </span>
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small lv-btn-primary"
+                            onclick={() => applySmartSplit(q)}
+                        >
+                            ⚡ {t.quickCardSmartSplitApply ?? "一键自动拆分到各选项与答案"}
+                        </button>
+                    </div>
+                {/if}
                 {#if template === "cloze"}<div class="ft__smaller ft__on-surface lv-qc-help">{t.quickCardClozeHint}</div>{/if}
-            </label>
+            </div>
             {#if template === "choice"}
                 <!-- R59 选择/判断题专属样态：模式切换 + 选项行 + 正确项点选 + 解析 -->
                 <div class="lv-qc-choice-modes" role="group" aria-label={t.quickCardChoiceModeLabel ?? "题型"}>
@@ -677,13 +950,15 @@
                         <span class="lv-qc-label">{t.quickCardA} <span class="lv-qc-count" class:lv-qc-count-warn={a.length > 120}>{a.length} 字</span></span>
                     </div>
                     <textarea
+                        bind:this={aTextareaEl}
                         class="b3-text-field fn__block"
                         aria-label={t.quickCardA}
                         rows="4"
                         bind:value={a}
-                        placeholder={template === "superblock" ? (t.quickCardSuperBlockHint ?? "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块") : t.quickCardA}
+                        placeholder={template === "superblock" ? (t.quickCardSuperBlockHint ?? "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块") : template === "formula" ? "输入公式表达式（如 E = mc^2）与推导解析" : t.quickCardA}
                         disabled={busy}
                         spellcheck="false"
+                        onfocus={() => (lastFocusedField = "a")}
                     ></textarea>
                 </label>
             {/if}
@@ -701,6 +976,8 @@
                     <p class="lv-qc-guidance-extra">{t.quickCardChoiceHint ?? "小提示：题面里按「A. … B. … C. … D. …」列出选项，复习时也能自动识别为可点击的选择题；也可以用「选择题」模板结构化编辑。"}</p>
                 {:else if template === "cloze"}
                     <p class="lv-qc-guidance-extra">{t.quickCardClozeMoreHint ?? "小提示：一段话里挖 1–2 个关键词最有效；挖空越多，回忆线索越少。"}</p>
+                {:else if template === "formula"}
+                    <p class="lv-qc-guidance-extra">{t.quickCardFormulaHint ?? "小提示：支持 $E=mc^2$ 行内公式或独立公式块，复习时自动 KaTeX 高保真渲染。"}</p>
                 {:else}
                     <p class="lv-qc-guidance-extra">{t.quickCardSuperMoreHint ?? "小提示：适合「一题多问」或分步骤的推导；每个问答对会生成独立卡片。"}</p>
                 {/if}
@@ -715,6 +992,7 @@
                         {:else if template === "qa" && isBidirectional}<LvIcon name="swap" size={14} /> {t.cardTypeBadgeBidi ?? "双向"}
                         {:else if template === "superblock"}<LvIcon name="cards" size={14} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}
                         {:else if template === "cloze"}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
+                        {:else if template === "formula"}<LvIcon name="code" size={14} /> {t.quickCardTemplateFormula ?? "公式"}
                         {:else}<LvIcon name="message" size={14} /> {t.cardTypeBadgeQA ?? "问答"}
                         {/if}
                     </span>
@@ -1278,4 +1556,156 @@
         opacity: 0.9;
     }
     .lv-quickcard .b3-dialog__action { justify-content: flex-end; }
+    .lv-qc-mand-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: var(--lv-sp-3);
+        padding: 6px 12px;
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-m);
+        font-size: var(--lv-type-caption-size);
+    }
+    .lv-qc-mand-title {
+        font-weight: var(--lv-fw-semibold);
+        color: var(--lv-color-text-muted);
+    }
+    .lv-qc-mand-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: var(--lv-r-tag);
+        font-size: 11px;
+        border: 1px solid var(--lv-border);
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .lv-qc-mand-ok {
+        border-color: color-mix(in srgb, var(--lv-color-success) 40%, transparent);
+        background: color-mix(in srgb, var(--lv-color-success) 10%, transparent);
+        color: var(--lv-color-success);
+        font-weight: var(--lv-fw-medium);
+    }
+    .lv-qc-mand-err {
+        border-color: color-mix(in srgb, var(--lv-color-danger) 40%, transparent);
+        background: color-mix(in srgb, var(--lv-color-danger) 10%, transparent);
+        color: var(--lv-color-danger);
+    }
+    .lv-qc-mand-status {
+        margin-left: auto;
+        color: var(--lv-color-text-muted);
+        font-size: 11px;
+    }
+    .lv-qc-mand-status--ready {
+        color: var(--lv-color-success);
+        font-weight: var(--lv-fw-medium);
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .lv-qc-smart-paste-card {
+        margin-bottom: var(--lv-sp-3);
+        padding: 12px 14px;
+        background: color-mix(in srgb, var(--lv-primary-soft) 30%, var(--lv-color-surface));
+        border: 1px solid var(--lv-primary-border);
+        border-radius: var(--lv-r-m);
+        box-shadow: var(--lv-shadow-1);
+    }
+    .lv-qc-smart-paste-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+    .lv-qc-smart-paste-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--lv-color-brand);
+        font-size: var(--lv-type-control-size);
+    }
+    .lv-qc-smart-paste-input {
+        margin-bottom: 8px;
+        resize: vertical;
+    }
+    .lv-qc-smart-paste-foot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .lv-qc-symbol-dock {
+        margin-bottom: 6px;
+        padding: 4px 8px;
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-s);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+    }
+    .lv-qc-symbol-tabs {
+        display: inline-flex;
+        gap: 2px;
+        border-right: 1px solid var(--lv-border);
+        padding-right: 6px;
+        flex-shrink: 0;
+    }
+    .lv-qc-symbol-tab-btn {
+        padding: 2px 6px;
+        font-size: 11px;
+        border: none;
+        background: transparent;
+        color: var(--lv-color-text-muted);
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .lv-qc-symbol-tab-active {
+        background: var(--lv-primary-soft);
+        color: var(--lv-color-brand);
+        font-weight: var(--lv-fw-bold);
+    }
+    .lv-qc-symbol-chips {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    .lv-chip-tool {
+        padding: 1px 6px;
+        font-size: 11px;
+        border: 1px solid var(--lv-border);
+        background: var(--lv-color-surface);
+        color: var(--lv-color-text);
+        border-radius: 4px;
+        cursor: pointer;
+        flex-shrink: 0;
+        &:hover {
+            border-color: var(--lv-color-brand);
+            color: var(--lv-color-brand);
+        }
+    }
+    .lv-qc-split-prompt {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 6px;
+        padding: 6px 10px;
+        background: color-mix(in srgb, var(--lv-primary-soft) 25%, var(--lv-color-surface));
+        border: 1px dashed var(--lv-primary-border);
+        border-radius: var(--lv-r-s);
+    }
+    .lv-qc-split-prompt-text {
+        font-size: 12px;
+        color: var(--lv-color-text);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
 </style>
