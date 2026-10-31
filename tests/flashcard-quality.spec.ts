@@ -5,12 +5,31 @@ import {
     hasMarkedAnswer,
     hasMeaningfulPrompt,
     hasQuestionContent,
+    parseSuperBlockMarkdown,
     serializeQaCard,
     validateFlashcardMarkdown,
     validateQaDraft,
 } from "../src/core/flashcard-quality";
 
 describe("flashcard-quality", () => {
+    it("accepts SiYuan SuperBlock QA markdown ({{{row / {{{col) with >=2 child blocks and rejects malformed ones", () => {
+        // 回归 W-06：超级块模板制卡（quick-card.svelte）与维护中心坏卡扫描不得将合法超级块问答卡误判为缺 ==答案==
+        const validCol = "{{{col\n什么是细胞呼吸？\n\n有机物在细胞内氧化分解并释放能量的过程。\n}}}";
+        const validRow = "{{{row\n近代史问题 1：第 1 次改革发生在哪一年？\n{: id=\"20261031000001-aaaaaaa\"}\n\n答案：1840 年。\n{: id=\"20261031000002-bbbbbbb\"}\n}}}\n{: id=\"20261031000000-ccccccc\"}";
+        expect(parseSuperBlockMarkdown(validCol)).toEqual({
+            question: "什么是细胞呼吸？",
+            answers: ["有机物在细胞内氧化分解并释放能量的过程。"],
+        });
+        expect(validateFlashcardMarkdown(validCol)).toBeNull();
+        expect(hasQuestionContent(validCol)).toBe(true);
+        expect(validateFlashcardMarkdown(validRow)).toBeNull();
+        expect(hasQuestionContent(validRow)).toBe(true);
+
+        // 仅 1 个子块（无背面答案）或题干仅标点、或内部挖空未闭合，必须拦截
+        expect(validateFlashcardMarkdown("{{{col\n只有题干没有答案子块\n}}}")).toBe("missing-answer");
+        expect(hasQuestionContent("{{{col\n???\n\n有效答案\n}}}")).toBe(false);
+        expect(validateFlashcardMarkdown("{{{col\n题干 ==未闭合\n\n有效答案\n}}}")).toBe("invalid-markup");
+    });
     it("requires a non-empty prompt and answer and reserves == for serialization", () => {
         expect(validateQaDraft("", "answer")).toContain("empty-question");
         expect(validateQaDraft("question", " ")).toContain("empty-answer");

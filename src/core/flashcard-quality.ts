@@ -85,21 +85,71 @@ export function concealUnmarkedText(text: string): string {
         .join(" ");
 }
 
+/**
+ * 解析思源超级块闪卡 Markdown（`{{{row` 或 `{{{col` ... `}}}`）。
+ * 遵循思源原生超级块闪卡规范：第 1 个非空子块为正面题干，第 2 个及后续非空子块为背面答案；
+ * 分隔空行时跳过围栏代码块与多行公式块内部的空行，并剥离行级 `{: ...}` IAL 属性。
+ */
+export function parseSuperBlockMarkdown(markdown: string): { question: string; answers: string[] } | null {
+    const trimmed = String(markdown ?? "").trim().replace(/\r\n/g, "\n");
+    const match = trimmed.match(/^\{\{\{(?:row|col)\b[^\n]*\n([\s\S]*?)\n\}\}\}(?:\s*\{:[^}\n]*\})?$/);
+    if (!match) return null;
+
+    const blocks: string[] = [];
+    let current: string[] = [];
+    let fence: string | null = null;
+
+    for (const line of match[1].split("\n")) {
+        const t = line.trim();
+        if (!fence && /^\{:\s[^}]*\}$/.test(t)) continue;
+        const fenceMatch = t.match(/^(```+|~~~+|\$\$)/);
+        if (fenceMatch) {
+            const token = fenceMatch[1].slice(0, 2);
+            if (!fence) fence = token;
+            else if (fence === token) fence = null;
+            current.push(line);
+            continue;
+        }
+        if (!fence && t === "") {
+            const joined = current.join("\n").trim();
+            if (joined) blocks.push(joined);
+            current = [];
+            continue;
+        }
+        current.push(line);
+    }
+    const tail = current.join("\n").trim();
+    if (tail) blocks.push(tail);
+
+    if (blocks.length < 2) return null;
+    return { question: blocks[0], answers: blocks.slice(1) };
+}
+
 export function validateFlashcardMarkdown(markdown: string): "empty-card" | "missing-answer" | "invalid-markup" | null {
     const text = String(markdown ?? "").trim();
     if (!text) return "empty-card";
     const hasDelimiter = text.includes("==");
-    if (!hasMarkedAnswer(text)) return hasDelimiter ? "invalid-markup" : "missing-answer";
-    return null;
+    if (hasDelimiter) {
+        return hasMarkedAnswer(text) ? null : "invalid-markup";
+    }
+    const sb = parseSuperBlockMarkdown(text);
+    if (sb && sb.answers.some(ans => hasMeaningfulPrompt(ans) || hasImageContent(ans))) {
+        return null;
+    }
+    return "missing-answer";
 }
 
 /**
  * 判断挖空答案之外是否仍有可呈现的问题内容。
  * 纯 `==答案==` 或只有空白/排版标记、纯标点符号占位的块不能作为普通闪卡入组；
- * 保护合法公式、代码与短术语；图片卡要求有效资源地址。
+ * 保护合法公式、代码与短术语；图片卡要求有效资源地址；超级块以首子块作为问题态内容。
  */
 export function hasQuestionContent(markdown: string): boolean {
     const text = String(markdown ?? "");
+    const sb = parseSuperBlockMarkdown(text);
+    if (sb && !text.includes("==")) {
+        return hasImageContent(sb.question) || hasMeaningfulPrompt(sb.question);
+    }
     const withoutAnswers = text.replace(/==[\s\S]*?==/g, " ");
     const hasMedia = hasQuestionMediaContent(text);
     return hasMedia || hasMeaningfulPrompt(withoutAnswers);

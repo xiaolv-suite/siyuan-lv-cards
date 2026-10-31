@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.220.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.221.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -19,18 +19,18 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.220.0 (Latest)
-* **Card creation and image occlusion blockers fixed**: creating a second card in the same notebook no longer fails with "document path is ambiguous"; onboarding sample cards are no longer rejected as empty; image-occlusion cards are masked again during review; editing an existing occlusion card keeps its saved masks; sample cards no longer show internal markers and occlusion masks are fully opaque.
-* **Settings take effect, challenge mode no longer spoils answers**: custom card CSS, check-in link and leech threshold now reach the review view; custom CSS is scoped to the card face; the default leech threshold is unified at 8 lapses; timed challenge shows the question first and reveals the answer with V.
-* **Half-finished entries cleaned up & occlusion controls improved**: added numbered mask chips for single-click deletion and a preset mask button in the occlusion editor; fixed version-acceptance refresh/error feedback and `.lvcards` conflict strategy selection; removed the unused settings exam-date field and hid unwired misconception/secondary-derive panels.
+### v0.221.0 (Latest)
+* **Fixed SuperBlock QA authoring & maintenance false positives**: SuperBlock QA cards (`{{{row` / `{{{col`) now pass card-entry validation cleanly—fixing Quick Card's SuperBlock template, native SuperBlock deck enrollment, Card Library filtering, and false broken-card flags in Maintenance.
+* **Archived 42 unreachable experimental modules & aligned docs**: Moved 42 unwired core modules (10,360 lines) and their unit tests to `archive/`, removed phantom settings rows, and aligned bilingual shortcut references with real runtime behavior—completing Stage A (Trustworthiness).
 
 <details>
-<summary>📜 View Historical Releases (v0.219.0 ~ v0.210.0)</summary>
+<summary>📜 View Historical Releases (v0.220.0 ~ v0.210.0)</summary>
 
+* **v0.220.0**: Fixed second-card "document path is ambiguous" errors, onboarding sample-card empty false positives, image-occlusion target/opacity/edit-readback bugs, review settings forwarding, scoped custom card CSS, timed-challenge answer masking, version-acceptance refresh, and `.lvcards` conflict strategy selection.
 * **v0.219.0**: Undo no longer rolls back historical revlog entries for skipped/requeued/Cram cards; `Ctrl+D` dismissal can be undone; Cram sessions isolated from formal daily state; starred-card persistence, dismissed-card filtering and done-screen targeted Cram.
 * **v0.218.0**: Added Leech card warning banner, H-key graded cueing, breadcrumb block locator, sibling card dispersal, 7-day workload forecast bar chart, Cram quick review, and R54 design system refinement.
 * **v0.217.0**: Landed 22-slot immutable snapshot persistence queue, cross-tab deck scope propagation, incremental revlog rollback, and global command registration.
-* **v0.212.4**: Added scalar numeric answer policy, presentation privacy mode, `.lvcards` diff inspector, and misconception cluster panel.
+* **v0.212.4**: Added presentation privacy mode, review card source breadcrumbs, and `.lvcards` diff inspector (unwired experimental modules such as scalar numeric policy have been moved to `archive/`).
 * See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
 </details>
@@ -114,7 +114,7 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 | :--- | :--- |
 | **Today's Action (Today)** | Daily launchpad: Displays cards due today, goal ring, dark streak card, weekly activity grid, deck quick access, and dormant uncarded knowledge block discovery. |
 | **Card Library (Library)** | Full-library search, status filters (New/Review/Due), card-type filters (QA/Cloze/SuperBlock), starred flags, batch add/move/delete, and CSV/Obsidian export. |
-| **Card Detail Drawer** | Slides out from any card: Content preview & real-time markdown editing, source block jump with diff comparison, review history log, version snapshots, knowledge objects (KO), and relation graphs. |
+| **Card Detail Drawer** | Slides out from any card: Content preview & real-time markdown editing, source block jump with diff comparison, review history log, version snapshots, knowledge object (KO) inspection, and relation graphs. |
 | **Authoring Studio (Studio)** | **Manual Authoring**: QA/Cloze/SuperBlock templates with live card face rendering;<br>**AI Wizard**: Material import, preflight consent modal, academic prompt templates, per-candidate vetting, and flashcard quality gates;<br>**Repair Drill**: Interactive tutorial teaching how to repair ambiguous cards. |
 | **Learning & Calendar** | **Recap**: 7-day trend charts and recent logs;<br>**Goals**: Exam target dates and daily quotas;<br>**Calendar**: Monthly heatmaps, future 30-day forecast load calendar, and date-level drilldowns. |
 | **Recovery Center** | Consolidates interrupted review sessions, pending inbox items, unfinished AI jobs, and suspended cards with 1-click restore. |
@@ -165,13 +165,16 @@ All shortcuts can be customized in SiYuan under **Settings → Shortcuts**:
 * **`2`**: Rate **Hard**
 * **`3`**: Rate **Good**
 * **`4`**: Rate **Easy** (in 4-button mode)
-* **`Ctrl+Z` / `⌘+Z`**: **Undo last rating** (rolls back queue, counters, and returns to previous card)
-* **`Ctrl+O` / `⌘+O`**: **Jump to source** (opens original note block in SiYuan editor)
-* **`Ctrl+E` / `⌘+E`**: Edit card text inline on the review card
-* **`Ctrl+K` / `⌘+K` / `F`**: Open quick reschedule modal (postpone target date)
-* **`Ctrl+D` / `⌘+D`**: Dismiss / archive current card immediately
-* **`h`**: Advance Hint Ladder (Target $\to$ Keyword $\to$ Context $\to$ Answer)
-* **`Esc`**: Pause review and safely return to Today (session state preserved)
+* **`p` / `q`**: **Undo last action** (rolls back queue, counters, dismissal state, and returns to previous card)
+* **`*`**: **Star / unstar current card** (syncs with Card Library starred filter)
+* **`x` / `0`**: **Skip current card** (excluded from current session without rating)
+* **`s`**: **Suspend for today** (postpones until tomorrow)
+* **`e` / `E`**: **Jump to source** (opens original note block in SiYuan editor)
+* **`m`**: Edit mnemonic memo for current card (syncs back to source block)
+* **`f`**: Open quick reschedule modal (postpone due date)
+* **`Ctrl+D` / `⌘+D`**: Dismiss / archive current card immediately (undoable via `p`/`q`)
+* **`h` / `H`**: Advance Hint Ladder (Target $\to$ Keyword $\to$ Context $\to$ Answer)
+* **`[`**: Peek at the previously answered card
 
 ### 3. Library & List Shortcuts
 * **`↑` / `↓`**: Navigate and highlight card rows
@@ -183,8 +186,8 @@ All shortcuts can be customized in SiYuan under **Settings → Shortcuts**:
 
 ## ❓ Frequently Asked Questions (FAQ)
 
-### Q1: I misrated a card by accident. How do I undo?
-* **Answer**: Press **`Ctrl+Z` (or `⌘+Z` on Mac)** or click the "Undo" button. The previous card is immediately restored to your screen, counter statistics roll back, and your session resumes seamlessly. Note that because SiYuan's native kernel API does not provide a rating cancellation endpoint, re-rating will apply your corrected score.
+### Q1: I misrated or dismissed a card by accident. How do I undo?
+* **Answer**: Press **`p` or `q`** or click the "Undo" button on the top toolbar. The previous card is immediately restored to your screen, dismissal state and counter statistics roll back, and your session resumes seamlessly. Note that because SiYuan's native kernel API does not provide a rating cancellation endpoint, re-rating will apply your corrected score.
 
 ### Q2: If I switch computers or reinstall SiYuan, will my cards and logs survive?
 * **Answer**: Yes, completely. Lv Cards is **local-first**:

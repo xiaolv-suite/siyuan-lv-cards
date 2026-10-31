@@ -208,7 +208,7 @@
             if (cardTypeFilter === "outline-cloze") {
                 arr = arr.filter(b => (b.content?.includes("NodeList") || b.content?.includes("<ul") || b.content?.includes("<ol") || b.content?.includes("NodeListItem")) && (b.content?.includes("lv-masked") || b.content?.includes("data-type=\"mark\"")));
             } else if (cardTypeFilter === "superblock") {
-                arr = arr.filter(b => b.content?.includes("NodeSuperBlock") || b.content?.includes("data-type=\"NodeSuperBlock\"") || b.content?.includes("{{{col"));
+                arr = arr.filter(b => b.content?.includes("NodeSuperBlock") || b.content?.includes("data-type=\"NodeSuperBlock\"") || b.content?.includes("{{{col") || b.content?.includes("{{{row"));
             }
             if (sortMode === "path") {
                 return [...arr].sort((a, b) => ((a.hPath as string) ?? "").localeCompare((b.hPath as string) ?? ""));

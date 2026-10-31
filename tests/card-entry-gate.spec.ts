@@ -88,10 +88,14 @@ describe("card-entry-gate", () => {
             { blockID: "colon", markdown: "TCP 三次握手 :: 确认连接" },
             { blockID: "qa-prefix", markdown: "Q: 什么是闭包？\nA: 访问外部作用域的函数" },
             { blockID: "memo", markdown: "光合作用的产物", attrs: { memo: "葡萄糖和氧气" } },
+            { blockID: "superblock", markdown: "{{{row\n什么是突触？\n\n神经元之间传递信息的结构。\n}}}" },
+            { blockID: "superblock-single", markdown: "{{{col\n只有正面块\n}}}" },
         ])).toEqual([
             { blockID: "colon", ok: true, kind: "markdown" },
             { blockID: "qa-prefix", ok: true, kind: "markdown" },
             { blockID: "memo", ok: true, kind: "memo-qa" },
+            { blockID: "superblock", ok: true, kind: "markdown" },
+            { blockID: "superblock-single", ok: false, issue: "missing-answer" },
         ]);
     });
 
