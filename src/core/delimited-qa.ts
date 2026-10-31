@@ -8,7 +8,7 @@
  * 4. 纯文本卡（自由回忆/自评卡）
  */
 
-export type DelimitedQaFormat = "triple-colon" | "double-colon" | "qa-prefix" | "qa-chinese" | "dash";
+export type DelimitedQaFormat = "triple-colon" | "double-colon" | "qa-prefix" | "qa-chinese" | "dash" | "anki-cloze";
 
 export interface DelimitedQaResult {
     question: string;
@@ -20,7 +20,7 @@ const INLINE_OR_BLOCK_CODE = /```[\s\S]*?```|`[^`\n]+`/g;
 const LATEX_MATH = /\$\$[\s\S]*?\$\$|\$[^$\n]+?\$/g;
 
 /**
- * 尝试解析带分隔符的问答文本（::: 或 :: 或 Q/A 前缀）
+ * 尝试解析带分隔符的问答文本（::: 或 :: 或 Q/A 前缀，或 Anki {{c1::...}} 挖空）
  * 严格排除 C++ std::cout 命名空间及代码块中的混淆
  */
 export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
@@ -29,6 +29,18 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
 
     // 已包含标准 ==答案== 的优先交由挖空/问答门禁处理
     if (raw.includes("==")) return null;
+
+    // 0. Anki 风格挖空兼容：{{c1::答案}} 或 {{c1::答案::提示}}
+    const ankiMatch = raw.match(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/);
+    if (ankiMatch && ankiMatch[1]?.trim()) {
+        const question = raw.replace(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g, (_, _ans, hint) => `［${hint || "…"}］`);
+        const answer = ankiMatch[1].trim();
+        return {
+            question,
+            answer,
+            format: "anki-cloze",
+        };
+    }
 
     // 排除纯代码或公式段落
     const strippedCodeAndMath = raw
@@ -148,6 +160,28 @@ export function maskDelimitedQaInHtml(root: Node): boolean {
 
         const text = node.nodeValue ?? "";
 
+        // 0.2 匹配 Anki 风格挖空 {{c1::答案}} 或 {{c1::答案::提示}}
+        const ankiMatch = text.match(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/);
+        if (ankiMatch && ankiMatch.index !== undefined) {
+            const before = text.slice(0, ankiMatch.index);
+            const answerText = ankiMatch[1].trim();
+            const hintText = (ankiMatch[2] ?? "").trim() || "Anki 挖空";
+            const after = text.slice(ankiMatch.index + ankiMatch[0].length);
+            const slot = document.createElement("mark");
+            slot.className = "lv-masked";
+            slot.setAttribute("data-type", "mark");
+            slot.setAttribute("aria-hidden", "true");
+            slot.title = `Anki 挖空（点击揭晓）：${answerText}`;
+            slot.innerHTML = `<span class="lv-mask-slot">［ ${hintText} ］</span>`;
+
+            node.nodeValue = before;
+            const afterNode = document.createTextNode(after);
+            parent.insertBefore(slot, node.nextSibling);
+            parent.insertBefore(afterNode, slot.nextSibling);
+            modified = true;
+            continue;
+        }
+
         // 0.5 匹配填空题中连续下划线填空槽，如 _____ 或 ____（3 个及以上下划线）
         const blankMatch = text.match(/_{3,}/);
         if (blankMatch && blankMatch.index !== undefined) {
@@ -223,6 +257,15 @@ export function upgradeLegacyCardToStandard(markdown: string, memo?: string): { 
 
     // 已具备 ==答案== 的不需要重复转换
     if (text.includes("==")) return null;
+
+    // 0. 优先支持 Anki 风格挖空 {{c1::答案}} 升级为标准 ==答案==
+    if (/\{\{c\d+::/.test(text)) {
+        const upgraded = text.replace(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g, "==$1==");
+        return {
+            markdown: upgraded,
+            reason: "将 Anki 挖空语法升级为思源标准闪卡挖空标记",
+        };
+    }
 
     // 1. 优先尝试解析分隔符问答（:: 或 Q/A）
     const qa = parseDelimitedQa(text);

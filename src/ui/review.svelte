@@ -378,6 +378,7 @@
     let typingInput = $state("");
     let typingGrade = $state<{ chars: { ch: string; ok: boolean }[]; suggested: Rating1to4; isTypo?: boolean } | null>(null);
     let expectedText = $state("");
+    let currentRiffTitle = $state("");
     // 评分音效（M 组 P2，Web Audio 合成）
     let audioCtx: AudioContext | null = null;
     let activeUtterance: SpeechSynthesisUtterance | null = null;
@@ -684,6 +685,7 @@
                     cardMemo = meta.cardMemo;
                     memoDraft = cardMemo;
                     expectedText = meta.expectedText;
+                    currentRiffTitle = meta.customRiffTitle ?? "";
                     answerCache.set(blockID, expectedText);
 
                     interactiveQuiz = parseInteractiveQuiz({
@@ -2385,6 +2387,7 @@
                 {selectedChoiceKeys}
                 {userJudgeChoice}
                 {typingInput}
+                customRiffTitle={currentRiffTitle}
                 cardFontScale={eff().cardFontScale}
                 customCardCss={eff().customCardCss}
                 {faceHints}

@@ -423,10 +423,11 @@ export interface CardAttrsMetadata<TOccl = any> {
     cardMemo: string;
     isCustomPluginAnswer: boolean;
     expectedText: string;
+    customRiffTitle: string;
 }
 
 /**
- * 从块属性中解析遮挡数据与助记/插件自定义答案
+ * 从块属性中解析遮挡数据与助记/插件自定义答案（包含闪卡工具箱 custom-riff-title 自定义题面）
  */
 export function parseCardAttrsMetadata<TOccl = any>(
     attrs: Record<string, string>,
@@ -438,6 +439,7 @@ export function parseCardAttrsMetadata<TOccl = any>(
     const occlusion = parseOcclusionFn(attrs);
     const customAnswer = String(attrs["custom-card-answer"] || attrs["custom-flashcard-answer"] || attrs["custom-exam-answer"] || "").trim();
     const memo = String(attrs.memo || attrs["custom-card-memo"] || attrs["custom-memo"] || attrs["custom-exam-analysis"] || "").trim();
+    const customRiffTitle = String(attrs["custom-riff-title"] || attrs["custom-card-title"] || "").trim();
     const isCustomPluginAnswer = Boolean(customAnswer);
     const cardMemo = customAnswer || memo;
     let expectedText = currentExpectedText;
@@ -451,6 +453,7 @@ export function parseCardAttrsMetadata<TOccl = any>(
         cardMemo,
         isCustomPluginAnswer,
         expectedText,
+        customRiffTitle,
     };
 }
 

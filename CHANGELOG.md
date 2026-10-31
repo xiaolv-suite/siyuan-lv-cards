@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.228.0 2026-11-01 · 思源闪卡生态插件格式深度兼容（Anki挖空、自定义题面标题、多卡包逗号映射与内置默认卡包）
+
+- **新增 (Added)**：
+  - **思源闪卡生态插件格式兼容调研与实施规范（`docs/59-思源闪卡生态插件格式兼容调研与实施规范-2026-11-01.md`）**：全景逆向并梳理思源笔记官方内核闪卡、SiYuanMemo (CDF 框架)、Flashcard Assistant (ZY)、Flashcard Toolbox、Highlight Cloze、Sy-Recite 以及 Anki/Obsidian 互通语法；
+  - **Anki 风格挖空格式兼容（`src/core/delimited-qa.ts`）**：支持运行时解析与内存遮罩 `{{c1::答案}}` 与 `{{c1::答案::提示}}`，并在卡片维护中心支持一键规范化升级为标准 `==答案==` 标记；
+  - **闪卡工具箱自定义题面标题兼容（`src/core/card-face.ts` & `src/ui/review/ReviewCardBody.svelte`）**：支持读取 `custom-riff-title` 与 `custom-card-title` 块属性，在复习卡面以长春花目标徽章高亮呈现自定义题面；
+  - **思源内核多卡包逗号分隔规范与默认卡包识别（`src/core/deck-management.ts`）**：精准提取 `custom-riff-decks="d1,d2"` 逗号分隔多卡包映射，自动识别官方内置默认卡包（`20230218211946-2kw8jgx`），保证卡包归属对齐零丢失。
+
 ## v0.227.0 2026-11-01 · 制卡必须要素硬核门禁、小驴考试风格试题智能拆单与数理工具栏、存量与第三方插件卡包全景管理
 
 - **新增 (Added)**：

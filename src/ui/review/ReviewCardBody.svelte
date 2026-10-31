@@ -17,6 +17,7 @@
         typingInput?: string;
         cardFontScale?: number;
         customCardCss?: string;
+        customRiffTitle?: string;
         faceHints?: string[];
         faceHintText?: (key: string) => string;
         t: any;
@@ -42,6 +43,7 @@
         typingInput = "",
         cardFontScale = 1,
         customCardCss = "",
+        customRiffTitle = "",
         faceHints = [],
         faceHintText = (k: string) => k,
         t,
@@ -121,6 +123,14 @@
     </div>
 {:else}
     {#key currentCardID}
+        <!-- 闪卡工具箱自定义题面标题（custom-riff-title）兼容展示 -->
+        {#if customRiffTitle}
+            <div class="lv-riff-title-badge" title="闪卡工具箱自定义题面 (custom-riff-title)">
+                <LvIcon name="target" size={12} />
+                <span>{customRiffTitle}</span>
+            </div>
+        {/if}
+
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <!-- 灵动感（R53 纪律内）：切卡 140ms 单次淡入，只动 opacity；翻面淡入由 lv-anim-glow 承担 -->
         <div
@@ -278,5 +288,19 @@
                 font-weight: var(--lv-fw-semibold);
             }
         }
+    }
+
+    .lv-riff-title-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: var(--lv-sp-2);
+        padding: 2px 8px;
+        border-radius: var(--lv-r-tag);
+        background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
+        color: var(--lv-color-brand);
+        font-size: var(--lv-type-caption-size);
+        font-weight: var(--lv-fw-medium);
     }
 </style>

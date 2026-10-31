@@ -124,4 +124,25 @@ describe("delimited-qa & legacy card upgrade engine", () => {
         expect(div.innerHTML).toContain("［ 填空 ］");
         expect(div.innerHTML).toContain("［ 参考解析·查看答案时揭晓 ］");
     });
+
+    it("parses and upgrades Anki-style {{c1::answer}} clozes for full ecosystem compatibility", () => {
+        const text = "在计算机中，{{c1::CPU}} 是中央处理单元。";
+        const res = parseDelimitedQa(text);
+        expect(res).toEqual({
+            question: "在计算机中，［…］ 是中央处理单元。",
+            answer: "CPU",
+            format: "anki-cloze",
+        });
+
+        expect(upgradeLegacyCardToStandard("人体最大的器官是 {{c1::皮肤::提示：覆盖全身}}。")).toEqual({
+            markdown: "人体最大的器官是 ==皮肤==。",
+            reason: "将 Anki 挖空语法升级为思源标准闪卡挖空标记",
+        });
+
+        const div = document.createElement("div");
+        div.innerHTML = "<p>光合作用主要在 {{c1::叶绿体::器官}} 中进行。</p>";
+        const masked = maskDelimitedQaInHtml(div);
+        expect(masked).toBe(true);
+        expect(div.innerHTML).toContain("［ 器官 ］");
+    });
 });

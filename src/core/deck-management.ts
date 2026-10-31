@@ -36,6 +36,8 @@ export interface DiscoveredLegacyDeck {
     sourcePlugin?: string;
 }
 
+export const SIYUAN_BUILTIN_DECK_ID = "20230218211946-2kw8jgx";
+
 const ATTR_DECK_REGEXES = [
     /custom-riff-decks="([^"]+)"/,
     /custom-flashcard-deck="([^"]+)"/,
@@ -51,14 +53,35 @@ const TAG_DECK_REGEX = /#(?:deck|卡包|卡组)\/([^\s#,]+)/;
  * 从块 IAL 属性字符串中提取卡包标识（支持原生与第三方插件）
  */
 export function extractDeckFromIal(ial: string): string | null {
-    if (!ial) return null;
+    const list = extractDecksFromIal(ial);
+    return list.length > 0 ? list[0] : null;
+}
+
+/**
+ * 从块 IAL 属性中提取所有关联卡包（兼容思源原生逗号分隔的多卡包映射）
+ */
+export function extractDecksFromIal(ial: string): string[] {
+    if (!ial) return [];
+    const found: string[] = [];
     for (const reg of ATTR_DECK_REGEXES) {
         const m = ial.match(reg);
         if (m && m[1]?.trim()) {
-            return m[1].trim();
+            const rawVal = m[1].trim();
+            // custom-riff-decks 是逗号分隔的多个卡包 ID
+            const parts = rawVal.split(",").map(s => s.trim()).filter(Boolean);
+            found.push(...parts);
         }
     }
-    return null;
+    return [...new Set(found)];
+}
+
+/**
+ * 提取闪卡工具箱（sy-flashcard-toolbox-plugin）自定义卡片标题
+ */
+export function extractCustomRiffTitle(ial: string): string | null {
+    if (!ial) return null;
+    const m = ial.match(/custom-riff-title="([^"]+)"/) || ial.match(/custom-card-title="([^"]+)"/);
+    return m ? m[1].trim() : null;
 }
 
 /**
@@ -90,38 +113,46 @@ export function discoverLegacyDecks(
     const orphanBlockIDs: string[] = [];
 
     for (const b of blocks) {
-        const ialDeck = extractDeckFromIal(b.ial);
+        const ialDecks = extractDecksFromIal(b.ial);
         const tagDeck = extractDeckFromTags(b.markdown);
 
-        if (ialDeck) {
-            // 如果已是当前已注册的原生 RiffDeck ID，跳过发现（已在本体卡包中）
-            if (activeDeckIdSet.has(ialDeck)) {
-                continue;
-            }
-            // 判断是否是已知卡包名称
-            const deckName = ialDeck;
-            const existing = deckMap.get(deckName);
-            const source = b.ial.includes("custom-flashcard-deck")
-                ? "思源第三方闪卡插件"
-                : b.ial.includes("custom-riff-decks")
-                ? "思源原生历史卡包"
-                : "第三方插件卡包";
-            if (existing) {
-                existing.blockIDs.push(b.id);
-            } else {
-                deckMap.set(deckName, {
-                    category: "third-party",
-                    blockIDs: [b.id],
-                    sample: b.markdown.slice(0, 60),
-                    source,
-                });
+        if (ialDecks.length > 0) {
+            for (const deckRef of ialDecks) {
+                // 如果已在活跃的原生卡包中，无需在此卡包中报告
+                if (activeDeckIdSet.has(deckRef)) {
+                    continue;
+                }
+                const isBuiltin = deckRef === SIYUAN_BUILTIN_DECK_ID;
+                const deckName = isBuiltin ? "思源默认内置卡包" : deckRef;
+                const source = isBuiltin
+                    ? "思源默认内置卡包"
+                    : b.ial.includes("custom-flashcard-deck")
+                    ? "SiYuanMemo / 第三方闪卡插件"
+                    : b.ial.includes("custom-riff-decks")
+                    ? "思源原生历史卡包"
+                    : "第三方插件卡包";
+
+                const existing = deckMap.get(deckName);
+                if (existing) {
+                    if (!existing.blockIDs.includes(b.id)) {
+                        existing.blockIDs.push(b.id);
+                    }
+                } else {
+                    deckMap.set(deckName, {
+                        category: "third-party",
+                        blockIDs: [b.id],
+                        sample: b.markdown.slice(0, 60),
+                        source,
+                    });
+                }
             }
         } else if (tagDeck) {
             const deckName = tagDeck;
-            // 如果已存在同名 RiffDeck，依然可以提示同步
             const existing = deckMap.get(deckName);
             if (existing) {
-                existing.blockIDs.push(b.id);
+                if (!existing.blockIDs.includes(b.id)) {
+                    existing.blockIDs.push(b.id);
+                }
             } else {
                 deckMap.set(deckName, {
                     category: "tag",

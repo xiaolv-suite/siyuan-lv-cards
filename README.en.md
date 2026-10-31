@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.227.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.228.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -25,7 +25,12 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.227.0 (Latest)
+### v0.228.0 (Latest)
+* **SiYuan Ecosystem Plugin Format Compatibility**: Researched and aligned native SiYuan flashcard kernel, SiYuanMemo (CDF), ZY Assistant, Flashcard Toolbox, Highlight Cloze, and Sy-Recite;
+* **Anki Cloze & Custom Title Support**: In-memory parsing and masking for `{{c1::answer}}` & `{{c1::answer::hint}}`; rendered `custom-riff-title` badge for cards;
+* **Multi-Deck Comma Mapping & Builtin Deck Identification**: Supported native `custom-riff-decks="d1,d2"` multi-deck comma mapping and auto-recognized SiYuan builtin default deck.
+
+### v0.227.0
 * **Mandatory Element Hard Guards & Status Checklist**: Enforced deck, question stem, and type-specific answer requirements with live validation capsules; card creation is strictly disabled and auto-focuses missing fields when requirements are unmet.
 * **Smart Question Text Splitter & Math Symbol Toolbar**: Reference Exam plugin authoring workflow; 1-click intelligent text parsing for pasted questions (stem, options, answer, analysis); math, pinyin, and formatting symbol insert docks.
 * **Unified Deck Management & Legacy/3rd-Party Sync**: Deep scanner for native block attributes, 3rd-party plugin attributes, and tag-based decks; 1-click sync into native Riff decks with comprehensive management dashboard (merge, rename, clean empty).
