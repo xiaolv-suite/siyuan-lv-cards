@@ -63,6 +63,7 @@
     // 合并卡包状态
     let mergingDeckId = $state("");
     let targetMergeDeckId = $state("");
+    let deleteSourceAfterMerge = $state(true);
 
     async function loadDecks() {
         loading = true;
@@ -267,7 +268,8 @@
             const res = await mergeRiffDecks(sourceDeckId, targetMergeDeckId, {
                 getRiffCards,
                 addRiffCards,
-            });
+                removeRiffDeck,
+            }, { deleteSourceDeck: deleteSourceAfterMerge });
             showMessage((t.deckManagerMergedNotice ?? "已将 ${n} 张卡片合并至目标卡包").replace("${n}", String(res.mergedCount)), 3000, "info");
             mergingDeckId = "";
             targetMergeDeckId = "";
@@ -543,7 +545,10 @@
                                             class="b3-text-field"
                                             bind:value={editingDeckName}
                                             aria-label="修改卡包名称"
-                                            onkeydown={(e) => { if (e.key === "Enter") handleRenameDeck(deck.id); }}
+                                            onkeydown={(e) => {
+                                                if (e.key === "Enter") handleRenameDeck(deck.id);
+                                                else if (e.key === "Escape") editingDeckId = "";
+                                            }}
                                         />
                                         <button class="b3-button b3-button--small lv-btn-primary" onclick={() => handleRenameDeck(deck.id)}>保存</button>
                                         <button class="b3-button b3-button--small b3-button--cancel" onclick={() => (editingDeckId = "")}>取消</button>
@@ -583,12 +588,20 @@
                         {#if mergingDeckId === deck.id}
                             <div class="lv-dm-merge-box">
                                 <span class="ft__smaller ft__on-surface">合并到目标卡包：</span>
-                                <select class="b3-select fn__flex-1" bind:value={targetMergeDeckId}>
+                                <select
+                                    class="b3-select fn__flex-1"
+                                    bind:value={targetMergeDeckId}
+                                    onchange={(e) => { targetMergeDeckId = e.currentTarget.value; }}
+                                >
                                     <option value="">选择目标卡包…</option>
                                     {#each decks.filter(d => d.id !== deck.id) as targetDeck (targetDeck.id)}
                                         <option value={targetDeck.id}>{targetDeck.name}</option>
                                     {/each}
                                 </select>
+                                <label class="lv-dm-merge-opt">
+                                    <input type="checkbox" bind:checked={deleteSourceAfterMerge} class="lv-check" />
+                                    <span>{t.deckManagerDeleteSourceAfterMerge ?? "合并后删除源卡包"}</span>
+                                </label>
                                 <button
                                     type="button"
                                     class="b3-button b3-button--small lv-btn-primary"
@@ -896,10 +909,20 @@
     .lv-dm-rename-box {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 6px;
         padding: 6px;
         background: var(--lv-primary-soft);
         border-radius: var(--lv-r-s);
+    }
+    .lv-dm-merge-opt {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--lv-color-text-muted);
+        cursor: pointer;
+        user-select: none;
     }
     .lv-dm-card-actions {
         display: flex;

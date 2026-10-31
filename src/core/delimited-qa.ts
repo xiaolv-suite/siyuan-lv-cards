@@ -30,14 +30,14 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
     // 已包含标准 ==答案== 的优先交由挖空/问答门禁处理
     if (raw.includes("==")) return null;
 
-    // 0. Anki 风格挖空兼容：{{c1::答案}} 或 {{c1::答案::提示}}
-    const ankiMatch = raw.match(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/);
-    if (ankiMatch && ankiMatch[1]?.trim()) {
+    // 0. Anki 风格挖空兼容：{{c1::答案}} 或 {{c1::答案::提示}}（支持单卡多处挖空提取）
+    const ankiMatches = Array.from(raw.matchAll(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g));
+    if (ankiMatches.length > 0 && ankiMatches[0][1]?.trim()) {
         const question = raw.replace(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g, (_, _ans, hint) => `［${hint || "…"}］`);
-        const answer = ankiMatch[1].trim();
+        const answers = ankiMatches.map(m => m[1].trim()).filter(Boolean);
         return {
             question,
-            answer,
+            answer: answers.join("；"),
             format: "anki-cloze",
         };
     }
@@ -153,8 +153,8 @@ export function maskDelimitedQaInHtml(root: Node): boolean {
         const parent = node.parentElement;
         if (!parent) continue;
 
-        // 严格排除代码块、行内代码、公式及 SVG 内的文本节点
-        if (parent.closest("pre, code, kbd, svg, .language-math, .katex, .MathJax")) {
+        // 严格排除代码块、行内代码、公式、SVG 及已有遮罩内的文本节点
+        if (parent.closest("pre, code, kbd, svg, .language-math, .katex, .MathJax, .lv-masked")) {
             continue;
         }
 

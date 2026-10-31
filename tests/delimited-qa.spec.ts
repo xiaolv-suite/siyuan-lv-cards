@@ -134,6 +134,15 @@ describe("delimited-qa & legacy card upgrade engine", () => {
             format: "anki-cloze",
         });
 
+        // 多处 Anki 挖空提取
+        const multi = "计算机核心包括 {{c1::CPU::运算器}} 与 {{c2::GPU::显示芯片}}。";
+        const multiRes = parseDelimitedQa(multi);
+        expect(multiRes).toEqual({
+            question: "计算机核心包括 ［运算器］ 与 ［显示芯片］。",
+            answer: "CPU；GPU",
+            format: "anki-cloze",
+        });
+
         expect(upgradeLegacyCardToStandard("人体最大的器官是 {{c1::皮肤::提示：覆盖全身}}。")).toEqual({
             markdown: "人体最大的器官是 ==皮肤==。",
             reason: "将 Anki 挖空语法升级为思源标准闪卡挖空标记",

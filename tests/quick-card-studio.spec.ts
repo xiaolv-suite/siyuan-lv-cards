@@ -516,4 +516,32 @@ describe("R58 卡组选择与制卡页强化", () => {
         await fireEvent.click(piBtn);
         expect((screen.getByRole("textbox", { name: "问题" }) as HTMLTextAreaElement).value).toContain("\\pi");
     });
+
+    it("选择题删除选项时自动平移重排正确答案键", async () => {
+        render(QuickCard, { i18n, onCreate: vi.fn(), onClose: vi.fn(), embedded: true });
+
+        // 切换到选择题
+        const choiceTplBtn = await screen.findByRole("button", { name: /选择题/ });
+        await fireEvent.click(choiceTplBtn);
+
+        // 填写 A, B, C 选项
+        const optInputs = screen.getAllByPlaceholderText(/选项 [A-D]/);
+        await fireEvent.input(optInputs[0], { target: { value: "选项一" } });
+        await fireEvent.input(optInputs[1], { target: { value: "选项二" } });
+        await fireEvent.input(optInputs[2], { target: { value: "选项三" } });
+
+        // 标记 C 为正确答案 (key: "C")
+        const keyBtns = screen.getAllByTitle(/标记为正确答案/);
+        await fireEvent.click(keyBtns[2]); // C
+
+        expect(keyBtns[2].getAttribute("aria-pressed")).toBe("true");
+
+        // 删除选项 B (index 1)
+        const removeBtns = screen.getAllByRole("button", { name: /删除选项/ });
+        await fireEvent.click(removeBtns[1]); // 删除 B
+
+        // 原来是 C 的「选项三」现在平移为 B，且正确答案键平移为 B
+        const updatedKeyBtns = screen.getAllByTitle(/标记为正确答案/);
+        expect(updatedKeyBtns[1].getAttribute("aria-pressed")).toBe("true");
+    });
 });

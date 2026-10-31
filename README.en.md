@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.228.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.229.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -25,7 +25,12 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.228.0 (Latest)
+### v0.229.0 (Latest)
+* **Comprehensive Isolated E2E Automation Suite (pnpm e2e:isolated)**: Deeply integrates kernel authentication, static chunk contracts, Riff review lifecycle, document linkage & attribute mirroring (starred, leech, lapses, error reasons, SQL board), and real headless Chrome 14-step UI & interaction verification;
+* **Authoring & Deck Management Interactive Convergence**: Precision focus targeting on mandatory guard failures, option removal answer key auto-shift, deck merge with delete source deck option, and rename Escape cancel;
+* **Ecosystem Compatibility Hardening**: Serialized multi-cloze Anki extraction with DOM mask nesting protection, and attribute regex support for unquoted, single-quoted, and double-quoted values.
+
+### v0.228.0
 * **SiYuan Ecosystem Plugin Format Compatibility**: Researched and aligned native SiYuan flashcard kernel, SiYuanMemo (CDF), ZY Assistant, Flashcard Toolbox, Highlight Cloze, and Sy-Recite;
 * **Anki Cloze & Custom Title Support**: In-memory parsing and masking for `{{c1::answer}}` & `{{c1::answer::hint}}`; rendered `custom-riff-title` badge for cards;
 * **Multi-Deck Comma Mapping & Builtin Deck Identification**: Supported native `custom-riff-decks="d1,d2"` multi-deck comma mapping and auto-recognized SiYuan builtin default deck.

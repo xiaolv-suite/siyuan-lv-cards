@@ -3354,7 +3354,7 @@
     "quickCardMandatoryDeckOk": "卡组已指定",
     "quickCardMandatoryDeckMissing": "必须选择或新建卡组",
     "quickCardMandatoryStemOk": "题干已就绪",
-    "quickCardMandatoryStemMissing": "必须填写题干（至少2字）",
+    "quickCardMandatoryStemMissing": "必须填写题干内容",
     "quickCardMandatoryAnswerOk": "答案要素已就绪",
     "quickCardMandatoryAnswerMissing": "必须满足题型答案要素",
     "quickCardMandatoryReady": "要素齐全，可立即制卡",
@@ -3385,5 +3385,6 @@
     "deckManagerDelete": "删除卡包",
     "deckManagerDeletePrompt": "确定要删除卡包「${name}」吗？",
     "deckManagerDeleteSafeNote": "仅解除卡包关联，原笔记中的卡片块完整保留在正文中。",
-    "deckManagerMergedNotice": "已将 ${n} 张卡片合并至目标卡包"
+    "deckManagerMergedNotice": "已将 ${n} 张卡片合并至目标卡包",
+    "deckManagerDeleteSourceAfterMerge": "合并后删除源卡包"
 }

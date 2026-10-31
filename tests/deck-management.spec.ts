@@ -24,12 +24,14 @@ describe("deck-management 卡包管理与存量/第三方插件卡包同步引�
 
     it("extractDecksFromIal 完整提取思源内核逗号分隔的多卡包映射", () => {
         expect(extractDecksFromIal('{: custom-riff-decks="deck-1,deck-2,deck-3"}')).toEqual(["deck-1", "deck-2", "deck-3"]);
+        expect(extractDecksFromIal("{: custom-riff-decks='deck-a,deck-b'}")).toEqual(["deck-a", "deck-b"]);
         expect(extractDecksFromIal('{: custom-flashcard-deck="考研英语,六级词汇"}')).toEqual(["考研英语", "六级词汇"]);
         expect(extractDecksFromIal('{: custom-riff-title="自定义题面标题"}')).toEqual([]);
     });
 
     it("extractCustomRiffTitle 提取闪卡工具箱自定义卡片标题属性", () => {
         expect(extractCustomRiffTitle('{: custom-riff-title="牛顿第一运动定律阐述"}')).toBe("牛顿第一运动定律阐述");
+        expect(extractCustomRiffTitle("{: custom-riff-title='开普勒行星运动定律'}")).toBe("开普勒行星运动定律");
         expect(extractCustomRiffTitle('{: custom-card-title="化学元素周期律"}')).toBe("化学元素周期律");
         expect(extractCustomRiffTitle('{: id="b1"}')).toBeNull();
     });

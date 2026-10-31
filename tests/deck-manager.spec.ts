@@ -189,4 +189,29 @@ describe("deck-manager 卡包管理组件", () => {
             expect(removeRiffDeck).toHaveBeenCalledWith("deck-3");
         });
     });
+
+    it("支持合并卡包并联动删除源卡包选项", async () => {
+        getRiffCards.mockResolvedValue({ blocks: [{ id: "c1" }, { id: "c2" }], total: 2 });
+        addRiffCards.mockResolvedValue(null);
+        removeRiffDeck.mockResolvedValue(null);
+
+        render(DeckManager, { i18n: mockI18n });
+        await screen.findByText("英语核心词");
+
+        const mergeToolBtns = screen.getAllByRole("button", { name: "合并卡片到其他卡包" });
+        await fireEvent.click(mergeToolBtns[0]); // deck-1 展开合并栏
+
+        const select = screen.getByRole("combobox") as HTMLSelectElement;
+        const option = select.querySelector('option[value="deck-2"]') as HTMLOptionElement;
+        option.selected = true;
+        await fireEvent.change(select);
+
+        const confirmMergeBtn = screen.getByRole("button", { name: "确认合并" });
+        await fireEvent.click(confirmMergeBtn);
+
+        await waitFor(() => {
+            expect(addRiffCards).toHaveBeenCalledWith("deck-2", ["c1", "c2"]);
+            expect(removeRiffDeck).toHaveBeenCalledWith("deck-1");
+        });
+    });
 });

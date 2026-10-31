@@ -1,6 +1,6 @@
 {
   "name": "siyuan-lv-cards",
-  "version": "0.228.0",
+  "version": "0.229.0",
   "type": "module",
   "description": "Lv Cards (Beta) / 小驴闪卡（内测版） - a local-first, full-lifecycle flashcard learning platform for SiYuan, built on the native FSRS scheduler",
   "repository": "https://github.com/ai68298100/siyuan-lv-cards",
@@ -41,6 +41,7 @@
     "update-version": "node --no-warnings ./scripts/update_version.js",
     "migrate:tokens": "node scripts/migrate-design-tokens.mjs",
     "make-install": "pnpm run build && node --no-warnings ./scripts/make_install.js",
+    "e2e:isolated": "node scripts/e2e-isolated.mjs",
     "serve:isolated": "node scripts/serve-isolated-web.mjs",
     "serve:isolated:reload": "node scripts/serve-isolated-web.mjs --reload",
     "serve:isolated:stop": "node scripts/serve-isolated-web.mjs --stop",

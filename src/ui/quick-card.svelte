@@ -98,9 +98,17 @@
     }
     function removeOption(index: number) {
         if (optionTexts.length <= 2) return;
-        optionTexts = optionTexts.filter((_, i) => i !== index);
         const removedKey = OPTION_LETTERS[index];
-        correctKeys = correctKeys.filter(k => k !== removedKey);
+        optionTexts = optionTexts.filter((_, i) => i !== index);
+        correctKeys = correctKeys
+            .filter(k => k !== removedKey)
+            .map(k => {
+                const kIdx = OPTION_LETTERS.indexOf(k as any);
+                if (kIdx > index && kIdx > 0) {
+                    return OPTION_LETTERS[kIdx - 1];
+                }
+                return k;
+            });
     }
 
     /** 序列化选择/判断题为思源块：题干 + 选项行 + 遮罩答案行，属性经 examAttrs 落 custom-exam-* */
@@ -447,7 +455,7 @@
             return false;
         }
         if (!stemReady) {
-            errorMsg = t.quickCardMandatoryStemMissing ?? "制卡失败：必须填写题干（至少2字）";
+            errorMsg = t.quickCardMandatoryStemMissing ?? "制卡失败：必须填写题干内容";
             qTextareaEl?.focus();
             return false;
         }
@@ -457,6 +465,15 @@
                 aTextareaEl?.focus();
             } else if (answerCheck.focusField === "q") {
                 qTextareaEl?.focus();
+            } else if (answerCheck.focusField === "option") {
+                const firstEmptyOptInput = editorRoot?.querySelector(".lv-qc-option-row input") as HTMLInputElement | null;
+                firstEmptyOptInput?.focus();
+            } else if (answerCheck.focusField === "answerKey") {
+                const firstKeyBtn = editorRoot?.querySelector(".lv-qc-option-key") as HTMLButtonElement | null;
+                firstKeyBtn?.focus();
+            } else if (answerCheck.focusField === "judge") {
+                const firstJudgeBtn = editorRoot?.querySelector(".lv-qc-judge-pick button") as HTMLButtonElement | null;
+                firstJudgeBtn?.focus();
             }
             return false;
         }
@@ -706,7 +723,7 @@
             onclick={() => qTextareaEl?.focus()}
             title={stemReady ? "题干已就绪" : "点击填写题干"}
         >
-            {#if stemReady}<LvIcon name="check" size={11} /> <span>{t.quickCardMandatoryStemOk ?? "题干已填写"}</span>{:else}<span>⚠️ {t.quickCardMandatoryStemMissing ?? "必须填写题干（至少2字）"}</span>{/if}
+            {#if stemReady}<LvIcon name="check" size={11} /> <span>{t.quickCardMandatoryStemOk ?? "题干已填写"}</span>{:else}<span>⚠️ {t.quickCardMandatoryStemMissing ?? "必须填写题干内容"}</span>{/if}
         </button>
         <button
             type="button"

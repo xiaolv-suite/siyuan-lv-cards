@@ -39,12 +39,12 @@ export interface DiscoveredLegacyDeck {
 export const SIYUAN_BUILTIN_DECK_ID = "20230218211946-2kw8jgx";
 
 const ATTR_DECK_REGEXES = [
-    /custom-riff-decks="([^"]+)"/,
-    /custom-flashcard-deck="([^"]+)"/,
-    /custom-deck="([^"]+)"/,
-    /custom-card-deck="([^"]+)"/,
-    /custom-card-group="([^"]+)"/,
-    /custom-card-pack="([^"]+)"/,
+    /custom-riff-decks=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/,
+    /custom-flashcard-deck=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/,
+    /custom-deck=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/,
+    /custom-card-deck=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/,
+    /custom-card-group=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/,
+    /custom-card-pack=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/,
 ];
 
 const TAG_DECK_REGEX = /#(?:deck|卡包|卡组)\/([^\s#,]+)/;
@@ -65,11 +65,13 @@ export function extractDecksFromIal(ial: string): string[] {
     const found: string[] = [];
     for (const reg of ATTR_DECK_REGEXES) {
         const m = ial.match(reg);
-        if (m && m[1]?.trim()) {
-            const rawVal = m[1].trim();
-            // custom-riff-decks 是逗号分隔的多个卡包 ID
-            const parts = rawVal.split(",").map(s => s.trim()).filter(Boolean);
-            found.push(...parts);
+        if (m) {
+            const rawVal = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+            if (rawVal) {
+                // custom-riff-decks 是逗号分隔的多个卡包 ID
+                const parts = rawVal.split(",").map(s => s.trim()).filter(Boolean);
+                found.push(...parts);
+            }
         }
     }
     return [...new Set(found)];
@@ -80,8 +82,11 @@ export function extractDecksFromIal(ial: string): string[] {
  */
 export function extractCustomRiffTitle(ial: string): string | null {
     if (!ial) return null;
-    const m = ial.match(/custom-riff-title="([^"]+)"/) || ial.match(/custom-card-title="([^"]+)"/);
-    return m ? m[1].trim() : null;
+    const m = ial.match(/custom-riff-title=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/) ||
+              ial.match(/custom-card-title=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/);
+    if (!m) return null;
+    const val = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+    return val || null;
 }
 
 /**

@@ -3354,7 +3354,7 @@
     "quickCardMandatoryDeckOk": "Deck assigned",
     "quickCardMandatoryDeckMissing": "Select or create a deck",
     "quickCardMandatoryStemOk": "Question prompt ready",
-    "quickCardMandatoryStemMissing": "Question prompt required (≥2 chars)",
+    "quickCardMandatoryStemMissing": "Question stem required",
     "quickCardMandatoryAnswerOk": "Answer element ready",
     "quickCardMandatoryAnswerMissing": "Answer elements required for this card type",
     "quickCardMandatoryReady": "All elements ready. Ready to create card",
@@ -3385,5 +3385,6 @@
     "deckManagerDelete": "Delete Deck",
     "deckManagerDeletePrompt": "Are you sure you want to delete deck \"${name}\"?",
     "deckManagerDeleteSafeNote": "Only removes the deck grouping. Note blocks in the document remain untouched.",
-    "deckManagerMergedNotice": "Merged ${n} cards into the target deck"
+    "deckManagerMergedNotice": "Merged ${n} cards into the target deck",
+    "deckManagerDeleteSourceAfterMerge": "Delete source deck after merge"
 }
