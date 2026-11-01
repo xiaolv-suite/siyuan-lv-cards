@@ -2,10 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import PairingGame from "../src/ui/pairing-game.svelte";
 
-const { dueGet, getBlockDOM } = vi.hoisted(() => ({ dueGet: vi.fn(), getBlockDOM: vi.fn() }));
+const { dueGet, getBlockDOM, getRiffDecks, getRiffCards } = vi.hoisted(() => ({
+    dueGet: vi.fn(),
+    getBlockDOM: vi.fn(),
+    getRiffDecks: vi.fn().mockResolvedValue([]),
+    getRiffCards: vi.fn().mockResolvedValue({ blocks: [] }),
+}));
 
 vi.mock("../src/api/due-shared", () => ({ dueCache: { get: dueGet } }));
 vi.mock("../src/api/siyuan", () => ({ getBlockDOM }));
+vi.mock("../src/api/riff", () => ({ getRiffDecks, getRiffCards }));
 
 const deferred = <T,>() => {
     let resolve!: (value: T) => void;
@@ -109,5 +115,37 @@ describe("pairing game async lifecycle", () => {
 
         await fireEvent.keyDown(window, { key: "Escape" });
         expect(onExit).toHaveBeenCalledOnce();
+    });
+
+    it("CF-08: 配对消除游戏支持切换指定卡包范围挑战", async () => {
+        getRiffDecks.mockResolvedValueOnce([
+            { id: "deck-math", name: "高等数学", size: 5 },
+            { id: "deck-eng", name: "大学英语", size: 8 },
+        ]);
+        dueGet.mockResolvedValueOnce({ cards });
+        getBlockDOM.mockResolvedValue("<p>Question <mark>answer</mark> details</p>");
+        mountGame();
+        await screen.findByText("Pairs: 0 / 4");
+
+        // 验证卡包选择器存在
+        const select = screen.getByRole("combobox", { name: "切换卡包范围" }) as HTMLSelectElement;
+        expect(select).toBeTruthy();
+        expect(select.options.length).toBe(3); // 全库 + 2个卡包
+
+        // 切换到「高等数学」卡包
+        getRiffCards.mockResolvedValueOnce({
+            blocks: [
+                { id: "m1", riffCard: { id: "c-m1" } },
+                { id: "m2", riffCard: { id: "c-m2" } },
+                { id: "m3", riffCard: { id: "c-m3" } },
+                { id: "m4", riffCard: { id: "c-m4" } },
+            ],
+            total: 4,
+        });
+        await fireEvent.change(select, { target: { value: "deck-math" } });
+
+        await waitFor(() => {
+            expect(getRiffCards).toHaveBeenCalledWith("deck-math", 1, 24);
+        });
     });
 });

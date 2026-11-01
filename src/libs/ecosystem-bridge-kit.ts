@@ -539,3 +539,113 @@ export function onTaskHorizonCompleted(
         window.removeEventListener("tm:task-completed", handler);
     };
 }
+
+/**
+ * 自动探测小驴打卡中与闪卡复习最匹配的打卡项 ID（零配置智能联动）
+ */
+export async function findMatchingCheckinItemId(configuredId?: string): Promise<string | null> {
+    if (configuredId && configuredId.trim()) {
+        return configuredId.trim();
+    }
+    if (typeof window === "undefined") return null;
+    const checkin = getBridgeSafely<CheckinBridgeApi>("checkin");
+    if (!checkin || typeof checkin.queryItems !== "function") return null;
+    try {
+        const items = checkin.queryItems({ includeArchived: false });
+        if (!Array.isArray(items) || items.length === 0) return null;
+        // 1. 优先匹配名称包含「闪卡」的项目
+        const flashcardItem = items.find(it => !it.archived && (it.name.includes("闪卡") || it.name.toLowerCase().includes("flashcard")));
+        if (flashcardItem) return flashcardItem.id;
+        // 2. 次优匹配名称包含「复习」或「记忆」
+        const reviewItem = items.find(it => !it.archived && (it.name.includes("复习") || it.name.includes("记忆")));
+        if (reviewItem) return reviewItem.id;
+    } catch {
+        // 静默隔离
+    }
+    return null;
+}
+
+/**
+ * 安全查询小驴考试概览与考期目标（若安装且挂载）
+ */
+export async function getExamOverviewSafely(): Promise<{ name: string; days: number; activeWrongCount?: number } | null> {
+    if (typeof window === "undefined") return null;
+    const exam = getBridgeSafely<ExamBridgeApi>("exam");
+    if (!exam) return null;
+    try {
+        if (typeof exam.getOverview === "function") {
+            const overview: any = exam.getOverview();
+            if (overview && typeof overview === "object") {
+                const examDateStr = overview.examDate || overview.targetDate;
+                if (examDateStr && typeof examDateStr === "string") {
+                    const target = new Date(examDateStr);
+                    if (!Number.isNaN(target.getTime())) {
+                        const now = new Date();
+                        const diffMs = target.getTime() - now.getTime();
+                        const days = Math.max(0, Math.ceil(diffMs / 86400000));
+                        return {
+                            name: overview.examTitle || overview.title || "小驴考试目标",
+                            days,
+                            activeWrongCount: overview.activeWrongCount,
+                        };
+                    }
+                }
+            }
+        }
+    } catch {
+        // 静默隔离
+    }
+    return null;
+}
+
+/**
+ * 安全打开小驴考试模块（练习台、错题本、模考等）
+ */
+export function openExamModuleSafely(action: "practice" | "wrongbook" | "mock" = "practice"): boolean {
+    if (typeof window === "undefined") return false;
+    const exam = getBridgeSafely<ExamBridgeApi>("exam");
+    if (!exam) return false;
+    try {
+        if (action === "wrongbook" && typeof exam.wrongbook === "function") {
+            exam.wrongbook();
+            return true;
+        }
+        if (action === "mock" && typeof exam.mock === "function") {
+            exam.mock();
+            return true;
+        }
+        if (typeof exam.practice === "function") {
+            exam.practice();
+            return true;
+        }
+    } catch {
+        // 静默隔离
+    }
+    return false;
+}
+
+/**
+ * 安全获取小驴常用语中的收藏或最近条目（供制卡素材快速填入）
+ */
+export async function getCommonSnippetsSafely(): Promise<CommonSnippet[]> {
+    if (typeof window === "undefined") return [];
+    const common = getBridgeSafely<CommonBridgeApi>("common");
+    if (!common) return [];
+    try {
+        if (typeof common.favorites === "function") {
+            const favRes = await common.favorites();
+            if (favRes && favRes.ok && Array.isArray(favRes.data) && favRes.data.length > 0) {
+                return favRes.data;
+            }
+        }
+        if (typeof common.recent === "function") {
+            const recRes = await common.recent();
+            if (recRes && recRes.ok && Array.isArray(recRes.data) && recRes.data.length > 0) {
+                return recRes.data;
+            }
+        }
+    } catch {
+        // 静默隔离
+    }
+    return [];
+}

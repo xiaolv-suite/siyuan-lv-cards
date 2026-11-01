@@ -3,6 +3,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
 import RepairDrill from "../src/ui/repair-drill.svelte";
 
 vi.mock("svelte/transition", () => ({ fade: () => ({ duration: 0, css: () => "" }) }));
+const { sqlQuery } = vi.hoisted(() => ({ sqlQuery: vi.fn() }));
+vi.mock("@/api/siyuan", () => ({ sqlQuery }));
+vi.mock("siyuan", () => ({ showMessage: vi.fn() }));
 
 const mockI18n = {
     drillStep1: "看材料",
@@ -115,4 +118,27 @@ describe("repair drill component flow", () => {
         await fireEvent.keyDown(window, { key: "Escape" });
         expect(onClose).toHaveBeenCalledOnce();
     });
+
+    it("CF-15: 支持从个人真实水蛭卡库导入真实案例进行重构实战", async () => {
+        sqlQuery.mockResolvedValueOnce([
+            { id: "leech-1", content: "光合作用的暗反应场所是叶绿体基质", markdown: "光合作用的暗反应场所是==叶绿体基质==" },
+        ]);
+
+        render(RepairDrill, { i18n: mockI18n, onClose: vi.fn() });
+
+        const importBtn = screen.getByRole("button", { name: "导入个人水蛭卡实战" });
+        expect(importBtn).toBeTruthy();
+
+        await fireEvent.click(importBtn);
+
+        // 验证导入成功并渲染自定义实战卡片
+        expect(await screen.findByRole("button", { name: /实战：/ })).toBeTruthy();
+        expect(screen.getByText(/【个人水蛭卡原块】/)).toBeTruthy();
+
+        // 步进到步骤 2
+        await fireEvent.click(screen.getByRole("button", { name: /下一步/ }));
+        expect(screen.getByText(/顽疾诊断/)).toBeTruthy();
+        expect(screen.getByText("光合作用的暗反应场所是____")).toBeTruthy();
+    });
 });
+

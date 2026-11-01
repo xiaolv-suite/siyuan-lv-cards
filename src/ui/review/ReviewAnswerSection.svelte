@@ -25,6 +25,8 @@
         onPickChoice?: (index: number) => void;
         onStartChoice?: () => void;
         onAdvanceHint?: () => void;
+        onPeekStart?: () => void;
+        onPeekEnd?: () => void;
         onRevealAnswer?: () => void;
         onSpeakAnswer?: () => void;
     }
@@ -46,6 +48,8 @@
         onPickChoice = () => {},
         onStartChoice = () => {},
         onAdvanceHint = () => {},
+        onPeekStart = () => {},
+        onPeekEnd = () => {},
         onRevealAnswer = () => {},
         onSpeakAnswer = () => {},
     }: Props = $props();
@@ -131,7 +135,12 @@
             type="button"
             class="b3-button b3-button--small lv-btn-ghost"
             aria-keyshortcuts="h"
+            title="点击推进提示，长按或按住快捷键临时透视"
             onclick={onAdvanceHint}
+            onpointerdown={onPeekStart}
+            onpointerup={onPeekEnd}
+            onpointerleave={onPeekEnd}
+            onpointercancel={onPeekEnd}
             data-testid="review-advance-hint-btn"
         >
             {t?.review?.hintBtn ?? "提示"}
@@ -147,7 +156,7 @@
             {t?.review?.showAnswer ?? "显示答案"}
         </button>
     </div>
-    <span class="lv-reveal-hint" aria-hidden="true">⎵ {t?.review?.revealHint ?? "空格翻面"}</span>
+    <span class="lv-reveal-hint" aria-hidden="true">⎵ {t?.review?.revealHint ?? "空格翻面"} · 长按透视</span>
 {/if}
 
 {#if typingGrade}

@@ -32,7 +32,7 @@
     import type { SessionPurpose } from "@/core/session-purpose";
     import { resolveTouchSwipe, mapSwipeActionToOutcome, extractSingleTouchCoords, extractChangedTouchCoords } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
-    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction } from "@/core/review-shortcuts";
+    import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction, isInputOrEditable } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, shouldRestartCountdownOnResume, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, isEventInsideContainer, focusReviewRootOrCard, type ZoomedImageState } from "@/core/card-interactions";
@@ -49,7 +49,7 @@
     import { lvLog } from "@/libs/log";
     import { resolveCardBreadcrumbsFromRows, buildHPathQuerySql, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, createInitialEphemeralQuizState, type InteractiveQuizData } from "@/core/quiz-interactive";
-    import { logCheckinEventSafely } from "@/libs/ecosystem-bridge-kit";
+    import { logCheckinEventSafely, findMatchingCheckinItemId } from "@/libs/ecosystem-bridge-kit";
     import { ATTR_LV_DISMISSED, buildDismissAttrs } from "@/core/incremental-learning";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
@@ -75,6 +75,7 @@
 
     export interface ReviewSettings {
         ratingStyle: "four" | "three";
+        ratingKeyScheme?: "number" | "jkl" | "both";
         timeoutMode: "off" | "reveal" | "forget";
         timeoutSeconds: number;
         randomOrder: boolean;
@@ -198,6 +199,41 @@
     let hintLevel: HintLevel | null = $state(null);
     let hintText = $state("");
     let hintLog: HintLogEntry[] = $state([]);
+    // CF-03: 按 O/E 键跳原笔记或编辑画布时挂起答题秒表
+    let stopwatchSuspendedAt = $state(0);
+    function suspendStopwatch() {
+        if (stopwatchSuspendedAt === 0 && current) {
+            stopwatchSuspendedAt = Date.now();
+            stopTimeout();
+        }
+    }
+    function resumeStopwatch() {
+        if (stopwatchSuspendedAt > 0) {
+            const pausedMs = Math.max(0, Date.now() - stopwatchSuspendedAt);
+            cardShownAt += pausedMs;
+            stopwatchSuspendedAt = 0;
+            if (shouldRestartCountdownOnResume(showAnswer, faceReady)) {
+                restartTimeout();
+            }
+        }
+    }
+
+    // CF-10: 长按/快捷键临时透视答案（只动视觉层，松开恢复）
+    let isPeekingAnswer = $state(false);
+
+    // CF-11: 今日目标达成即时彩带与粒子微动效
+    let showTargetCelebration = $state(false);
+    let targetCelebrationTimer: ReturnType<typeof setTimeout> | null = null;
+    function triggerTargetCelebration() {
+        if (targetCelebrationTimer) clearTimeout(targetCelebrationTimer);
+        showTargetCelebration = true;
+        announce(t.review?.targetCelebration ?? "今日复习目标达成！干得漂亮！", "polite");
+        targetCelebrationTimer = setTimeout(() => {
+            showTargetCelebration = false;
+            targetCelebrationTimer = null;
+        }, 3200);
+    }
+
     // BJ-4：遗忘卡错误原因标注（评分后可选旁路动作；标签走 i18n errReasons 段）
     let showErrTags = $state(false);
     let errTagCardID = $state("");
@@ -614,8 +650,14 @@
             showMessage(t.review?.sourceNotFound ?? "原笔记块不存在或已被删除", 2500, "info");
             return;
         }
+        suspendStopwatch();
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
-        openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+        try {
+            openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+        } catch (e: unknown) {
+            resumeStopwatch();
+            showMessage(friendlyError(e, t), 2500, "error");
+        }
     }
     let isCustomPluginAnswer = $state(false);
     // 选择题模式（M4·FR3，干扰项取自同队列后续卡）
@@ -927,10 +969,15 @@
                     if (s && !s.completed) ctx.saveSessionState(markSessionCompleted(s));
                     ctx.emitSessionFinished({ new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip });
                 }
-                // 联动小驴打卡（Ecosystem Federation Epoch 6）
+                // 联动小驴打卡（Ecosystem Federation Epoch 6 / 智能零配置打卡）
                 if (!cramActive && finished && reviewedIDs.length > 0) {
-                    const checkinItemId = eff().checkinItemId;
                     const reviewedCount = reviewedIDs.length;
+                    let checkinItemId = eff().checkinItemId;
+                    let autoMatched = false;
+                    if (!checkinItemId) {
+                        checkinItemId = await findMatchingCheckinItemId();
+                        if (checkinItemId) autoMatched = true;
+                    }
                     if (checkinItemId && reviewedCount > 0) {
                         const today = new Date().toISOString().slice(0, 10);
                         const accuracy = calculateReviewAccuracy({
@@ -946,6 +993,16 @@
                             unit: "张",
                             externalRef: `cards:${checkinItemId}:${today}`,
                             note: `完成闪卡复习 ${reviewedCount} 张（命中率 ${accuracy}%）`,
+                        }).then((ok) => {
+                            if (ok) {
+                                showMessage(
+                                    autoMatched
+                                        ? `[小驴打卡] 自动匹配并记录「闪卡复习」+${reviewedCount}张`
+                                        : `[小驴打卡] 今日复习打卡成功（+${reviewedCount}张）`,
+                                    2800,
+                                    "info"
+                                );
+                            }
                         });
                     }
                 }
@@ -1012,6 +1069,8 @@
         loadSeq++;
         contextRequestSeq++;
         showAnswer = false;
+        isPeekingAnswer = false;
+        stopwatchSuspendedAt = 0;
         answerRevealedAt = 0;
         expectedText = "";
         typingInput = "";
@@ -1350,11 +1409,15 @@
                     forgottenCardIDs = nextForgotten;
                 }
                 const wasNew = isCardNew(ctx.getRevlog(), current.cardID);
+                const prevTargetMet = (sessionNew + sessionReview) >= eff().dailyReviewTarget && eff().dailyReviewTarget > 0;
                 const nextCounters = updateSessionCountersOnRate(
                     { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
                     rating,
                     wasNew
                 );
+                if (!prevTargetMet && (nextCounters.new + nextCounters.review) >= eff().dailyReviewTarget && eff().dailyReviewTarget > 0) {
+                    triggerTargetCelebration();
+                }
                 sessionNew = nextCounters.new;
                 sessionReview = nextCounters.review;
                 sessionForget = nextCounters.forget;
@@ -1383,11 +1446,15 @@
                 forgottenCardIDs = nextForgotten;
             }
             reviewedIDs = [...reviewedIDs, current.cardID];
+            const prevTargetMet = (sessionNew + sessionReview) >= eff().dailyReviewTarget && eff().dailyReviewTarget > 0;
             const nextCounters = updateSessionCountersOnRate(
                 { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
                 rating,
                 wasNew
             );
+            if (!prevTargetMet && (nextCounters.new + nextCounters.review) >= eff().dailyReviewTarget && eff().dailyReviewTarget > 0) {
+                triggerTargetCelebration();
+            }
             sessionNew = nextCounters.new;
             sessionReview = nextCounters.review;
             sessionForget = nextCounters.forget;
@@ -1532,7 +1599,13 @@
             showMessage(t.review?.sourceNotFound ?? "原笔记块不存在或已被删除", 2500, "info");
             return;
         }
-        openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+        suspendStopwatch();
+        try {
+            openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+        } catch (e: unknown) {
+            resumeStopwatch();
+            showMessage(friendlyError(e, t), 2500, "error");
+        }
     }
 
     /** 快速改期（M3·FR5，f 键/按钮）：N 天后到期 */
@@ -1570,16 +1643,25 @@
         await loadBlockDOM(current.blockID);
     }
 
-    /** 编辑返回自动刷新（M3·FR5）：监听 visible 状态恢复时刷新卡面 */
+    /** 编辑返回自动刷新（M3·FR5）：监听 visible 状态与窗口 focus 恢复时刷新卡面并恢复秒表 */
     $effect(() => {
         if (typeof document === "undefined") return;
         const handler = () => {
-            if (document.visibilityState === "visible" && current) {
-                refreshCard();
+            if (document.visibilityState === "visible") {
+                resumeStopwatch();
+                if (current) refreshCard();
             }
         };
+        const onWindowFocus = () => {
+            resumeStopwatch();
+            resumePausedSession();
+        };
         document.addEventListener("visibilitychange", handler);
-        return () => document.removeEventListener("visibilitychange", handler);
+        window.addEventListener("focus", onWindowFocus);
+        return () => {
+            document.removeEventListener("visibilitychange", handler);
+            window.removeEventListener("focus", onWindowFocus);
+        };
     });
 
     /** 应用内返回检测（M3）：思源内切回复习页不触发 visibilitychange，
@@ -1589,6 +1671,7 @@
         if (!current || !isEventInsideContainer(rootEl, e.target)) {
             return;
         }
+        resumeStopwatch();
         resumePausedSession();
         const now = Date.now();
         if (shouldRefreshOnPanelPointer(lastPanelPointer, now)) {
@@ -1628,14 +1711,39 @@
         if (!rootEl || !rootEl.isConnected || rootEl.offsetParent === null) {
             return;
         }
+        // CF-10: 长按 H 或 Alt+Space / Alt+H 临时透视答案
+        if (!showAnswer && current && faceReady && !isInputOrEditable(e.target)) {
+            if (((e.key === "h" || e.key === "H") && (e.repeat || e.altKey)) || (e.code === "Space" && e.altKey)) {
+                isPeekingAnswer = true;
+                e.preventDefault();
+                return;
+            }
+        }
         if (isEventInsideContainer(rootEl, e.target)) {
             return;
         }
         onKeydown(e);
     }
 
+    function onWindowKeyup(e: KeyboardEvent) {
+        if (isPeekingAnswer) {
+            if (e.key === "h" || e.key === "H" || e.code === "Space") {
+                isPeekingAnswer = false;
+                e.preventDefault();
+            }
+        }
+    }
+
     function onKeydown(e: KeyboardEvent) {
         if (sessionPaused) return;
+        // CF-10: 容器内长按 H 或 Alt+Space / Alt+H 临时透视答案
+        if (!showAnswer && current && faceReady && !isInputOrEditable(e.target)) {
+            if (((e.key === "h" || e.key === "H") && (e.repeat || e.altKey)) || (e.code === "Space" && e.altKey)) {
+                isPeekingAnswer = true;
+                e.preventDefault();
+                return;
+            }
+        }
         if (zoomedImage) {
             if (e.key === "Escape") {
                 closeZoomedImage();
@@ -1681,6 +1789,7 @@
             hasCurrent: Boolean(current),
             hasLastAnswered: Boolean(lastAnswered || history.length > 0),
             ratingStyle: eff().ratingStyle,
+            ratingKeyScheme: eff().ratingKeyScheme,
             isTargetInsideRoot: isEventInsideContainer(rootEl, e.target),
         });
 
@@ -2129,6 +2238,10 @@
         isDisposed = true;
         throttledViewportChange.cancel();
         clearAutoSubmitTimer();
+        if (targetCelebrationTimer) {
+            clearTimeout(targetCelebrationTimer);
+            targetCelebrationTimer = null;
+        }
         stopTimeout(); // AJ7：销毁时清理倒计时，防止泄漏
         stopRequeueTimers();
         if (typeof window !== "undefined" && window.visualViewport) {
@@ -2144,7 +2257,7 @@
     });
 </script>
 
-<svelte:window on:keydown={onWindowKeydown} />
+<svelte:window on:keydown={onWindowKeydown} on:keyup={onWindowKeyup} />
 <svelte:document on:pointerdown={onPanelPointerDown} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -2205,6 +2318,19 @@
         onRecheckQuality={recheckQualityExcluded}
         onOpenMaintenance={() => ctx.openDashboard("maintenance")}
     />
+    {#if showTargetCelebration}
+        <div class="lv-target-celebration" data-testid="target-celebration-banner" role="status">
+            <div class="lv-celebration-particles" aria-hidden="true">
+                {#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as i}
+                    <span class={`lv-particle lv-p-${i}`} style={`--i:${i}`}></span>
+                {/each}
+            </div>
+            <div class="lv-celebration-content">
+                <span class="lv-celebration-icon">🎉</span>
+                <span class="lv-celebration-text">{t?.review?.targetCelebration ?? "今日复习目标达成！干得漂亮！"}</span>
+            </div>
+        </div>
+    {/if}
     {#if loading}
         <div class="lv-center">{t.dashboard.loading}</div>
     {:else if errorMsg}
@@ -2377,12 +2503,18 @@
                 onToggleContext={toggleContext}
                 onOpenInEditor={openInEditor}
             />
+            {#if stopwatchSuspendedAt > 0}
+                <div class="lv-stopwatch-suspended-badge" data-testid="review-stopwatch-suspended" role="status">
+                    <LvIcon name="timer" size={12} />
+                    <span>{t?.review?.stopwatchSuspended ?? "答题计时已挂起 (返回闪卡自动恢复)"}</span>
+                </div>
+            {/if}
             <ReviewCardBody
                 {cardHtml}
                 {faceError}
                 currentCardID={current?.cardID ?? ""}
-                {showAnswer}
-                {maskedCardHtml}
+                showAnswer={showAnswer || isPeekingAnswer}
+                maskedCardHtml={isPeekingAnswer ? cardHtml : maskedCardHtml}
                 {interactiveQuiz}
                 {selectedChoiceKeys}
                 {userJudgeChoice}
@@ -2402,6 +2534,12 @@
                 onFillCheck={handleFillCheck}
                 onTypingInput={(val) => { typingInput = val; }}
             />
+            {#if isPeekingAnswer && !showAnswer}
+                <div class="lv-peeking-banner" data-testid="review-peeking-badge" role="status">
+                    <LvIcon name="eye" size={13} />
+                    <span>{t?.review?.peekingAnswer ?? "临时透视答案中 (松开恢复)"}</span>
+                </div>
+            {/if}
             <ReviewMemoCallout
                 {showAnswer}
                 {cardMemo}
@@ -2416,7 +2554,7 @@
                 {occl}
                 {occlBox}
                 bind:occlHidden
-                {showAnswer}
+                showAnswer={showAnswer || isPeekingAnswer}
             />
             {#if !showAnswer}
                 <ReviewRescheduleModal
@@ -2452,6 +2590,8 @@
                 }}
                 onStartChoice={startChoice}
                 onAdvanceHint={advanceHint}
+                onPeekStart={() => { if (!showAnswer && current) isPeekingAnswer = true; }}
+                onPeekEnd={() => { isPeekingAnswer = false; }}
                 onRevealAnswer={revealAnswer}
                 onSpeakAnswer={speakAnswer}
             />
@@ -2480,8 +2620,9 @@
             {faceReady}
             {pressedKeyFeedback}
             ratingStyle={eff().ratingStyle}
+            ratingKeyScheme={eff().ratingKeyScheme}
             {suggestedRating}
-            {actionBusy}
+            actionBusy={actionBusy}
             compact={eff().ratingDensity === "compact"}
             {dueText}
             {t}
@@ -2671,6 +2812,109 @@
             padding: 0 calc(var(--lv-space-unit) * 2);
             box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
             animation: lv-pulse-glow 0.3s var(--lv-ease);
+        }
+
+        /* CF-10 透视状态标识 */
+        .lv-peeking-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--lv-sp-2);
+            padding: 4px 12px;
+            margin: var(--lv-sp-2) auto 0;
+            border-radius: var(--b3-border-radius);
+            background: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+            border: 1px dashed var(--b3-theme-primary);
+            color: var(--b3-theme-primary);
+            font-size: var(--lv-type-small-size);
+            animation: lv-fade-in 0.2s ease-out;
+        }
+
+        /* CF-03 答题计时挂起提示 */
+        .lv-stopwatch-suspended-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 10px;
+            margin: 0 auto;
+            border-radius: var(--b3-border-radius);
+            background: var(--b3-theme-surface-lighter);
+            color: var(--b3-theme-on-surface-light);
+            font-size: var(--lv-type-smaller-size);
+            border: 1px solid var(--b3-border-color);
+        }
+
+        /* CF-11 目标达成即时彩带与粒子微动效 */
+        .lv-target-celebration {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--lv-sp-2) var(--lv-sp-4);
+            margin: var(--lv-sp-2) auto;
+            border-radius: var(--b3-border-radius);
+            background: linear-gradient(135deg, color-mix(in srgb, var(--b3-theme-primary) 15%, transparent), color-mix(in srgb, #f59e0b 15%, transparent));
+            border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 40%, transparent);
+            box-shadow: 0 4px 14px color-mix(in srgb, var(--b3-theme-primary) 20%, transparent);
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .lv-celebration-content {
+            display: flex;
+            align-items: center;
+            gap: var(--lv-sp-2);
+            font-weight: 600;
+            font-size: var(--lv-type-control-size);
+            color: var(--b3-theme-on-background);
+            z-index: 2;
+        }
+
+        .lv-celebration-particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+
+            .lv-particle {
+                position: absolute;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                opacity: 0.85;
+                animation: lv-confetti-float 2.8s ease-out infinite;
+
+                &:nth-child(3n) { background: #3b82f6; }
+                &:nth-child(3n + 1) { background: #10b981; }
+                &:nth-child(3n + 2) { background: #f59e0b; }
+
+                &:nth-child(1) { left: 10%; animation-delay: 0.1s; }
+                &:nth-child(2) { left: 20%; animation-delay: 0.4s; }
+                &:nth-child(3) { left: 30%; animation-delay: 0.2s; }
+                &:nth-child(4) { left: 40%; animation-delay: 0.6s; }
+                &:nth-child(5) { left: 50%; animation-delay: 0.3s; }
+                &:nth-child(6) { left: 60%; animation-delay: 0.5s; }
+                &:nth-child(7) { left: 70%; animation-delay: 0.15s; }
+                &:nth-child(8) { left: 80%; animation-delay: 0.45s; }
+                &:nth-child(9) { left: 90%; animation-delay: 0.25s; }
+                &:nth-child(10) { left: 15%; animation-delay: 0.7s; }
+                &:nth-child(11) { left: 55%; animation-delay: 0.35s; }
+                &:nth-child(12) { left: 85%; animation-delay: 0.55s; }
+            }
+        }
+
+        @keyframes lv-confetti-float {
+            0% { transform: translateY(20px) scale(0.6); opacity: 0; }
+            30% { opacity: 0.9; }
+            100% { transform: translateY(-40px) scale(1.1); opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .lv-particle {
+                display: none !important;
+            }
+            .lv-target-celebration {
+                animation: none !important;
+            }
         }
     }
 </style>

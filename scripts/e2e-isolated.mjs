@@ -221,6 +221,15 @@ async function runBrowserWalkthrough(webUrl) {
             }
             walk.push({ name: "今日卡组列表渲染", pass: deckBtns.length >= 2, detail: "decks=" + deckBtns.length });
 
+            // 今日看板统一样态与 4 格指标通栏
+            const todayDecksSec = document.getElementById("sec-today-decks");
+            const statCells = document.querySelectorAll(".lv-today-stats .lv-stat-cell");
+            walk.push({
+                name: "今日看板统一样态 (我的卡组Section/4格指标通栏)",
+                pass: Boolean(todayDecksSec) && statCells.length === 4,
+                detail: "statCells=" + statCells.length,
+            });
+
             // 2. 点击「卡包管理」直达按钮
             const dmBtn = Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("卡包管理"));
             if (dmBtn) {
@@ -233,6 +242,24 @@ async function runBrowserWalkthrough(webUrl) {
             if (dmRegion) {
                 const deckCards = dmRegion.querySelectorAll(".lv-dm-deck-card");
                 walk.push({ name: "卡包管理卡包矩阵渲染", pass: deckCards.length >= 2, detail: "cards=" + deckCards.length });
+
+                // 卡库子导航层级：先卡包管理，再闪卡明细
+                const subnavBtns = Array.from(document.querySelectorAll(".lv-hub-subnav-btn"));
+                const subnavTexts = subnavBtns.map(b => b.textContent.trim());
+                const isOrderCorrect = subnavTexts.length >= 2 && subnavTexts[0] === "卡包管理" && subnavTexts[1] === "闪卡明细";
+                walk.push({
+                    name: "卡库子导航层级先卡包后明细",
+                    pass: isOrderCorrect,
+                    detail: subnavTexts.join(" > "),
+                });
+
+                // 生态来源属性与徽章识别
+                const ecoBadges = dmRegion.querySelectorAll(".lv-dm-origin-chip");
+                walk.push({
+                    name: "卡包管理生态来源属性与徽章识别",
+                    pass: ecoBadges.length >= 1,
+                    detail: "badges=" + ecoBadges.length,
+                });
 
                 // 新建卡包展开与取消
                 const newDeckBtn = Array.from(dmRegion.querySelectorAll("button")).find(b => b.textContent.includes("新建卡包"));
@@ -255,6 +282,24 @@ async function runBrowserWalkthrough(webUrl) {
                     walk.push({ name: "合并卡包抽屉与删除源卡包选项", pass: Boolean(mergeBox && mergeOpt) });
                     const cancelMergeBtn = dmRegion.querySelector(".lv-dm-merge-box button:last-child");
                     if (cancelMergeBtn) cancelMergeBtn.click();
+                }
+
+                // 单卡包钻取控制台（查看闪卡 -> 钻取控制台 -> 返回卡包）
+                const viewCardsBtn = dmRegion.querySelector(".lv-dm-card-actions button[title*='闪卡内容']");
+                if (viewCardsBtn) {
+                    viewCardsBtn.click();
+                    await new Promise(r => setTimeout(r, 600));
+                    const deckScope = document.querySelector(".lv-mgr-deck-scope");
+                    const backBtn = deckScope ? deckScope.querySelector("button[title*='返回卡包']") : null;
+                    const scopeReview = deckScope ? deckScope.querySelector(".lv-deck-scope-actions button[title*='复习本卡包']") : null;
+                    walk.push({
+                        name: "单卡包钻取控制台 (返回卡包/本包复习/卡数统计)",
+                        pass: Boolean(deckScope && backBtn && scopeReview),
+                    });
+                    if (backBtn) {
+                        backBtn.click();
+                        await new Promise(r => setTimeout(r, 400));
+                    }
                 }
             }
 
@@ -298,6 +343,32 @@ async function runBrowserWalkthrough(webUrl) {
                     const closeBtn = modal ? modal.querySelector("button") : null;
                     if (closeBtn) closeBtn.click();
                 }
+            }
+
+            // 4. AI 制卡工坊参数与功能检测
+            try {
+                plugin.openAIWizard();
+                await new Promise(r => setTimeout(r, 700));
+                const aiWb = document.querySelector(".lv-wb");
+                if (aiWb) {
+                    const focusOptions = aiWb.querySelectorAll("select[aria-label='出题侧重'] option");
+                    const demoBtns = aiWb.querySelectorAll(".lv-wb-demo-btn");
+                    if (demoBtns.length > 0) {
+                        demoBtns[0].click();
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+                    const cleanBtn = Array.from(aiWb.querySelectorAll("button")).find(b => b.textContent.includes("规整格式") || b.textContent.includes("清洗"));
+                    walk.push({
+                        name: "AI制卡工坊 (5大设问风格/演示示例/清洗规整工具)",
+                        pass: focusOptions.length >= 4 && demoBtns.length >= 1 && Boolean(cleanBtn),
+                        detail: "focusStyles=" + focusOptions.length + ", demoPresets=" + demoBtns.length,
+                    });
+                    const closeAiDialog = document.querySelector(".b3-dialog__action[data-type='cancel'], .b3-dialog__header button, button[aria-label='关闭']");
+                    if (closeAiDialog && typeof closeAiDialog.click === "function") closeAiDialog.click();
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            } catch (err) {
+                walk.push({ name: "AI制卡工坊走查异常", pass: false, detail: String(err) });
             }
 
             // 4. 隐藏面板无残留泄漏审计

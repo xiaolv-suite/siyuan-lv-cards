@@ -14,6 +14,8 @@
 
 import type { RiffDeck } from "@/api/riff";
 
+export type DeckBadgeIcon = "graduation" | "book" | "home" | "check" | "flag" | "cards";
+
 export type DeckCategory = "native" | "third-party" | "tag" | "orphan";
 
 export interface ManagedDeckInfo {
@@ -112,7 +114,17 @@ export function discoverLegacyDecks(
     blocks: RawScannedBlock[],
     activeRiffDecks: RiffDeck[],
 ): DiscoveredLegacyDeck[] {
-    const activeDeckIdSet = new Set(activeRiffDecks.map(d => d.id));
+    const activeDeckIdSet = new Set(activeRiffDecks.map(d => d.id.trim()));
+    const activeDeckNameSet = new Set(activeRiffDecks.map(d => d.name.trim().toLowerCase()));
+
+    // 辅助检查某卡包标识（ID 或名称）是否已被原生 Riff 卡包收录
+    const isAlreadyActive = (ref: string): boolean => {
+        const clean = ref.trim();
+        if (!clean) return true;
+        if (activeDeckIdSet.has(clean)) return true;
+        if (activeDeckNameSet.has(clean.toLowerCase())) return true;
+        return false;
+    };
 
     const deckMap = new Map<string, { category: DeckCategory; blockIDs: string[]; sample?: string; source?: string }>();
     const orphanBlockIDs: string[] = [];
@@ -123,12 +135,14 @@ export function discoverLegacyDecks(
 
         if (ialDecks.length > 0) {
             for (const deckRef of ialDecks) {
-                // 如果已在活跃的原生卡包中，无需在此卡包中报告
-                if (activeDeckIdSet.has(deckRef)) {
+                const trimmedRef = deckRef.trim();
+                const isBuiltin = trimmedRef === SIYUAN_BUILTIN_DECK_ID;
+                const deckName = isBuiltin ? "思源默认内置卡包" : trimmedRef;
+
+                // 如果已在活跃的原生卡包中（匹配 ID 或名称），已导入过的存量卡包不应再被识别
+                if (isAlreadyActive(trimmedRef) || isAlreadyActive(deckName)) {
                     continue;
                 }
-                const isBuiltin = deckRef === SIYUAN_BUILTIN_DECK_ID;
-                const deckName = isBuiltin ? "思源默认内置卡包" : deckRef;
                 const source = isBuiltin
                     ? "思源默认内置卡包"
                     : b.ial.includes("custom-flashcard-deck")
@@ -152,7 +166,11 @@ export function discoverLegacyDecks(
                 }
             }
         } else if (tagDeck) {
-            const deckName = tagDeck;
+            const deckName = tagDeck.trim();
+            // 如果标签卡包名称已存在同名活跃原生卡包，不重复识别
+            if (isAlreadyActive(deckName)) {
+                continue;
+            }
             const existing = deckMap.get(deckName);
             if (existing) {
                 if (!existing.blockIDs.includes(b.id)) {
@@ -175,6 +193,9 @@ export function discoverLegacyDecks(
     const result: DiscoveredLegacyDeck[] = [];
 
     for (const [name, info] of deckMap.entries()) {
+        if (isAlreadyActive(name)) {
+            continue;
+        }
         result.push({
             name,
             category: info.category,
@@ -186,7 +207,7 @@ export function discoverLegacyDecks(
 
     if (orphanBlockIDs.length > 0) {
         result.push({
-            name: "未归组存量闪卡",
+            name: "未归组闪卡",
             category: "orphan",
             blockIDs: orphanBlockIDs,
             sampleBlockContent: "包含正文 ==挖空== 但尚未加入任何卡包的存量闪卡",
@@ -277,3 +298,192 @@ export async function mergeRiffDecks(
 export function findEmptyDecks(decks: RiffDeck[]): RiffDeck[] {
     return decks.filter(d => (d.size ?? 0) === 0);
 }
+
+export const PINNED_DECKS_STORAGE_KEY = "lv-cards.pinned-decks";
+export const DECK_SORT_STORAGE_KEY = "lv-cards.deck-sort-mode";
+
+export type DeckSortMode = "default" | "size-desc" | "name-asc";
+
+/**
+ * 读取置顶卡包 ID 列表（CF-05）
+ */
+export function loadPinnedDeckIds(storage?: Storage): string[] {
+    const s = storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
+    if (!s) return [];
+    try {
+        const raw = s.getItem(PINNED_DECKS_STORAGE_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 保存置顶卡包 ID 列表
+ */
+export function savePinnedDeckIds(ids: string[], storage?: Storage): void {
+    const s = storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
+    if (!s) return;
+    try {
+        s.setItem(PINNED_DECKS_STORAGE_KEY, JSON.stringify(ids));
+    } catch { /* 旁路 */ }
+}
+
+/**
+ * 切换某卡包的置顶状态
+ */
+export function togglePinnedDeckId(ids: string[], deckId: string, storage?: Storage): string[] {
+    const set = new Set(ids);
+    if (set.has(deckId)) {
+        set.delete(deckId);
+    } else {
+        set.add(deckId);
+    }
+    const next = Array.from(set);
+    savePinnedDeckIds(next, storage);
+    return next;
+}
+
+/**
+ * 卡包列表按置顶与排序模式重排（置顶优先排在前列）
+ */
+export function sortDecksWithPins<T extends { id: string; name: string; size?: number }>(
+    decks: T[],
+    pinnedIds: string[],
+    sortMode: DeckSortMode = "default"
+): T[] {
+    const pinSet = new Set(pinnedIds);
+    const pinned: T[] = [];
+    const unpinned: T[] = [];
+    for (const d of decks) {
+        if (pinSet.has(d.id)) pinned.push(d);
+        else unpinned.push(d);
+    }
+
+    const sortFn = (a: T, b: T) => {
+        if (sortMode === "size-desc") {
+            return (b.size ?? 0) - (a.size ?? 0);
+        }
+        if (sortMode === "name-asc") {
+            return a.name.localeCompare(b.name, undefined, { numeric: true });
+        }
+        return 0;
+    };
+
+    pinned.sort(sortFn);
+    unpinned.sort(sortFn);
+    return [...pinned, ...unpinned];
+}
+
+export interface DeckClusterNode<T extends { id: string; name: string; size?: number }> {
+    prefix: string;
+    isGroup: boolean;
+    totalSize: number;
+    decks: T[];
+}
+
+/**
+ * 识别卡包名称中的斜杠分级命名（如「考研/数学/高数」），按顶层前缀聚类（CF-02）
+ */
+export function clusterDecksBySlash<T extends { id: string; name: string; size?: number }>(
+    decks: T[]
+): DeckClusterNode<T>[] {
+    const groups = new Map<string, T[]>();
+    const rootOrder: string[] = [];
+
+    for (const d of decks) {
+        const parts = d.name.split("/").map(p => p.trim()).filter(Boolean);
+        if (parts.length > 1) {
+            const rootPrefix = parts[0];
+            let list = groups.get(rootPrefix);
+            if (!list) {
+                list = [];
+                groups.set(rootPrefix, list);
+                rootOrder.push(rootPrefix);
+            }
+            list.push(d);
+        } else {
+            const key = `__single__:${d.id}`;
+            groups.set(key, [d]);
+            rootOrder.push(key);
+        }
+    }
+
+    const clusters: DeckClusterNode<T>[] = [];
+    for (const key of rootOrder) {
+        const list = groups.get(key) ?? [];
+        if (key.startsWith("__single__:")) {
+            const d = list[0];
+            clusters.push({
+                prefix: d.name,
+                isGroup: false,
+                totalSize: d.size ?? 0,
+                decks: [d],
+            });
+        } else {
+            const totalSize = list.reduce((sum, d) => sum + (d.size ?? 0), 0);
+            clusters.push({
+                prefix: key,
+                isGroup: list.length > 1,
+                totalSize,
+                decks: list,
+            });
+        }
+    }
+    return clusters;
+}
+
+export type EcosystemOrigin = "exam" | "glean" | "home" | "checkin" | "none";
+
+export interface DeckEcosystemBadge {
+    origin: EcosystemOrigin;
+    label: string;
+    icon: DeckBadgeIcon;
+    colorTone: "brand" | "info" | "warning" | "success";
+    actionLabel?: string;
+}
+
+/**
+ * 识别卡包所属的小驴家族生态来源（如小驴考试、小驴拾遗、小驴管家等）
+ */
+export function getDeckEcosystemBadge(deckName: string): DeckEcosystemBadge | null {
+    const trimmed = (deckName || "").trim();
+    if (trimmed.startsWith("小驴考试/") || trimmed === "小驴考试" || trimmed.startsWith("siyuan-exam/")) {
+        return {
+            origin: "exam",
+            label: "小驴考试",
+            icon: "graduation",
+            colorTone: "brand",
+            actionLabel: "考试台",
+        };
+    }
+    if (trimmed === "拾遗卡片" || trimmed.startsWith("拾遗卡片/") || trimmed.startsWith("小驴拾遗/")) {
+        return {
+            origin: "glean",
+            label: "小驴拾遗",
+            icon: "book",
+            colorTone: "info",
+        };
+    }
+    if (trimmed.startsWith("小驴管家/") || trimmed.startsWith("管家备忘")) {
+        return {
+            origin: "home",
+            label: "小驴管家",
+            icon: "home",
+            colorTone: "warning",
+        };
+    }
+    if (trimmed.startsWith("小驴打卡/") || trimmed.startsWith("打卡")) {
+        return {
+            origin: "checkin",
+            label: "小驴打卡",
+            icon: "check",
+            colorTone: "success",
+        };
+    }
+    return null;
+}
+
+

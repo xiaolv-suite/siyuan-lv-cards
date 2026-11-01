@@ -17,10 +17,16 @@
         syncDiscoveredDeckToRiff,
         mergeRiffDecks,
         findEmptyDecks,
+        loadPinnedDeckIds,
+        togglePinnedDeckId,
+        sortDecksWithPins,
+        getDeckEcosystemBadge,
+        type DeckSortMode,
         type DiscoveredLegacyDeck,
         type RawScannedBlock,
     } from "@/core/deck-management";
     import { buildDeckDashboard, type DeckDashboardRow, type DeckDashDue } from "@/core/deck-dashboard";
+    import { getBridgeSafely, openExamModuleSafely } from "@/libs/ecosystem-bridge-kit";
     import LvIcon from "./kit/LvIcon.svelte";
 
     interface Props {
@@ -38,6 +44,7 @@
     }: Props = $props();
 
     const t = $derived(i18n);
+    const hasExamBridge = $derived(Boolean(getBridgeSafely("exam")));
 
     let loading = $state(true);
     let scanning = $state(false);
@@ -51,6 +58,12 @@
 
     let filterMode = $state<"all" | "active" | "empty" | "legacy">("all");
     let searchText = $state("");
+    let pinnedDeckIds = $state<string[]>(loadPinnedDeckIds());
+    let sortMode = $state<DeckSortMode>("default");
+
+    function handleTogglePin(deckId: string) {
+        pinnedDeckIds = togglePinnedDeckId(pinnedDeckIds, deckId);
+    }
 
     // 新建卡包状态
     let newDeckName = $state("");
@@ -321,7 +334,7 @@
             const q = searchText.trim().toLowerCase();
             list = list.filter(d => d.name.toLowerCase().includes(q));
         }
-        return list;
+        return sortDecksWithPins(list, pinnedDeckIds, sortMode);
     });
 
     onMount(() => {
@@ -430,6 +443,15 @@
                 placeholder="搜索卡包名称…"
                 aria-label="搜索卡包"
             />
+            <select
+                class="b3-select lv-dm-sort-select"
+                bind:value={sortMode}
+                aria-label="卡包排序方案"
+            >
+                <option value="default">默认排序</option>
+                <option value="size-desc">卡片最多</option>
+                <option value="name-asc">名称 A-Z</option>
+            </select>
         </div>
     </div>
 
@@ -533,38 +555,48 @@
             </div>
         {:else}
             <div class="lv-dm-grid">
-                {#each filteredDecks as deck (deck.id)}
-                    {@const stats = dashboardRows.get(deck.id)}
-                    <div class="lv-dm-deck-card">
-                        <!-- 卡包头部与名称 -->
-                        <div class="lv-dm-card-head">
-                            <div class="lv-dm-deck-meta">
-                                {#if editingDeckId === deck.id}
-                                    <div class="lv-dm-rename-box">
-                                        <input
-                                            class="b3-text-field"
-                                            bind:value={editingDeckName}
-                                            aria-label="修改卡包名称"
-                                            onkeydown={(e) => {
-                                                if (e.key === "Enter") handleRenameDeck(deck.id);
-                                                else if (e.key === "Escape") editingDeckId = "";
-                                            }}
-                                        />
-                                        <button class="b3-button b3-button--small lv-btn-primary" onclick={() => handleRenameDeck(deck.id)}>保存</button>
-                                        <button class="b3-button b3-button--small b3-button--cancel" onclick={() => (editingDeckId = "")}>取消</button>
-                                    </div>
+	                {#each filteredDecks as deck (deck.id)}
+	                    {@const stats = dashboardRows.get(deck.id)}
+	                    {@const ecoBadge = getDeckEcosystemBadge(deck.name)}
+	                    <div class="lv-dm-deck-card">
+	                        <!-- 卡包头部与名称 -->
+	                        <div class="lv-dm-card-head">
+	                            <div class="lv-dm-deck-meta">
+	                                {#if editingDeckId === deck.id}
+	                                    <div class="lv-dm-rename-box">
+	                                        <input
+	                                            class="b3-text-field"
+	                                            bind:value={editingDeckName}
+	                                            aria-label="修改卡包名称"
+	                                            onkeydown={(e) => {
+	                                                if (e.key === "Enter") handleRenameDeck(deck.id);
+	                                                else if (e.key === "Escape") editingDeckId = "";
+	                                            }}
+	                                        />
+	                                        <button class="b3-button b3-button--small lv-btn-primary" onclick={() => handleRenameDeck(deck.id)}>保存</button>
+	                                        <button class="b3-button b3-button--small b3-button--cancel" onclick={() => (editingDeckId = "")}>取消</button>
+	                                    </div>
+	                                {:else}
+	                                    <button
+	                                        type="button"
+	                                        class="lv-dm-deck-name-btn"
+	                                        title={deck.name}
+	                                        onclick={() => openManagerDeck?.(deck.id, deck.name)}
+	                                    >
+	                                        <LvIcon name="cards" size={16} />
+	                                        <h3 class="lv-dm-deck-name">{deck.name}</h3>
+	                                    </button>
+	                                {/if}
+	                                {#if pinnedDeckIds.includes(deck.id)}
+	                                    <span class="lv-dm-pinned-chip" title="置顶卡包"><LvIcon name="star" size={11} /> 置顶</span>
+	                                {/if}
+	                                {#if ecoBadge}
+	                                    <span class="lv-dm-origin-chip lv-dm-origin-chip--{ecoBadge.origin}">
+                                        <LvIcon name={ecoBadge.icon} size={11} /> {ecoBadge.label}
+                                    </span>
                                 {:else}
-                                    <button
-                                        type="button"
-                                        class="lv-dm-deck-name-btn"
-                                        title={deck.name}
-                                        onclick={() => openManagerDeck?.(deck.id, deck.name)}
-                                    >
-                                        <LvIcon name="cards" size={16} />
-                                        <h3 class="lv-dm-deck-name">{deck.name}</h3>
-                                    </button>
+                                    <span class="lv-dm-origin-chip">思源原生</span>
                                 {/if}
-                                <span class="lv-dm-origin-chip">思源原生</span>
                             </div>
                         </div>
 
@@ -590,6 +622,7 @@
                                 <span class="ft__smaller ft__on-surface">合并到目标卡包：</span>
                                 <select
                                     class="b3-select fn__flex-1"
+                                    aria-label="选择合并目标卡包"
                                     bind:value={targetMergeDeckId}
                                     onchange={(e) => { targetMergeDeckId = e.currentTarget.value; }}
                                 >
@@ -640,9 +673,28 @@
                                 type="button"
                                 class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                                 onclick={() => openManagerDeck?.(deck.id, deck.name)}
-                                title="浏览此卡包内的全部卡片"
+                                title="查看并管理此卡包内的具体闪卡内容"
                             >
-                                <LvIcon name="search" size={13} /> <span>卡片</span>
+                                <LvIcon name="cards" size={13} /> <span>查看闪卡</span>
+                            </button>
+                            {#if ecoBadge?.origin === "exam" && hasExamBridge}
+                                <button
+                                    type="button"
+                                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                                    onclick={() => openExamModuleSafely("practice")}
+                                    title="直达小驴考试练习台刷题"
+                                >
+                                    <LvIcon name="graduation" size={13} /> <span>考试台</span>
+                                </button>
+                            {/if}
+                            <button
+                                type="button"
+                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
+                                class:lv-btn-pinned={pinnedDeckIds.includes(deck.id)}
+                                onclick={() => handleTogglePin(deck.id)}
+                                title={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡包"}
+                            >
+                                <LvIcon name="star" size={13} />
                             </button>
                             <button
                                 type="button"
@@ -696,29 +748,33 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        margin: 0 0 4px;
-        font-size: 18px;
+        margin: 0 0 2px;
+        font-size: 16px;
+        font-weight: 600;
         color: var(--lv-color-text);
     }
     .lv-dm-subtitle {
         margin: 0;
-        font-size: var(--lv-type-caption-size);
+        font-size: 12px;
         color: var(--lv-color-text-muted);
     }
     .lv-dm-stats-pills {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
     }
     .lv-dm-stat-pill {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 4px 10px;
+        padding: 2px 8px;
         border-radius: var(--lv-r-tag);
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
-        font-size: var(--lv-type-control-size);
+        font-size: 12px;
+        strong {
+            font-size: 13px;
+        }
     }
     .lv-dm-stat-pill--warn {
         border-color: color-mix(in srgb, var(--lv-color-warning) 50%, transparent);
@@ -800,7 +856,8 @@
         align-items: center;
         gap: 6px;
         color: var(--lv-color-warning);
-        font-size: var(--lv-type-body-size);
+        font-size: 13px;
+        font-weight: 600;
     }
     .lv-dm-discovered-grid {
         display: grid;
@@ -857,6 +914,8 @@
         align-items: center;
         justify-content: space-between;
         width: 100%;
+        min-width: 0;
+        gap: 8px;
     }
     .lv-dm-deck-name-btn {
         display: inline-flex;
@@ -867,14 +926,42 @@
         padding: 0;
         cursor: pointer;
         text-align: left;
+        min-width: 0;
+        flex: 1 1 auto;
     }
     .lv-dm-deck-name {
         margin: 0;
         font-size: 15px;
         color: var(--lv-color-text);
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         &:hover {
             color: var(--lv-color-brand);
         }
+    }
+    .lv-dm-pinned-chip {
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
+        color: var(--b3-theme-primary);
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        flex-shrink: 0;
+    }
+    .lv-btn-pinned {
+        color: #f59e0b !important;
+    }
+    .lv-dm-sort-select {
+        height: 26px;
+        line-height: 24px;
+        font-size: 12px;
+        padding: 0 6px;
+        max-width: 105px;
     }
     .lv-dm-origin-chip {
         font-size: 10px;
@@ -882,6 +969,7 @@
         border-radius: 4px;
         background: color-mix(in srgb, var(--lv-color-text-muted) 15%, transparent);
         color: var(--lv-color-text-muted);
+        flex-shrink: 0;
     }
     .lv-dm-metrics {
         display: flex;

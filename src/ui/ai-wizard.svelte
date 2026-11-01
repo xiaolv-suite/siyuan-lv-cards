@@ -14,6 +14,7 @@
     import { appendVersion, type CardProvenance, type ProvenanceVersion } from "@/core/ai-provenance";
     import { getMotionDuration } from "./kit/motion";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { extractDroppedBlockText } from "@/core/drag-drop";
 
     /** BU-36 分层预算报告（宿主 assembleGeneratePrompt 纯函数产出） */
     interface BudgetPreview {
@@ -27,6 +28,30 @@
     }
     import LvChip from "./kit/LvChip.svelte";
     import LvSteps from "./kit/LvSteps.svelte";
+    import { getBridgeSafely, getCommonSnippetsSafely, type CommonSnippet } from "@/libs/ecosystem-bridge-kit";
+
+    const hasCommonBridge = $derived(Boolean(getBridgeSafely("common")));
+    let commonSnippets = $state<CommonSnippet[]>([]);
+    let commonLoading = $state(false);
+
+    async function loadCommonSnippets() {
+        if (commonLoading) return;
+        commonLoading = true;
+        try {
+            commonSnippets = await getCommonSnippetsSafely();
+            if (commonSnippets.length === 0) {
+                showMessage("小驴常用语中暂无可用收藏或最近素材", 2000, "info");
+            }
+        } finally {
+            commonLoading = false;
+        }
+    }
+
+    function appendCommonSnippet(snip: CommonSnippet) {
+        const title = snip.title || "常用语素材";
+        addSource(title, snip.content);
+        showMessage(`已引入素材「${title}」`, 2000, "info");
+    }
 
     let { i18n, initialSource = "", initialSources = [], loadCurrentDoc, loadNotebookMaterial, loadNotebooks, generate, onCreate, onClose, closeLabel, embedded = false, onImportComplete, getUnfinishedJob, openDocById, isSourceDenied, onDenySource, sensitiveTerms = "", modelTrustKnown, previewBudget, recoveryJob = null }: {
         i18n: any;
@@ -85,6 +110,27 @@
     // BW-9：来源被登记禁止外发后，审核页仍可能保留已生成候选；重生成时给出明确原因。
     let deniedSourceKind = $state<"doc" | "notebook" | null>(null);
 
+    // CF-01: 编辑器块拖拽落入 AI 分析材料
+    let isDraggingOver = $state(false);
+
+    function onDragOver(e: DragEvent) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+        isDraggingOver = true;
+    }
+    function onDragLeave() {
+        isDraggingOver = false;
+    }
+    function onDrop(e: DragEvent) {
+        e.preventDefault();
+        isDraggingOver = false;
+        const dropped = extractDroppedBlockText(e.dataTransfer);
+        if (dropped && dropped.text) {
+            source = source ? `${source}\n\n${dropped.text}` : dropped.text;
+            showMessage("已成功从编辑器拖入分析材料", 1800, "info");
+        }
+    }
+
     function addSource(label: string, content: string, docId?: string, nbId?: string): void {
         // BW-9：已登记禁止外发的来源在载入前拦截（generate 侧另有硬阻断兜底）
         if (docId && isSourceDenied?.("doc", docId)) {
@@ -142,6 +188,63 @@
     let decks: RiffDeck[] = $state([]);
     let selected = $state("");
     let newName = $state("");
+
+    type PromptFocus = "core" | "compare" | "cause" | "exam" | "practice";
+    let promptFocus = $state<PromptFocus>("core");
+
+    const FOCUS_OPTIONS = [
+        { id: "core" as const, label: "🎯 核心概念与定义", desc: "围绕核心专有名词与精准定义设问，确保单空唯一指向性", instruction: "优先围绕材料中的核心概念、专有名词与精确定义提问，确保单空唯一指向性。" },
+        { id: "compare" as const, label: "🔍 易错对比与辨析", desc: "重点针对容易混淆的概念、属性异同点设问，强化概念辨析", instruction: "重点针对材料中容易混淆的概念、容易混淆的属性进行对比设问，强化概念辨析。" },
+        { id: "cause" as const, label: "🧩 原理机制与因果", desc: "重点考察底层原理、发生条件、因果逻辑与逐步演进过程", instruction: "重点考察知识点的底层原理、发生条件、因果逻辑与逐步演进过程。" },
+        { id: "exam" as const, label: "💡 考试高频考点速记", desc: "以考试常考重点风格为主，题干明确紧凑，答案精炼，适合快速自测", instruction: "以考试高频出题风格为主，题干明确紧凑，答案精炼，适合快速自测。" },
+        { id: "practice" as const, label: "📝 实战应用与案例分析", desc: "结合具体应用场景或案例分析提问，考察知识点在实际场景中的运用", instruction: "结合具体场景或应用案例设问，考察知识点在实际场景中的具体运用。" },
+    ];
+
+    const DEMO_PRESETS = [
+        {
+            label: "网络协议 (TCP握手)",
+            text: `TCP 是面向连接的、可靠的传输层协议。
+TCP 建立连接需要进行三次握手：
+1. 客户端发送 SYN 报文（同步序列号 seq=x），进入 SYN_SENT 状态；
+2. 服务端收到后回复 SYN + ACK 报文（seq=y, ack=x+1），进入 SYN_RCVD 状态；
+3. 客户端收到后发送 ACK 报文（ack=y+1），双方进入 ESTABLISHED 状态。
+三次握手的主要目的是确认双方的发送与接收能力均正常，并同步双方的初始序列号（ISN）。`,
+        },
+        {
+            label: "记忆科学 (FSRS模型)",
+            text: `FSRS（Free Spaced Repetition Scheduler）是现代先进的间隔重复调度算法。
+其核心基于记忆稳定性（Stability, S）与可提取性（Retrievability, R）模型：
+1. 稳定性 S：指在未复习状态下，记忆保留率从 100% 衰减至 90% 所经过的时间（天数）。
+2. 可提取性 R：指某一时间点能成功回忆起知识点的概率，随时间推移按负幂函数衰减。
+3. 评分级别：Again (1, 遗忘), Hard (2, 困难), Good (3, 良好), Easy (4, 简单)。每次评分后根据当前难度与稳定性动态计算下一轮最佳复习间隔。`,
+        },
+    ];
+
+    function fillDemoPreset(idx: number) {
+        const item = DEMO_PRESETS[idx];
+        if (item) {
+            source = item.text;
+            showMessage(`已填入示例：「${item.label}」`, 1800, "info");
+        }
+    }
+
+    function cleanSourceText() {
+        if (!source.trim()) return;
+        source = source.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+        showMessage("已规整多余换行与空格", 1500, "info");
+    }
+
+    let candidateFilter = $state("");
+    const visibleCandidates = $derived.by(() => {
+        if (!candidateFilter.trim()) return candidates;
+        const q = candidateFilter.trim().toLowerCase();
+        return candidates.filter(c => c.q.toLowerCase().includes(q) || c.a.toLowerCase().includes(q));
+    });
+
+    function toggleAllKeep() {
+        const allKept = candidates.every(c => c.keep);
+        candidates = candidates.map(c => ({ ...c, keep: !allKept }));
+    }
 
     /** T03 片二：审阅状态——已选(keep)≠已审(review)；入库只取 已选+已接受 */
     let candidates: { q: string; a: string; d?: number; keep: boolean; origIndex: number; review: "pending" | "accepted" | "verified" | "needsCheck"; edited?: boolean }[] = $state([]);
@@ -585,8 +688,12 @@
         busy = true;
         errorMsg = "";
         try {
+            const focusInstruction = FOCUS_OPTIONS.find(f => f.id === promptFocus)?.instruction;
+            const payloadSource = (promptFocus !== "core" && focusInstruction)
+                ? `${source.trim()}\n\n【出题要求与侧重点】：${focusInstruction}`
+                : source.trim();
             // BW-9：随请求携带来源 provenance（generate 侧判 deny 规则——UI 拦截不可绕过的硬门）
-            const { cards, jobId, gen } = await generate(source.trim(), { count, language, type: cardType }, { signal: myCtrl.signal, provenance: provenance() });
+            const { cards, jobId, gen } = await generate(payloadSource, { count, language, type: cardType }, { signal: myCtrl.signal, provenance: provenance() });
             if (seq !== genSeq) {
                 return; // 旧请求：候选与步骤不写回
             }
@@ -639,8 +746,12 @@
         errorMsg = "";
         recordUserVersion(i); // BU-15：重生前留痕当前文本（用户改过未接受也不丢）
         try {
+            const focusInstruction = FOCUS_OPTIONS.find(f => f.id === promptFocus)?.instruction;
+            const payloadSource = (promptFocus !== "core" && focusInstruction)
+                ? `${source.trim()}\n\n【出题要求与侧重点】：${focusInstruction}`
+                : source.trim();
             // 重生成仅替换候选内容：currentJobId 保持原绑定（下标对位不变；作业记录中该卡为旧文本，已知边界）
-            const { cards, gen } = await generate(source.trim(), { count: 1, language, type: cardType }, { signal: myCtrl.signal, provenance: provenance() });
+            const { cards, gen } = await generate(payloadSource, { count: 1, language, type: cardType }, { signal: myCtrl.signal, provenance: provenance() });
             if (seq !== genSeq) {
                 return;
             }
@@ -809,96 +920,241 @@
             <!-- T02 完整工作面（docs/13 §4）：左=来源清单与载入，右=材料编辑与参数 -->
             <div class="lv-wb">
                 <div class="lv-wb-side">
-                    <div class="lv-eyebrow">{t.aiWizard.source}</div>
-                    {#if loadCurrentDoc}
-                        <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadActiveDoc}>
-                            <LvIcon name="book" size={13} /> <span>{t.aiWizard.loadDoc}</span>
-                        </button>
-                    {/if}
-                    {#if loadNotebookMaterial}
-                        <div class="lv-wb-nb">
-                            <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy || nbLoading || nbOptions.length === 0 || !nbId} onclick={loadNotebookContent}>
-                                <LvIcon name="cards" size={13} /> <span>{nbLoading ? t.aiWizard.loadingNotebooks : t.aiWizard.loadNotebook}</span>
+                    <!-- 来源载入卡片 -->
+                    <div class="lv-side-card">
+                        <div class="lv-side-head">
+                            <LvIcon name="inbox" size={13} />
+                            <span>{t.aiWizard.source}</span>
+                        </div>
+                        <div class="lv-side-actions">
+                            {#if loadCurrentDoc}
+                                <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadActiveDoc}>
+                                    <LvIcon name="book" size={13} /> <span>{t.aiWizard.loadDoc}</span>
+                                </button>
+                            {/if}
+                            <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadSelection}>
+                                <LvIcon name="edit" size={13} /> <span>{t.aiWizard.loadSelection}</span>
                             </button>
-                            <select class="b3-select lv-wb-nb-select" bind:value={nbId} disabled={loadDocBusy || nbLoading || nbOptions.length === 0} aria-label={t.aiWizard.loadNotebook}>
-                                {#if nbOptions.length === 0}<option value="">{nbLoading ? t.aiWizard.loadingNotebooks : t.aiWizard.noNotebookAvailable}</option>{/if}
-                                {#each nbOptions as n (n.id)}<option value={n.id}>{n.name}</option>{/each}
-                            </select>
-                            {#if nbError}
-                                <span class="ft__smaller" style="color: var(--lv-color-danger); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{nbError}</span>
-                                <button class="b3-button b3-button--small" disabled={nbLoading} onclick={loadNotebookOptions}>{t.dashboard.refresh}</button>
+                            <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadClipboard}>
+                                <LvIcon name="inbox" size={13} /> <span>{t.aiWizard.loadClipboard}</span>
+                            </button>
+                            {#if loadNotebookMaterial}
+                                <div class="lv-wb-nb-card">
+                                    <span class="lv-side-sublabel">指定笔记本载入：</span>
+                                    <div class="lv-wb-nb-row">
+                                        <select class="b3-select lv-wb-nb-select" bind:value={nbId} disabled={loadDocBusy || nbLoading || nbOptions.length === 0} aria-label={t.aiWizard.loadNotebook}>
+                                            {#if nbOptions.length === 0}<option value="">{nbLoading ? t.aiWizard.loadingNotebooks : t.aiWizard.noNotebookAvailable}</option>{/if}
+                                            {#each nbOptions as n (n.id)}<option value={n.id}>{n.name}</option>{/each}
+                                        </select>
+                                        <button class="b3-button b3-button--small lv-btn-primary lv-wb-nb-btn" disabled={busy || loadDocBusy || nbLoading || nbOptions.length === 0 || !nbId} onclick={loadNotebookContent} title="载入笔记本全部内容">
+                                            <LvIcon name="cards" size={12} /> <span>{nbLoading ? "…" : "载入"}</span>
+                                        </button>
+                                    </div>
+                                    {#if nbError}
+                                        <span class="ft__smaller" style="color: var(--lv-color-danger); line-height: 1.4;" role="alert" aria-live="assertive">{nbError}</span>
+                                        <button class="b3-button b3-button--small" disabled={nbLoading} onclick={loadNotebookOptions}>{t.dashboard.refresh}</button>
+                                    {/if}
+                                </div>
                             {/if}
                         </div>
-                    {/if}
-                    <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadSelection}>
-                        <LvIcon name="edit" size={13} /> <span>{t.aiWizard.loadSelection}</span>
-                    </button>
-                    <button class="b3-button b3-button--small lv-wb-load" disabled={busy || loadDocBusy} onclick={loadClipboard}>
-                        <LvIcon name="inbox" size={13} /> <span>{t.aiWizard.loadClipboard}</span>
-                    </button>
-                    {#if sources.length > 0}
-                        <div class="lv-eyebrow" style="margin-top: calc(var(--lv-space-unit) * 5)">{t.aiWizard.srcLedger}</div>
-                        <div class="lv-wb-chips">
-                            {#each sources as src (src.id)}
-                                <div class="lv-wb-chip">
-                                    <!-- T02：点标签查看该条原文（只读展开，不影响合并编辑） -->
-                                    <button class="lv-wb-view" title={t.aiWizard.viewSource} onclick={() => (viewSrc = viewSrc === src.id ? null : src.id)}>{src.label} · {src.content.length}</button>
-                                    {#if src.docId && openDocById}
-                                        <button class="lv-wb-icon" title={t.aiWizard.openSource} aria-label={t.aiWizard.openSource} onclick={() => openDocById?.(src.docId!)}>↗</button>
-                                    {/if}
-                                    {#if (src.docId || src.nbId) && onDenySource}
-                                        <!-- BW-9：一键登记禁止外发（落盘规则 + 移除该来源） -->
-                                        <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.denySource} aria-label={t.aiWizard.denySource} onclick={() => denySource(src)}><LvIcon name="ban" size={13} /></button>
-                                    {/if}
-                                    <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.srcRemove} aria-label={t.aiWizard.srcRemove} onclick={() => removeSource(src.id)}><LvIcon name="close" size={13} /></button>
-                                </div>
-                                {#if viewSrc === src.id}
-                                    <div class="ft__smaller lv-wb-srcview">{src.content}</div>
-                                {/if}
+                    </div>
+
+                    <!-- 示例材料快速试用卡片 -->
+                    <div class="lv-side-card">
+                        <div class="lv-side-head">
+                            <LvIcon name="lightbulb" size={13} />
+                            <span>快速填入示例</span>
+                        </div>
+                        <div class="lv-side-demo-grid">
+                            {#each DEMO_PRESETS as p, idx (p.label)}
+                                <button
+                                    type="button"
+                                    class="b3-button b3-button--small b3-button--outline lv-wb-demo-btn"
+                                    onclick={() => fillDemoPreset(idx)}
+                                    title={`填入「${p.label}」示例文本`}
+                                >
+                                    <span>{p.label}</span>
+                                </button>
                             {/each}
+                        </div>
+                    </div>
+
+                    {#if hasCommonBridge}
+                        <div class="lv-side-card">
+                            <div class="lv-side-head">
+                                <LvIcon name="book" size={13} />
+                                <span>小驴常用素材</span>
+                            </div>
+                            <div class="lv-side-actions">
+                                {#if commonSnippets.length === 0}
+                                    <button
+                                        type="button"
+                                        class="b3-button b3-button--small lv-wb-load"
+                                        disabled={commonLoading}
+                                        onclick={loadCommonSnippets}
+                                        title="从小驴常用语中拉取收藏或最近素材"
+                                    >
+                                        <LvIcon name="refresh" size={12} />
+                                        <span>{commonLoading ? "正在拉取…" : "获取常用语与收藏"}</span>
+                                    </button>
+                                {:else}
+                                    <div class="lv-side-demo-grid">
+                                        {#each commonSnippets.slice(0, 4) as snip (snip.id)}
+                                            <button
+                                                type="button"
+                                                class="b3-button b3-button--small b3-button--outline lv-wb-demo-btn"
+                                                onclick={() => appendCommonSnippet(snip)}
+                                                title={snip.content}
+                                            >
+                                                <LvIcon name="flag" size={11} />
+                                                <span>{snip.title || snip.content.slice(0, 10)}</span>
+                                            </button>
+                                        {/each}
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+                    {/if}
+
+                    {#if sources.length > 0}
+                        <div class="lv-side-card">
+                            <div class="lv-side-head">
+                                <LvIcon name="list" size={13} />
+                                <span>{t.aiWizard.srcLedger} ({sources.length})</span>
+                            </div>
+                            <div class="lv-wb-chips">
+                                {#each sources as src (src.id)}
+                                    <div class="lv-wb-chip">
+                                        <!-- T02：点标签查看该条原文（只读展开，不影响合并编辑） -->
+                                        <button class="lv-wb-view" title={t.aiWizard.viewSource} onclick={() => (viewSrc = viewSrc === src.id ? null : src.id)}>{src.label} · {src.content.length}</button>
+                                        {#if src.docId && openDocById}
+                                            <button class="lv-wb-icon" title={t.aiWizard.openSource} aria-label={t.aiWizard.openSource} onclick={() => openDocById?.(src.docId!)}>↗</button>
+                                        {/if}
+                                        {#if (src.docId || src.nbId) && onDenySource}
+                                            <!-- BW-9：一键登记禁止外发（落盘规则 + 移除该来源） -->
+                                            <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.denySource} aria-label={t.aiWizard.denySource} onclick={() => denySource(src)}><LvIcon name="ban" size={13} /></button>
+                                        {/if}
+                                        <button class="lv-wb-icon" disabled={busy} title={t.aiWizard.srcRemove} aria-label={t.aiWizard.srcRemove} onclick={() => removeSource(src.id)}><LvIcon name="close" size={13} /></button>
+                                    </div>
+                                    {#if viewSrc === src.id}
+                                        <div class="ft__smaller lv-wb-srcview">{src.content}</div>
+                                    {/if}
+                                {/each}
+                            </div>
                         </div>
                     {/if}
                 </div>
                 <div class="lv-wb-main">
+                    <div class="lv-wb-header">
+                        <span class="lv-wb-title">
+                            <LvIcon name="edit" size={13} />
+                            <strong>待分析笔记材料</strong>
+                        </span>
+                        <div class="fn__flex-1"></div>
+                        {#if source.trim()}
+                            <button
+                                type="button"
+                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
+                                onclick={cleanSourceText}
+                                title="一键清理连续多余空行与空格"
+                            >
+                                <LvIcon name="refresh" size={12} /> <span>规整格式</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
+                                onclick={() => (source = "")}
+                                aria-label={t.aiWizard.sourceClear}
+                                title={t.aiWizard.sourceClear}
+                            >
+                                <LvIcon name="trash" size={12} /> <span>{t.aiWizard.sourceClear}</span>
+                            </button>
+                        {/if}
+                    </div>
                     <textarea
-                        class="b3-text-field fn__block"
-                        rows="10"
+                        class="b3-text-field fn__block lv-wb-textarea"
+                        class:lv-drag-over={isDraggingOver}
+                        rows="9"
                         bind:value={source}
                         disabled={busy}
                         spellcheck="false"
                         placeholder={t.aiWizard.sourceEditHint}
                         aria-label={t.aiWizard.sourceEditHint}
-                        style="font-size: var(--lv-type-control-size); line-height: 1.6"
+                        ondragover={onDragOver}
+                        ondragleave={onDragLeave}
+                        ondrop={onDrop}
                     ></textarea>
                     {#if source}
                         <!-- 材料可读可改：裁剪即编辑，生成以此处内容为准 -->
-                        <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2); display: flex; gap: calc(var(--lv-space-unit) * 4); align-items: center">
-                            <span>{source.length} 字符 · ≈ {Math.ceil(source.length / 4)} tokens</span>
+                        <div class="ft__smaller ft__on-surface lv-wb-meter-row">
+                            <span class="lv-wb-meter-pill">
+                                <LvIcon name="code" size={12} />
+                                <span>{source.length} 字符 · ≈ {Math.ceil(source.length / 4)} tokens</span>
+                            </span>
                             <div class="fn__flex-1"></div>
-                            <button class="b3-button b3-button--small lv-btn-ghost" disabled={busy} onclick={() => (source = "")}>{t.aiWizard.sourceClear}</button>
+                            <span class="lv-wb-meter-note">支持从编辑器拖拽块直接追加</span>
                         </div>
                     {:else}
-                        <!-- R53 §3.9 空态：图标圈 + 一句话 + 指引，不用裸 hint -->
+                        <!-- R53 §3.9 空态：图标圈 + 一句话 + 指引 + 示例按钮 -->
                         <div class="lv-wb-empty">
                             <div class="lv-wb-empty-icon" aria-hidden="true"><LvIcon name="zap" size={24} /></div>
                             <div class="lv-wb-empty-text">{t.aiWizard.sourceEmptyHint}</div>
+                            <div class="lv-wb-empty-actions">
+                                <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => fillDemoPreset(0)}>
+                                    <LvIcon name="lightbulb" size={12} /> <span>填入示例材料快速试用</span>
+                                </button>
+                            </div>
                         </div>
                     {/if}
-                    <div class="fn__flex fn__flex-wrap" style="gap: var(--lv-sp-3); margin-top: var(--lv-sp-3); align-items: center">
-                        <span class="ft__smaller ft__on-surface">{t.aiWizard.count}</span>
-                        <select class="b3-select" style="max-width: 90px" bind:value={count} disabled={busy} aria-label={t.aiWizard.count}>
-                            {#each [5, 10, 15, 20] as n (n)}<option value={n}>{n}</option>{/each}
-                        </select>
-                        <span class="ft__smaller ft__on-surface">{t.aiWizard.language}</span>
-                        <select class="b3-select" style="max-width: 140px" bind:value={language} disabled={busy} aria-label={t.aiWizard.language}>
-                            <option value="中文">中文</option>
-                            <option value="English">English</option>
-                        </select>
-                        <span class="ft__smaller ft__on-surface">{t.aiWizard.cardType}</span>
-                        <select class="b3-select" style="max-width: 140px" bind:value={cardType} disabled={busy} aria-label={t.aiWizard.cardType}>
-                            <option value="qa">{t.aiWizard.typeQa}</option>
-                            <option value="cloze">{t.aiWizard.typeCloze}</option>
-                        </select>
+                    <div class="lv-aiwiz-params-card">
+                        <!-- 第一行：三大核心维度（出题侧重 / 题型 / 目标卡包） -->
+                        <div class="lv-params-major-row">
+                            <div class="lv-param-item lv-param-item--focus">
+                                <span class="lv-param-label">出题侧重</span>
+                                <select class="b3-select fn__block lv-param-select" bind:value={promptFocus} disabled={busy} aria-label="出题侧重">
+                                    {#each FOCUS_OPTIONS as opt (opt.id)}
+                                        <option value={opt.id}>{opt.label}</option>
+                                    {/each}
+                                </select>
+                            </div>
+                            <div class="lv-param-item lv-param-item--type">
+                                <span class="lv-param-label">{t.aiWizard.cardType}</span>
+                                <select class="b3-select fn__block lv-param-select" bind:value={cardType} disabled={busy} aria-label={t.aiWizard.cardType}>
+                                    <option value="qa">问答卡 (QA)</option>
+                                    <option value="cloze">挖空卡 (Cloze)</option>
+                                </select>
+                            </div>
+                            {#if decks.length > 0}
+                                <div class="lv-param-item lv-param-item--deck">
+                                    <span class="lv-param-label">入库卡包</span>
+                                    <select class="b3-select fn__block lv-param-select" bind:value={selected} disabled={busy} aria-label="目标卡包" title={decks.find(d => d.id === selected)?.name ?? "目标卡包"}>
+                                        {#each decks as d (d.id)}
+                                            <option value={d.id}>{d.name}</option>
+                                        {/each}
+                                    </select>
+                                </div>
+                            {/if}
+                        </div>
+                        <!-- 第二行：辅助规格参数与侧重说明 -->
+                        <div class="lv-params-minor-row">
+                            <div class="lv-param-item lv-param-item--count">
+                                <span class="lv-param-label">{t.aiWizard.count}</span>
+                                <select class="b3-select lv-param-select-sm" bind:value={count} disabled={busy} aria-label={t.aiWizard.count}>
+                                    {#each [5, 10, 15, 20] as n (n)}<option value={n}>{n} 张</option>{/each}
+                                </select>
+                            </div>
+                            <div class="lv-param-item lv-param-item--lang">
+                                <span class="lv-param-label">{t.aiWizard.language}</span>
+                                <select class="b3-select lv-param-select-sm" bind:value={language} disabled={busy} aria-label={t.aiWizard.language}>
+                                    <option value="中文">中文</option>
+                                    <option value="English">English</option>
+                                </select>
+                            </div>
+                            <div class="lv-param-desc fn__flex-1">
+                                <LvIcon name="lightbulb" size={13} />
+                                <span>{FOCUS_OPTIONS.find(f => f.id === promptFocus)?.desc}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1006,10 +1262,30 @@
                 <LvChip tone="default">{t.aiWizard.selCount.replace("${n}", String(candidates.filter(c => c.keep).length))}</LvChip>
                 <LvChip tone="primary">{t.aiWizard.accCount.replace("${n}", String(acceptedCount))}</LvChip>
                 <div class="fn__flex-1"></div>
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    disabled={creating || regenBusy !== null}
+                    onclick={toggleAllKeep}
+                    title="切换全部卡片的勾选状态"
+                >
+                    <LvIcon name="check" size={12} />
+                    <span>{candidates.every(c => c.keep) ? "全不选" : "全选"}</span>
+                </button>
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={creating || regenBusy !== null} onclick={acceptAll}><LvIcon name="check" size={12} /> <span>{t.aiWizard.acceptAll}</span></button>
                 <!-- T03：来源依据折叠（审核时可对照，不离开本屏） -->
                 <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => (sourceOpen = !sourceOpen)}><span>{t.aiWizard.sourceFold}</span> <LvIcon name={sourceOpen ? "chevron-up" : "chevron-down"} size={13} /></button>
             </div>
+            {#if candidates.length > 3}
+                <div class="lv-candidate-search-row">
+                    <input
+                        class="b3-text-field fn__block lv-candidate-search-input"
+                        placeholder="在已生成的卡片中过滤关键字..."
+                        bind:value={candidateFilter}
+                        aria-label="搜索候选卡片"
+                    />
+                </div>
+            {/if}
             {#if reviewPlan}
                 <!-- BU-14 审阅计划：按因子就高不就低；建议性横幅，不代审不阻断（block 档在制卡任务不会出现） -->
                 <div class="lv-notice" style="display: flex; align-items: center; gap: calc(var(--lv-space-unit) * 3); flex-wrap: wrap; margin-bottom: var(--lv-sp-2); padding: 6px 10px">
@@ -1029,7 +1305,7 @@
                 </div>
             {/if}
             <div class="lv-aiwiz-list">
-                {#each candidates as c, i (c.origIndex)}
+                {#each visibleCandidates as c, i (c.origIndex)}
                     <div class="lv-card2 lv-aiwiz-card">
                         <label class="fn__flex" style="gap: var(--lv-sp-2); align-items: center">
                             <input type="checkbox" bind:checked={c.keep} disabled={creating || regenBusy !== null} />
@@ -1231,6 +1507,12 @@
         overflow: auto;
         box-sizing: border-box;
 
+        :global(.lv-drag-over) {
+            border-color: var(--b3-theme-primary) !important;
+            background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent) !important;
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent) !important;
+        }
+
         .b3-button {
             touch-action: manipulation;
             user-select: none;
@@ -1322,31 +1604,43 @@
     /* T02 完整工作面（docs/13 §4）：左=来源清单与载入，右=材料编辑与参数 */
     .lv-wb {
         display: grid;
-        grid-template-columns: 230px minmax(0, 1fr);
+        grid-template-columns: 240px minmax(0, 1fr);
         gap: var(--lv-sp-4);
         margin-bottom: var(--lv-sp-3);
-        @media (max-width: 740px) { grid-template-columns: 1fr; }
+        @media (max-width: 760px) { grid-template-columns: 1fr; }
     }
-    .lv-wb-side { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 3); align-items: stretch; }
+    .lv-wb-side { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 2); align-items: stretch; }
     .lv-wb-side .lv-wb-load {
         width: 100%;
         text-align: left;
         /* 宿主 .b3-button 是 inline-flex 居中——覆盖对齐，文字靠左（text-align 对 flex 不生效） */
         justify-content: flex-start;
     }
-    /* 笔记本载入组：按钮 + 范围选择拼接成一行 */
-    .lv-wb-nb { display: flex; gap: var(--lv-sp-2); }
-    .lv-wb-nb .lv-wb-load { flex: 1; min-width: 0; }
+    /* 笔记本载入组：卡片式堆叠，下拉与按钮各自拥有充足宽度 */
+    .lv-wb-nb-card {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+    }
+    .lv-wb-nb-row {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
     .lv-wb-nb-select {
-        width: 96px;
+        flex: 1;
+        min-width: 0;
+        height: 28px;
+        line-height: 26px;
+        font-size: var(--lv-type-control-size);
+        padding: 0 6px;
+        box-sizing: border-box;
+    }
+    .lv-wb-nb-btn {
         flex: none;
         height: 28px;
-        min-height: 28px;
-        line-height: var(--lv-lh-control-lg);
-        font-size: var(--lv-type-control-size);
-        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 2);
-        box-sizing: border-box;
-        vertical-align: middle;
+        padding: 0 8px;
     }
     .lv-wb-chips { display: flex; flex-direction: column; gap: calc(var(--lv-space-unit) * 2); margin-top: var(--lv-sp-1); }
     .lv-wb-chip {
@@ -1444,5 +1738,170 @@
             outline: none;
             box-shadow: var(--lv-focus-ring);
         }
+    }
+
+    /* ① 左侧栏分组卡片化与排版对齐 */
+    .lv-side-card {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px 12px;
+        background: color-mix(in srgb, var(--lv-color-text) 3%, var(--lv-color-surface));
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-m);
+    }
+    .lv-side-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: var(--lv-type-smaller-size);
+        font-weight: 600;
+        color: var(--lv-color-text-muted);
+        letter-spacing: 0.3px;
+    }
+    .lv-side-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .lv-side-sublabel {
+        font-size: 11px;
+        color: var(--lv-color-text-muted);
+    }
+    .lv-side-demo-grid {
+        display: flex;
+        gap: 6px;
+    }
+    .lv-wb-demo-btn {
+        flex: 1 1 50%;
+        text-align: center;
+        justify-content: center;
+        font-size: 11px;
+        padding: 4px 6px;
+        white-space: nowrap;
+    }
+
+    .lv-wb-header {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        margin-bottom: 6px;
+    }
+    .lv-wb-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: var(--lv-type-control-size);
+        color: var(--lv-color-text);
+    }
+    .lv-wb-textarea {
+        font-size: var(--lv-type-control-size);
+        line-height: 1.6;
+        min-height: 200px;
+        max-height: 400px;
+        resize: vertical;
+    }
+    .lv-wb-meter-row {
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        flex-wrap: wrap;
+    }
+    .lv-wb-meter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+        border-radius: var(--lv-r-pill);
+    }
+    .lv-wb-meter-note {
+        color: var(--lv-color-text-muted);
+    }
+    .lv-wb-empty-actions {
+        margin-top: 10px;
+    }
+
+    /* ② 参数区两行结构化布局 */
+    .lv-aiwiz-params-card {
+        margin-top: var(--lv-sp-3);
+        padding: 12px 14px;
+        background: color-mix(in srgb, var(--lv-color-text) 3%, var(--lv-color-surface));
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-l);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .lv-params-major-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 1.4fr) minmax(130px, 1fr) minmax(180px, 1.5fr);
+        gap: var(--lv-sp-3);
+        align-items: start;
+        width: 100%;
+
+        @media (max-width: 800px) {
+            grid-template-columns: 1fr;
+        }
+    }
+    .lv-params-minor-row {
+        display: flex;
+        align-items: flex-end;
+        gap: var(--lv-sp-3);
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .lv-param-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+    .lv-param-item--count,
+    .lv-param-item--lang {
+        flex: none;
+    }
+    .lv-param-label {
+        font-size: 11px;
+        color: var(--lv-color-text-muted);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .lv-param-select {
+        height: 30px;
+        line-height: 28px;
+        padding: 0 8px;
+        font-size: var(--lv-type-control-size);
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .lv-param-select-sm {
+        height: 30px;
+        line-height: 28px;
+        padding: 0 8px;
+        font-size: var(--lv-type-control-size);
+        min-width: 90px;
+        box-sizing: border-box;
+    }
+    .lv-param-desc {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--b3-theme-primary);
+        font-size: var(--lv-type-smaller-size);
+        line-height: 1.4;
+        padding: 5px 10px;
+        background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
+        border-radius: var(--b3-border-radius);
+        min-height: 30px;
+        box-sizing: border-box;
+    }
+    .lv-candidate-search-row {
+        margin-bottom: var(--lv-sp-2);
+    }
+    .lv-candidate-search-input {
+        height: 28px;
+        font-size: var(--lv-type-smaller-size);
     }
 </style>

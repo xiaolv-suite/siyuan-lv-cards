@@ -16,6 +16,8 @@ export interface LvCardsSettings {
     dailyReviewTarget: number;
     /** 评分按钮风格：four=Anki 式 4 档，three=墨墨式 认识/模糊/不认识 */
     ratingStyle: "four" | "three";
+    /** 复习评分快捷键方案（CF-18）：number=数字键 1-4，jkl=主键区 J/K/L/;，both=两者兼备 */
+    ratingKeyScheme: "number" | "jkl" | "both";
     /** 超时模式：关 / 超时自动翻面 / 超时自动评遗忘 */
     timeoutMode: "off" | "reveal" | "forget";
     timeoutSeconds: number;
@@ -188,6 +190,7 @@ export function defaultSettings(): LvCardsSettings {
         dailyNewTarget: 20,
         dailyReviewTarget: 200,
         ratingStyle: "four",
+        ratingKeyScheme: "both",
         timeoutMode: "off",
         timeoutSeconds: 60,
         randomOrder: false,
@@ -205,7 +208,7 @@ export function defaultSettings(): LvCardsSettings {
         cardFontScale: 1,
         customCardCss: "",
         heatmapWeeks: 17,
-        deepStatsOpen: false,
+        deepStatsOpen: true,
         sessionBudgetMin: 15,
         badgeRefreshSec: 60,
         ratingDensity: "cozy",

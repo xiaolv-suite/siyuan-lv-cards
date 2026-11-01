@@ -201,7 +201,7 @@ describe("deck-manager 卡包管理组件", () => {
         const mergeToolBtns = screen.getAllByRole("button", { name: "合并卡片到其他卡包" });
         await fireEvent.click(mergeToolBtns[0]); // deck-1 展开合并栏
 
-        const select = screen.getByRole("combobox") as HTMLSelectElement;
+        const select = screen.getByRole("combobox", { name: "选择合并目标卡包" }) as HTMLSelectElement;
         const option = select.querySelector('option[value="deck-2"]') as HTMLOptionElement;
         option.selected = true;
         await fireEvent.change(select);
@@ -214,4 +214,41 @@ describe("deck-manager 卡包管理组件", () => {
             expect(removeRiffDeck).toHaveBeenCalledWith("deck-1");
         });
     });
+
+    it("CF-05: 支持卡包置顶与取消置顶操作并反映在界面", async () => {
+        render(DeckManager, { i18n: mockI18n });
+        await screen.findByText("计算机网络");
+
+        // 初始无置顶标签
+        expect(screen.queryByText("置顶")).toBeNull();
+
+        // 点击「计算机网络」卡包上的置顶按钮
+        const pinBtns = screen.getAllByRole("button", { name: "置顶卡包" });
+        await fireEvent.click(pinBtns[1]); // deck-2 计算机网络
+
+        // 出现置顶标识
+        expect(await screen.findByText("置顶")).toBeTruthy();
+    });
+
+    it("CF-05: 纯逻辑层 sortDecksWithPins 正确按置顶与排序模式重排", async () => {
+        const { sortDecksWithPins } = await import("../src/core/deck-management");
+        const sampleDecks = [
+            { id: "d1", name: "B卡包", size: 5 },
+            { id: "d2", name: "A卡包", size: 20 },
+            { id: "d3", name: "C卡包", size: 10 },
+        ];
+
+        // 置顶 d3，默认排序：d3 排在首位
+        const res1 = sortDecksWithPins(sampleDecks, ["d3"]);
+        expect(res1.map(d => d.id)).toEqual(["d3", "d1", "d2"]);
+
+        // 按卡片降序且置顶 d1：d1 在最前，剩下的按 size 降序 (d2: 20, d3: 10)
+        const res2 = sortDecksWithPins(sampleDecks, ["d1"], "size-desc");
+        expect(res2.map(d => d.id)).toEqual(["d1", "d2", "d3"]);
+
+        // 按名称升序且置顶 d3：d3 在最前，剩下的按名称升序 (A卡包 -> B卡包)
+        const res3 = sortDecksWithPins(sampleDecks, ["d3"], "name-asc");
+        expect(res3.map(d => d.id)).toEqual(["d3", "d2", "d1"]);
+    });
 });
+

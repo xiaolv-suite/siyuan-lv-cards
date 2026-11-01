@@ -140,10 +140,13 @@ describe("review-shortcuts 键盘调度解析器", () => {
             expect(resolveReviewKeyAction({ key: "[" }, baseContext({ hasLastAnswered: false }))).toBeNull();
         });
 
-        it("e 或 E 触发 open-editor 原生编辑，对齐思源原生操作体验", () => {
+        it("e/E 或 o/O 触发 open-editor 原生编辑，对齐思源原生操作体验与 O 键记忆", () => {
             expect(resolveReviewKeyAction({ key: "e" }, baseContext({ hasCurrent: true }))).toBe("open-editor");
             expect(resolveReviewKeyAction({ key: "E" }, baseContext({ hasCurrent: true }))).toBe("open-editor");
+            expect(resolveReviewKeyAction({ key: "o" }, baseContext({ hasCurrent: true }))).toBe("open-editor");
+            expect(resolveReviewKeyAction({ key: "O" }, baseContext({ hasCurrent: true }))).toBe("open-editor");
             expect(resolveReviewKeyAction({ key: "e" }, baseContext({ hasCurrent: false }))).toBeNull();
+            expect(resolveReviewKeyAction({ key: "o" }, baseContext({ hasCurrent: false }))).toBeNull();
         });
     });
 
@@ -165,6 +168,37 @@ describe("review-shortcuts 键盘调度解析器", () => {
             expect(resolveReviewKeyAction({ key: "4" }, ctx)).toBe("rate-4");
             expect(resolveReviewKeyAction({ key: "ArrowUp" }, ctx)).toBe("rate-4");
             expect(resolveReviewKeyAction({ key: "5" }, ctx)).toBeNull();
+        });
+
+        it("CF-18：四档与三档支持主键区人体工学按键 (J/K/L/;) 及双键位方案", () => {
+            const ctxBoth = baseContext({ showAnswer: true, ratingStyle: "four", ratingKeyScheme: "both" });
+            expect(resolveReviewKeyAction({ key: "j" }, ctxBoth)).toBe("rate-1");
+            expect(resolveReviewKeyAction({ key: "J" }, ctxBoth)).toBe("rate-1");
+            expect(resolveReviewKeyAction({ key: "k" }, ctxBoth)).toBe("rate-2");
+            expect(resolveReviewKeyAction({ key: "l" }, ctxBoth)).toBe("rate-3");
+            expect(resolveReviewKeyAction({ key: ";" }, ctxBoth)).toBe("rate-4");
+            expect(resolveReviewKeyAction({ key: "；" }, ctxBoth)).toBe("rate-4");
+            // 数字键依然有效
+            expect(resolveReviewKeyAction({ key: "1" }, ctxBoth)).toBe("rate-1");
+            expect(resolveReviewKeyAction({ key: "4" }, ctxBoth)).toBe("rate-4");
+
+            // 仅人体工学方案
+            const ctxJkl = baseContext({ showAnswer: true, ratingStyle: "four", ratingKeyScheme: "jkl" });
+            expect(resolveReviewKeyAction({ key: "j" }, ctxJkl)).toBe("rate-1");
+            expect(resolveReviewKeyAction({ key: ";" }, ctxJkl)).toBe("rate-4");
+            expect(resolveReviewKeyAction({ key: "1" }, ctxJkl)).toBeNull();
+
+            // 仅数字键方案
+            const ctxNum = baseContext({ showAnswer: true, ratingStyle: "four", ratingKeyScheme: "number" });
+            expect(resolveReviewKeyAction({ key: "1" }, ctxNum)).toBe("rate-1");
+            expect(resolveReviewKeyAction({ key: "j" }, ctxNum)).toBeNull();
+
+            // 三档模式人体工学映射
+            const ctxThree = baseContext({ showAnswer: true, ratingStyle: "three", ratingKeyScheme: "both" });
+            expect(resolveReviewKeyAction({ key: "j" }, ctxThree)).toBe("rate-1");
+            expect(resolveReviewKeyAction({ key: "k" }, ctxThree)).toBe("rate-2");
+            expect(resolveReviewKeyAction({ key: "l" }, ctxThree)).toBe("rate-3");
+            expect(resolveReviewKeyAction({ key: ";" }, ctxThree)).toBeNull();
         });
 
         it("三档模式：1~3 映射评分，4 被忽略", () => {

@@ -22,6 +22,7 @@ export const CARDS_BRIDGE_CAPABILITIES = [
     "getOverview",
     "receiveExtract",
     "daily-task-export",
+    "today-summary",
 ] as const;
 
 export const CARDS_BRIDGE_ALIASES = [
@@ -58,6 +59,7 @@ export interface FlashcardDueSummary {
     unreviewedCount: number;
     unreviewedNewCardCount: number;
     unreviewedOldCardCount: number;
+    todayReviewedCount?: number;
     updatedAt: string;
 }
 
@@ -80,6 +82,7 @@ export interface CardsBridgeApi {
     openReview(options?: ReviewOpenOptions): Promise<ActionResult<boolean>>;
     receiveExtract(envelope: ExtractEnvelope): Promise<ActionResult<{ blockID?: string; enrolled?: boolean }>>;
     generateDailyTaskMarkdown(options?: { customPrefix?: string }): Promise<ActionResult<{ markdown: string; dueCount: number }>>;
+    getTodaySummaryText(options?: { customPrefix?: string }): Promise<ActionResult<{ text: string; dueCount: number }>>;
 }
 
 export interface CardsBridgeHost {
@@ -172,6 +175,20 @@ export function buildCardsBridge(host: CardsBridgeHost): CardsBridgeApi {
                     : `- [ ] ${prefix}：今日待复习 ${totalDue} 张闪卡`;
                 return {
                     markdown,
+                    dueCount: totalDue,
+                };
+            });
+        },
+        getTodaySummaryText: (opts?: { customPrefix?: string }) => {
+            return wrap("summary-failed", async () => {
+                const dueSummary = await host.getDueSummary();
+                const totalDue = dueSummary.unreviewedCount;
+                const prefix = opts?.customPrefix ?? "闪卡复习";
+                const text = totalDue === 0
+                    ? `【${prefix}】今日已无待复习闪卡（全部完成 🎉）`
+                    : `【${prefix}】今日待复习 ${totalDue} 张闪卡`;
+                return {
+                    text,
                     dueCount: totalDue,
                 };
             });

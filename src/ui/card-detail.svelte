@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { showMessage } from "siyuan";
     import { getBlockDOM } from "@/api/siyuan";
     import { diffLines, type DiffRow } from "@/core/line-diff";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
@@ -306,6 +307,24 @@
         {#if editorCtx && !editing}
             <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={editorLoadBusy} aria-busy={editorLoadBusy} onclick={startEdit}><LvIcon name="edit" size={12} /> <span>{editorLoadBusy ? "…" : t.editor.edit}</span></button>
         {/if}
+        <button
+            type="button"
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            title={t.manager.copyRef ?? "复制块引用 ((id '内容'))"}
+            onclick={async () => {
+                const cleanText = (block.content || "闪卡").replace(/<[^>]+>/g, "").slice(0, 30);
+                const text = `(( ${block.id} "${cleanText}" ))`;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showMessage(t.manager.copyRefSuccess ?? "已复制块引用到剪贴板", 2000, "info");
+                } catch {
+                    showMessage("复制失败", 2000, "error");
+                }
+            }}
+        >
+            <LvIcon name="book" size={12} />
+            <span>{t.manager.copyRef ?? "复制块引"}</span>
+        </button>
         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenDoc}><LvIcon name="target" size={12} /> <span>{t.manager.openDoc}</span></button>
     {/snippet}
     <!-- T05 分面导航（docs/40）：内容 / 来源 / 学习记录 / 问题 -->

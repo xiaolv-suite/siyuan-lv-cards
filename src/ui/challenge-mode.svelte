@@ -10,11 +10,29 @@
     let { i18n, onExit }: { i18n: any; onExit: () => void } = $props();
     const t = $derived(i18n);
 
-    const DURATION = 180;
+    // CF-09: 限时挑战自定义倒计时时长（60s / 180s / 300s）
+    const DURATION_STORAGE_KEY = "lv-cards.challenge.duration-sec";
+    function loadSavedDuration(): number {
+        try {
+            const v = Number(localStorage.getItem(DURATION_STORAGE_KEY));
+            if (v === 60 || v === 180 || v === 300) return v;
+        } catch { /* 防御 */ }
+        return 180;
+    }
+    const initialDuration = loadSavedDuration();
+    let durationSec = $state<number>(initialDuration);
+    function setDuration(sec: number) {
+        durationSec = sec;
+        remaining = sec;
+        try {
+            localStorage.setItem(DURATION_STORAGE_KEY, String(sec));
+        } catch { /* 防御 */ }
+    }
+
     let phase = $state<"idle" | "loading" | "running" | "empty" | "error" | "done">("idle");
     let errorMsg = $state("");
     let readFailures = $state(0);
-    let remaining = $state(DURATION);
+    let remaining = $state(initialDuration);
     let known = $state(0);
     let unknown = $state(0);
     let cards: { blockID: string; dom: string }[] = $state([]);
@@ -76,7 +94,7 @@
         phase = "loading";
         errorMsg = "";
         readFailures = 0;
-        remaining = DURATION;
+        remaining = durationSec;
         known = 0; unknown = 0; idx = 0;
         cards = [];
         try {
@@ -173,7 +191,36 @@
         <div class="lv-chal-center">
             <div class="lv-chal-icon"><LvIcon name="timer" size={34} /></div>
             <div class="lv-chal-title">{t.challenge.title}</div>
-            <div class="lv-chal-desc">{t.challenge.desc.replace("${n}", "3")}</div>
+            <div class="lv-chal-desc">{t.challenge.desc.replace("${n}", String(Math.round(durationSec / 60)))}</div>
+            <div class="lv-chal-dur-group" style="display: flex; gap: 8px; justify-content: center; margin: 10px 0 16px;">
+                <button
+                    type="button"
+                    class="b3-button b3-button--small"
+                    class:lv-btn-primary={durationSec === 60}
+                    class:b3-button--outline={durationSec !== 60}
+                    onclick={() => setDuration(60)}
+                >
+                    60秒 (1分钟)
+                </button>
+                <button
+                    type="button"
+                    class="b3-button b3-button--small"
+                    class:lv-btn-primary={durationSec === 180}
+                    class:b3-button--outline={durationSec !== 180}
+                    onclick={() => setDuration(180)}
+                >
+                    180秒 (3分钟)
+                </button>
+                <button
+                    type="button"
+                    class="b3-button b3-button--small"
+                    class:lv-btn-primary={durationSec === 300}
+                    class:b3-button--outline={durationSec !== 300}
+                    onclick={() => setDuration(300)}
+                >
+                    300秒 (5分钟)
+                </button>
+            </div>
             <button class="b3-button lv-btn-primary" onclick={start}>{t.challenge.start} <LvKbd k="Space" /></button>
             <div style="margin-top: var(--lv-sp-3)">
                 <button

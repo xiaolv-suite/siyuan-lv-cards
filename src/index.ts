@@ -367,6 +367,8 @@ export default class LvCardsPlugin extends Plugin {
     private onboardingTimer: ReturnType<typeof setTimeout> | null = null;
     /** null=idle, object=pending/active, undefined=unloaded. Identity rejects late completions. */
     private paletteState: { close?: () => void; element?: HTMLElement } | null | undefined = null;
+    /** 文档编辑后台防抖同步句柄（TODO-L1，1.5s 防抖，避免频繁拉取） */
+    private docSyncTimer: ReturnType<typeof setTimeout> | null = null;
     private settingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
     private persistedSettingsSnapshot: LvCardsSettings | null = null;
     private settingsMutationVersion = 0;
@@ -416,6 +418,26 @@ export default class LvCardsPlugin extends Plugin {
     private readonly examPlansSourceID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     private examPlansSequence = 0;
     private examKernelWasRunning = false;
+    public cachedExamLinkage: { name: string; days: number; source: string } | null = null;
+
+    public async refreshExamLinkage(): Promise<{ name: string; days: number; source: string } | null> {
+        try {
+            const { getExamPluginConfig } = await import("./api/siyuan");
+            const cfg = await getExamPluginConfig();
+            if (cfg?.examDate) {
+                const { daysLeft } = await import("./core/exam");
+                const left = daysLeft(cfg.examDate);
+                if (left !== null && left >= 0) {
+                    this.cachedExamLinkage = { name: "小驴考试 · 备考目标", days: left, source: "siyuan-exam" };
+                    return this.cachedExamLinkage;
+                }
+            }
+        } catch {
+            // 静默旁路
+        }
+        this.cachedExamLinkage = null;
+        return null;
+    }
     private disposeCardsBridge?: () => void;
     private unregisterRaikiri?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
@@ -935,6 +957,7 @@ export default class LvCardsPlugin extends Plugin {
         // （AT-1：读取与装配抽成方法，同步/覆盖变更后的有界串行重载复用同一路径）
         await this.applyLoadedStores(await this.readAllStores());
         this.bindExamPlansSync();
+        void this.refreshExamLinkage();
         this.perf.setCold(!this.settings.onboarded); // AT-6：首轮未完成引导=冷启动
         if (rollDateIfNeeded(this.suspendToday)) {
             await this.persist.save(SUSPEND_TODAY_DATA, this.suspendToday);
@@ -984,6 +1007,8 @@ export default class LvCardsPlugin extends Plugin {
         this.eventBus.on("click-flashcard-action", this.onNativeCardAction);
         // 块图标菜单 → 制卡入口（M2·FR1）
         this.eventBus.on("click-blockicon", this.onBlockIcon);
+        // 外部编辑器文档保存与事务广播 → 静默防抖刷新前台看板（TODO-L1）
+        this.eventBus.on("ws-main", this.onWsMain);
 
         // 对外窗口桥 window.xiaolvCards / window.lvCards（小驴生态协商协议 v1）
         this.disposeCardsBridge = mountCardsBridge({
@@ -999,11 +1024,14 @@ export default class LvCardsPlugin extends Plugin {
                 };
             },
             getDueSummary: async () => {
-                const d = await dueCache.get("");
+                const d = await dueCache.get("").catch(() => null);
+                const today = todayDate();
+                const todayReviewed = this.revlog?.days?.[today]?.review ?? 0;
                 return {
                     unreviewedCount: d?.unreviewedCount ?? 0,
                     unreviewedNewCardCount: d?.unreviewedNewCardCount ?? 0,
                     unreviewedOldCardCount: d?.unreviewedOldCardCount ?? 0,
+                    todayReviewedCount: todayReviewed,
                     updatedAt: new Date().toISOString(),
                 };
             },
@@ -1011,7 +1039,7 @@ export default class LvCardsPlugin extends Plugin {
             openReview: opts => this.openTabOf(TAB_REVIEW, opts as Record<string, unknown>),
         });
 
-        // 向小驴雷切工作台安全注册待复习闪卡组件（Ecosystem Federation Epoch 6）
+        // 向小驴雷切工作台安全注册待复习闪卡组件（Ecosystem Federation Epoch 6 / Bento 3.0）
         this.unregisterRaikiri = registerRaikiriModuleSafely({
             moduleId: "cards-due-summary",
             title: "待复习闪卡",
@@ -1019,16 +1047,27 @@ export default class LvCardsPlugin extends Plugin {
             category: "learning",
             supportedDevices: ["desktop", "sidebar", "mobile"],
             sizes: ["small", "medium", "wide"],
-            description: "待复习统计",
+            description: "待复习闪卡统计与今日记忆节奏",
             source: { pluginId: "siyuan-lv-cards", name: "小驴闪卡" },
             read: async () => {
                 const due = await dueCache.get("").catch(() => null);
+                const today = todayDate();
+                const todayReviewed = this.revlog?.days?.[today]?.review ?? 0;
+                const streak = calcStreak(this.revlog);
+                const totalDue = due?.unreviewedCount ?? 0;
                 return {
                     items: [
-                        { label: "待复习", value: String(due?.unreviewedOldCardCount ?? 0) },
-                        { label: "新卡", value: String(due?.unreviewedNewCardCount ?? 0) },
-                        { label: "已复习", value: String(this.revlog.days[todayDate()]?.review ?? 0) },
+                        { label: "待复习", value: `${due?.unreviewedOldCardCount ?? 0} 张` },
+                        { label: "新卡片", value: `${due?.unreviewedNewCardCount ?? 0} 张` },
+                        { label: "今日已学", value: `${todayReviewed} 张` },
                     ],
+                    stat: {
+                        value: String(totalDue),
+                        label: "今日待复习",
+                        sub: `连续学习 ${streak} 天`,
+                    },
+                    emptyHint: totalDue === 0 ? "今日闪卡已全部复习完毕 🎉" : "",
+                    status: "ready",
                 };
             },
             open: () => this.openTabOf(TAB_REVIEW),
@@ -1201,6 +1240,11 @@ export default class LvCardsPlugin extends Plugin {
         this.unbindExamPlansSync();
         this.eventBus.off("click-flashcard-action", this.onNativeCardAction);
         this.eventBus.off("click-blockicon", this.onBlockIcon);
+        this.eventBus.off("ws-main", this.onWsMain);
+        if (this.docSyncTimer) {
+            clearTimeout(this.docSyncTimer);
+            this.docSyncTimer = null;
+        }
         this.topbarController?.destroy();
         if (this.onboardingTimer) {
             clearTimeout(this.onboardingTimer);
@@ -2522,6 +2566,30 @@ export default class LvCardsPlugin extends Plugin {
 
     /** 原生事件幂等去重（AQ-5）：eventId / cardID+1s 时间窗 */
     private nativeDeduper = new NativeEventDeduper();
+
+    /** 思源文档编辑 WebSocket 事件防抖同步（TODO-L1）：在思源编辑器中修改文档或块时，防抖 1.5s 通知插件静默刷新 */
+    private onWsMain = (event: CustomEvent<any>) => {
+        try {
+            const cmd = event?.detail?.cmd;
+            if (cmd === "transactions" || cmd === "savedoc" || cmd === "syncMergeResult") {
+                if (this.docSyncTimer) {
+                    clearTimeout(this.docSyncTimer);
+                }
+                this.docSyncTimer = setTimeout(() => {
+                    this.docSyncTimer = null;
+                    try {
+                        invalidateDueCache();
+                        this.refreshDueBadge();
+                        (this.eventBus as any).emit(LV_EVENTS.storesChanged, storesChangedEvent());
+                    } catch {
+                        // 旁路通知，异常不抛出
+                    }
+                }, 1500);
+            }
+        } catch {
+            // 防御外部事件结构变动
+        }
+    };
 
     private onNativeCardAction = (event: CustomEvent) => {
         try {

@@ -77,6 +77,8 @@
         onCardContentSaved?: (blockID: string) => void | Promise<void>;
         deckScope?: { id: string; name: string } | null;
         clearDeckScope?: () => void;
+        openDecksTab?: () => void;
+        openReviewScope?: (scope: string, cram?: boolean) => void;
         /** 维护页定点打开的卡片；只读导航参数，不改变筛选或调度。 */
         initialBlockID?: string;
         onInitialBlockConsumed?: () => void;
@@ -232,6 +234,12 @@
         // 新请求对应新结果，旧页面的选择不能作用于新分页或筛选结果。
         selected = [];
         try {
+            if (availableDecks.length === 0 && getRiffDecks) {
+                try {
+                    const dl = await getRiffDecks();
+                    availableDecks = dl ?? [];
+                } catch { /* 旁路 */ }
+            }
             const cards = await getRiffCards(deckScope?.id ?? "", page, PAGE_SIZE);
             if (seq !== loadSeq) {
                 return; // 旧页响应不覆盖筛选、页码与选择
@@ -334,6 +342,22 @@
         page = 1;
         resetScrollPosition();
         void load();
+    }
+
+    function onDeckFilterChange(e: Event) {
+        const val = (e.currentTarget as HTMLSelectElement).value;
+        if (!val) {
+            clearDeckScope();
+        } else {
+            const found = availableDecks.find(d => d.id === val);
+            if (found) {
+                deckScope = { id: found.id, name: found.name };
+                page = 1;
+                selected = [];
+                resetScrollPosition();
+                void load();
+            }
+        }
     }
 
     function toggleSelect(id: string) {
@@ -757,7 +781,11 @@
 
     function openDoc(block: SearchBlock) {
         const rootId = (block.rootID as string) || block.id;
-        openTab({ app: ctx.app, doc: { id: rootId } });
+        try {
+            openTab({ app: ctx.app, doc: { id: rootId } });
+        } catch (e: unknown) {
+            showMessage(friendlyError(e, t), 2500, "error");
+        }
     }
 
     onMount(() => {
@@ -934,6 +962,18 @@
                 <button class="b3-button b3-button--small lv-btn-ghost" title={t.manager.deleteSaved} aria-label={t.manager.deleteSaved} onclick={deleteSaved}><LvIcon name="ban" size={15} /></button>
             {/if}
         {/if}
+        <select
+            class="b3-select lv-sort lv-deck-selector"
+            value={deckScope?.id ?? ""}
+            onchange={onDeckFilterChange}
+            title="选择当前卡包范围"
+            aria-label="卡包范围"
+        >
+            <option value="">全部卡包</option>
+            {#each availableDecks as d (d.id)}
+                <option value={d.id}>{d.name} ({d.size ?? 0})</option>
+            {/each}
+        </select>
         <select class="b3-select lv-sort" bind:value={sortMode} onchange={() => (selected = [])} title={t.manager.sortLabel} aria-label={t.manager.sortLabel}>
             <option value="default">{t.manager.sortDefault}</option>
             <option value="path">{t.manager.sortPath}</option>
@@ -993,12 +1033,53 @@
         </div>
     </div>
     {#if deckScope}
-        <div class="lv-mgr-deck-scope" role="status">
-            <span>{t.manager.deckScopeLabel ?? "当前卡组"}：<strong>{deckScope.name}</strong></span>
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearDeckScope}>
-                <LvIcon name="close" size={12} />
-                <span>{t.manager.deckScopeClear ?? "查看全部卡组"}</span>
-            </button>
+        <div class="lv-mgr-deck-scope" role="region" aria-label="当前卡包管理">
+            <div class="lv-deck-scope-left">
+                {#if ctx.openDecksTab}
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                        onclick={() => ctx.openDecksTab?.()}
+                        title="返回卡包管理列表"
+                    >
+                        <LvIcon name="chevron-left" size={13} />
+                        <span>返回卡包列表</span>
+                    </button>
+                {/if}
+                <div class="lv-deck-scope-info" role="status">
+                    <span class="lv-deck-scope-icon"><LvIcon name="book" size={15} /></span>
+                    <span>{t.manager.deckScopeLabel ?? "当前卡组"}：<strong class="lv-deck-scope-name">{deckScope.name}</strong></span>
+                    <span class="ft__smaller ft__on-surface">({total} 张闪卡)</span>
+                </div>
+            </div>
+            <div class="lv-deck-scope-actions">
+                {#if ctx.openReviewScope}
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small lv-btn-primary"
+                        disabled={total === 0}
+                        onclick={() => ctx.openReviewScope?.(`deck:${deckScope.id}`)}
+                        title="开始复习本卡包"
+                    >
+                        <LvIcon name="learn" size={13} />
+                        <span>复习本包</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                        disabled={total === 0}
+                        onclick={() => ctx.openReviewScope?.(`deck:${deckScope.id}`, true)}
+                        title="突击练习本卡包（不计入遗忘）"
+                    >
+                        <LvIcon name="zap" size={13} />
+                        <span>突击</span>
+                    </button>
+                {/if}
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearDeckScope} title="清除卡包限制，查看全库闪卡">
+                    <LvIcon name="close" size={12} />
+                    <span>{t.manager.deckScopeClear ?? "查看全部卡组"}</span>
+                </button>
+            </div>
         </div>
     {/if}
 
@@ -1177,6 +1258,25 @@
                             <LvIcon name="star" size={13} />
                         </button>
                     {/if}
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                        title={t.manager.copyRef ?? "复制块引用 ((id '内容'))"}
+                        onclick={async (e: Event) => {
+                            e.stopPropagation();
+                            const cleanText = (stripHtml(b.content) || "闪卡").slice(0, 30);
+                            const text = `(( ${b.id} "${cleanText}" ))`;
+                            try {
+                                await navigator.clipboard.writeText(text);
+                                showMessage(t.manager.copyRefSuccess ?? "已复制块引用到剪贴板", 2000, "info");
+                            } catch {
+                                showMessage("复制失败", 2000, "error");
+                            }
+                        }}
+                    >
+                        <LvIcon name="book" size={12} />
+                        <span>{t.manager.copyRef ?? "复制块引"}</span>
+                    </button>
                     <button class="b3-button b3-button--small" onclick={(e: Event) => { e.stopPropagation(); openDoc(b); }}><LvIcon name="target" size={12} /> {t.manager.openDoc}</button>
                 </div>
             {/each}
@@ -1496,13 +1596,50 @@
         justify-content: space-between;
         gap: var(--lv-sp-3);
         margin: 0 0 var(--lv-sp-3);
-        padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 7);
+        padding: 8px 14px;
         border-radius: var(--lv-r-m);
         border: 1px solid var(--lv-primary-border);
         background: var(--lv-primary-soft);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        flex-wrap: wrap;
+
+        .lv-deck-scope-left {
+            display: flex;
+            align-items: center;
+            gap: var(--lv-sp-3);
+            min-width: 0;
+            flex-wrap: wrap;
+        }
+        .lv-deck-scope-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--lv-color-text);
+        }
+        .lv-deck-scope-icon {
+            color: var(--lv-color-brand);
+            display: inline-flex;
+            align-items: center;
+        }
+        .lv-deck-scope-name {
+            font-size: var(--lv-type-body-size);
+            font-weight: var(--lv-fw-bold);
+            color: var(--lv-color-brand);
+        }
+        .lv-deck-scope-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--lv-sp-2);
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+    }
+    .lv-deck-selector {
+        max-width: 170px !important;
+        font-weight: 500;
+        border-color: color-mix(in srgb, var(--lv-color-brand) 40%, var(--lv-border)) !important;
     }
     .lv-mgr-deck-scope strong { color: var(--lv-color-text); overflow-wrap: anywhere; }
 

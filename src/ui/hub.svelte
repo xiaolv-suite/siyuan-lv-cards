@@ -450,8 +450,8 @@
             <div class="lv-hub-bar">
                 {#if primaryFor(active) === "library" && uiMode !== "simple"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡库"}>
-                        <button class:lv-hub-subnav-active={active === "manage"} class="lv-hub-subnav-btn" aria-current={active === "manage" ? "page" : undefined} onclick={() => switchTab("manage")}>{i18n.hubTabManage ?? "卡片管理"}</button>
                         <button class:lv-hub-subnav-active={active === "decks"} class="lv-hub-subnav-btn" aria-current={active === "decks" ? "page" : undefined} onclick={() => switchTab("decks")}>{i18n.hubTabDecks ?? "卡包管理"}</button>
+                        <button class:lv-hub-subnav-active={active === "manage"} class="lv-hub-subnav-btn" aria-current={active === "manage" ? "page" : undefined} onclick={() => switchTab("manage")}>{i18n.hubTabManage ?? "闪卡明细"}</button>
                         <button class:lv-hub-subnav-active={active === "maintenance"} class="lv-hub-subnav-btn" aria-current={active === "maintenance" ? "page" : undefined} onclick={() => switchTab("maintenance")}>{i18n.hubTabMaintenance ?? "维护债务"}</button>
                     </nav>
                 {:else if primaryFor(active) === "studio" && inbox}
@@ -501,7 +501,7 @@
                     <Dashboard ctx={{ ...dctx, openHubTab: (id: string) => switchTab(id) }} />
                 {:else if active === "manage"}
                     {#key managerDeckScope?.id ?? ""}
-                    <Manager ctx={{ ...managerCtx, initialBlockID: managerInitialBlockID, onInitialBlockConsumed: () => (managerInitialBlockID = ""), onCardContentSaved: handleManagerCardSaved, deckScope: managerDeckScope, clearDeckScope: () => (managerDeckScope = null) }} />
+                    <Manager ctx={{ ...managerCtx, initialBlockID: managerInitialBlockID, onInitialBlockConsumed: () => (managerInitialBlockID = ""), onCardContentSaved: handleManagerCardSaved, deckScope: managerDeckScope, clearDeckScope: () => (managerDeckScope = null), openDecksTab: () => switchTab("decks"), openReviewScope: dctx.openReviewScope }} />
                     {/key}
                 {:else if active === "decks"}
                     <DeckManager

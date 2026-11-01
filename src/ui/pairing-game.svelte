@@ -2,7 +2,7 @@
     import { onDestroy } from "svelte";
     import { scale } from "svelte/transition";
     import { dueCache } from "@/api/due-shared";
-    import { getRiffCards } from "@/api/riff";
+    import { getRiffCards, getRiffDecks, type RiffDeck } from "@/api/riff";
     import { getBlockDOM } from "@/api/siyuan";
     import { extractMarkTexts, MARK_SELECTOR } from "@/core/card-face";
     import LvEmpty from "./kit/LvEmpty.svelte";
@@ -23,6 +23,8 @@
 
     let phase = $state<"loading" | "running" | "done" | "notEnough" | "error">("loading");
     let errorMsg = $state("");
+    let availableDecks = $state<RiffDeck[]>([]);
+    let selectedDeckId = $state<string>("");
     let pairs = $state<Pair[]>([]);
     // 左列（题面，原序）与右列（答案，洗牌）
     let left = $state<Pair[]>([]);
@@ -76,9 +78,28 @@
         phase = "loading";
         errorMsg = "";
         try {
-            const due = await dueCache.get("");
-            if (disposed || generation !== loadGeneration) return;
-            const candidates = (due.cards ?? []).slice(0, 12);
+            if (availableDecks.length === 0) {
+                try {
+                    const dl = await getRiffDecks();
+                    if (disposed || generation !== loadGeneration) return;
+                    availableDecks = (dl ?? []).filter(d => (d.size ?? 0) > 0);
+                } catch { /* 旁路 */ }
+            }
+
+            let candidates: { cardID: string; blockID: string }[] = [];
+            if (selectedDeckId) {
+                const resp = await getRiffCards(selectedDeckId, 1, 24);
+                if (disposed || generation !== loadGeneration) return;
+                candidates = (resp.blocks ?? []).map((b: any) => ({
+                    cardID: String(b.riffCard?.id ?? b.riffCard?.cardID ?? b.id ?? ""),
+                    blockID: String(b.id ?? ""),
+                })).filter((c: any) => Boolean(c.cardID && c.blockID));
+            } else {
+                const due = await dueCache.get("");
+                if (disposed || generation !== loadGeneration) return;
+                candidates = (due?.cards ?? []).map(c => ({ cardID: c.cardID, blockID: c.blockID })).slice(0, 16);
+            }
+
             const found: Pair[] = [];
             let failedCards = 0;
             for (const c of candidates) {
@@ -101,8 +122,8 @@
                     failedCards += 1;
                 }
             }
-            if (found.length < 4) {
-                // 闭环保障：到期卡不足 4 张时平滑回退读取卡库中已有卡片，支持用户在无到期时随时练习
+            if (found.length < 4 && !selectedDeckId) {
+                // 闭环保障：全库到期卡不足 4 张时平滑回退读取卡库中已有卡片，支持用户在无到期时随时练习
                 try {
                     const fallbackCards = await getRiffCards("", 1, 20);
                     for (const b of fallbackCards.blocks ?? []) {
@@ -201,7 +222,22 @@
         <!-- R53 §3.9：空态走标准组件（图标圈 + 说明 + 动作钮），居中限宽不顶满 -->
         <div class="lv-pair-center">
             <div class="lv-pair-empty-wrap">
-                <LvEmpty text={t.pairing.notEnough} actionLabel={t.pairing.exit} onaction={onExit} />
+                {#if availableDecks.length > 0}
+                    <div style="margin-bottom: var(--lv-sp-3); display: flex; justify-content: center;">
+                        <select
+                            class="b3-select"
+                            bind:value={selectedDeckId}
+                            onchange={(e) => { selectedDeckId = e.currentTarget.value; void load(); }}
+                            aria-label="选择挑战卡包"
+                        >
+                            <option value="">全库到期卡片</option>
+                            {#each availableDecks as d (d.id)}
+                                <option value={d.id}>{d.name} ({d.size ?? 0})</option>
+                            {/each}
+                        </select>
+                    </div>
+                {/if}
+                <LvEmpty text={selectedDeckId ? "所选卡包内包含挖空的闪卡不足 4 张" : t.pairing.notEnough} actionLabel={t.pairing.exit} onaction={onExit} />
             </div>
         </div>
     {:else if phase === "error"}
@@ -210,6 +246,20 @@
         </div>
     {:else if phase === "running"}
         <div class="lv-pair-head">
+            {#if availableDecks.length > 0}
+                <select
+                    class="b3-select lv-pair-deck-select"
+                    bind:value={selectedDeckId}
+                    onchange={(e) => { selectedDeckId = e.currentTarget.value; void load(); }}
+                    aria-label="切换卡包范围"
+                    title="选择配对挑战卡包范围"
+                >
+                    <option value="">全库到期卡片</option>
+                    {#each availableDecks as d (d.id)}
+                        <option value={d.id}>{d.name} ({d.size ?? 0})</option>
+                    {/each}
+                </select>
+            {/if}
             <span class="lv-chip2 lv-chip2--primary"><LvIcon name="timer" size={14} /> {seconds}s</span>
             <span class="lv-chip2 lv-chip2--default">{t.pairing.pairs}: {matched.size} / {pairs.length}</span>
             <span class="lv-chip2 lv-chip2--error">{t.pairing.mistakes}: {mistakes}</span>
@@ -264,6 +314,12 @@
 </div>
 
 <style>
+    .lv-pair-deck-select {
+        height: 28px;
+        font-size: var(--lv-type-small-size);
+        max-width: 180px;
+        padding: 0 8px;
+    }
     .lv-pair { min-height: 320px; display: flex; flex-direction: column; }
     .lv-pair-empty-wrap { width: min(440px, 100%); }
     .lv-pair-center {

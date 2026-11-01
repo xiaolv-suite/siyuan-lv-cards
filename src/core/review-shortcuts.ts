@@ -34,6 +34,8 @@ export interface ReviewShortcutContext {
     hasCurrent: boolean;
     hasLastAnswered: boolean;
     ratingStyle?: "three" | "four";
+    /** 复习评分键位方案（CF-18）：number=数字键 1-4，jkl=主键区 J/K/L/;，both=两者均可 */
+    ratingKeyScheme?: "number" | "jkl" | "both";
     /** 事件目标是否在复习容器内部 */
     isTargetInsideRoot?: boolean;
 }
@@ -148,7 +150,7 @@ export function resolveReviewKeyAction(
     if (e.key === "s") {
         return "suspend";
     }
-    if (e.key === "e" || e.key === "E") {
+    if (e.key === "e" || e.key === "E" || e.key === "o" || e.key === "O") {
         if (ctx.hasCurrent) {
             e.preventDefault?.();
             return "open-editor";
@@ -184,16 +186,22 @@ export function resolveReviewKeyAction(
         return null;
     }
 
-    // 10. 评分按键（1~4 或 1~3，以及方向键 ←/→/↓/↑ 单手盲打流）
+    // 10. 评分按键（1~4 或 1~3，方向键 ←/→/↓/↑ 单手盲打，以及人体工学 J/K/L/;）
+    const scheme = ctx.ratingKeyScheme ?? "both";
+    const allowNum = scheme === "number" || scheme === "both";
+    const allowJkl = scheme === "jkl" || scheme === "both";
+    const k = e.key;
+    const lower = k.toLowerCase();
+
     if (ctx.ratingStyle === "three") {
-        if (e.key === "1" || e.key === "ArrowLeft") return "rate-1";
-        if (e.key === "2" || e.key === "ArrowDown") return "rate-2";
-        if (e.key === "3" || e.key === "ArrowRight") return "rate-3";
+        if ((allowNum && (k === "1" || k === "ArrowLeft")) || (allowJkl && lower === "j")) return "rate-1";
+        if ((allowNum && (k === "2" || k === "ArrowDown")) || (allowJkl && lower === "k")) return "rate-2";
+        if ((allowNum && (k === "3" || k === "ArrowRight")) || (allowJkl && lower === "l")) return "rate-3";
     } else {
-        if (e.key === "1" || e.key === "ArrowLeft") return "rate-1";
-        if (e.key === "2" || e.key === "ArrowDown") return "rate-2";
-        if (e.key === "3" || e.key === "ArrowRight") return "rate-3";
-        if (e.key === "4" || e.key === "ArrowUp") return "rate-4";
+        if ((allowNum && (k === "1" || k === "ArrowLeft")) || (allowJkl && lower === "j")) return "rate-1";
+        if ((allowNum && (k === "2" || k === "ArrowDown")) || (allowJkl && lower === "k")) return "rate-2";
+        if ((allowNum && (k === "3" || k === "ArrowRight")) || (allowJkl && lower === "l")) return "rate-3";
+        if ((allowNum && (k === "4" || k === "ArrowUp")) || (allowJkl && (k === ";" || k === "；"))) return "rate-4";
     }
 
     return null;

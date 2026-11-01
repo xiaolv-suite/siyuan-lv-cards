@@ -327,3 +327,19 @@ export const getDocTitles = async (docIDs: string[]): Promise<Map<string, string
 export const kernelVersion = async (): Promise<string> => {
     return String(await kernelRead<unknown>("/api/system/version", {}) ?? "?");
 };
+
+/** 读取小驴考试插件配置（若已安装），用于考期感知联动 */
+export const getExamPluginConfig = async (): Promise<{ examDate?: string } | null> => {
+    try {
+        const res = await kernelRead<any>("/api/file/getFile", { path: "/data/storage/petal/siyuan-exam/config.json" });
+        if (res && typeof res === "object") {
+            return res;
+        }
+        if (typeof res === "string") {
+            return JSON.parse(res);
+        }
+    } catch {
+        // 静默隔离
+    }
+    return null;
+};

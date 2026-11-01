@@ -52,3 +52,40 @@ describe("flattenPaletteGroups", () => {
         expect(flattenPaletteGroups(groups).map(i => i.id)).toEqual(["review", "wizard", "overview", "exam"]);
     });
 });
+
+describe("CF-16: 最近常用命令置顶", () => {
+    it("记录与读取最近常用命令（上限 3 条且去重后入首位）", () => {
+        const store: Record<string, string> = {};
+        const mockStorage = {
+            getItem: (k: string) => store[k] ?? null,
+            setItem: (k: string, v: string) => { store[k] = v; },
+        } as Storage;
+
+        import("../src/core/palette").then(({ loadRecentCommandIds, recordRecentCommandId }) => {
+            expect(loadRecentCommandIds(mockStorage)).toEqual([]);
+            recordRecentCommandId("review", mockStorage);
+            expect(loadRecentCommandIds(mockStorage)).toEqual(["review"]);
+            recordRecentCommandId("wizard", mockStorage);
+            recordRecentCommandId("exam", mockStorage);
+            expect(loadRecentCommandIds(mockStorage)).toEqual(["exam", "wizard", "review"]);
+            // 再次执行 review 提升到最前，总数不超过 3
+            recordRecentCommandId("review", mockStorage);
+            expect(loadRecentCommandIds(mockStorage)).toEqual(["review", "exam", "wizard"]);
+        });
+    });
+
+    it("空查询时置顶推荐最近常用命令组", () => {
+        const groups = filterPaletteCommands(cmds, "", 12, ["exam", "wizard"]);
+        expect(groups[0].group).toBe("recent");
+        expect(groups[0].items.map(i => i.id)).toEqual(["exam", "wizard"]);
+        // 后续仍包含原有分类
+        expect(groups.slice(1).map(g => g.group)).toEqual(["actions", "nav"]);
+    });
+
+    it("有搜索关键字时不展示最近常用组，只展示匹配结果", () => {
+        const groups = filterPaletteCommands(cmds, "总览", 12, ["exam", "wizard"]);
+        expect(groups.some(g => g.group === "recent")).toBe(false);
+        expect(flattenPaletteGroups(groups).map(i => i.id)).toEqual(["overview"]);
+    });
+});
+

@@ -1,7 +1,7 @@
 <script lang="ts">
     // T13 ⌘K 命令面板（docs/42 §3.10）：输入过滤 + 分组结果 + ↑↓/Enter/Esc 键盘流。
     // 纯展示组件：命令表与执行回调由宿主注入（core/palette.ts 承担过滤逻辑）。
-    import { filterPaletteCommands, flattenPaletteGroups, type PaletteCommand } from "@/core/palette";
+    import { filterPaletteCommands, flattenPaletteGroups, loadRecentCommandIds, recordRecentCommandId, type PaletteCommand } from "@/core/palette";
 
     let {
         commands,
@@ -27,11 +27,17 @@
     let selected = $state(0);
     let composing = $state(false);
     let revealSelection = $state(true);
+    let recentIds = $state<string[]>(loadRecentCommandIds());
 
     // The command source is already scoped by the host. Do not silently hide
     // authorized commands behind the pure helper's generic 12-item default.
-    const groups = $derived(filterPaletteCommands(commands, query, commands.length));
+    const groups = $derived(filterPaletteCommands(commands, query, commands.length, recentIds));
     const flat = $derived(flattenPaletteGroups(groups));
+
+    function groupLabel(key: string): string {
+        if (key === "recent") return groupNames.recent ?? "最近常用";
+        return groupNames[key] ?? key;
+    }
 
     const optionId = (index: number) => `${paletteId}-option-${encodeURIComponent(flat[index].id)}`;
     const activeOptionId = $derived(flat[selected] ? optionId(selected) : undefined);
@@ -59,6 +65,7 @@
     function runAt(index: number) {
         const cmd = flat[index];
         if (!cmd) return;
+        recordRecentCommandId(cmd.id);
         onrun(cmd);
         onClose();
     }
@@ -115,8 +122,8 @@
             <div class="lv-palette-empty">{labels.empty ?? ""}</div>
         {:else}
             {#each groups as g (g.group)}
-                <div role="group" aria-label={groupNames[g.group] ?? g.group}>
-                    <div class="lv-palette-group" aria-hidden="true">{groupNames[g.group] ?? g.group}</div>
+                <div role="group" aria-label={groupLabel(g.group)}>
+                    <div class="lv-palette-group" aria-hidden="true">{groupLabel(g.group)}</div>
                     {#each g.items as cmd (cmd.id)}
                         {@const index = flat.indexOf(cmd)}
                         <button

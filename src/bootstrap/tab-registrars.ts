@@ -126,7 +126,13 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                         getExamCountdown: () => {
                             const plan = plugin.examPlans.plans.find((p: any) => p.enabled && p.examDate && !p.archived);
                             const left = plan ? daysLeft(plan.examDate) : null;
-                            return plan && left !== null && left >= 0 ? { name: plan.name, days: left } : null;
+                            if (plan && left !== null && left >= 0) {
+                                return { name: plan.name, days: left };
+                            }
+                            if ((plugin as any).cachedExamLinkage && (plugin as any).cachedExamLinkage.days >= 0) {
+                                return (plugin as any).cachedExamLinkage;
+                            }
+                            return null;
                         },
                         getXpEnabled: () => plugin.settings.xpEnabled,
                         onSessionFinished: (cb: () => void) => {

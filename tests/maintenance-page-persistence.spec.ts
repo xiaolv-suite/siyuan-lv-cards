@@ -451,4 +451,32 @@ describe("maintenance pause persistence feedback", () => {
         await waitFor(() => expect(screen.queryByRole("button", { name: i18n.maintenance.repairApply })).toBeNull());
         expect(screen.getByRole("textbox", { name: `${i18n.maintenance.repairDraft} broken` })).toBeTruthy();
     });
+
+    it("CF-14: 支持在卡库维护体检页一键批量暂挂所有坏卡与一键恢复", async () => {
+        const suspendToday = vi.fn(async () => undefined);
+        const unsuspendToday = vi.fn(async () => undefined);
+        renderPage({ suspendToday, unsuspendToday });
+
+        // 等待扫描发现坏卡并渲染顶部批量暂挂按钮
+        const batchBtn = await screen.findByRole("button", { name: /批量暂挂坏卡/ });
+        expect(batchBtn).toBeTruthy();
+        expect(batchBtn.textContent).toContain("批量暂挂坏卡 (2)");
+
+        // 点击批量暂挂
+        await fireEvent.click(batchBtn);
+        await waitFor(() => {
+            expect(suspendToday).toHaveBeenCalledWith(["card-a", "card-b"]);
+        });
+
+        // 暂挂完成后按钮状态变为恢复全部
+        const resumeBtn = await screen.findByRole("button", { name: /已全部暂挂 \(恢复\)/ });
+        expect(resumeBtn).toBeTruthy();
+
+        // 点击恢复全部
+        await fireEvent.click(resumeBtn);
+        await waitFor(() => {
+            expect(unsuspendToday).toHaveBeenCalledWith(["card-a", "card-b"]);
+        });
+    });
 });
+

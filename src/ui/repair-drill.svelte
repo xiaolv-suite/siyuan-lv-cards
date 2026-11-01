@@ -9,6 +9,8 @@
     import { getMotionDuration } from "./kit/motion";
     import LvSteps from "./kit/LvSteps.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { sqlQuery } from "@/api/siyuan";
+    import { showMessage } from "siyuan";
 
     let { i18n, onClose }: { i18n: any; onClose: () => void } = $props();
     const t = $derived(i18n);
@@ -18,26 +20,78 @@
     let sampleIdx = $state(0);
     let draft = $state("");
     let revealed = $state(false);
+    let importing = $state(false);
+    let customSample = $state<{
+        label: string;
+        material: string;
+        brokenQ: string;
+        issue: string;
+        fixed: string;
+        answer: string;
+    } | null>(null);
 
-    const samples = $derived([
-        {
-            label: t.drillSample1,
-            material: t.drillMaterial,
-            brokenQ: t.drillBrokenQ,
-            issue: t.drillIssue,
-            fixed: t.drillFixed,
-            answer: t.drillAnswer,
-        },
-        {
-            label: t.drillSample2,
-            material: t.drill2Material,
-            brokenQ: t.drill2BrokenQ,
-            issue: t.drill2Issue,
-            fixed: t.drill2Fixed,
-            answer: t.drill2Answer,
-        },
-    ]);
-    const sample = $derived(samples[sampleIdx]);
+    const samples = $derived.by(() => {
+        const base = [
+            {
+                label: t.drillSample1 ?? "样例 1：题面过宽",
+                material: t.drillMaterial,
+                brokenQ: t.drillBrokenQ,
+                issue: t.drillIssue,
+                fixed: t.drillFixed,
+                answer: t.drillAnswer,
+            },
+            {
+                label: t.drillSample2 ?? "样例 2：缺少前提",
+                material: t.drill2Material,
+                brokenQ: t.drill2BrokenQ,
+                issue: t.drill2Issue,
+                fixed: t.drill2Fixed,
+                answer: t.drill2Answer,
+            },
+        ];
+        if (customSample) {
+            base.push(customSample);
+        }
+        return base;
+    });
+    const sample = $derived(samples[sampleIdx] ?? samples[0]);
+
+    async function importPersonalLeechCard() {
+        if (importing) return;
+        importing = true;
+        try {
+            const rows = await sqlQuery(
+                "SELECT id, content, markdown FROM blocks WHERE (ial LIKE '%custom-lv-leech=\"true\"%' OR ial LIKE '%custom-lv-lapses=\"%') ORDER BY updated DESC LIMIT 10"
+            );
+            if (!rows || rows.length === 0) {
+                showMessage("当前卡库未检测到水蛭卡（遗忘记录良好），无需急救！", 2500, "info");
+                return;
+            }
+            const target = rows[Math.floor(Math.random() * rows.length)] as any;
+            const md = String(target?.markdown || target?.content || "").trim();
+            const match = md.match(/==([^=]+)==/);
+            const answer = match ? match[1].trim() : "核心知识点";
+            const brokenQ = md.replace(/==([^=]+)==/g, "____");
+
+            customSample = {
+                label: `实战：${String(target?.content || md).slice(0, 8)}…`,
+                material: `【个人水蛭卡原块】\n${md}`,
+                brokenQ: brokenQ || md,
+                issue: "【顽疾诊断】该卡在日常复习中发生多次遗忘。常见病灶：题干过长缺少前置关键词定位、单空记忆负载过大，或缺少明确场景提示。",
+                fixed: "【重构建议】将知识点拆解为原子化问答；明确核心触发语境（例如：「在...场景下」）；确保答案单空唯一。",
+                answer,
+            };
+            sampleIdx = 2;
+            step = 1;
+            draft = customSample.brokenQ;
+            revealed = false;
+            showMessage("已成功导入个人真实水蛭卡案例，开始 5 步救治演练！", 2500, "info");
+        } catch (e: any) {
+            showMessage(`导入失败：${e?.message ?? String(e)}`, 3000, "error");
+        } finally {
+            importing = false;
+        }
+    }
 
     const stepLabels = $derived([
         t.drillStep1,
@@ -87,7 +141,7 @@
         <span class="lv-tag lv-tag--brand">{t.drillBadge}</span>
     </div>
 
-    <!-- 样例选择器（T10 扩容） -->
+    <!-- 样例选择器（T10 扩容 + CF-15 真实水蛭卡实战导入） -->
     <div class="lv-drill-samples">
         {#each samples as sm, i (i)}
             <button
@@ -96,6 +150,16 @@
                 onclick={() => pickSample(i)}
             >{sm.label}</button>
         {/each}
+        <button
+            type="button"
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            disabled={importing}
+            onclick={importPersonalLeechCard}
+            title="从个人真实水蛭卡库提取高遗忘卡片进行救治重构演练"
+        >
+            <LvIcon name="zap" size={12} />
+            <span>{importing ? "正在提取…" : "导入个人水蛭卡实战"}</span>
+        </button>
     </div>
 
     {#key `${sampleIdx}-${step}`}

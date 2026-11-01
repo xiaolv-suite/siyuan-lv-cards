@@ -8,6 +8,7 @@
         faceReady = true,
         pressedKeyFeedback = null,
         ratingStyle = "four",
+        ratingKeyScheme = "both",
         suggestedRating = null,
         actionBusy = false,
         compact = false,
@@ -22,6 +23,7 @@
         faceReady?: boolean;
         pressedKeyFeedback?: string | null;
         ratingStyle?: "four" | "three";
+        ratingKeyScheme?: "number" | "jkl" | "both";
         suggestedRating?: number | null;
         actionBusy?: boolean;
         compact?: boolean;
@@ -31,6 +33,16 @@
         onRevealNextCloze?: () => void;
         onRate: (rating: Rating) => void;
     } = $props();
+
+    const k1 = $derived(ratingKeyScheme === "jkl" ? "J" : ratingKeyScheme === "both" ? "1/J" : "1");
+    const k2 = $derived(ratingKeyScheme === "jkl" ? "K" : ratingKeyScheme === "both" ? "2/K" : "2");
+    const k3 = $derived(ratingKeyScheme === "jkl" ? "L" : ratingKeyScheme === "both" ? "3/L" : "3");
+    const k4 = $derived(ratingKeyScheme === "jkl" ? ";" : ratingKeyScheme === "both" ? "4/;" : "4");
+
+    const isPressed1 = $derived(pressedKeyFeedback === "1" || pressedKeyFeedback?.toLowerCase() === "j");
+    const isPressed2 = $derived(pressedKeyFeedback === "2" || pressedKeyFeedback?.toLowerCase() === "k");
+    const isPressed3 = $derived(pressedKeyFeedback === "3" || pressedKeyFeedback?.toLowerCase() === "l");
+    const isPressed4 = $derived(pressedKeyFeedback === "4" || pressedKeyFeedback === ";" || pressedKeyFeedback === "；");
 </script>
 
 <div class="lv-actions" class:lv-actions-compact={compact} role="group" aria-label={t.review?.ratingAriaLabel ?? "评分操作区"}>
@@ -82,7 +94,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b1"
             class:lv-btn-suggested={suggestedRating === 1}
-            class:lv-btn-pressed={pressedKeyFeedback === "1"}
+            class:lv-btn-pressed={isPressed1}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="1"
@@ -90,7 +102,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.unknown ?? "重来"}</span>
-                <LvKbd k="1" />
+                <LvKbd k={k1} />
             </span>
             <small>{dueText("1")}</small>
         </button>
@@ -98,7 +110,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b2"
             class:lv-btn-suggested={suggestedRating === 2}
-            class:lv-btn-pressed={pressedKeyFeedback === "2"}
+            class:lv-btn-pressed={isPressed2}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="2"
@@ -106,7 +118,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.vague ?? "模糊"}</span>
-                <LvKbd k="2" />
+                <LvKbd k={k2} />
             </span>
             <small>{dueText("2")}</small>
         </button>
@@ -114,7 +126,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b3"
             class:lv-btn-suggested={suggestedRating === 3}
-            class:lv-btn-pressed={pressedKeyFeedback === "3"}
+            class:lv-btn-pressed={isPressed3}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="3"
@@ -122,7 +134,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.know ?? "认识"}</span>
-                <LvKbd k="3" />
+                <LvKbd k={k3} />
             </span>
             <small>{dueText("3")}</small>
         </button>
@@ -131,7 +143,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b1"
             class:lv-btn-suggested={suggestedRating === 1}
-            class:lv-btn-pressed={pressedKeyFeedback === "1"}
+            class:lv-btn-pressed={isPressed1}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="1"
@@ -139,7 +151,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.againBtn ?? "重来"}</span>
-                <LvKbd k="1" />
+                <LvKbd k={k1} />
             </span>
             <small>{dueText("1")}</small>
         </button>
@@ -147,7 +159,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b2"
             class:lv-btn-suggested={suggestedRating === 2}
-            class:lv-btn-pressed={pressedKeyFeedback === "2"}
+            class:lv-btn-pressed={isPressed2}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="2"
@@ -155,7 +167,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.hard ?? "困难"}</span>
-                <LvKbd k="2" />
+                <LvKbd k={k2} />
             </span>
             <small>{dueText("2")}</small>
         </button>
@@ -163,7 +175,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b3"
             class:lv-btn-suggested={suggestedRating === 3}
-            class:lv-btn-pressed={pressedKeyFeedback === "3"}
+            class:lv-btn-pressed={isPressed3}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="3"
@@ -171,7 +183,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.good ?? "良好"}</span>
-                <LvKbd k="3" />
+                <LvKbd k={k3} />
             </span>
             <small>{dueText("3")}</small>
         </button>
@@ -179,7 +191,7 @@
             type="button"
             class="b3-button lv-btn-rate lv-b4"
             class:lv-btn-suggested={suggestedRating === 4}
-            class:lv-btn-pressed={pressedKeyFeedback === "4"}
+            class:lv-btn-pressed={isPressed4}
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="4"
@@ -187,7 +199,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.easy ?? "简单"}</span>
-                <LvKbd k="4" />
+                <LvKbd k={k4} />
             </span>
             <small>{dueText("4")}</small>
         </button>

@@ -344,6 +344,40 @@
         void runSuspendAction({ type: "resume", ids, group: kind, message: t.resumedGroup.replace("${n}", String(ids.length)) });
     }
 
+    const allDebtBlockIds = $derived.by(() => {
+        const set = new Set<string>();
+        for (const k of DEBT_KINDS) {
+            for (const item of groups[k]) {
+                set.add(item.blockID);
+            }
+        }
+        return Array.from(set);
+    });
+
+    const unSuspendedDebtCount = $derived(
+        allDebtBlockIds.filter(id => !suspended.has(id)).length
+    );
+
+    function suspendAllDebts() {
+        const ids = allDebtBlockIds.filter(id => !suspended.has(id));
+        if (ids.length === 0) return;
+        void runSuspendAction({
+            type: "suspend",
+            ids,
+            message: `已批量暂挂 ${ids.length} 张体检异常卡片（今日不学）`,
+        });
+    }
+
+    function resumeAllDebts() {
+        const ids = allDebtBlockIds.filter(id => suspended.has(id));
+        if (ids.length === 0) return;
+        void runSuspendAction({
+            type: "resume",
+            ids,
+            message: `已批量恢复 ${ids.length} 张体检异常卡片`,
+        });
+    }
+
     function actionIsPending(type: SuspendAction["type"], id: string): boolean {
         return pendingAction?.type === type && pendingAction.ids.includes(id);
     }
@@ -457,6 +491,31 @@
         >
             <LvIcon name="book" size={13} /> <span>{t.dynamicBoardDocBtn ?? "动态错题看板"}</span>
         </button>
+        {#if allDebtBlockIds.length > 0}
+            {#if unSuspendedDebtCount > 0}
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy}
+                    title="一键将排查出的所有体检坏卡暂挂至今日不学，保护日常复习心流"
+                    onclick={suspendAllDebts}
+                >
+                    <LvIcon name="ban" size={13} />
+                    <span>批量暂挂坏卡 ({unSuspendedDebtCount})</span>
+                </button>
+            {:else}
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy}
+                    title="恢复所有已暂挂的体检坏卡"
+                    onclick={resumeAllDebts}
+                >
+                    <LvIcon name="check" size={13} />
+                    <span>已全部暂挂 (恢复)</span>
+                </button>
+            {/if}
+        {/if}
         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={scanning || !!pendingAction || !!sourceHealthPendingId || repairBusy || rollbackBusy} onclick={upgradeLegacyCards}>
             <LvIcon name="zap" size={13} /> <span>存量格式规范化 (可选)</span>
         </button>

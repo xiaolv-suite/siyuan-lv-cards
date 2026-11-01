@@ -17,6 +17,8 @@
     import { friendlyError } from "@/api/errors";
     import { getMotionDuration } from "./kit/motion";
     import { findDormantKnowledgeBlocks, type DormantKnowledgeCandidate } from "@/core/dormant-knowledge";
+    import { loadPinnedDeckIds, sortDecksWithPins, clusterDecksBySlash, getDeckEcosystemBadge } from "@/core/deck-management";
+    import { getBridgeSafely, openExamModuleSafely } from "@/libs/ecosystem-bridge-kit";
     import LvPage from "./kit/LvPage.svelte";
     import LvSection from "./kit/LvSection.svelte";
     import LvStat from "./kit/LvStat.svelte";
@@ -91,15 +93,29 @@
 
     let loading = $state(true);
     let decks: RiffDeck[] = $state([]);
+    let pinnedDeckIds = $state<string[]>(loadPinnedDeckIds());
     let showAllEmptyDecks = $state(false);
     const activeDecks = $derived(decks.filter(d => (d.size ?? 0) > 0));
     const emptyDecks = $derived(decks.filter(d => (d.size ?? 0) === 0));
-    const displayedDecks = $derived(
-        (activeDecks.length > 0 && !showAllEmptyDecks) ? activeDecks : decks
-    );
+    const displayedDecks = $derived.by(() => {
+        const base = (activeDecks.length > 0 && !showAllEmptyDecks) ? activeDecks : decks;
+        return sortDecksWithPins(base, pinnedDeckIds);
+    });
+    // CF-02: 今日卡组列表按斜杠分级树状聚类与折叠
+    let collapsedClusters = $state<Set<string>>(new Set());
+    function toggleCluster(prefix: string) {
+        const next = new Set(collapsedClusters);
+        if (next.has(prefix)) {
+            next.delete(prefix);
+        } else {
+            next.add(prefix);
+        }
+        collapsedClusters = next;
+    }
+    const clusteredDecks = $derived(clusterDecksBySlash(displayedDecks));
     let dueCount = $state(0);
     let newCount = $state(0);
-    // T01（docs/39 批 2）：今日行动 hero——当日未收场会话可「继续本场」；深度统计默认折叠
+    // T01（docs/39 批 2）：今日行动 hero——当日未收场会话可「继续本场」；深度统计默认展开
     let sessReps = $state(0);
     let sessLive = $state(false);
     let deepOpen = $state(false);
@@ -331,6 +347,8 @@
         return todayDecision.primaryActionLabel;
     }
 
+    const hasExamBridge = $derived(Boolean(getBridgeSafely("exam")));
+
     function startReviewDeck(deckID: string) {
         if (ctx.openReviewScope) {
             ctx.openReviewScope(`deck:${deckID}`);
@@ -400,11 +418,6 @@
         } catch {
             showMessage(taskText, 4000, "info");
         }
-    }
-
-    /** R53 统计瓦片走势（docs/42 §3.4）：近 7 天正式复习量——只喂真实数据，无记录不补 0 走势 */
-    function studySpark(): number[] {
-        return heat.slice(-7).map(h => h.stat.review);
     }
 
     /** 本周星期一至星期日的本地记录；未来日期和未知记录保持为空，不补造学习量。 */
@@ -556,6 +569,7 @@
             let pageCount = 1;
             do {
                 const r = await getRiffCards("", page, 100);
+                if (!r || typeof r !== "object") break;
                 pageCount = Number(r.pageCount ?? 1);
                 for (const b of r.blocks ?? []) {
                     const blockRec = b as unknown as { riffCard?: { due?: unknown; state?: unknown }; RiffCard?: { due?: unknown; state?: unknown } };
@@ -563,7 +577,7 @@
                     if (rc) cards.push({ due: String(rc.due ?? ""), state: Number(rc.state ?? 0) });
                 }
                 page += 1;
-            } while (page <= pageCount && page <= 20);
+            } while (page <= pageCount && page <= 50);
             if (seq !== calSeq) return;
             forecastRawCards = cards;
             calForecast = buildForecast(cards, { today: now, horizonDays: 14, dailyNewTarget: targets.new });
@@ -764,10 +778,18 @@
                 <LvChip tone={examChip.days <= 7 ? "error" : "warn"}><LvIcon name="graduation" size={14} /> {examChip.name} · {t.exam.daysLeft.replace("${n}", String(examChip.days))}</LvChip>
                 <span class="ft__smaller ft__on-surface">{t.exam.examChipHint}</span>
             </div>
-            <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => ctx.openHubTab?.("learning")}>
-                <LvIcon name="zap" size={12} />
-                <span>{t.exam?.startToday ?? "冲刺复习"}</span>
-            </button>
+            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                {#if hasExamBridge}
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => openExamModuleSafely("practice")} title="打开小驴考试做题练习台">
+                        <LvIcon name="graduation" size={12} />
+                        <span>考试台</span>
+                    </button>
+                {/if}
+                <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => ctx.openHubTab?.("learning")}>
+                    <LvIcon name="zap" size={12} />
+                    <span>{t.exam?.startToday ?? "冲刺复习"}</span>
+                </button>
+            </div>
         </div>
     {/if}
 
@@ -960,17 +982,80 @@
                     denom={targets.review > 0 ? String(targets.review) : ""}
                     tone="data"
                     progress={targetPct()}
-                    spark={studySpark()}
+                    animate
                 />
             </div>
         </div>
 
+        {#snippet deckItem(deck: RiffDeck, nested: boolean)}
+            {@const eco = getDeckEcosystemBadge(deck.name)}
+            <div class="lv-today-deck" class:lv-today-deck--nested={nested} class:lv-today-deck--has-cards={(deck.size ?? 0) > 0} class:lv-today-deck--pinned={pinnedDeckIds.includes(deck.id)}>
+                <button
+                    type="button"
+                    class="lv-today-deck-main-btn"
+                    aria-label={`${deck.name}, ${t.dashboard.deckCardCount.replace("${n}", String(deck.size ?? 0))}`}
+                    onclick={() => ctx.openManagerDeck?.(deck.id, deck.name)}
+                >
+                    <span class="lv-deck-icon-badge" aria-hidden="true">
+                        <LvIcon name={pinnedDeckIds.includes(deck.id) ? "star" : "book"} size={15} />
+                    </span>
+                    <span class="lv-today-deck-name">{nested ? deck.name.replace(/^[^/]+\//, "") : deck.name}</span>
+                    {#if eco}
+                        <span class="lv-tag lv-tag--{eco.colorTone}" style="font-size: 10px; padding: 1px 5px; margin-left: 6px; border-radius: 4px;">
+                            <LvIcon name={eco.icon} size={10} /> <span>{eco.label}</span>
+                        </span>
+                    {/if}
+                </button>
+                <div class="lv-today-deck-actions">
+                    <span class="lv-today-deck-count">{t.dashboard.deckCardCount.replace("${n}", String(deck.size ?? 0))}</span>
+                    {#if eco?.origin === "exam" && hasExamBridge}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
+                            title="直达小驴考试练习台刷题"
+                            onclick={() => openExamModuleSafely("practice")}
+                        >
+                            <LvIcon name="graduation" size={13} /> 考试台
+                        </button>
+                    {/if}
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
+                        disabled={(deck.size ?? 0) === 0}
+                        title={t.dashboard.cramDeckTip ?? `突击快刷此卡组（不改排期）`}
+                        onclick={() => startCramDeck(deck.id)}
+                        data-testid={`dashboard-cram-deck-${deck.id}`}
+                    >
+                        <LvIcon name="zap" size={13} /> {t.dashboard.cramDeck ?? "突击"}
+                    </button>
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
+                        disabled={(deck.size ?? 0) === 0}
+                        title={(deck.size ?? 0) === 0 ? "卡组暂无可复习卡片" : `开始复习卡组「${deck.name}」`}
+                        onclick={() => startReviewDeck(deck.id)}
+                    >
+                        <LvIcon name="cards" size={13} /> {(deck.size ?? 0) === 0 ? "暂无卡片" : (t.dashboard.openReview ?? "复习")}
+                    </button>
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={`${t.dashboard.renameDeck ?? "重命名卡组"} ${deck.name}`} onclick={() => renameDeckPrompt(deck.id, deck.name)}>
+                        <LvIcon name="edit" size={13} />
+                    </button>
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={`${t.dashboard.ddShareBtn} ${deck.name}`} onclick={() => exportDeckShare(deck.id, deck.name)}>
+                        <LvIcon name="eye" size={13} />
+                    </button>
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={`${t.dashboard.deleteDeck ?? "删除卡组"} ${deck.name}`} onclick={() => removeDeckConfirm(deck.id, deck.name)}>
+                        <LvIcon name="trash" size={13} />
+                    </button>
+                </div>
+            </div>
+        {/snippet}
+
         {#if ctx.openManagerDeck && decks.length > 0}
-            <section class="lv-today-decks" aria-labelledby="lv-today-decks-title">
-                <div class="lv-today-decks-head">
-                    <h3 id="lv-today-decks-title">{t.dashboard.decksToday ?? "我的卡组"}</h3>
+            <LvSection id="sec-today-decks" title={t.dashboard.decksToday ?? "我的卡组"}>
+                {#snippet actions()}
                     <div style="display: flex; gap: var(--lv-sp-2); align-items: center;">
                         <button
+                            type="button"
                             class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                             title={t.dashboard.cramAll ?? "Cram 考前突击快刷（不改排期）"}
                             onclick={startGlobalCram}
@@ -985,51 +1070,40 @@
                             <LvIcon name="search" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span>
                         </button>
                     </div>
-                </div>
+                {/snippet}
+
                 <div class="lv-today-decks-list">
-                    {#each [...displayedDecks].sort((a, b) => (b.size ?? 0) - (a.size ?? 0)).slice(0, 6) as deck (deck.id)}
-                        <div class="lv-today-deck" class:lv-today-deck--has-cards={(deck.size ?? 0) > 0}>
-                            <button
-                                type="button"
-                                class="lv-today-deck-main-btn"
-                                aria-label={`${deck.name}, ${t.dashboard.deckCardCount.replace("${n}", String(deck.size ?? 0))}`}
-                                onclick={() => ctx.openManagerDeck?.(deck.id, deck.name)}
-                            >
-                                <span class="lv-deck-icon-badge" aria-hidden="true"><LvIcon name="book" size={15} /></span>
-                                <span class="lv-today-deck-name">{deck.name}</span>
-                            </button>
-                            <div class="lv-today-deck-actions">
-                                <span class="lv-today-deck-count">{t.dashboard.deckCardCount.replace("${n}", String(deck.size ?? 0))}</span>
+                    {#each clusteredDecks.slice(0, 8) as cluster (cluster.prefix)}
+                        {#if cluster.isGroup}
+                            <div class="lv-deck-cluster">
                                 <button
                                     type="button"
-                                    class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
-                                    disabled={(deck.size ?? 0) === 0}
-                                    title={t.dashboard.cramDeckTip ?? `突击快刷此卡组（不改排期）`}
-                                    onclick={() => startCramDeck(deck.id)}
-                                    data-testid={`dashboard-cram-deck-${deck.id}`}
+                                    class="lv-deck-cluster-head"
+                                    onclick={() => toggleCluster(cluster.prefix)}
+                                    aria-expanded={!collapsedClusters.has(cluster.prefix)}
                                 >
-                                    <LvIcon name="zap" size={13} /> {t.dashboard.cramDeck ?? "突击"}
+                                    <span class="lv-cluster-arrow">
+                                        <LvIcon name={collapsedClusters.has(cluster.prefix) ? "chevron-right" : "chevron-down"} size={13} />
+                                    </span>
+                                    <LvIcon name="book" size={14} />
+                                    <strong class="lv-cluster-name">{cluster.prefix}</strong>
+                                    <span class="lv-cluster-meta ft__smaller ft__on-surface">
+                                        {cluster.decks.length} 个子卡包 · 共 {cluster.totalSize} 张
+                                    </span>
                                 </button>
-                                <button
-                                    type="button"
-                                    class="b3-button b3-button--small b3-button--outline lv-deck-quick-btn"
-                                    disabled={(deck.size ?? 0) === 0}
-                                    title={(deck.size ?? 0) === 0 ? "卡组暂无可复习卡片" : `开始复习卡组「${deck.name}」`}
-                                    onclick={() => startReviewDeck(deck.id)}
-                                >
-                                    <LvIcon name="cards" size={13} /> {(deck.size ?? 0) === 0 ? "暂无卡片" : (t.dashboard.openReview ?? "复习")}
-                                </button>
-                                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={`${t.dashboard.renameDeck ?? "重命名卡组"} ${deck.name}`} onclick={() => renameDeckPrompt(deck.id, deck.name)}>
-                                    <LvIcon name="edit" size={13} />
-                                </button>
-                                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={`${t.dashboard.ddShareBtn} ${deck.name}`} onclick={() => exportDeckShare(deck.id, deck.name)}>
-                                    <LvIcon name="eye" size={13} />
-                                </button>
-                                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={`${t.dashboard.deleteDeck ?? "删除卡组"} ${deck.name}`} onclick={() => removeDeckConfirm(deck.id, deck.name)}>
-                                    <LvIcon name="trash" size={13} />
-                                </button>
+                                {#if !collapsedClusters.has(cluster.prefix)}
+                                    <div class="lv-deck-cluster-items">
+                                        {#each cluster.decks as deck (deck.id)}
+                                            {@render deckItem(deck, true)}
+                                        {/each}
+                                    </div>
+                                {/if}
                             </div>
-                        </div>
+                        {:else}
+                            {#each cluster.decks as deck (deck.id)}
+                                {@render deckItem(deck, false)}
+                            {/each}
+                        {/if}
                     {/each}
                 </div>
                 {#if activeDecks.length > 0 && emptyDecks.length > 0}
@@ -1044,15 +1118,19 @@
                         </button>
                     </div>
                 {/if}
-            </section>
+            </LvSection>
         {/if}
 
         <!-- T08 待处理与恢复：有待办才展开卡片，空态只用一行静默底栏，不堆空盒子 -->
         {#if inboxOpen === 0 && suspended === 0 && !unfinishedAI && dormantCount === 0}
             <div class="lv-todo-quiet">
-                <span>{t.dashboard.todoNone}</span>
+                <div class="lv-todo-quiet-left">
+                    <LvIcon name="check" size={14} />
+                    <span>{t.dashboard.todoNone}</span>
+                </div>
                 {#if ctx.openHubTab}
-                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => ctx.openHubTab?.("recovery")}>
+                    <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openHubTab?.("recovery")}>
+                        <LvIcon name="inbox" size={12} />
                         <span>{t.hubTabRecovery ?? "待处理与恢复"}</span>
                     </button>
                 {/if}
@@ -1105,10 +1183,18 @@
         {/if}
 
         <!-- T01 渐进展开：行动、今日四指标与卡组留在首屏；未来负载预测、报告导出与深度统计按需展开 -->
-        <button class="b3-button b3-button--outline lv-deep-toggle" onclick={() => { deepOpen = !deepOpen; ctx.setDeepStatsOpen?.(deepOpen); }}>
-            <span>{t.dashboard.deepToggle}</span>
-            <LvIcon name={deepOpen ? "chevron-up" : "chevron-down"} size={13} />
-        </button>
+        <div class="lv-deep-toggle-wrap">
+            <button
+                type="button"
+                class="b3-button b3-button--outline lv-deep-toggle"
+                onclick={() => { deepOpen = !deepOpen; ctx.setDeepStatsOpen?.(deepOpen); }}
+                aria-expanded={deepOpen}
+            >
+                <LvIcon name="timer" size={13} />
+                <span>{t.dashboard.deepToggle ?? "深度统计"}</span>
+                <LvIcon name={deepOpen ? "chevron-up" : "chevron-down"} size={13} />
+            </button>
+        </div>
         {#if deepOpen}
         <div in:fade={{ duration: getMotionDuration("emphasis") }}>
         <div class="lv-deep-report-bar">
@@ -1233,6 +1319,37 @@
                         + (calSelectedSummary ? " · " + calSelectedSummary : "")
                     : ""}
             />
+            {#if calSelectedDate}
+                <div class="lv-cal-selected-card" data-testid="dashboard-cal-selected-card">
+                    <div class="lv-cal-selected-meta">
+                        <span class="lv-cal-selected-date">
+                            <LvIcon name="calendar" size={14} />
+                            <strong>{calSelectedDate}</strong>
+                        </span>
+                        <span class="lv-cal-selected-stat">{calSelectedSummary}</span>
+                    </div>
+                    <div class="lv-cal-selected-actions">
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small lv-btn-primary"
+                            onclick={() => ctx.openReviewScope?.("all")}
+                            title={`针对 ${calSelectedDate} 发起复习会话`}
+                        >
+                            <LvIcon name="learn" size={13} />
+                            <span>发起复习</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            onclick={() => ctx.openReviewScope?.("all", true)}
+                            title="突击练习（全量刷题，不记入正式遗忘惩罚）"
+                        >
+                            <LvIcon name="zap" size={13} />
+                            <span>突击</span>
+                        </button>
+                    </div>
+                </div>
+            {/if}
         </LvSection>
 
         <LvSection title={t.retention.title} sub={t.retention.sub}>
@@ -1308,7 +1425,13 @@
                         <div class="fn__flex-1"></div>
                         <LvChip tone={l.lapses >= 12 ? "error" : "warn"}>{t.leech.lapses}: {l.lapses}</LvChip>
                         <button class="b3-button b3-button--small" onclick={() => ctx.rewriteWithAI(l.blockID)}>{t.leech.rewriteAI}</button>
-                        <button class="b3-button b3-button--small" onclick={() => openTab({ app: ctx.app, doc: { id: l.blockID, zoomIn: true } })}>
+                        <button class="b3-button b3-button--small" onclick={() => {
+                            try {
+                                openTab({ app: ctx.app, doc: { id: l.blockID, zoomIn: true } });
+                            } catch (e: unknown) {
+                                showMessage(friendlyError(e, t), 2500, "error");
+                            }
+                        }}>
                             {t.leech.rewrite}
                         </button>
                     </div>
@@ -1609,6 +1732,17 @@
     }
     .lv-first-use-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--lv-sp-2); margin: calc(var(--lv-space-unit) * 11) 0 calc(var(--lv-space-unit) * 13); }
     .lv-first-use-actions button { min-height: 44px; }
+    .lv-first-use-actions :global(.lv-btn-primary) {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--lv-color-brand) 40%, transparent);
+        animation: lv-pulse-glow 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+    @keyframes lv-pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--lv-color-brand) 40%, transparent); }
+        50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--lv-color-brand) 0%, transparent); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .lv-first-use-actions :global(.lv-btn-primary) { animation: none; }
+    }
     .lv-first-use-steps {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1736,14 +1870,55 @@
         text-wrap: pretty;
     }
     .lv-refresh-status { margin: 0 0 var(--lv-sp-2); color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); }
-    .lv-today-decks { margin: var(--lv-sp-4) 0; }
-    .lv-today-decks-head { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); margin-bottom: var(--lv-sp-2); }
-    .lv-today-decks-head h3 { margin: 0; font-size: var(--lv-type-body-size); text-wrap: balance; }
     .lv-today-decks-list {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
         gap: var(--lv-sp-3);
     }
+    .lv-deck-cluster {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--lv-sp-2);
+        margin-bottom: var(--lv-sp-2);
+    }
+    .lv-deck-cluster-head {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        border: none;
+        padding: 4px 8px;
+        cursor: pointer;
+        text-align: left;
+        color: var(--lv-color-text);
+        border-radius: var(--b3-border-radius);
+        width: fit-content;
+        &:hover {
+            background: color-mix(in srgb, var(--lv-color-brand) 8%, transparent);
+            color: var(--lv-color-brand);
+        }
+    }
+    .lv-cluster-arrow {
+        display: inline-flex;
+        align-items: center;
+    }
+    .lv-cluster-meta {
+        margin-left: 6px;
+        font-variant-numeric: tabular-nums;
+        color: var(--lv-color-text-muted);
+    }
+    .lv-deck-cluster-items {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+        gap: var(--lv-sp-3);
+        padding-left: var(--lv-sp-3);
+        border-left: 2px dashed color-mix(in srgb, var(--lv-color-brand) 30%, transparent);
+    }
+    .lv-today-deck--nested {
+        background: color-mix(in srgb, var(--b3-theme-surface) 90%, var(--b3-theme-surface-lighter));
+    }
+
     .lv-today-deck {
         display: flex;
         flex-wrap: wrap;
@@ -1760,6 +1935,12 @@
         text-align: left;
         cursor: default;
         content-visibility: auto;
+        &--pinned {
+            border-color: color-mix(in srgb, #f59e0b 40%, var(--lv-border));
+            .lv-deck-icon-badge {
+                color: #f59e0b;
+            }
+        }
         contain-intrinsic-size: 0 56px;
         transition: transform var(--lv-dur-2) var(--lv-ease),
             box-shadow var(--lv-dur-2) var(--lv-ease),
@@ -1899,11 +2080,45 @@
         align-items: center;
         justify-content: space-between;
         gap: var(--lv-sp-2);
-        padding: 8px 4px;
-        margin: var(--lv-sp-2) 0 var(--lv-sp-3);
+        padding: 10px 14px;
+        margin: var(--lv-sp-3) 0 var(--lv-sp-4);
+        background: color-mix(in srgb, var(--lv-color-text) 3%, var(--lv-color-surface));
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-m);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
-        border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+
+        .lv-todo-quiet-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--lv-color-text);
+        }
+    }
+    .lv-deep-toggle-wrap {
+        display: flex;
+        justify-content: center;
+        margin: var(--lv-sp-3) 0 var(--lv-sp-4);
+    }
+    .lv-deep-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 18px;
+        border-radius: var(--lv-r-pill);
+        font-size: var(--lv-type-control-size);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        box-shadow: var(--lv-shadow-1);
+        color: var(--lv-color-text-muted);
+        cursor: pointer;
+        transition: all var(--lv-dur-1) var(--lv-ease);
+
+        &:hover {
+            color: var(--lv-color-brand);
+            border-color: var(--lv-color-brand);
+            background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
+        }
     }
     .lv-deep-report-bar {
         display: flex;
@@ -1967,6 +2182,41 @@
         }
         .lv-ret-row:last-child { border-bottom: none; }
         .lv-ret-rate { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--lv-color-data); }
+    }
+
+    .lv-cal-selected-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--lv-sp-3);
+        margin-top: var(--lv-sp-3);
+        padding: 10px 14px;
+        background: var(--b3-theme-surface-lighter);
+        border: 1px solid var(--b3-border-color);
+        border-radius: var(--b3-border-radius);
+        flex-wrap: wrap;
+    }
+    .lv-cal-selected-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-3);
+        flex-wrap: wrap;
+    }
+    .lv-cal-selected-date {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--b3-theme-primary);
+    }
+    .lv-cal-selected-stat {
+        font-size: var(--lv-type-smaller-size);
+        color: var(--lv-color-text-muted);
+    }
+    .lv-cal-selected-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        flex-shrink: 0;
     }
 
     .lv-airow {

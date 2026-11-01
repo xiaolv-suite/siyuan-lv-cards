@@ -16,6 +16,8 @@ vi.mock("@/api/riff", () => ({
     getRiffCardsByBlockIDs,
     removeRiffCards,
     resetRiffCards: vi.fn(),
+    getRiffDecks: vi.fn().mockResolvedValue([]),
+    createRiffDeck: vi.fn(),
 }));
 vi.mock("@/api/due-shared", () => ({ invalidateDueCache }));
 vi.mock("@/api/siyuan", () => ({ getBlockDOM: vi.fn().mockResolvedValue("") }));

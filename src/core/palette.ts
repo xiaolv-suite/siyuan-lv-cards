@@ -30,9 +30,62 @@ export function matchPaletteCommand(cmd: PaletteCommand, query: string): boolean
     return haystack.includes(q);
 }
 
-/** 过滤 + 按组聚合（组序 = 首次出现顺序，组内保持原序）；limit 限制总条数 */
-export function filterPaletteCommands(cmds: PaletteCommand[], query: string, limit = 12): PaletteGroup[] {
+export const RECENT_COMMANDS_KEY = "lv-cards.palette.recent-commands";
+
+/**
+ * 读取最近执行的命令 ID 列表（CF-16）
+ */
+export function loadRecentCommandIds(storage?: Storage): string[] {
+    const s = storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
+    if (!s) return [];
+    try {
+        const raw = s.getItem(RECENT_COMMANDS_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string").slice(0, 3) : [];
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 记录执行的命令 ID 到最近常用
+ */
+export function recordRecentCommandId(id: string, storage?: Storage): string[] {
+    if (!id) return [];
+    const s = storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
+    const existing = loadRecentCommandIds(s).filter(x => x !== id);
+    const updated = [id, ...existing].slice(0, 3);
+    if (s) {
+        try {
+            s.setItem(RECENT_COMMANDS_KEY, JSON.stringify(updated));
+        } catch { /* 旁路 */ }
+    }
+    return updated;
+}
+
+/** 过滤 + 按组聚合（组序 = 首次出现顺序，组内保持原序）；limit 限制总条数；未输入搜索词时置顶展示最近常用 */
+export function filterPaletteCommands(
+    cmds: PaletteCommand[],
+    query: string,
+    limit = 12,
+    recentIds: string[] = []
+): PaletteGroup[] {
     const groups: PaletteGroup[] = [];
+    const isBlank = !query.trim();
+
+    // 空查询时若有最近执行历史，置顶注入「最近常用」组
+    if (isBlank && recentIds.length > 0) {
+        const cmdMap = new Map(cmds.map(c => [c.id, c]));
+        const recentCmds = recentIds.map(id => cmdMap.get(id)).filter((c): c is PaletteCommand => Boolean(c));
+        if (recentCmds.length > 0) {
+            groups.push({
+                group: "recent",
+                items: recentCmds.map(c => ({ ...c, group: "recent" })),
+            });
+        }
+    }
+
     const byGroup = new Map<string, PaletteCommand[]>();
     let total = 0;
     for (const cmd of cmds) {

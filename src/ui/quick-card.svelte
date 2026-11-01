@@ -3,6 +3,8 @@
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
     import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
     import { parsePastedQuestionText } from "@/core/question-splitter";
+    import { extractDroppedBlockText } from "@/core/drag-drop";
+    import { showMessage } from "siyuan";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -63,10 +65,52 @@
     let correctKeys = $state<string[]>([]);
     let analysis = $state("");
 
-    // 智能拆单与符号快捷工具条状态
+    // CF-01: 编辑器块拖拽落入制卡输入框
+    let isDraggingOver = $state(false);
+
+    function onDragOver(e: DragEvent) {
+        e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = "copy";
+        }
+        isDraggingOver = true;
+    }
+
+    function onDragLeave() {
+        isDraggingOver = false;
+    }
+
+    function onDrop(e: DragEvent) {
+        e.preventDefault();
+        isDraggingOver = false;
+        const dropped = extractDroppedBlockText(e.dataTransfer);
+        if (dropped && dropped.text) {
+            q = dropped.text;
+            if (dropped.hasCloze) {
+                template = "cloze";
+            }
+            showMessage("已成功从编辑器拖拽置入卡片内容", 1800, "info");
+        }
+    }
+
+    // 智能拆单与符号快捷工具条状态 (CF-06 / CF-07)
+    const SAVED_SYMBOL_TAB_KEY = "lv-cards.quick-card.symbol-tab";
+    function loadSavedSymbolTab(): "math" | "pinyin" | "format" {
+        try {
+            const v = localStorage.getItem(SAVED_SYMBOL_TAB_KEY);
+            if (v === "math" || v === "pinyin" || v === "format") return v;
+        } catch { /* 防御 */ }
+        return "math";
+    }
     let smartPasteModalOpen = $state(false);
     let smartPasteInputText = $state("");
-    let symbolTab = $state<"math" | "pinyin" | "format">("math");
+    let symbolTab = $state<"math" | "pinyin" | "format">(loadSavedSymbolTab());
+    function setSymbolTab(tab: "math" | "pinyin" | "format") {
+        symbolTab = tab;
+        try {
+            localStorage.setItem(SAVED_SYMBOL_TAB_KEY, tab);
+        } catch { /* 防御 */ }
+    }
     let lastFocusedField = $state<"q" | "a">("q");
 
     const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
@@ -365,6 +409,15 @@
                 a = "";
                 isBidirectional = false;
                 previewAnswer = false;
+                if (template === "choice") {
+                    if (choiceMode === "judge") {
+                        optionTexts = [{ text: "对" }, { text: "错" }];
+                    } else {
+                        optionTexts = [{ text: "" }, { text: "" }, { text: "" }, { text: "" }];
+                    }
+                    correctKeys = [];
+                    analysis = "";
+                }
                 createdNotice = insertInPlace
                     ? (t.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组")
                     : (t.quickCardSplitDone ?? "已拆分为 ${n} 张原子卡并加入卡组").replace("${n}", String(drafts.length));
@@ -752,9 +805,22 @@
                 <span class="lv-qc-smart-paste-title">
                     <LvIcon name="zap" size={14} /> <strong>{t.quickCardSmartSplitModalTitle ?? "智能试题文本拆单与识别填入"}</strong>
                 </span>
-                <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => (smartPasteModalOpen = false)}>
-                    <LvIcon name="close" size={12} />
-                </button>
+                <span style="display: inline-flex; align-items: center; gap: 4px;">
+                    {#if smartPasteInputText.trim()}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            title={t.quickCardSmartSplitClear ?? "清空文本"}
+                            onclick={() => (smartPasteInputText = "")}
+                        >
+                            <LvIcon name="trash" size={12} />
+                            <span>{t.quickCardSmartSplitClear ?? "清空"}</span>
+                        </button>
+                    {/if}
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" onclick={() => (smartPasteModalOpen = false)}>
+                        <LvIcon name="close" size={12} />
+                    </button>
+                </span>
             </div>
             <textarea
                 class="b3-text-field fn__block lv-qc-smart-paste-input"
@@ -841,9 +907,9 @@
                 <!-- 快捷数理、拼音与格式工具栏 -->
                 <div class="lv-qc-symbol-dock" role="toolbar" aria-label="快捷符号工具条">
                     <div class="lv-qc-symbol-tabs" role="tablist">
-                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "math"} onclick={() => (symbolTab = "math")}>{t.quickCardSymbolMath ?? "数理"}</button>
-                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "pinyin"} onclick={() => (symbolTab = "pinyin")}>{t.quickCardSymbolPinyin ?? "拼音"}</button>
-                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "format"} onclick={() => (symbolTab = "format")}>{t.quickCardSymbolFormat ?? "格式"}</button>
+                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "math"} onclick={() => setSymbolTab("math")}>{t.quickCardSymbolMath ?? "数理"}</button>
+                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "pinyin"} onclick={() => setSymbolTab("pinyin")}>{t.quickCardSymbolPinyin ?? "拼音"}</button>
+                        <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "format"} onclick={() => setSymbolTab("format")}>{t.quickCardSymbolFormat ?? "格式"}</button>
                     </div>
                     <div class="lv-qc-symbol-chips">
                         {#if symbolTab === "math"}
@@ -876,6 +942,7 @@
                 <textarea
                     bind:this={qTextareaEl}
                     class="b3-text-field fn__block"
+                    class:lv-drag-over={isDraggingOver}
                     aria-label={t.quickCardQ}
                     rows="4"
                     bind:value={q}
@@ -883,6 +950,9 @@
                     disabled={busy}
                     spellcheck="false"
                     onfocus={() => (lastFocusedField = "q")}
+                    ondragover={onDragOver}
+                    ondragleave={onDragLeave}
+                    ondrop={onDrop}
                     onkeydown={(e) => {
                         if (template === "cloze" && (e.ctrlKey || e.metaKey) && (e.key === "h" || e.key === "H")) {
                             e.preventDefault();
@@ -1306,6 +1376,11 @@
         outline: none;
         box-shadow: var(--lv-focus-ring);
         border-color: var(--lv-color-brand);
+    }
+    :global(.lv-drag-over) {
+        border-color: var(--b3-theme-primary) !important;
+        background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent) !important;
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent) !important;
     }
     .lv-qc-template button:disabled { cursor: not-allowed; opacity: .55; }
     .lv-qc-template button.lv-qc-template-active {

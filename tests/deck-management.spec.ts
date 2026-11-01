@@ -50,8 +50,9 @@ describe("deck-management 卡包管理与存量/第三方插件卡包同步引�
         ];
 
         const rawBlocks: RawScannedBlock[] = [
-            // 已在活跃原生卡包中的块（应被忽略）
+            // 已在活跃原生卡包中的块（应被忽略，支持 ID 或名称去重）
             { id: "b1", markdown: "原生卡片内容", ial: '{: custom-riff-decks="active-1"}' },
+            { id: "b1-name", markdown: "原生卡片内容（已导入卡包名称）", ial: '{: custom-riff-decks="默认卡组"}' },
             // 来自第三方插件属性的卡包
             { id: "b2", markdown: "第三方插件卡 1", ial: '{: custom-flashcard-deck="医学综合"}' },
             { id: "b3", markdown: "第三方插件卡 2", ial: '{: custom-flashcard-deck="医学综合"}' },

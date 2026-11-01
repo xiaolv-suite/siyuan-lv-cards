@@ -6,7 +6,7 @@
     import { PERSONA_PRESETS, type PersonaPreset } from "@/core/personas";
     import { confirmDialog, confirmDialogBool } from "@/libs/dialog";
     import { trapFocus } from "@/libs/focus-trap";
-    import type { LvCardsSettings } from "@/core/settings";
+    import { defaultSettings, type LvCardsSettings } from "@/core/settings";
     import LvSection from "./kit/LvSection.svelte";
     import LvRow from "./kit/LvRow.svelte";
     import LvChip from "./kit/LvChip.svelte";
@@ -515,24 +515,97 @@
         }
     }
     const SECTION_KEYWORDS: Record<string, string[]> = {
-        persona: ["personaSection", "personaManage", "personaActive", "personaImport"],
-        modules: ["modules", "gateway", "review", "stats"],
-        studyRhythm: ["studyRhythm", "dailyNewTarget", "dailyReviewTarget", "checkinIntegration"],
-        studyAnswer: ["studyAnswer", "ratingStyle", "timeoutMode", "timeoutForget", "typingEnabled", "dictationEnabled", "choiceEnabled"],
-        studyVoice: ["studyVoice", "ttsEnabled", "ttsRate"],
-        studyNotify: ["studyNotify", "notifyDue", "dailyTipEnabled"],
-        aiSection: ["aiSection", "aiEndpoint", "aiModel", "aiPromptTemplate", "aiKillTitle"],
-        ankiSection: ["ankiSection", "ankiSectionHint", "ankiImport", "ankiImportHint", "ankiImportPick", "lvcardsImportLabel", "lvcardsImportHint", "obImportLabel", "obImportHint", "obImportPick"],
-        appearance: ["appearance", "cardFontScale", "uiMode"],
-        dataSection: ["dataSection", "importMerge", "importMergeHint", "importCsv", "backupExport", "backupHint", "exportRevlog", "exportSettings"],
+        persona: ["personaSection", "personaManage", "personaActive", "personaImport", "极客", "应试", "轻量", "极简", "画像"],
+        modules: ["modules", "gateway", "review", "stats", "功能模块", "开关", "制卡", "消字", "挖空", "听写", "打字"],
+        studyRhythm: ["studyRhythm", "dailyNewTarget", "dailyReviewTarget", "checkinIntegration", "backlogDays", "exam", "examEnabled", "examDate", "节奏", "目标", "打卡", "积压", "考试"],
+        studyAnswer: ["studyAnswer", "ratingStyle", "ratingKeyScheme", "timeoutMode", "timeoutForget", "timeoutSeconds", "randomOrder", "burySiblings", "typingEnabled", "typingStrict", "dictationEnabled", "choiceEnabled", "mixedRotation", "requeueAgain", "answerTimeCapSec", "评分", "快捷键", "键盘", "人体工学", "超时", "防剧透", "兄弟卡", "打字", "听写", "选择题", "轮换", "封顶", "jkl"],
+        studyVoice: ["studyVoice", "ttsEnabled", "ttsRate", "ttsVoice", "sfxEnabled", "sfxStyle", "语音", "朗读", "语速", "音效", "木鱼", "清音", "铃声"],
+        studyNotify: ["studyNotify", "notifyDue", "dailyTipEnabled", "quietStart", "quietEnd", "reminderEnabled", "reminderTime", "提醒", "免打扰", "每日一语", "小贴士", "通知"],
+        aiSection: ["aiSection", "aiEndpoint", "aiModel", "aiPromptTemplate", "aiKillTitle", "aiFallbackEndpoint", "aiSensitiveTerms", "aiCostBudgetEnabled", "aiCostMonthlyCap", "端点", "模型", "预算", "敏感词", "脱敏", "提示词", "token"],
+        ankiSection: ["ankiSection", "ankiSectionHint", "ankiImport", "ankiImportHint", "ankiImportPick", "lvcardsImportLabel", "lvcardsImportHint", "obImportLabel", "obImportHint", "obImportPick", "导入", "导出", "anki", "obsidian", "闪卡包"],
+        appearance: ["appearance", "cardFontScale", "uiMode", "cardMaxWidth", "customCardCss", "ratingDensity", "hideMetaUntilAnswer", "heatmapWeeks", "外观", "字号", "缩放", "宽度", "css", "紧凑", "热力图", "样式"],
+        dataSection: ["dataSection", "importMerge", "importMergeHint", "importCsv", "backupExport", "backupHint", "exportRevlog", "exportSettings", "数据", "日志", "清空", "备份", "导出", "重置"],
     };
     function sectionMatches(id: string): boolean {
         if (sectionScope === "imports" && id !== "ankiSection" && id !== "dataSection") return false;
         const q = searchQuery.trim().toLowerCase();
         if (!q) return true;
         const dict = t.settings as Record<string, unknown>;
-        const hay = (SECTION_KEYWORDS[id] ?? []).map((k) => String(dict[k] ?? "")).join(" ").toLowerCase();
+        const list = SECTION_KEYWORDS[id] ?? [];
+        const hay = list.map((k) => String(dict[k] ?? k)).join(" ").toLowerCase();
         return hay.includes(q);
+    }
+
+    const matchedSectionCount = $derived.by(() => {
+        if (!searchQuery.trim()) return 0;
+        return Object.keys(SECTION_KEYWORDS).filter(sectionMatches).length;
+    });
+
+    /**
+     * CF-13: 按单分组一键重置默认值
+     */
+    function resetSectionDefaults(sectionId: string) {
+        const defaults = defaultSettings();
+        if (sectionId === "studyRhythm") {
+            draft.dailyNewTarget = defaults.dailyNewTarget;
+            draft.dailyReviewTarget = defaults.dailyReviewTarget;
+            draft.checkinItemId = defaults.checkinItemId;
+            draft.backlogDays = defaults.backlogDays;
+            draft.examEnabled = defaults.examEnabled;
+            draft.examDate = defaults.examDate;
+            showMessage("已恢复「学习节奏」默认设置", 1500, "info");
+        } else if (sectionId === "studyAnswer") {
+            draft.ratingStyle = defaults.ratingStyle;
+            draft.ratingKeyScheme = defaults.ratingKeyScheme;
+            draft.timeoutMode = defaults.timeoutMode;
+            draft.timeoutSeconds = defaults.timeoutSeconds;
+            draft.randomOrder = defaults.randomOrder;
+            draft.burySiblings = defaults.burySiblings;
+            draft.typingEnabled = defaults.typingEnabled;
+            draft.typingStrict = defaults.typingStrict;
+            draft.dictationEnabled = defaults.dictationEnabled;
+            draft.choiceEnabled = defaults.choiceEnabled;
+            draft.mixedRotation = defaults.mixedRotation;
+            draft.requeueAgain = defaults.requeueAgain;
+            draft.answerTimeCapSec = defaults.answerTimeCapSec;
+            showMessage("已恢复「作答偏好」默认设置", 1500, "info");
+        } else if (sectionId === "studyVoice") {
+            draft.ttsEnabled = defaults.ttsEnabled;
+            draft.ttsRate = defaults.ttsRate;
+            draft.ttsVoice = defaults.ttsVoice;
+            draft.sfxEnabled = defaults.sfxEnabled;
+            draft.sfxStyle = defaults.sfxStyle;
+            showMessage("已恢复「语音与音效」默认设置", 1500, "info");
+        } else if (sectionId === "studyNotify") {
+            draft.quietStart = defaults.quietStart;
+            draft.quietEnd = defaults.quietEnd;
+            draft.reminderEnabled = defaults.reminderEnabled;
+            draft.reminderTime = defaults.reminderTime;
+            draft.dailyTipEnabled = defaults.dailyTipEnabled;
+            showMessage("已恢复「提醒与免打扰」默认设置", 1500, "info");
+        } else if (sectionId === "appearance") {
+            draft.cardFontScale = defaults.cardFontScale;
+            draft.customCardCss = defaults.customCardCss;
+            draft.cardMaxWidth = defaults.cardMaxWidth;
+            draft.ratingDensity = defaults.ratingDensity;
+            draft.hideMetaUntilAnswer = defaults.hideMetaUntilAnswer;
+            draft.heatmapWeeks = defaults.heatmapWeeks;
+            draft.uiMode = defaults.uiMode;
+            showMessage("已恢复「外观与卡面」默认设置", 1500, "info");
+        } else if (sectionId === "aiSection") {
+            draft.aiMode = defaults.aiMode;
+            draft.aiEndpoint = defaults.aiEndpoint;
+            draft.aiKey = defaults.aiKey;
+            draft.aiModel = defaults.aiModel;
+            draft.aiFallbackEndpoint = defaults.aiFallbackEndpoint;
+            draft.aiFallbackKey = defaults.aiFallbackKey;
+            draft.aiFallbackModel = defaults.aiFallbackModel;
+            draft.aiSensitiveTerms = defaults.aiSensitiveTerms;
+            draft.aiCostBudgetEnabled = defaults.aiCostBudgetEnabled;
+            draft.aiCostMonthlyCap = defaults.aiCostMonthlyCap;
+            draft.aiPromptTemplate = defaults.aiPromptTemplate;
+            showMessage("已恢复「AI 配置」默认设置", 1500, "info");
+        }
     }
 
     function scrollToSection(id: string) {
@@ -928,18 +1001,33 @@
 
     <!-- T09 三件套（docs/40）：搜索定位 + 本地样例预览（虚构内容，不触真实卡片） -->
     <div class="lv-searchbar">
+        <span class="lv-searchbar-icon"><LvIcon name="search" size={14} /></span>
         <input
             bind:this={searchInput}
-            class="b3-text-field"
-            style="width: 100%"
-            placeholder={t.settings.searchPlaceholder}
-            aria-label={t.settings.searchPlaceholder}
+            class="b3-text-field fn__flex-1"
+            placeholder={t.settings.searchPlaceholder ?? "搜索配置项 (如: 快捷键 / 音效 / 目标 / AI / 导出)..."}
+            aria-label={t.settings.searchPlaceholder ?? "搜索配置项"}
             spellcheck="false"
             autocomplete="off"
             bind:value={searchQuery}
             onkeydown={(e) => { if (e.key === "Escape" && searchQuery) { e.stopPropagation(); searchQuery = ""; } }}
         />
+        {#if searchQuery.trim()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-searchbar-clear"
+                title="清空搜索"
+                onclick={() => { searchQuery = ""; searchInput?.focus(); }}
+            >
+                <LvIcon name="close" size={13} />
+            </button>
+        {/if}
     </div>
+    {#if searchQuery.trim() && matchedSectionCount > 0}
+        <div class="lv-search-summary">
+            <span class="ft__smaller ft__on-surface">找到 {matchedSectionCount} 个匹配的设置分组 (按 Esc 清空)</span>
+        </div>
+    {/if}
     {#if !searchQuery.trim() && sectionScope !== "imports"}
         <nav class="lv-settings-nav-rail" aria-label="设置快速导航">
             <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-persona")}>
@@ -1046,6 +1134,17 @@
     <!-- 学习偏好四区（13-W10）：节奏与目标 / 评分与作答 / 朗读与音效 / 提醒与免打扰 -->
     {#if sectionMatches("studyRhythm")}
     <LvSection id="sec-studyRhythm" title={t.settings.studyRhythm}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-btn-tool"
+                title="恢复学习节奏默认设置"
+                onclick={() => resetSectionDefaults("studyRhythm")}
+            >
+                <LvIcon name="refresh" size={12} />
+                <span>恢复本组默认</span>
+            </button>
+        {/snippet}
         <LvRow label={t.settings.dailyNewTarget} hint="推荐默认 10 张，设为 0 则不设每日目标">
             <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.dailyNewTarget} />
         </LvRow>
@@ -1064,12 +1163,13 @@
         <LvRow label={t.settings.burySiblings ?? "同源兄弟卡防剧透推迟"} hint={t.settings.burySiblingsHint}>
             <LvSwitch bind:checked={draft.burySiblings} />
         </LvRow>
-        <LvRow label={t.settings.checkinIntegration ?? "小驴打卡生态联动"} hint={t.settings.checkinIntegrationHint}>
+        <LvRow label={t.settings.checkinIntegration ?? "小驴打卡生态联动"} hint={t.settings.checkinIntegrationHint ?? "完成复习时自动记录打卡计数；留空将自动匹配包含「闪卡」或「复习」的项目"}>
             {#if checkinInstalled && checkinItems.length > 0}
-                <select class="b3-select fn__flex-1" bind:value={draft.checkinItemId}>
-                    <option value="">{t.settings.checkinNone ?? "不联动打卡"}</option>
+                <select class="b3-select fn__flex-1" bind:value={draft.checkinItemId} aria-label="小驴打卡联动条目">
+                    <option value="">{t.settings.checkinNone ?? "智能自动匹配（默认）"}</option>
                     {#each checkinItems as item (item.id)}
-                        <option value={item.id}>{item.name} ({item.kind || "计数"})</option>
+                        {@const isRec = item.name.includes("闪卡") || item.name.includes("复习") || item.name.toLowerCase().includes("cards")}
+                        <option value={item.id}>{item.name} ({item.kind || "计数"}){isRec ? " ★推荐" : ""}</option>
                     {/each}
                 </select>
             {:else}
@@ -1099,6 +1199,17 @@
 
     {#if sectionMatches("studyAnswer")}
     <LvSection id="sec-studyAnswer" title={t.settings.studyAnswer}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-btn-tool"
+                title="恢复作答偏好默认设置"
+                onclick={() => resetSectionDefaults("studyAnswer")}
+            >
+                <LvIcon name="refresh" size={12} />
+                <span>恢复本组默认</span>
+            </button>
+        {/snippet}
         <LvRow label={t.settings.ratingStyle}>
             <LvSegmented
                 options={[
@@ -1107,6 +1218,18 @@
                 ]}
                 value={draft.ratingStyle}
                 onchange={(v) => (draft.ratingStyle = v as "four" | "three")}
+            />
+        </LvRow>
+
+        <LvRow label={t.settings.ratingKeyScheme ?? "评分快捷键方案"}>
+            <LvSegmented
+                options={[
+                    { value: "number", label: t.settings.ratingKeySchemeNumber ?? "数字键 (1-4)" },
+                    { value: "jkl", label: t.settings.ratingKeySchemeJkl ?? "人体工学 (J/K/L/;)" },
+                    { value: "both", label: t.settings.ratingKeySchemeBoth ?? "双键位并存" },
+                ]}
+                value={draft.ratingKeyScheme || "both"}
+                onchange={(v) => (draft.ratingKeyScheme = v as "number" | "jkl" | "both")}
             />
         </LvRow>
 
@@ -1153,6 +1276,17 @@
 
     {#if sectionMatches("studyVoice")}
     <LvSection id="sec-studyVoice" title={t.settings.studyVoice}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-btn-tool"
+                title="恢复语音与音效默认设置"
+                onclick={() => resetSectionDefaults("studyVoice")}
+            >
+                <LvIcon name="refresh" size={12} />
+                <span>恢复本组默认</span>
+            </button>
+        {/snippet}
         <LvRow label={t.settings.ttsEnabled}>
             <LvSwitch bind:checked={draft.ttsEnabled} />
         </LvRow>
@@ -1189,7 +1323,18 @@
     {/if}
 
     {#if sectionMatches("studyNotify")}
-    <LvSection title={t.settings.studyNotify}>
+    <LvSection id="sec-studyNotify" title={t.settings.studyNotify}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-btn-tool"
+                title="恢复提醒与免打扰默认设置"
+                onclick={() => resetSectionDefaults("studyNotify")}
+            >
+                <LvIcon name="refresh" size={12} />
+                <span>恢复本组默认</span>
+            </button>
+        {/snippet}
         <LvRow label={t.settings.quietStart} hint={t.settings.quietHint}>
             <input class="b3-text-field fn__size-60" type="time" bind:value={draft.quietStart} />
         </LvRow>
@@ -1218,6 +1363,17 @@
 
     {#if sectionMatches("aiSection")}
     <LvSection id="sec-aiSection" title={t.settings.aiSection} sub={t.settings.aiSectionHint}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-btn-tool"
+                title="恢复 AI 配置默认设置"
+                onclick={() => resetSectionDefaults("aiSection")}
+            >
+                <LvIcon name="refresh" size={12} />
+                <span>恢复本组默认</span>
+            </button>
+        {/snippet}
         <LvRow label={t.settings.targetNotebook} hint={t.settings.targetNotebookHint}>
             <div style="display:flex;flex-direction:column;align-items:flex-start;gap:var(--lv-sp-1);max-width:320px">
                 <LvSelect
@@ -1497,6 +1653,17 @@
 
     {#if sectionMatches("appearance")}
     <LvSection id="sec-appearance" title={t.settings.appearance}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-btn-tool"
+                title="恢复外观与卡面默认设置"
+                onclick={() => resetSectionDefaults("appearance")}
+            >
+                <LvIcon name="refresh" size={12} />
+                <span>恢复本组默认</span>
+            </button>
+        {/snippet}
         <div class="lv-notice" style="display: flex; gap: var(--lv-sp-4); align-items: center; flex-wrap: wrap; margin-bottom: var(--lv-sp-3)">
             <div style="flex: 1; min-width: 220px">
                 <div class="lv-eyebrow">{t.settings.previewTitle}</div>
@@ -1588,7 +1755,14 @@
         {#if ctx.openDynamicBoardDoc}
             <LvRow label={t.settings.dynamicBoardDoc} hint={t.settings.dynamicBoardDocHint}>
                 {#snippet children()}
-                    <button type="button" class="b3-button b3-button--outline lv-btn-tool" onclick={() => ctx.openDynamicBoardDoc?.()}>
+                    <button type="button" class="b3-button b3-button--outline lv-btn-tool" onclick={() => {
+                        try {
+                            const res = ctx.openDynamicBoardDoc?.();
+                            if (res && typeof (res as any).catch === "function") {
+                                (res as any).catch(() => {});
+                            }
+                        } catch { /* 旁路 */ }
+                    }}>
                         <LvIcon name="book" size={12} />
                         <span>{t.settings.openDynamicBoardBtn}</span>
                     </button>
@@ -1826,10 +2000,21 @@
             }
         }
         .lv-searchbar {
-            margin-bottom: var(--lv-sp-4);
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--lv-sp-2);
+            .lv-searchbar-icon {
+                position: absolute;
+                left: 14px;
+                color: var(--lv-color-text-muted);
+                pointer-events: none;
+                display: flex;
+                align-items: center;
+            }
             .b3-text-field {
                 border-radius: var(--lv-r-pill);
-                padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 8);
+                padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 8) calc(var(--lv-space-unit) * 4) 36px;
                 box-shadow: var(--lv-shadow-1);
                 transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
                 &:focus {
@@ -1837,6 +2022,15 @@
                     box-shadow: var(--lv-focus-ring);
                 }
             }
+            .lv-searchbar-clear {
+                position: absolute;
+                right: 8px;
+                padding: 4px;
+                color: var(--lv-color-text-muted);
+            }
+        }
+        .lv-search-summary {
+            margin: 0 0 var(--lv-sp-3) 8px;
         }
         .lv-import-scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lv-sp-2); }
         .lv-import-scope > span { flex: 1 1 220px; }
