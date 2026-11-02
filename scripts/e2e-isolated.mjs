@@ -303,6 +303,45 @@ async function runBrowserWalkthrough(webUrl) {
                 }
             }
 
+            // 2.5 切换到闪卡公共集市 (一级高层级入口)
+            const marketNav = document.getElementById("lv-tab-marketplace") || Array.from(document.querySelectorAll(".lv-tabs__tab, button")).find(b => b.textContent.trim() === "集市");
+            if (marketNav) {
+                marketNav.click();
+                await new Promise(r => setTimeout(r, 800));
+            }
+            const mktStudio = document.querySelector(".lv-marketplace-studio");
+            walk.push({ name: "切换到公共集市一级工作台 (.lv-marketplace-studio)", pass: Boolean(mktStudio) });
+
+            if (mktStudio) {
+                // 全域统计概览卡
+                const statsCard = mktStudio.querySelector(".lv-market-stats-card");
+                const statItems = mktStudio.querySelectorAll(".lv-market-stat-item");
+                walk.push({ name: "公共集市全域统计看板 (8大学科/覆盖量/版权安全)", pass: Boolean(statsCard) && statItems.length === 3 });
+
+                // 8大学科分类标签
+                const categoryChips = mktStudio.querySelectorAll(".lv-market-categories .lv-chip");
+                walk.push({ name: "8大学科体系领域分类胶囊", pass: categoryChips.length === 8, detail: "categories=" + categoryChips.length });
+
+                // 卡片网格与公版卡包
+                const deckCards = mktStudio.querySelectorAll(".lv-deck-card");
+                walk.push({ name: "精选公版卡包网格展示", pass: deckCards.length >= 6, detail: "decks=" + deckCards.length });
+
+                // 交互式闪卡翻面试看
+                const firstPreviewBtn = mktStudio.querySelector(".lv-preview-toggle-btn");
+                if (firstPreviewBtn) {
+                    firstPreviewBtn.click();
+                    await new Promise(r => setTimeout(r, 300));
+                    const previewCard = mktStudio.querySelector(".lv-interactive-preview-card");
+                    const hasFront = Boolean(mktStudio.querySelector(".lv-preview-face.front"));
+                    if (previewCard) {
+                        previewCard.click();
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+                    const hasBack = Boolean(mktStudio.querySelector(".lv-preview-face.back"));
+                    walk.push({ name: "闪卡试看形态与交互式点击翻面 (正反面与memo)", pass: Boolean(previewCard) && hasFront && hasBack });
+                }
+            }
+
             // 3. 切换到制卡工坊
             const studioNav = document.getElementById("lv-tab-studio") || Array.from(document.querySelectorAll(".lv-tabs__tab, button")).find(b => b.textContent.trim() === "制卡");
             if (studioNav) {

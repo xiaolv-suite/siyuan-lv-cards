@@ -6,6 +6,7 @@
     import Dashboard from "./dashboard.svelte";
     import Manager from "./manager.svelte";
     import DeckManager from "./deck-manager.svelte";
+    import MarketplaceStudio from "./marketplace-studio.svelte";
     import StudioWorkbench from "./studio-workbench.svelte";
     import RecoveryPage from "./recovery-page.svelte";
     import type { DashboardCtx } from "./dashboard.svelte";
@@ -135,6 +136,7 @@
                 : (i18n.hubDueCount ?? "待复习 ${count} 张").replace("${count}", String(dueCount)),
         },
         { id: "library", label: i18n.hubPrimaryLibrary ?? "卡库", icon: "cards" },
+        { id: "marketplace", label: i18n.hubPrimaryMarketplace ?? "集市", icon: "store" },
         { id: "studio", label: i18n.hubPrimaryStudio ?? "制卡", icon: "plus" },
         { id: "learning", label: i18n.hubPrimaryLearning ?? "学习", icon: "learn" },
         { id: "settings", label: i18n.hubPrimarySettings ?? "设置", icon: "settings" },
@@ -144,6 +146,7 @@
     const legacyTabs = [
         { id: "overview", label: i18n.hubTabOverview },
         { id: "manage", label: i18n.hubTabManage },
+        { id: "marketplace", label: i18n.hubTabMarketplace ?? "闪卡集市" },
         ...(openWizard || openQuickCard ? [{ id: "authoring", label: i18n.hubTabAuthoring }] : []),
         { id: "goals", label: i18n.hubTabGoals },
         ...(inbox ? [{ id: "inbox", label: i18n.hubTabInbox }] : []),
@@ -152,13 +155,14 @@
         { id: "recovery", label: i18n.hubTabRecovery ?? "待处理与恢复" },
     ];
     // 简洁模式隐藏高级导航，但今日建议与恢复中心仍可直达维护闭环。
-    const knownIds = new Set(["today", "library", "studio", "learning", "settings", "decks", "maintenance", ...legacyTabs.map(t => t.id)]);
+    const knownIds = new Set(["today", "library", "marketplace", "studio", "learning", "settings", "decks", "maintenance", ...legacyTabs.map(t => t.id)]);
     function initialRoute(id: string): string {
         if (id === "settings") return "settings";
         // 旧入口「goals」仍保留兼容，但落到完整学习页的目标与计划分面。
         if (id === "goals") return "learning";
-        if (knownIds.has(id) && (id === "overview" || id === "manage" || id === "authoring" || id === "goals" || id === "inbox" || id === "exam" || id === "decks" || id === "maintenance" || id === "recovery")) return id;
+        if (knownIds.has(id) && (id === "overview" || id === "manage" || id === "marketplace" || id === "authoring" || id === "goals" || id === "inbox" || id === "exam" || id === "decks" || id === "maintenance" || id === "recovery")) return id;
         if (id === "library") return "manage";
+        if (id === "marketplace") return "marketplace";
         if (id === "studio") return "authoring";
         if (id === "learning") return "learning";
         return "overview";
@@ -173,6 +177,7 @@
     let managerInitialBlockID = $state(initialBlockID);
 
     function primaryFor(route: string): string {
+        if (route === "marketplace") return "marketplace";
         if (route === "manage" || route === "decks" || route === "maintenance") return "library";
         if (route === "authoring" || route === "inbox") return "studio";
         if (route === "learning" || route === "goals" || route === "exam") return "learning";
@@ -331,7 +336,7 @@
             learningTabRequest = "recap";
             learningViewKey += 1;
         }
-        const route = id === "today" ? "overview" : id === "library" ? "manage" : id === "studio" ? "authoring" : id === "goals" ? "learning" : id;
+        const route = id === "today" ? "overview" : id === "library" ? "manage" : id === "marketplace" ? "marketplace" : id === "studio" ? "authoring" : id === "goals" ? "learning" : id;
         if (!knownIds.has(route) && route !== "settings") return;
         // 离开管理器即放弃未完成的维护页返回点，避免随后从普通卡库编辑时误跳回维护页。
         if (route !== "manage") managerReturnToMaintenance = "";
@@ -509,6 +514,17 @@
                         openReviewScope={dctx.openReviewScope}
                         openManagerDeck={openManagerDeck}
                         getRevlog={dashboardBase.getRevlog}
+                    />
+                {:else if active === "marketplace"}
+                    <MarketplaceStudio
+                        {i18n}
+                        onDeckCreated={(deckId, deckName) => {
+                            managerDeckScope = { id: deckId, name: deckName };
+                        }}
+                        onOpenDeck={(deckId, deckName) => {
+                            managerDeckScope = { id: deckId, name: deckName };
+                            switchTab("decks");
+                        }}
                     />
                 {:else if active === "settings"}
                     <div class="lv-r54-settings">

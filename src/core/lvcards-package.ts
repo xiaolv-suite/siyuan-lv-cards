@@ -5,13 +5,15 @@
  * 3. 本地优先：零云端账号依赖，支持直接文件分享、导入与离线归档。
  */
 
+export type LvCardKind = "qa" | "cloze" | "code" | "list";
+
 export interface LvPackageCard {
     /** 卡片唯一标识（导入时供幂等与引用对齐） */
     id: string;
     /** 卡片正文（Markdown 格式，含 ==挖空== 或 问答排版） */
     markdown: string;
     /** 卡片题型 */
-    kind: "qa" | "cloze" | "code" | "list";
+    kind: LvCardKind;
     /** 提炼的问题题干（可选） */
     question?: string;
     /** 提炼的参考答案（可选） */
@@ -75,7 +77,7 @@ export function normalizeCardFingerprint(md: string): string {
 }
 
 /** 插件代码层版本常量（与 package.json / plugin.json / README.md 保持四处一致） */
-export const PLUGIN_VERSION = "0.230.0";
+export const PLUGIN_VERSION = "0.231.0";
 
 /**
  * 序列化小驴闪卡分享包为 JSON 字符串
