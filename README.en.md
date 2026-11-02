@@ -25,7 +25,31 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.229.0 (Latest)
+### v0.231.0 (Latest)
+* **Launched "Flashcard & Knowledge Marketplace" Top-Level Workbench**:
+  - **Primary Navigation Anchor**: Elevated "Market" to top-level sidebar navigation alongside Today, Library, Studio, and Learn;
+  - **Immersive Marketplace Studio (`MarketplaceStudio`)**: Responsive grid showcase covering 8 major academic disciplines with zero-copyright public domain certification;
+* **Aligned with siyuan-exam Public Marketplace Protocol & Decentralized Architecture**:
+  - **Decentralized Lightweight Catalog**: Reuses `MarketplaceCatalog` / `MarketplaceItem` specification with client-side direct fetching and zero server dependencies;
+  - **Custom 3rd-Party Network Sources (URL)**: Supports user-defined JSON direct link subscriptions (similar to Legado book sources);
+  - **8 Curated Public Domain Decks**: Math formulas, Computer 408, English vocabulary, Civil Code, Physics laws, Data structures, History, and Logic;
+* **Flashcard-Native Features & 1-Click FSRS Import**:
+  - **Interactive Click-to-Flip Card Previews**: Previews question stem, answer, memo, and initial FSRS difficulty;
+  - **1-Click Native Deck Import**: Automatically creates decks, deduplicates content, writes to SiYuan notebooks, and binds FSRS parameters;
+  - **Bi-directional Portability (`.lvcards`)**: Strict `lvcards.v1` compatibility with 100% lossless sharing between Lv Cards and Exam plugin;
+* **Expanded E2E Automation Suite (pnpm e2e:isolated)**: 47/47 end-to-end browser walkthrough checks passing cleanly.
+
+### v0.230.0
+* **Xiaolv Sibling Ecosystem Bidirectional Interoperability**:
+  - **siyuan-exam**: Exam date countdown capsule, dedicated badges, practice launcher, and rating Good/Easy wrongbook clearance;
+  - **siyuan-checkin**: Zero-config intelligent check-in auto-matcher (`findMatchingCheckinItemId`);
+  - **xiaolv-common**: Common snippets import in AI Wizard, `getTodaySummaryText` dynamic macro;
+  - **siyuan-speed-switch & siyuan-glean**: Apple WidgetKit Bento 3.0 support and glean origin badges;
+* **AI Wizard Experience & Parameter Enrichment**: 5 distinct question focus tags, demo presets, format cleaner, and drag-and-drop block support;
+* **Decks-First Architecture in Library**: Subnav reorganized to `[Deck Management] -> [Cards Detail] -> [Maintenance Debt]`; active deck console;
+* **Isolated E2E Automation Expansion**: 42/42 isolated browser walkthrough checks passed.
+
+### v0.229.0
 * **Comprehensive Isolated E2E Automation Suite (pnpm e2e:isolated)**: Deeply integrates kernel authentication, static chunk contracts, Riff review lifecycle, document linkage & attribute mirroring (starred, leech, lapses, error reasons, SQL board), and real headless Chrome 14-step UI & interaction verification;
 * **Authoring & Deck Management Interactive Convergence**: Precision focus targeting on mandatory guard failures, option removal answer key auto-shift, deck merge with delete source deck option, and rename Escape cancel;
 * **Ecosystem Compatibility Hardening**: Serialized multi-cloze Anki extraction with DOM mask nesting protection, and attribute regex support for unquoted, single-quoted, and double-quoted values.
