@@ -14,7 +14,7 @@
     import { buildForecast, buildMonthGrid, dueMapFromForecast, get7DayForecast, smoothForecastLoad, type ForecastResult, type CalendarCell, type ForecastCardInput, type ForecastDay } from "@/core/forecast";
     import { renderDashboardReportMarkdown, computeWeekOverview, computeCurveSvgPaths } from "@/core/report-writer";
     import { openTab } from "siyuan";
-    import { showMessage } from "@/libs/notice";
+    import { showMessage, lvEcosystem } from "@/libs/notice";
     import { friendlyError } from "@/api/errors";
     import { getMotionDuration } from "./kit/motion";
     import { findDormantKnowledgeBlocks, type DormantKnowledgeCandidate } from "@/core/dormant-knowledge";
@@ -123,6 +123,7 @@
     // T01 可用时间（docs/40）：hero 选择，落偏好并在复习开场生效
     let sessionBudget = $state(15);
     const BUDGET_CHOICES = [0, 5, 15, 30, 60] as const;
+    let ecosystemBadgeText = $state(lvEcosystem.getStatusBadgeText());
     // 本地日期跨午夜后驱动页眉与本周视图重算；避免长时间驻留时“今日”停在前一天。
     let dayTick = $state(Date.now());
     let dayBoundaryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -666,6 +667,7 @@
             leech = ctx.getLeechCards().slice(0, 8);
             examChip = ctx.getExamCountdown();
             targets = ctx.getDailyTargets();
+            ecosystemBadgeText = lvEcosystem.getStatusBadgeText();
             hasLoadedSnapshot = true;
             lastSuccessfulAt = Date.now();
             loading = false;
@@ -1457,6 +1459,12 @@
         {/if}
     {/if}
         {/if}
+
+    <footer class="lv-ecosystem-footer" style="display: flex; justify-content: center; align-items: center; padding: 24px 0 12px; margin-top: auto;">
+        <span class="lv-ecosystem-badge" data-testid="ecosystem-status-badge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--lv-color-text-muted); padding: 4px 14px; border-radius: 999px; background: color-mix(in srgb, var(--lv-color-surface) 75%, transparent); border: 1px solid var(--lv-border); backdrop-filter: blur(4px); box-shadow: var(--lv-shadow-1);">
+            {ecosystemBadgeText}
+        </span>
+    </footer>
 </LvPage>
 
 <style lang="scss">

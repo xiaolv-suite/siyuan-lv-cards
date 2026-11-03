@@ -94,9 +94,32 @@ export interface LvSurfaceHandle {
 /* 3. 全局单例接口与自协商常量                                               */
 /* ========================================================================= */
 
-const PROTOCOL_VERSION = 120; // 1.2.0 (Phase 3: AI Gateway & Activity Stream)
+const PROTOCOL_VERSION = 130; // 1.3.0 (Phase 4: Full Ecosystem Orchestration & Backup)
 const STORAGE_PREFIX = "lv_notice_mute_";
 const AI_STORAGE_KEY = "lv_ai_shared_config";
+
+export interface LvPluginBackupPayload {
+    plugin: string;
+    version: string;
+    exportedAt: string;
+    data: Record<string, unknown>;
+}
+
+export interface LvEcosystemFullBackup {
+    v: 1;
+    ecosystem: "xiaolv";
+    exportedAt: string;
+    plugins: Record<string, LvPluginBackupPayload>;
+}
+
+export interface LvEcosystemDiagnostics {
+    version: number;
+    coordinatorHost: string;
+    registeredPlugins: string[];
+    todayActivitiesCount: number;
+    hasSharedAiConfig: boolean;
+    sharedAiModel?: string;
+}
 
 export interface LvAiConfig {
     endpoint: string;    // e.g. "https://api.deepseek.com/v1" or "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -169,7 +192,6 @@ interface LvAiGatewayHub {
     setConfig: (cfg: LvAiConfig) => void;
     getConfig: () => LvAiConfig | null;
     chat: (opts: LvAiRequestOptions) => Promise<LvAiResponse>;
-    destroy?: () => void;
 }
 
 interface LvActivityStreamHub {
@@ -180,6 +202,13 @@ interface LvActivityStreamHub {
     formatAsMarkdown: () => string;
 }
 
+interface LvBackupHub {
+    version: number;
+    register: (plugin: string, backupFn: () => Promise<Record<string, unknown>>, restoreFn: (data: Record<string, unknown>) => Promise<boolean>) => () => void;
+    exportFull: () => Promise<LvEcosystemFullBackup>;
+    restoreFull: (bundle: LvEcosystemFullBackup) => Promise<{ success: string[]; failed: string[] }>;
+}
+
 declare global {
     interface Window {
         __LV_NOTICE_HUB__?: LvNoticeHub;
@@ -188,6 +217,7 @@ declare global {
         __LV_DOC_LOCKS__?: Map<string, Promise<unknown>>;
         __LV_AI_GATEWAY__?: LvAiGatewayHub;
         __LV_ACTIVITY_STREAM__?: LvActivityStreamHub;
+        __LV_BACKUP_HUB__?: LvBackupHub;
     }
 }
 
@@ -427,19 +457,17 @@ function createCoordinator(initialPlugin: string): LvNoticeHub {
     const timers = new Map<string, number>();
     const pluginRegistry = new Map<string, () => void>();
 
-    // 接入统一浮层栈 Esc 秒关（仅针对 Card 交互卡片，瞬时胶囊不阻断页面 Esc）
+    // 接入统一浮层栈 Esc 秒关
     const unregisterSurface = lvSurfaceStack.push({
         id: "lv-notice-active-card",
         type: "card",
         dismiss: () => {
-            // 若页面上有活动的模态对话框或前台菜单（如 .b3-dialog, [role="dialog"], .lv-modal, .lv-toolbar-more-menu 等），优先由前台浮层处理 Esc
-            if (typeof document !== "undefined") {
-                const hasOpenDialog = document.querySelector(".b3-dialog, [role='dialog'], .lv-modal, .lv-modal-scrim, .b3-dialog__scrim, .lv-toolbar-more-menu, .lv-menu, .b3-menu");
-                if (hasOpenDialog) return false;
+            // 若前台存在模态对话框、弹窗或菜单，优先让渡 Escape 按键给前台组件处理
+            if (typeof document !== "undefined" && document.querySelector('.b3-dialog, [role="dialog"], .lv-modal, .lv-toolbar-more-menu, .lv-menu, .b3-menu')) {
+                return false;
             }
-            const lastCard = activePackets.slice().reverse().find(p => p.mode === "card");
-            if (lastCard) {
-                hub.dismiss(lastCard.id);
+            if (activePackets.length > 0) {
+                hub.dismiss(activePackets[activePackets.length - 1].id);
                 return true;
             }
             return false;
@@ -744,6 +772,12 @@ function getSurfaceStack(): LvSurfaceHandle[] {
         // 捕获阶段拦截 Escape 键，阻止向底层冒泡
         window.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key !== "Escape") return;
+            // 若前台存在模态对话框、弹窗或菜单，且栈顶为非模态通知浮层，让渡 Escape
+            if (typeof document !== "undefined" && document.querySelector('.b3-dialog, [role="dialog"], .lv-modal, .lv-toolbar-more-menu, .lv-menu, .b3-menu')) {
+                const stack = window.__LV_SURFACE_STACK__;
+                const top = stack && stack.length > 0 ? stack[stack.length - 1] : undefined;
+                if (top?.type === "card") return;
+            }
             const stack = window.__LV_SURFACE_STACK__;
             if (!stack || stack.length === 0) return;
             const top = stack[stack.length - 1];
@@ -1106,25 +1140,19 @@ function getAiHub(): LvAiGatewayHub {
         const next = requestQueue.shift();
         if (!next) return;
         activeCount++;
-        try {
-            Promise.resolve(next.execute()).finally(() => {
-                activeCount--;
-                processQueue();
-            });
-        } catch {
+        next.execute().finally(() => {
             activeCount--;
             processQueue();
-        }
+        });
     }
 
     async function executeChatRequest(cfg: LvAiConfig | null, opts: LvAiRequestOptions): Promise<LvAiResponse> {
-        const apiKey = opts.apiKey || cfg?.apiKey || "";
+        const apiKey = opts.apiKey || cfg?.apiKey;
         if (!apiKey) {
             throw new Error("[LvAiGateway] 未配置共享 API Key（请在任意小驴插件设置中配置）");
         }
 
-        const rawEndpoint = opts.endpoint || cfg?.endpoint || "https://api.deepseek.com/v1";
-        const endpoint = rawEndpoint.replace(/\/+$/, "");
+        const endpoint = (opts.endpoint || cfg?.endpoint || "https://api.deepseek.com/v1").replace(/\/+$/, "");
         const targetUrl = endpoint.endsWith("/chat/completions") ? endpoint : `${endpoint}/chat/completions`;
         const model = opts.model || cfg?.model || "deepseek-chat";
 
@@ -1171,11 +1199,7 @@ function getAiHub(): LvAiGatewayHub {
                     totalTokens,
                 };
             } catch (err) {
-                // 明确的 HTTP 响应错误直接抛出，由上层决策降级链；429 已在上面处理
-                if (err instanceof Error && err.message.includes("[LvAiGateway] HTTP")) {
-                    throw err;
-                }
-                if (retries < maxRetries && err instanceof Error && !err.name.includes("Abort") && !err.name.includes("Canceled")) {
+                if (retries < maxRetries && err instanceof Error && !err.name.includes("Abort") && !err.message.includes("[LvAiGateway] HTTP")) {
                     retries++;
                     const backoffMs = Math.pow(2, retries) * 1000;
                     await new Promise(r => setTimeout(r, backoffMs));
@@ -1206,45 +1230,41 @@ function getAiHub(): LvAiGatewayHub {
         },
         chat(opts: LvAiRequestOptions): Promise<LvAiResponse> {
             if (opts.signal?.aborted) {
-                return Promise.reject(new Error("AbortError"));
+                return Promise.reject(new DOMException("The user aborted a request.", "AbortError"));
             }
             return new Promise((resolve, reject) => {
-                let settled = false;
-                let cleanupSignal: (() => void) | undefined;
+                const cfg = this.getConfig();
+                let aborted = false;
                 const onAbort = () => {
-                    if (settled) return;
-                    settled = true;
-                    cleanupSignal?.();
-                    reject(new Error("AbortError"));
+                    aborted = true;
+                    reject(new DOMException("The user aborted a request.", "AbortError"));
                 };
                 if (opts.signal) {
                     opts.signal.addEventListener("abort", onAbort, { once: true });
-                    cleanupSignal = () => opts.signal?.removeEventListener("abort", onAbort);
                 }
-                const cfg = this.getConfig();
-                const task = () => {
-                    if (settled) return Promise.resolve();
-                    const abortPromise = new Promise<never>((_, rej) => {
+
+                const task = async () => {
+                    if (aborted) return;
+                    try {
+                        const chatPromise = executeChatRequest(cfg, opts);
+                        let res: LvAiResponse;
                         if (opts.signal) {
-                            opts.signal.addEventListener("abort", () => rej(new Error("AbortError")), { once: true });
+                            const abortPromise = new Promise<never>((_, rej) => {
+                                if (opts.signal!.aborted) rej(new DOMException("The user aborted a request.", "AbortError"));
+                                else opts.signal!.addEventListener("abort", () => rej(new DOMException("The user aborted a request.", "AbortError")), { once: true });
+                            });
+                            res = await Promise.race([chatPromise, abortPromise]);
+                        } else {
+                            res = await chatPromise;
                         }
-                    });
-                    return Promise.race([executeChatRequest(cfg, opts), abortPromise]).then(
-                        res => {
-                            if (!settled) {
-                                settled = true;
-                                cleanupSignal?.();
-                                resolve(res);
-                            }
-                        },
-                        err => {
-                            if (!settled) {
-                                settled = true;
-                                cleanupSignal?.();
-                                reject(err);
-                            }
+                        if (!aborted) resolve(res);
+                    } catch (e) {
+                        if (!aborted) reject(e);
+                    } finally {
+                        if (opts.signal) {
+                            opts.signal.removeEventListener("abort", onAbort);
                         }
-                    );
+                    }
                 };
                 requestQueue.push({
                     execute: task,
@@ -1252,13 +1272,6 @@ function getAiHub(): LvAiGatewayHub {
                 });
                 processQueue();
             });
-        },
-        destroy() {
-            activeCount = 0;
-            requestQueue.length = 0;
-            if (window.__LV_AI_GATEWAY__ === this) {
-                delete window.__LV_AI_GATEWAY__;
-            }
         }
     };
 
@@ -1281,9 +1294,11 @@ export const lvAi = {
     chat(options: LvAiRequestOptions): Promise<LvAiResponse> {
         return getAiHub().chat(options);
     },
-    /** 销毁网关单例（测试与生命周期） */
     destroy(): void {
-        window.__LV_AI_GATEWAY__?.destroy?.();
+        if (typeof window !== "undefined") {
+            delete (window as any).__LV_AI_GATEWAY__;
+        }
+        fallbackAiConfig = null;
     }
 };
 
@@ -1404,5 +1419,159 @@ export const lvActivity = {
     /** 格式化生成结构化 Markdown 字符串，可直接追加到 Daily Note */
     formatAsMarkdown(): string {
         return getActivityHub().formatAsMarkdown();
+    }
+};
+
+/* ========================================================================= */
+/* 12. 全家桶一键联合灾备包 (Lv Ecosystem Full Backup Orchestrator)           */
+/* ========================================================================= */
+
+interface BackupProvider {
+    plugin: string;
+    backup: () => Promise<Record<string, unknown>>;
+    restore: (data: Record<string, unknown>) => Promise<boolean>;
+}
+
+const backupRegistry = new Map<string, BackupProvider>();
+
+function getBackupHub(): LvBackupHub {
+    if (typeof window === "undefined") {
+        return {
+            version: PROTOCOL_VERSION,
+            register: (plugin, backup, restore) => {
+                backupRegistry.set(plugin, { plugin, backup, restore });
+                return () => backupRegistry.delete(plugin);
+            },
+            exportFull: async () => ({
+                v: 1,
+                ecosystem: "xiaolv",
+                exportedAt: new Date().toISOString(),
+                plugins: {},
+            }),
+            restoreFull: async () => ({ success: [], failed: [] }),
+        };
+    }
+
+    if (window.__LV_BACKUP_HUB__ && window.__LV_BACKUP_HUB__.version >= PROTOCOL_VERSION) {
+        return window.__LV_BACKUP_HUB__;
+    }
+
+    const hub: LvBackupHub = {
+        version: PROTOCOL_VERSION,
+        register(plugin: string, backup: () => Promise<Record<string, unknown>>, restore: (data: Record<string, unknown>) => Promise<boolean>): () => void {
+            backupRegistry.set(plugin, { plugin, backup, restore });
+            return () => backupRegistry.delete(plugin);
+        },
+
+        async exportFull(): Promise<LvEcosystemFullBackup> {
+            const bundle: LvEcosystemFullBackup = {
+                v: 1,
+                ecosystem: "xiaolv",
+                exportedAt: new Date().toISOString(),
+                plugins: {},
+            };
+
+            const entries = Array.from(backupRegistry.entries());
+            await Promise.all(
+                entries.map(async ([plugin, provider]) => {
+                    try {
+                        const data = await provider.backup();
+                        bundle.plugins[plugin] = {
+                            plugin,
+                            version: "latest",
+                            exportedAt: new Date().toISOString(),
+                            data,
+                        };
+                    } catch (err) {
+                        console.error(`[LvBackup] 备份插件 ${plugin} 失败:`, err);
+                    }
+                })
+            );
+
+            return bundle;
+        },
+
+        async restoreFull(bundle: LvEcosystemFullBackup): Promise<{ success: string[]; failed: string[] }> {
+            if (!bundle || bundle.ecosystem !== "xiaolv" || !bundle.plugins) {
+                throw new Error("[LvBackup] 非合法的小驴全生态灾备包格式");
+            }
+
+            const success: string[] = [];
+            const failed: string[] = [];
+
+            for (const [plugin, payload] of Object.entries(bundle.plugins)) {
+                const provider = backupRegistry.get(plugin);
+                if (!provider) {
+                    failed.push(`${plugin}(未安装或未注册恢复切面)`);
+                    continue;
+                }
+                try {
+                    const ok = await provider.restore(payload.data);
+                    if (ok) success.push(plugin);
+                    else failed.push(plugin);
+                } catch (e) {
+                    console.error(`[LvBackup] 恢复插件 ${plugin} 异常:`, e);
+                    failed.push(plugin);
+                }
+            }
+
+            return { success, failed };
+        }
+    };
+
+    window.__LV_BACKUP_HUB__ = hub;
+    return hub;
+}
+
+export const lvBackup = {
+    /** 插件向生态灾备总线注册备份/恢复切面 */
+    register(
+        pluginName: string,
+        backupFn: () => Promise<Record<string, unknown>>,
+        restoreFn: (data: Record<string, unknown>) => Promise<boolean>
+    ): () => void {
+        return getBackupHub().register(pluginName, backupFn, restoreFn);
+    },
+
+    /** 导出当前已安装并启用的所有小驴插件全量联合备份包 */
+    exportFull(): Promise<LvEcosystemFullBackup> {
+        return getBackupHub().exportFull();
+    },
+
+    /** 将联合备份包一键恢复到各个插件 */
+    restoreFull(bundle: LvEcosystemFullBackup): Promise<{ success: string[]; failed: string[] }> {
+        return getBackupHub().restoreFull(bundle);
+    }
+};
+
+/* ========================================================================= */
+/* 13. 全生态健康自省与指示器 (Lv Ecosystem Diagnostics)                       */
+/* ========================================================================= */
+
+export const lvEcosystem = {
+    /** 获取全生态运行态健康诊断信息 */
+    getDiagnostics(): LvEcosystemDiagnostics {
+        const noticeHub = typeof window !== "undefined" ? window.__LV_NOTICE_HUB__ : undefined;
+        const aiHub = typeof window !== "undefined" ? window.__LV_AI_GATEWAY__ : undefined;
+        const aiCfg = aiHub?.getConfig();
+        const activities = typeof window !== "undefined" ? window.__LV_ACTIVITY_STREAM__?.getTodayRecords() ?? [] : [];
+        const registered = Array.from(backupRegistry.keys());
+
+        return {
+            version: PROTOCOL_VERSION,
+            coordinatorHost: noticeHub?.hostPlugin ?? "none",
+            registeredPlugins: registered,
+            todayActivitiesCount: activities.length,
+            hasSharedAiConfig: Boolean(aiCfg?.apiKey),
+            sharedAiModel: aiCfg?.model,
+        };
+    },
+
+    /** 生成一行极简且精致的胶囊状态文字，如：“🐴 小驴全家桶协同正常 · 7 个插件已联结 · 今日活动 8 项” */
+    getStatusBadgeText(): string {
+        const diag = this.getDiagnostics();
+        const count = diag.registeredPlugins.length;
+        const pluginText = count > 0 ? `${count} 插件已联结` : "单机模式";
+        return `🐴 小驴全家桶协同正常 · ${pluginText} · 今日活动 ${diag.todayActivitiesCount} 项`;
     }
 };

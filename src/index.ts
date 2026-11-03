@@ -1,7 +1,7 @@
 import "./index.scss";
 
 import { Plugin, getAllEditor, openTab, getAllTabs } from "siyuan";
-import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation } from "./libs/notice";
+import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
@@ -444,6 +444,7 @@ export default class LvCardsPlugin extends Plugin {
     private disposeCardsBridge?: () => void;
     private unregisterRaikiri?: () => void;
     private noticeHubCleaner?: () => void;
+    private backupCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
     private aiBatchesMutationVersion = 0;
     private costLedgerMutationVersion = 0;
@@ -939,6 +940,54 @@ export default class LvCardsPlugin extends Plugin {
         });
     }
 
+    /**
+     * 全生态联合灾备切面（lvBackup 导出）
+     * 导出闪卡牌组、复习日志与记忆曲线排期等全部 22 槽持久化数据
+     */
+    public async dumpData(): Promise<Record<string, unknown>> {
+        if (this.saveRevlogTimer) {
+            this.flushRevlogSave();
+        }
+        if (this.settingsSaveTimer) {
+            clearTimeout(this.settingsSaveTimer);
+            this.settingsSaveTimer = null;
+            await this.saveSettingsNow();
+        }
+        await this.persist.waitAll(3000);
+        const stores = await this.readAllStores();
+        return {
+            v: 1,
+            plugin: "siyuan-lv-cards",
+            timestamp: Date.now(),
+            exportedAt: new Date().toISOString(),
+            stores,
+        };
+    }
+
+    /**
+     * 全生态联合灾备切面（lvBackup 导入恢复）
+     * 将全生态灾备包中的闪卡数据恢复到私有存储并重载刷新
+     */
+    public async restoreData(data: Record<string, unknown>): Promise<boolean> {
+        if (!data || typeof data !== "object") return false;
+        const restoreFiles = (data.stores && typeof data.stores === "object" ? data.stores : data) as Record<string, unknown>;
+        try {
+            const currentFiles = await this.readAllStores();
+            await applyRestoreTransaction({
+                restoreFiles,
+                currentFiles,
+                saveFile: (key, val) => this.saveData(key, val),
+                rollbackFailedKey: true,
+                logError: (msg) => lvLog("error", msg),
+            });
+            await this.reloadLocalStoresBounded(Object.keys(restoreFiles));
+            return true;
+        } catch (e) {
+            lvLog("error", `[lvBackup] restore failed: ${e instanceof Error ? e.message : String(e)}`);
+            return false;
+        }
+    }
+
     async onload() {
         // AT-6：启动性能计时起点（onload 首行）
         this.perf.markStart();
@@ -1128,6 +1177,13 @@ export default class LvCardsPlugin extends Plugin {
         // 注册全生态统一通知套件协调者（去中心化自协商与热接管）
         this.noticeHubCleaner = lvNotify.registerPlugin("siyuan-lv-cards");
 
+        // 注册全生态灾备切面（Epoch 7 Phase 4 Protocol v1.3.0）
+        this.backupCleaner = lvBackup.register(
+            "siyuan-lv-cards",
+            async () => this.dumpData(),
+            async (data) => this.restoreData(data)
+        );
+
         // 零点复习池重算：接入 lvTicker.onDateCross，零点准时重算今日 Due 卡池
         this.dateCrossUnsub = lvTicker.onDateCross("siyuan-lv-cards", async (todayKey: string) => {
             lvLog("info", `[lvTicker] date crossed to ${todayKey}, recalculating due pool`);
@@ -1259,6 +1315,10 @@ export default class LvCardsPlugin extends Plugin {
 
     onunload() {
         const unloadStart = Date.now();
+        if (this.backupCleaner) {
+            this.backupCleaner();
+            this.backupCleaner = undefined;
+        }
         if (this.noticeHubCleaner) {
             this.noticeHubCleaner();
             this.noticeHubCleaner = undefined;

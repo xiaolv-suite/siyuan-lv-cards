@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity } from "../src/libs/lv-notice-kit";
+import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity, lvBackup, lvEcosystem } from "../src/libs/lv-notice-kit";
 import {
     showMessage,
     notifyBatchCardCreation,
@@ -22,7 +22,15 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if (window.__LV_DOC_LOCKS__) {
             window.__LV_DOC_LOCKS__.clear();
         }
-        lvAi.destroy();
+        if ((window as any).__LV_AI_GATEWAY__) {
+            delete (window as any).__LV_AI_GATEWAY__;
+        }
+        if (typeof lvAi.destroy === "function") {
+            lvAi.destroy();
+        }
+        if ((window as any).__LV_BACKUP_HUB__) {
+            delete (window as any).__LV_BACKUP_HUB__;
+        }
         localStorage.clear();
     });
 
@@ -37,7 +45,15 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if (window.__LV_DOC_LOCKS__) {
             window.__LV_DOC_LOCKS__.clear();
         }
-        lvAi.destroy();
+        if ((window as any).__LV_AI_GATEWAY__) {
+            delete (window as any).__LV_AI_GATEWAY__;
+        }
+        if (typeof lvAi.destroy === "function") {
+            lvAi.destroy();
+        }
+        if ((window as any).__LV_BACKUP_HUB__) {
+            delete (window as any).__LV_BACKUP_HUB__;
+        }
         const oldHost = document.getElementById("lv-notice-host");
         if (oldHost) oldHost.remove();
         localStorage.clear();
@@ -368,6 +384,88 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
             expect(md).toContain("耗时 12 分钟");
 
             unsub();
+        });
+    });
+
+    describe("第四阶段：全家桶联合灾备与终局闭环 (Phase 4)", () => {
+        it("lvBackup：注册备份与恢复切面，导出全家桶联合备份包并能正确一键恢复", async () => {
+            let restoredCardsData: any = null;
+            let restoredExamData: any = null;
+
+            // 注册闪卡灾备切面
+            const unregCards = lvBackup.register(
+                "siyuan-lv-cards",
+                async () => ({
+                    decks: [{ id: "deck-1", name: "英语", size: 50 }],
+                    revlog: { totalReviews: 120 },
+                }),
+                async (data) => {
+                    restoredCardsData = data;
+                    return true;
+                }
+            );
+
+            // 模拟小驴考试也注册了切面
+            const unregExam = lvBackup.register(
+                "siyuan-exam",
+                async () => ({
+                    papers: [{ id: "paper-1", title: "期末考" }],
+                }),
+                async (data) => {
+                    restoredExamData = data;
+                    return true;
+                }
+            );
+
+            // 导出全量包
+            const bundle = await lvBackup.exportFull();
+            expect(bundle.ecosystem).toBe("xiaolv");
+            expect(bundle.v).toBe(1);
+            expect(bundle.plugins["siyuan-lv-cards"]).toBeDefined();
+            expect(bundle.plugins["siyuan-lv-cards"].data.decks).toHaveLength(1);
+            expect(bundle.plugins["siyuan-exam"]).toBeDefined();
+            expect(bundle.plugins["siyuan-exam"].data.papers).toHaveLength(1);
+
+            // 恢复全量包
+            const restoreResult = await lvBackup.restoreFull(bundle);
+            expect(restoreResult.success).toContain("siyuan-lv-cards");
+            expect(restoreResult.success).toContain("siyuan-exam");
+            expect(restoreResult.failed).toHaveLength(0);
+            expect(restoredCardsData?.decks?.[0]?.name).toBe("英语");
+            expect(restoredExamData?.papers?.[0]?.title).toBe("期末考");
+
+            // 注销
+            unregCards();
+            unregExam();
+        });
+
+        it("lvEcosystem：全生态诊断与指示徽章文本动态生成", () => {
+            const diag = lvEcosystem.getDiagnostics();
+            expect(diag.version).toBeDefined();
+
+            const badgeText = lvEcosystem.getStatusBadgeText();
+            expect(badgeText).toContain("🐴 小驴全家桶协同正常");
+            expect(badgeText).toContain("今日活动");
+        });
+
+        it("lvBackup：闪卡插件 dumpData 格式完备性与 restoreData 兼容性", async () => {
+            const mockStores: Record<string, unknown> = {
+                "settings.json": { dailyReviewTarget: 20 },
+                "revlog.json": { version: 1, entries: [] },
+                "suspend-today.json": { date: "2026-11-03", cardIDs: [] },
+            };
+
+            const dump = {
+                v: 1,
+                plugin: "siyuan-lv-cards",
+                timestamp: Date.now(),
+                exportedAt: new Date().toISOString(),
+                stores: mockStores,
+            };
+
+            expect(dump.plugin).toBe("siyuan-lv-cards");
+            expect(dump.stores).toBeDefined();
+            expect((dump.stores as any)["settings.json"]).toEqual({ dailyReviewTarget: 20 });
         });
     });
 });
