@@ -1,7 +1,7 @@
 import "./index.scss";
 
 import { Plugin, getAllEditor, openTab, getAllTabs } from "siyuan";
-import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup } from "./libs/notice";
+import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
@@ -445,6 +445,7 @@ export default class LvCardsPlugin extends Plugin {
     private unregisterRaikiri?: () => void;
     private noticeHubCleaner?: () => void;
     private backupCleaner?: () => void;
+    private launchpadCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
     private aiBatchesMutationVersion = 0;
     private costLedgerMutationVersion = 0;
@@ -988,6 +989,58 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
+    /** 获取当前今日到期卡片数 */
+    public getDueCount(): number {
+        return this.lastDue || (this.topbarController?.getLastDue() ?? 0);
+    }
+
+    /** 打开复习主界面 */
+    public openReviewTab(options?: Record<string, unknown>): void {
+        this.openTabOf(TAB_REVIEW, options);
+    }
+
+    /** 响应小驴罗盘二级快捷业务行动 */
+    public handleQuickAction(action: string): void {
+        const act = String(action || "").toLowerCase();
+        if (act.includes("复习") || act.includes("review") || act.includes("会话")) {
+            this.openReviewTab();
+        } else if (act.includes("抽取") || act.includes("选区") || act.includes("制卡")) {
+            this.openQuickCard();
+        } else if (act.includes("重新计算") || act.includes("曲线") || act.includes("排期") || act.includes("fsrs")) {
+            invalidateDueCache();
+            this.refreshDueBadge();
+            showMessage("已重新计算卡片遗忘曲线排期与待复习卡池", 2500, "info");
+        } else if (act.includes("牌组") || act.includes("卡包") || act.includes("管理")) {
+            this.openTabOf(TAB_DASHBOARD, { tab: "manage" });
+        } else {
+            this.openTabOf(TAB_DASHBOARD);
+        }
+    }
+
+    /** 向小驴罗盘注册/同步入口与最新角标状态 */
+    public registerLaunchpadEntry(): void {
+        const due = this.getDueCount();
+        this.launchpadCleaner = lvLaunchpad.register({
+            id: "siyuan-lv-cards",
+            name: "闪卡",
+            fullName: "小驴闪卡",
+            svgIcon: "icon-lv-cards",
+            color: "#f43f5e",
+            desc: "间隔复习 · 记忆曲线",
+            digit: 6,
+            badge: due > 0 ? `${due} 待复习` : undefined,
+            badgeType: "error",
+            actions: [
+                "开始今日25张卡复习会话",
+                "从当前文档选区一键抽取制卡",
+                "重新计算卡片遗忘曲线排期",
+                "管理牌组与核心卡包",
+            ],
+            onClick: () => this.openReviewTab(),
+            onAction: (action) => this.handleQuickAction(action),
+        });
+    }
+
     async onload() {
         // AT-6：启动性能计时起点（onload 首行）
         this.perf.markStart();
@@ -1196,6 +1249,9 @@ export default class LvCardsPlugin extends Plugin {
                 (this.eventBus as any).emit(LV_EVENTS.storesChanged, storesChangedEvent([SUSPEND_TODAY_DATA]));
             } catch { /* 旁路 */ }
         });
+
+        // 注册小驴罗盘极速弹射坞入口与二级行动（Epoch 7 Phase 5 Protocol v1.4.0）
+        this.registerLaunchpadEntry();
     }
 
     onLayoutReady() {
@@ -1315,6 +1371,10 @@ export default class LvCardsPlugin extends Plugin {
 
     onunload() {
         const unloadStart = Date.now();
+        if (this.launchpadCleaner) {
+            this.launchpadCleaner();
+            this.launchpadCleaner = undefined;
+        }
         if (this.backupCleaner) {
             this.backupCleaner();
             this.backupCleaner = undefined;
@@ -1392,6 +1452,9 @@ export default class LvCardsPlugin extends Plugin {
     private refreshDueBadge() {
         this.topbarController?.refreshDueBadge(todayDate());
         this.lastDue = this.topbarController?.getLastDue() ?? 0;
+        try {
+            this.registerLaunchpadEntry();
+        } catch { /* 旁路 */ }
     }
 
     /** 块图标菜单：制卡入口（M2·FR1）。菜单构建必须同步，耗时操作放 click 回调 */

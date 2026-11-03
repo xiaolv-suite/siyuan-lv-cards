@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity, lvBackup, lvEcosystem } from "../src/libs/lv-notice-kit";
+import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity, lvBackup, lvEcosystem, lvLaunchpad } from "../src/libs/lv-notice-kit";
 import {
     showMessage,
     notifyBatchCardCreation,
@@ -31,6 +31,9 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if ((window as any).__LV_BACKUP_HUB__) {
             delete (window as any).__LV_BACKUP_HUB__;
         }
+        if ((window as any).__LV_LAUNCHPAD__) {
+            delete (window as any).__LV_LAUNCHPAD__;
+        }
         localStorage.clear();
     });
 
@@ -53,6 +56,9 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         }
         if ((window as any).__LV_BACKUP_HUB__) {
             delete (window as any).__LV_BACKUP_HUB__;
+        }
+        if ((window as any).__LV_LAUNCHPAD__) {
+            delete (window as any).__LV_LAUNCHPAD__;
         }
         const oldHost = document.getElementById("lv-notice-host");
         if (oldHost) oldHost.remove();
@@ -466,6 +472,58 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
             expect(dump.plugin).toBe("siyuan-lv-cards");
             expect(dump.stores).toBeDefined();
             expect((dump.stores as any)["settings.json"]).toEqual({ dailyReviewTarget: 20 });
+        });
+    });
+
+    describe("第五阶段：小驴罗盘顶栏收敛与极速二级行动 (Phase 5 Launchpad)", () => {
+        it("lvLaunchpad：注册闪卡入口并支持三态持久化属性与二级行动", () => {
+            let clicked = false;
+            let actionTriggered = "";
+
+            const unreg = lvLaunchpad.register({
+                id: "siyuan-lv-cards",
+                name: "闪卡",
+                fullName: "小驴闪卡",
+                svgIcon: "icon-lv-cards",
+                color: "#f43f5e",
+                desc: "间隔复习 · 记忆曲线",
+                digit: 6,
+                badge: "25 待复习",
+                badgeType: "error",
+                actions: [
+                    "开始今日25张卡复习会话",
+                    "从当前文档选区一键抽取制卡",
+                    "重新计算卡片遗忘曲线排期",
+                    "管理牌组与核心卡包",
+                ],
+                onClick: () => { clicked = true; },
+                onAction: (act) => { actionTriggered = act; },
+            });
+
+            const items = lvLaunchpad.getItems();
+            const cardsItem = items.find(i => i.id === "siyuan-lv-cards");
+            expect(cardsItem).toBeDefined();
+            expect(cardsItem?.fullName).toBe("小驴闪卡");
+            expect(cardsItem?.badge).toBe("25 待复习");
+            expect(cardsItem?.actions).toHaveLength(4);
+            expect(cardsItem?.state).toBe("docked");
+
+            // 触发主点击
+            cardsItem?.onClick();
+            expect(clicked).toBe(true);
+
+            // 触发二级行动
+            cardsItem?.onAction?.("开始今日25张卡复习会话");
+            expect(actionTriggered).toBe("开始今日25张卡复习会话");
+
+            // 修改状态为 pinned（置顶）
+            lvLaunchpad.setPluginState("siyuan-lv-cards", "pinned");
+            const updatedItems = lvLaunchpad.getItems();
+            expect(updatedItems.find(i => i.id === "siyuan-lv-cards")?.state).toBe("pinned");
+
+            // 注销
+            unreg();
+            expect(lvLaunchpad.getItems().find(i => i.id === "siyuan-lv-cards")).toBeUndefined();
         });
     });
 });
