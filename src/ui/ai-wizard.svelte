@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
     import { classifyAiFailure, isAICanceled } from "@/api/ai";
     import { lintAICards } from "@/core/ai-lint";

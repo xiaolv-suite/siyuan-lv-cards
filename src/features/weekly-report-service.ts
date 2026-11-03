@@ -1,4 +1,4 @@
-import { showMessage } from "siyuan";
+import { showMessage } from "@/libs/notice";
 import { createDocWithMd } from "@/api/siyuan";
 import { assembleWeeklyReportPayload } from "@/core/report-writer";
 import type { RevlogData } from "@/core/revlog";

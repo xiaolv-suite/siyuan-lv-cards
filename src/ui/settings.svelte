@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { MODULE_DEFS } from "@/core/modules";
     import { scopeCustomCardCss } from "@/core/card-face";
     import { PERSONA_PRESETS, type PersonaPreset } from "@/core/personas";

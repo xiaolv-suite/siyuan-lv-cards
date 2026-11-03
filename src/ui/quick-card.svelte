@@ -4,7 +4,7 @@
     import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
     import { parsePastedQuestionText } from "@/core/question-splitter";
     import { extractDroppedBlockText } from "@/core/drag-drop";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 

@@ -10,7 +10,7 @@
     import LvSteps from "./kit/LvSteps.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
     import { sqlQuery } from "@/api/siyuan";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
 
     let { i18n, onClose }: { i18n: any; onClose: () => void } = $props();
     const t = $derived(i18n);

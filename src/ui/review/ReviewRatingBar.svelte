@@ -1,6 +1,7 @@
 <script lang="ts">
     import LvKbd from "@/ui/kit/LvKbd.svelte";
     import type { Rating } from "@/api/riff";
+    import { notifyInline } from "@/libs/notice";
 
     let {
         showAnswer = false,
@@ -98,7 +99,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="1"
-            onclick={() => onRate(1)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(1); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.unknown ?? "重来"}</span>
@@ -114,7 +115,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="2"
-            onclick={() => onRate(2)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(2); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.vague ?? "模糊"}</span>
@@ -130,7 +131,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="3"
-            onclick={() => onRate(3)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(3); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.know ?? "认识"}</span>
@@ -147,7 +148,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="1"
-            onclick={() => onRate(1)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(1); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.againBtn ?? "重来"}</span>
@@ -163,7 +164,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="2"
-            onclick={() => onRate(2)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(2); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.hard ?? "困难"}</span>
@@ -179,7 +180,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="3"
-            onclick={() => onRate(3)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(3); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.good ?? "良好"}</span>
@@ -195,7 +196,7 @@
             disabled={actionBusy}
             aria-busy={actionBusy}
             aria-keyshortcuts="4"
-            onclick={() => onRate(4)}
+            onclick={(e) => { notifyInline(e.currentTarget); onRate(4); }}
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.easy ?? "简单"}</span>

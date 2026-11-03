@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { getBlockDOM } from "@/api/siyuan";
     import { diffLines, type DiffRow } from "@/core/line-diff";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";

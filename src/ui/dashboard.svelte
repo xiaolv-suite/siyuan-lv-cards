@@ -13,7 +13,8 @@
     import { calcStreak, lastNDays, localDate, studySecondsOn, coverageStats, computeRetention, computeRetentionCurve, reviewStatsFor, type RevlogData, type RetentionResult, type CurvePoint, type CoverageStats } from "@/core/revlog";
     import { buildForecast, buildMonthGrid, dueMapFromForecast, get7DayForecast, smoothForecastLoad, type ForecastResult, type CalendarCell, type ForecastCardInput, type ForecastDay } from "@/core/forecast";
     import { renderDashboardReportMarkdown, computeWeekOverview, computeCurveSvgPaths } from "@/core/report-writer";
-    import { openTab, showMessage } from "siyuan";
+    import { openTab } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { friendlyError } from "@/api/errors";
     import { getMotionDuration } from "./kit/motion";
     import { findDormantKnowledgeBlocks, type DormantKnowledgeCandidate } from "@/core/dormant-knowledge";

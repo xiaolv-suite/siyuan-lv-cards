@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { getNotebooks, type Notebook } from "@/api/siyuan";
     import LvSection from "./kit/LvSection.svelte";
     import LvRow from "./kit/LvRow.svelte";

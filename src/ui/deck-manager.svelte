@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import {
         getRiffDecks,
         createRiffDeck,

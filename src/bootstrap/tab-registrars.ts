@@ -6,7 +6,8 @@
  * 将庞大的生命周期装配与主入口解耦，使 src/index.ts 保持高度轻量与高内聚。
  */
 
-import { openTab, showMessage } from "siyuan";
+import { openTab } from "siyuan";
+import { showMessage } from "@/libs/notice";
 import { getBlockDOM, sqlQuery, probeAssetRefs, getBlockDocMap, getDocTitles, setBlockAttrs } from "@/api/siyuan";
 import { buildLeechAttrs } from "@/core/block-attributes";
 import { getRiffCards, getRiffCardsByBlockIDs } from "@/api/riff";

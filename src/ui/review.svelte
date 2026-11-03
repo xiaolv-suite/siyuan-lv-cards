@@ -1,7 +1,8 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { rafThrottle } from "@/libs/throttle";
-    import { openTab, showMessage } from "siyuan";
+    import { openTab } from "siyuan";
+    import { showMessage, notifyInline } from "@/libs/notice";
     import {
         getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
         batchSetRiffCardsDueTime, getRiffCards, getNotebookRiffCards, getTreeRiffCards,
@@ -1957,7 +1958,12 @@
         sessionStarredCardIDs = nextSessionStarred;
         void ctx.toggleStarCard?.(current.blockID || current.cardID);
         const fb = formatStarToggleFeedback(!wasStarred);
-        showMessage(fb.message, fb.toastDuration, "info");
+        const starBtn = document.querySelector(".lv-review-header-star, .lv-zen-star") as HTMLElement | null;
+        if (starBtn) {
+            notifyInline(starBtn, fb.message);
+        } else {
+            showMessage(fb.message, fb.toastDuration, "info");
+        }
         if (fb.hapticPattern) triggerHaptic(fb.hapticPattern);
     }
 
@@ -2032,7 +2038,7 @@
             suggestedRating = res.suggestedRating;
             playSfx(res.sfxRating as any);
             triggerHaptic(res.hapticPattern);
-            showMessage(res.message, res.toastDuration ?? 2000, res.messageType);
+            // 评级原位交互反馈，不弹 Toast
         }
         revealAnswer();
     }
@@ -2053,7 +2059,7 @@
                     suggestedRating = res.suggestedRating;
                     playSfx(res.sfxRating as any);
                     triggerHaptic(res.hapticPattern);
-                    showMessage(res.message, res.toastDuration ?? 1800, res.messageType);
+                    // 评级原位交互反馈，不弹 Toast
                 }
                 revealAnswer();
             }
@@ -2079,7 +2085,7 @@
                 suggestedRating = res.suggestedRating;
                 playSfx(res.sfxRating as any);
                 triggerHaptic(res.hapticPattern);
-                showMessage(res.message, res.toastDuration ?? 1800, res.messageType);
+                // 评级原位交互反馈，不弹 Toast
             }
         }
         revealAnswer();
@@ -2586,7 +2592,6 @@
                 onSubmitTyping={submitTyping}
                 onPickChoice={(i) => {
                     pickChoice(i);
-                    showMessage(i === choices.answerIdx ? t.review.choiceCorrect : t.review.choiceWrong, 1500, i === choices.answerIdx ? "info" : "error");
                 }}
                 onStartChoice={startChoice}
                 onAdvanceHint={advanceHint}

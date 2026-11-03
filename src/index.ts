@@ -1,6 +1,7 @@
 import "./index.scss";
 
-import { Plugin, getAllEditor, showMessage, openTab, getAllTabs } from "siyuan";
+import { Plugin, getAllEditor, openTab, getAllTabs } from "siyuan";
+import { showMessage, lvNotify, notifyDailyReviewReminder, notifyBatchCardCreation } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
@@ -440,6 +441,7 @@ export default class LvCardsPlugin extends Plugin {
     }
     private disposeCardsBridge?: () => void;
     private unregisterRaikiri?: () => void;
+    private noticeHubCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
     private aiBatchesMutationVersion = 0;
     private costLedgerMutationVersion = 0;
@@ -1120,6 +1122,9 @@ export default class LvCardsPlugin extends Plugin {
                 },
             });
         }
+
+        // 注册全生态统一通知套件协调者（去中心化自协商与热接管）
+        this.noticeHubCleaner = lvNotify.registerPlugin("siyuan-lv-cards");
     }
 
     onLayoutReady() {
@@ -1191,12 +1196,21 @@ export default class LvCardsPlugin extends Plugin {
         });
         if (decision.shouldNotify && decision.plan && decision.daysLeft !== undefined && decision.key) {
             this.examNotifiedFor = decision.key;
-            try {
-                const n = new Notification(this.i18n.examNotifTitle, {
-                    body: this.i18n.examNotifBody.replace("${name}", decision.plan.name).replace("${n}", String(decision.daysLeft)),
-                });
-                n.onclick = () => this.openTabOf(TAB_DASHBOARD);
-            } catch { /* 通知不可用则静默跳过 */ }
+            lvNotify.card({
+                source: "小驴闪卡",
+                category: "exam-milestone",
+                title: this.i18n.examNotifTitle || "备考倒计时提醒",
+                message: this.i18n.examNotifBody.replace("${name}", decision.plan.name).replace("${n}", String(decision.daysLeft)),
+                level: "warn",
+                duration: 10000,
+                actions: [
+                    {
+                        label: "查看看板",
+                        primary: true,
+                        onClick: () => this.openTabOf(TAB_DASHBOARD),
+                    },
+                ],
+            });
         }
     }
 
@@ -1214,18 +1228,22 @@ export default class LvCardsPlugin extends Plugin {
                 this.reminderShownFor = today;
                 return;
             }
-            try {
-                const n = new Notification(this.i18n.topbarTitle, {
-                    body: this.i18n.badgeDue.replace("${n}", String(count)),
-                });
-                n.onclick = () => this.openTabOf(TAB_REVIEW);
-            } catch { /* 通知不可用则静默跳过 */ }
+            notifyDailyReviewReminder({
+                count,
+                title: this.i18n.topbarTitle || "今日复习提醒",
+                message: this.i18n.badgeDue.replace("${n}", String(count)),
+                onStartReview: () => this.openTabOf(TAB_REVIEW),
+            });
             this.reminderShownFor = today;
         }).catch(() => { /* 旁路 */ });
     }
 
     onunload() {
         const unloadStart = Date.now();
+        if (this.noticeHubCleaner) {
+            this.noticeHubCleaner();
+            this.noticeHubCleaner = undefined;
+        }
         if (this.disposeCardsBridge) {
             this.disposeCardsBridge();
             this.disposeCardsBridge = undefined;
@@ -1386,7 +1404,7 @@ export default class LvCardsPlugin extends Plugin {
                             showMessage(formatRiffCardEntryError(error, this.i18n), 3000, "error");
                             return false;
                         }
-                        showMessage(this.i18n.deckAdded.replace("${n}", String(blockIDs.length)), 2000, "info");
+                        notifyBatchCardCreation(this.i18n.deckAdded.replace("${n}", String(blockIDs.length)));
                     }
                     opts.onPicked?.(deckID);
                 },
@@ -1840,7 +1858,7 @@ export default class LvCardsPlugin extends Plugin {
                             throw new Error(formatRiffCardEntryError(error, this.i18n));
                         }
                     }
-                    showMessage(this.i18n.markerCreated.replace("${n}", String(all.length)), 2500, "info");
+                    notifyBatchCardCreation(this.i18n.markerCreated.replace("${n}", String(all.length)));
                 },
                 onClose: noop,
             },
@@ -2499,7 +2517,7 @@ export default class LvCardsPlugin extends Plugin {
                 deckID, count: blockIDs.length, blockIDs,
             }));
         } catch { /* 事件旁路 */ }
-        showMessage(this.i18n.deckAdded.replace("${n}", String(blockIDs.length)), 2000, "info");
+        notifyBatchCardCreation(this.i18n.deckAdded.replace("${n}", String(blockIDs.length)));
     }
 
     /** Replace one job snapshot in-place; duplicated IDs make recovery read stale state. */

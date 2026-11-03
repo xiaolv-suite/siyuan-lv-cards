@@ -4,7 +4,7 @@
     // + 行级 LvSkeleton 标题加载 + LvEmpty 空态 + LvLive 读屏播报 + 破坏性操作 confirmDialog
     // + 行内打开来源（BI-6 openSource 建议）。流转：inbox → staged → selected / dismissed；
     // 只读收集不产生 due。
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { confirmDialog } from "@/libs/dialog";
     import LvPage from "./kit/LvPage.svelte";
     import LvSegmented from "./kit/LvSegmented.svelte";

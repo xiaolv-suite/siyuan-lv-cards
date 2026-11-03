@@ -32,7 +32,7 @@
         type CardDeltaReport,
     } from "@/core/marketplace-sync";
     import { serializeLvCardsPackage } from "@/core/lvcards-package";
-    import { showMessage } from "siyuan";
+    import { showMessage } from "@/libs/notice";
 
     interface Props {
         i18n: any;

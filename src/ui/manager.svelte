@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
-    import { openTab, showMessage } from "siyuan";
+    import { openTab } from "siyuan";
+    import { showMessage } from "@/libs/notice";
     import { getRiffCards, getRiffCardsByBlockIDs, getRiffDecks, createRiffDeck, removeRiffCards, resetRiffCards, type SearchBlock, type RiffDeck } from "@/api/riff";
     import { addRiffCards, invalidateDueCache } from "@/api/due-shared";
     import { friendlyError } from "@/api/errors";
