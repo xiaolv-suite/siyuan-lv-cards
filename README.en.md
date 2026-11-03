@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.231.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.232.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -25,7 +25,15 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.231.0 (Latest)
+### v0.232.0 (Latest)
+* **Full Public Marketplace Feature Alignment (Based on Xiaolv Interoperability Spec)**:
+  - **Deck Quality Metrics Dashboard**: Embeds card-type breakdown bars, FSRS difficulty ladders (Basic ★1-2, Intermediate ★3-4, Advanced ★5), and memo/expansion coverage ratios for every marketplace deck;
+  - **Cross-Disciplinary Flashcard Cart (Cart & Selective Stash)**: Selective item and whole-deck stash into the floating Cart Dock; 1-click batch export to `.lvcards` bundles or direct cloning into SiYuan;
+  - **Non-Destructive Delta Sync & Patch Merge**: Fine-grained remote delta comparison (added, updated, unchanged); merges new cards and revisions while **strictly preserving local FSRS parameters, review schedules, and mastery states**;
+  - **Privacy Sanitizer**: Automatic scan for absolute local disk paths and internal `siyuan://blocks/...` URIs before deck sharing;
+  - **Expanded E2E Automation Suite (pnpm e2e:isolated)**: 49/49 end-to-end browser walkthrough checks passing cleanly.
+
+### v0.231.0
 * **Launched "Flashcard & Knowledge Marketplace" Top-Level Workbench**:
   - **Primary Navigation Anchor**: Elevated "Market" to top-level sidebar navigation alongside Today, Library, Studio, and Learn;
   - **Immersive Marketplace Studio (`MarketplaceStudio`)**: Responsive grid showcase covering 8 major academic disciplines with zero-copyright public domain certification;

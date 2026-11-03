@@ -340,6 +340,44 @@ async function runBrowserWalkthrough(webUrl) {
                     const hasBack = Boolean(mktStudio.querySelector(".lv-preview-face.back"));
                     walk.push({ name: "闪卡试看形态与交互式点击翻面 (正反面与memo)", pass: Boolean(previewCard) && hasFront && hasBack });
                 }
+
+                // 卡包品质画像看板 (FSRS 难度梯队与卡型构成)
+                const qualityToggleBtn = mktStudio.querySelector(".lv-quality-bar-toggle button");
+                if (qualityToggleBtn) {
+                    qualityToggleBtn.click();
+                    await new Promise(r => setTimeout(r, 300));
+                    const qualityDash = mktStudio.querySelector(".lv-quality-dashboard");
+                    const metricsBars = mktStudio.querySelectorAll(".lv-metrics-bar");
+                    walk.push({
+                        name: "卡包品质画像看板 (FSRS难度梯队与卡型分布条)",
+                        pass: Boolean(qualityDash) && metricsBars.length >= 2,
+                        detail: "bars=" + metricsBars.length,
+                    });
+                }
+
+                // 闪卡篮跨学科挑选与悬浮抽屉
+                const addToCartBtn = mktStudio.querySelector(".lv-card-stash-bar button, button[title*='全包卡片加入闪卡篮']");
+                if (addToCartBtn) {
+                    addToCartBtn.click();
+                    await new Promise(r => setTimeout(r, 300));
+                }
+                const cartBtn = Array.from(mktStudio.querySelectorAll("button")).find(b => b.textContent.includes("闪卡篮"));
+                if (cartBtn) {
+                    cartBtn.click();
+                    await new Promise(r => setTimeout(r, 300));
+                    const cartDrawer = document.querySelector(".lv-cart-drawer");
+                    const cartItems = document.querySelectorAll(".lv-cart-item");
+                    walk.push({
+                        name: "闪卡篮挑选控制台与跨学科打包抽屉 (.lv-cart-drawer)",
+                        pass: Boolean(cartDrawer),
+                        detail: "cartItems=" + cartItems.length,
+                    });
+                    const closeCartBtn = cartDrawer ? cartDrawer.querySelector(".lv-cart-drawer-header button") : null;
+                    if (closeCartBtn) {
+                        closeCartBtn.click();
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+                }
             }
 
             // 3. 切换到制卡工坊

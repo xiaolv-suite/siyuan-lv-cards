@@ -63,8 +63,10 @@ describe("error-reasons（BJ-4）", () => {
 });
 
 describe("normalizeErrorTags（BJ-4 白名单清洗）", () => {
+    const fixedNow = new Date("2026-10-05T00:00:00").getTime();
+
     it("合法条目保留", () => {
-        const r = normalizeErrorTags({ tags: [{ cardID: "c1", reason: "memory-blank", date: "2026-10-04" }] });
+        const r = normalizeErrorTags({ tags: [{ cardID: "c1", reason: "memory-blank", date: "2026-10-04" }] }, fixedNow);
         expect(r.tags).toHaveLength(1);
         expect(r.tags[0]).toEqual({ cardID: "c1", reason: "memory-blank", date: "2026-10-04" });
     });
@@ -79,7 +81,7 @@ describe("normalizeErrorTags（BJ-4 白名单清洗）", () => {
                 "not an object",
                 { cardID: "c5", reason: "memory-blank", date: "2026-10-04" },  // 合法
             ],
-        });
+        }, fixedNow);
         expect(r.tags).toHaveLength(1);
         expect(r.tags[0].cardID).toBe("c5");
     });

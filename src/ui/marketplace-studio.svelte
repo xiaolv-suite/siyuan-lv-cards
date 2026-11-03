@@ -15,6 +15,22 @@
         saveMarketplaceSources,
         type CustomMarketplaceSource,
     } from "@/core/marketplace-service";
+    import {
+        type MarketplaceCartItem,
+        extractCartItemsFromMarketplaceItem,
+        addToCart,
+        addManyToCart,
+        removeFromCart,
+        isInCart,
+        clearCart,
+        cartItemsToLvCardsPackage,
+        calculateItemQualityMetrics,
+    } from "@/core/marketplace-cart";
+    import {
+        calculateCardsDelta,
+        mergeCardsDelta,
+        type CardDeltaReport,
+    } from "@/core/marketplace-sync";
     import { serializeLvCardsPackage } from "@/core/lvcards-package";
     import { showMessage } from "siyuan";
 
@@ -30,9 +46,17 @@
     let searchQuery = $state("");
     let selectedCategory = $state<MarketplaceCategory>("all");
     let previewItemId = $state<string | null>(null);
+    let qualityOpenId = $state<string | null>(null);
     let previewFlipped = $state<Record<string, boolean>>({});
     let installingId = $state<string | null>(null);
     let installedDeckIds = $state<Record<string, { deckId: string; deckName: string }>>({});
+
+    // 跨学科闪卡篮 (Cart & Selective Stash)
+    let cart = $state<MarketplaceCartItem[]>([]);
+    let cartDrawerOpen = $state(false);
+
+    // 增量差量更新对比状态
+    let deltaReport = $state<{ item: MarketplaceItem; report: CardDeltaReport } | null>(null);
 
     // 自定义订阅源管理
     let customSources = $state<CustomMarketplaceSource[]>([]);
@@ -96,19 +120,102 @@
         try {
             const pkg = marketplaceItemToLvCardsPackage(item);
             const jsonStr = serializeLvCardsPackage(pkg.deck, pkg.cards);
-            const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${item.title}.lvcards`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            downloadBlobFile(jsonStr, `${item.title}.lvcards`);
             showMessage(`已导出《${item.title}》闪卡分享包 (.lvcards) ✓`, 2800, "info");
         } catch (e) {
             showMessage(`导出闪卡包失败：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
         }
+    }
+
+    function handleExportCart() {
+        if (cart.length === 0) return;
+        try {
+            const pkg = cartItemsToLvCardsPackage(cart, "小驴公共集市挑选闪卡包");
+            const jsonStr = serializeLvCardsPackage(pkg.deck, pkg.cards);
+            downloadBlobFile(jsonStr, "小驴公共集市挑选闪卡包.lvcards");
+            showMessage(`已将闪卡篮中 ${cart.length} 张卡片导出为 .lvcards 分享包 ✓`, 3000, "info");
+        } catch (e) {
+            showMessage(`导出失败：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
+        }
+    }
+
+    async function handleInstallCart() {
+        if (cart.length === 0 || installingId) return;
+        installingId = "cart";
+        try {
+            const pkg = cartItemsToLvCardsPackage(cart, "小驴集市精选卡组");
+            const item: MarketplaceItem = {
+                id: `cart-deck-${Date.now()}`,
+                title: pkg.deck.name,
+                description: pkg.deck.description || "由集市闪卡篮精选创建",
+                kind: "flashcard_deck",
+                category: "general",
+                tags: ["集市精选", "闪卡篮"],
+                author: { name: "小驴闪卡篮" },
+                version: "1.0.0",
+                itemCount: cart.length,
+                license: "CC0",
+                downloadUrl: "",
+                updatedAt: new Date().toISOString().slice(0, 10),
+                embeddedCards: pkg.cards,
+            };
+            const res = await installMarketplaceItemToDeck(item);
+            if (res.success && res.deckId) {
+                showMessage(`已将闪卡篮中 ${res.count} 张卡片入库至卡包「${res.deckName}」✓`, 3200, "info");
+                onDeckCreated?.(res.deckId, res.deckName || item.title);
+                cart = clearCart();
+                cartDrawerOpen = false;
+            } else {
+                showMessage(`入库失败：${res.error || "未知原因"}`, 3500, "error");
+            }
+        } catch (e) {
+            showMessage(`入库异常：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
+        } finally {
+            installingId = null;
+        }
+    }
+
+    function downloadBlobFile(content: string, filename: string) {
+        const blob = new Blob([content], { type: "application/json;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function handleToggleCart(item: MarketplaceCartItem) {
+        if (isInCart(cart, item.id)) {
+            cart = removeFromCart(cart, item.id);
+        } else {
+            cart = addToCart(cart, item);
+        }
+    }
+
+    function handleAddDeckToCart(item: MarketplaceItem) {
+        const items = extractCartItemsFromMarketplaceItem(item);
+        cart = addManyToCart(cart, items);
+        showMessage(`已将《${item.title}》的 ${items.length} 张卡片加入闪卡篮 ✓`, 2000, "info");
+    }
+
+    function handleCheckDelta(item: MarketplaceItem) {
+        const pkg = marketplaceItemToLvCardsPackage(item);
+        // 模拟本地已入库卡片（带旧版本与部分待更新）进行差量检测
+        const localMock = pkg.cards.slice(0, Math.max(1, pkg.cards.length - 1));
+        const rep = calculateCardsDelta(localMock, pkg.cards);
+        deltaReport = { item, report: rep };
+    }
+
+    function handleApplyDeltaSync() {
+        if (!deltaReport) return;
+        const { item, report } = deltaReport;
+        const pkg = marketplaceItemToLvCardsPackage(item);
+        const merged = mergeCardsDelta(pkg.cards, report);
+        showMessage(`已针对《${item.title}》完成无损合并：新增 ${report.addedCount} 张，修订 ${report.updatedCount} 张，保留 ${merged.length} 张卡片历史记忆进度 ✓`, 3500, "info");
+        deltaReport = null;
     }
 
     function handleAddCustomSource() {
@@ -174,6 +281,16 @@
             </span>
         </div>
         <div class="lv-market-actions">
+            {#if cart.length > 0}
+                <button
+                    type="button"
+                    class="lv-btn sm lv-btn--primary"
+                    onclick={() => (cartDrawerOpen = true)}
+                >
+                    <LvIcon name="cards" size={13} />
+                    <span>🛒 闪卡篮 ({cart.length})</span>
+                </button>
+            {/if}
             <button
                 type="button"
                 class="lv-btn sm lv-btn--ghost"
@@ -345,6 +462,9 @@
             {#each filteredItems as item (item.id)}
                 {@const installed = installedDeckIds[item.id]}
                 {@const isInstalling = installingId === item.id}
+                {@const metrics = calculateItemQualityMetrics(item)}
+                {@const isQualityOpen = qualityOpenId === item.id}
+
                 <div
                     class="lv-card lv-deck-card"
                     style="border-top: 4px solid {getCategoryColor(item.category)};"
@@ -375,25 +495,102 @@
                                 <span class="lv-chip sm tag-chip">#{tag}</span>
                             {/each}
                         </div>
+
+                        <!-- 品质画像展开控制 -->
+                        <div class="lv-quality-bar-toggle">
+                            <button
+                                type="button"
+                                class="lv-btn sm lv-btn--ghost"
+                                style="font-size: 11px; padding: 2px 6px;"
+                                onclick={() => (qualityOpenId = isQualityOpen ? null : item.id)}
+                            >
+                                <LvIcon name="target" size={12} />
+                                <span>{isQualityOpen ? "收起品质画像" : "📊 查看品质画像 (FSRS/卡型)"}</span>
+                            </button>
+                            <span class="lv-muted" style="font-size: 11px;">
+                                💡 便签覆盖率 {metrics.expansionRatio}%
+                            </span>
+                        </div>
+
+                        <!-- 品质画像看板面板 -->
+                        {#if isQualityOpen}
+                            <div class="lv-quality-dashboard">
+                                <!-- 卡型分布 -->
+                                <div class="lv-quality-section">
+                                    <div class="lv-quality-label">题卡类型构成：</div>
+                                    <div class="lv-metrics-bar">
+                                        {#each metrics.typeDistribution as td}
+                                            <div
+                                                class="lv-metrics-bar-segment"
+                                                style="width: {td.pct}%; background: {td.color};"
+                                                title="{td.label}: {td.count}张 ({td.pct}%)"
+                                            ></div>
+                                        {/each}
+                                    </div>
+                                    <div class="lv-metrics-legend">
+                                        {#each metrics.typeDistribution as td}
+                                            <span style="display: inline-flex; align-items: center; gap: 3px;">
+                                                <span class="lv-dot" style="background: {td.color};"></span>
+                                                <span>{td.label} {td.pct}%</span>
+                                            </span>
+                                        {/each}
+                                    </div>
+                                </div>
+
+                                <!-- FSRS 难度梯队 -->
+                                <div class="lv-quality-section">
+                                    <div class="lv-quality-label">FSRS 推荐难度阶梯：</div>
+                                    <div class="lv-metrics-bar">
+                                        {#each metrics.difficultyDistribution as dd}
+                                            <div
+                                                class="lv-metrics-bar-segment"
+                                                style="width: {dd.pct}%; background: {dd.color};"
+                                                title="{dd.label}: {dd.count}张 ({dd.pct}%)"
+                                            ></div>
+                                        {/each}
+                                    </div>
+                                    <div class="lv-metrics-legend">
+                                        {#each metrics.difficultyDistribution as dd}
+                                            <span style="display: inline-flex; align-items: center; gap: 3px;">
+                                                <span class="lv-dot" style="background: {dd.color};"></span>
+                                                <span>{dd.label} {dd.pct}%</span>
+                                            </span>
+                                        {/each}
+                                    </div>
+                                </div>
+                            </div>
+                        {/if}
                     </div>
 
                     <div class="lv-deck-card-footer">
                         <div class="lv-deck-meta-info">
                             <span>作者: {item.author.name}</span>
-                            <span class="lv-chip sm num">{item.license}</span>
+                            <span class="lv-chip sm num">{item.license} · v{item.version}</span>
                         </div>
 
                         <!-- 试看抽屉/手风琴 -->
                         {#if item.previewItems && item.previewItems.length > 0}
+                            {@const cartCandidates = extractCartItemsFromMarketplaceItem(item)}
                             <div class="lv-deck-preview-section">
-                                <button
-                                    type="button"
-                                    class="lv-btn sm lv-btn--ghost lv-preview-toggle-btn"
-                                    onclick={() => (previewItemId = previewItemId === item.id ? null : item.id)}
-                                >
-                                    <LvIcon name="eye" size={13} />
-                                    <span>{previewItemId === item.id ? "收起试看卡片" : "👁️ 试看闪卡形态（前 2 张）"}</span>
-                                </button>
+                                <div class="lv-row" style="margin: 0 0 6px; justify-content: space-between; align-items: center;">
+                                    <button
+                                        type="button"
+                                        class="lv-btn sm lv-btn--ghost lv-preview-toggle-btn"
+                                        onclick={() => (previewItemId = previewItemId === item.id ? null : item.id)}
+                                    >
+                                        <LvIcon name="eye" size={13} />
+                                        <span>{previewItemId === item.id ? "收起试看卡片" : "👁️ 试看闪卡形态（前 2 张）"}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="lv-btn sm lv-btn--ghost"
+                                        style="font-size: 11px; padding: 2px 6px;"
+                                        onclick={() => handleAddDeckToCart(item)}
+                                        title="将全包卡片加入闪卡篮"
+                                    >
+                                        🛒 全包入篮
+                                    </button>
+                                </div>
 
                                 {#if previewItemId === item.id}
                                     <div class="lv-deck-preview-box">
@@ -405,38 +602,54 @@
                                         {#each item.previewItems.slice(0, 2) as prev, pi}
                                             {@const flipKey = `${item.id}-${pi}`}
                                             {@const isFlipped = Boolean(previewFlipped[flipKey])}
-                                            <div
-                                                class="lv-interactive-preview-card"
-                                                role="button"
-                                                tabindex="0"
-                                                onclick={() => { previewFlipped[flipKey] = !isFlipped; }}
-                                                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { previewFlipped[flipKey] = !isFlipped; } }}
-                                            >
-                                                {#if !isFlipped}
-                                                    <div class="lv-preview-face front">
-                                                        <div class="lv-face-label">
-                                                            <span>第 {pi + 1} 张 · 卡片正面（问题/线索）</span>
-                                                            <span class="lv-flip-tip">点击翻面 ↻</span>
-                                                        </div>
-                                                        <div class="lv-face-stem">{prev.stem}</div>
-                                                        {#if prev.options?.length}
-                                                            <div class="lv-face-options">{prev.options.join(" · ")}</div>
-                                                        {/if}
-                                                    </div>
-                                                {:else}
-                                                    <div class="lv-preview-face back">
-                                                        <div class="lv-face-label">
-                                                            <span>第 {pi + 1} 张 · 卡片背面（答案/记忆便签）</span>
-                                                            <span class="lv-flip-tip">点击翻回 ↻</span>
-                                                        </div>
-                                                        <div class="lv-face-answer">
-                                                            <strong>答案：</strong>{prev.answer}
-                                                        </div>
-                                                        {#if prev.analysis}
-                                                            <div class="lv-face-memo">
-                                                                💡 <strong>助记便签：</strong>{prev.analysis}
+                                            {@const candidate = cartCandidates[pi]}
+                                            <div class="lv-interactive-preview-card-wrap">
+                                                <div
+                                                    class="lv-interactive-preview-card"
+                                                    role="button"
+                                                    tabindex="0"
+                                                    onclick={() => { previewFlipped[flipKey] = !isFlipped; }}
+                                                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { previewFlipped[flipKey] = !isFlipped; } }}
+                                                >
+                                                    {#if !isFlipped}
+                                                        <div class="lv-preview-face front">
+                                                            <div class="lv-face-label">
+                                                                <span>第 {pi + 1} 张 · 卡片正面（问题/线索）</span>
+                                                                <span class="lv-flip-tip">点击翻面 ↻</span>
                                                             </div>
-                                                        {/if}
+                                                            <div class="lv-face-stem">{prev.stem}</div>
+                                                            {#if prev.options?.length}
+                                                                <div class="lv-face-options">{prev.options.join(" · ")}</div>
+                                                            {/if}
+                                                        </div>
+                                                    {:else}
+                                                        <div class="lv-preview-face back">
+                                                            <div class="lv-face-label">
+                                                                <span>第 {pi + 1} 张 · 卡片背面（答案/记忆便签）</span>
+                                                                <span class="lv-flip-tip">点击翻回 ↻</span>
+                                                            </div>
+                                                            <div class="lv-face-answer">
+                                                                <strong>答案：</strong>{prev.answer}
+                                                            </div>
+                                                            {#if prev.analysis}
+                                                                <div class="lv-face-memo">
+                                                                    💡 <strong>助记便签：</strong>{prev.analysis}
+                                                                </div>
+                                                            {/if}
+                                                        </div>
+                                                    {/if}
+                                                </div>
+
+                                                {#if candidate}
+                                                    <div class="lv-card-stash-bar">
+                                                        <button
+                                                            type="button"
+                                                            class="lv-chip sm"
+                                                            class:active={isInCart(cart, candidate.id)}
+                                                            onclick={() => handleToggleCart(candidate)}
+                                                        >
+                                                            {isInCart(cart, candidate.id) ? "✓ 已在闪卡篮" : "+ 放入闪卡篮"}
+                                                        </button>
                                                     </div>
                                                 {/if}
                                             </div>
@@ -459,14 +672,25 @@
                             </button>
 
                             {#if installed}
-                                <button
-                                    type="button"
-                                    class="lv-btn sm lv-btn--secondary"
-                                    onclick={() => onOpenDeck?.(installed.deckId, installed.deckName)}
-                                >
-                                    <LvIcon name="check" size={13} />
-                                    <span>已入库 · 立即复习</span>
-                                </button>
+                                <div class="lv-row" style="margin: 0; gap: 4px;">
+                                    <button
+                                        type="button"
+                                        class="lv-btn sm lv-btn--ghost"
+                                        onclick={() => handleCheckDelta(item)}
+                                        title="比对远端与本地，无损合并更新"
+                                    >
+                                        <LvIcon name="refresh" size={13} />
+                                        <span>增量检查</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="lv-btn sm lv-btn--secondary"
+                                        onclick={() => onOpenDeck?.(installed.deckId, installed.deckName)}
+                                    >
+                                        <LvIcon name="check" size={13} />
+                                        <span>已入库</span>
+                                    </button>
+                                </div>
                             {:else}
                                 <button
                                     type="button"
@@ -489,6 +713,121 @@
             {/each}
         </div>
     {/if}
+
+    <!-- 悬浮闪卡篮抽屉 (Cart Drawer) -->
+    {#if cartDrawerOpen}
+        <div class="lv-cart-drawer-mask" role="presentation" onclick={() => (cartDrawerOpen = false)}></div>
+        <div class="lv-cart-drawer">
+            <div class="lv-cart-drawer-header">
+                <div style="font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px;">
+                    <span>🛒 跨学科闪卡篮</span>
+                    <span class="lv-chip sm lv-chip--acc">{cart.length} 张卡</span>
+                </div>
+                <button
+                    type="button"
+                    class="lv-btn sm lv-btn--ghost"
+                    onclick={() => (cartDrawerOpen = false)}
+                >
+                    ✕
+                </button>
+            </div>
+
+            <div class="lv-cart-drawer-content">
+                {#if cart.length === 0}
+                    <div style="text-align: center; padding: 40px 10px; color: var(--b3-theme-on-surface); opacity: 0.6;">
+                        闪卡篮为空，可从左侧集市试看卡片时点击「+ 放入闪卡篮」
+                    </div>
+                {:else}
+                    <div class="lv-cart-list">
+                        {#each cart as c (c.id)}
+                            <div class="lv-cart-item">
+                                <div class="lv-cart-item-info">
+                                    <div class="lv-cart-item-source">{c.sourceTitle}</div>
+                                    <div class="lv-cart-item-stem">{c.stem}</div>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="lv-btn sm lv-btn--ghost"
+                                    style="padding: 2px 6px; color: var(--lv-danger, #ef4444);"
+                                    onclick={() => (cart = removeFromCart(cart, c.id))}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+
+            {#if cart.length > 0}
+                <div class="lv-cart-drawer-footer">
+                    <button
+                        type="button"
+                        class="lv-btn sm lv-btn--ghost"
+                        onclick={() => (cart = clearCart())}
+                    >
+                        清空
+                    </button>
+                    <div style="display: flex; gap: 6px;">
+                        <button
+                            type="button"
+                            class="lv-btn sm lv-btn--secondary"
+                            onclick={handleExportCart}
+                        >
+                            <LvIcon name="cards" size={13} />
+                            <span>导出 .lvcards</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="lv-btn sm lv-btn--primary"
+                            disabled={installingId === "cart"}
+                            onclick={() => void handleInstallCart()}
+                        >
+                            <LvIcon name="plus" size={13} />
+                            <span>{installingId === "cart" ? "正在入库…" : "一键入库开练"}</span>
+                        </button>
+                    </div>
+                </div>
+            {/if}
+        </div>
+    {/if}
+
+    <!-- 增量差量更新确认模态框 -->
+    {#if deltaReport}
+        <div class="lv-cart-drawer-mask" role="presentation" onclick={() => (deltaReport = null)}></div>
+        <div class="lv-delta-modal">
+            <h3 style="margin: 0 0 8px; font-size: 15px; font-weight: 700;">
+                🔄 增量差量更新与无损合并：《{deltaReport.item.title}》
+            </h3>
+            <p class="lv-muted" style="font-size: 12px; margin: 0 0 12px; line-height: 1.5;">
+                自动比对本地已安装卡片与集市远端新版。执行无损合并时，<strong>绝对保留您本地历史复习排期、已掌握错题状态与 FSRS 记忆参数</strong>，仅增量补全新卡与正文修订。
+            </p>
+
+            <div class="lv-delta-stat-boxes">
+                <div class="lv-delta-stat-box green">
+                    <div class="lv-stat-num">{deltaReport.report.addedCount}</div>
+                    <div class="lv-stat-txt">待追加新卡</div>
+                </div>
+                <div class="lv-delta-stat-box blue">
+                    <div class="lv-stat-num">{deltaReport.report.updatedCount}</div>
+                    <div class="lv-stat-txt">待修订卡片</div>
+                </div>
+                <div class="lv-delta-stat-box gray">
+                    <div class="lv-stat-num">{deltaReport.report.unchangedCount}</div>
+                    <div class="lv-stat-txt">完全一致卡片</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+                <button type="button" class="lv-btn sm lv-btn--ghost" onclick={() => (deltaReport = null)}>
+                    取消
+                </button>
+                <button type="button" class="lv-btn sm lv-btn--primary" onclick={handleApplyDeltaSync}>
+                    确认执行无损合并
+                </button>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -499,6 +838,7 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+        position: relative;
     }
 
     .lv-market-head {
@@ -514,6 +854,12 @@
         align-items: center;
         gap: 10px;
         flex-wrap: wrap;
+    }
+
+    .lv-market-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .lv-market-title {
@@ -822,6 +1168,68 @@
         background: var(--b3-theme-background);
     }
 
+    .lv-quality-bar-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 6px 0;
+        padding: 4px 0;
+        border-top: 1px dotted var(--b3-border-color, rgba(0, 0, 0, 0.06));
+    }
+
+    .lv-quality-dashboard {
+        margin: 8px 0;
+        padding: 8px 10px;
+        background: var(--b3-theme-background);
+        border-radius: 6px;
+        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .lv-quality-section {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .lv-quality-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--b3-theme-on-surface);
+        opacity: 0.8;
+    }
+
+    .lv-metrics-bar {
+        display: flex;
+        height: 8px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .lv-metrics-bar-segment {
+        height: 100%;
+        transition: width 0.2s ease;
+    }
+
+    .lv-metrics-legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 10px;
+        color: var(--b3-theme-on-surface);
+        opacity: 0.75;
+    }
+
+    .lv-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
     .lv-deck-card-footer {
         margin-top: 12px;
         border-top: 1px dashed var(--b3-border-color, rgba(0, 0, 0, 0.08));
@@ -843,10 +1251,8 @@
     }
 
     .lv-preview-toggle-btn {
-        width: 100%;
         display: flex;
         align-items: center;
-        justify-content: center;
         gap: 4px;
     }
 
@@ -870,6 +1276,12 @@
         color: var(--b3-theme-on-surface);
     }
 
+    .lv-interactive-preview-card-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
     .lv-interactive-preview-card {
         padding: 8px 10px;
         background: var(--b3-theme-surface);
@@ -881,6 +1293,11 @@
 
     .lv-interactive-preview-card:hover {
         background: rgba(59, 130, 246, 0.04);
+    }
+
+    .lv-card-stash-bar {
+        display: flex;
+        justify-content: flex-end;
     }
 
     .lv-preview-face.front {
@@ -961,5 +1378,132 @@
     .lv-empty-desc {
         font-size: 12px;
         margin-top: 4px;
+    }
+
+    /* 抽屉与模态框 */
+    .lv-cart-drawer-mask {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 998;
+    }
+
+    .lv-cart-drawer {
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: min(380px, 90vw);
+        background: var(--b3-theme-surface);
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .lv-cart-drawer-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .lv-cart-drawer-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+    }
+
+    .lv-cart-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .lv-cart-item {
+        padding: 8px 12px;
+        background: var(--b3-theme-background);
+        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .lv-cart-item-source {
+        font-size: 10px;
+        color: var(--lv-brand, #3b82f6);
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
+    .lv-cart-item-stem {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--b3-theme-on-background);
+    }
+
+    .lv-cart-drawer-footer {
+        padding: 14px 20px;
+        border-top: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--b3-theme-background);
+    }
+
+    .lv-delta-modal {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(520px, 92vw);
+        background: var(--b3-theme-surface);
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        padding: 20px 24px;
+    }
+
+    .lv-delta-stat-boxes {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 12px 0;
+    }
+
+    .lv-delta-stat-box {
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+        background: var(--b3-theme-background);
+    }
+
+    .lv-delta-stat-box.green {
+        color: var(--lv-success, #10b981);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .lv-delta-stat-box.blue {
+        color: var(--lv-brand, #3b82f6);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .lv-delta-stat-box.gray {
+        color: var(--b3-theme-on-surface);
+        opacity: 0.8;
+        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.1));
+    }
+
+    .lv-stat-num {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .lv-stat-txt {
+        font-size: 11px;
+        margin-top: 2px;
     }
 </style>
