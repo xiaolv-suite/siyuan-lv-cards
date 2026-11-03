@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.232.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.233.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -25,7 +25,20 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 
 ## 🆕 What's New
 
-### v0.232.0 (Latest)
+### v0.233.0 (Latest)
+* **Epoch 7 Full Ecosystem Infrastructure Federation (Protocol v1.6.0)**:
+  - **Xiaolv Launchpad (`lvLaunchpad`)**: Topbar aggregation with 4 deep secondary actions (Start Review Session, Extract Cards from Selection, Recalculate Forgetting Curves, Manage Decks), with dynamic badge updates;
+  - **Ecosystem Omnisearch (`lvOmnisearch`)**: Registered search provider for decks and flashcard block contents across `content` and `markdown` fields with 1-click navigation;
+  - **Cross-Plugin IFTTT Automation (`lvAutomation`)**: Automatic flashcard generation from wrong exam questions (`rule-exam-to-cards`) via standard cloze question format;
+  - **Federated Lossless Disaster Recovery (`lvBackup`)**: 1-click ecosystem-wide backup export & atomic transaction restore with reverse rollback compensation;
+  - **Ecosystem Diagnostics Badge (`lvEcosystem`)**: Floating status pill in Dashboard and Settings displaying linked plugin count and daily activity statistics;
+  - **Progressive De-noising Notification Center (`lvNotify`)**: Automatic batch creation folding (`×2`, `×3`), interactive review reminders with snooze/mute, and inline micro-haptics on rating;
+  - **Resource Hardening & Concurrency Locks**: Unified `lvTicker.onMinute` with 60s low-power mode on blur, midnight `onDateCross` due recalculation, `withDocLock` write barriers, and top-surface Esc key arbitration;
+  - **Unified AI Gateway & Daily Stream**: Centralized `lvAi.chat` with shared API keys and token-bucket concurrency limiters, plus `lvActivity.record` daily timeline export.
+* **Expanded E2E Automation Suite (54/54 All Green)**:
+  - Walkthrough expanded from 49 to 54 browser checks, verifying launchpad actions, omnisearch hits (29+), wrongbook automation, and ecosystem status pills.
+
+### v0.232.0
 * **Full Public Marketplace Feature Alignment (Based on Xiaolv Interoperability Spec)**:
   - **Deck Quality Metrics Dashboard**: Embeds card-type breakdown bars, FSRS difficulty ladders (Basic ★1-2, Intermediate ★3-4, Advanced ★5), and memo/expansion coverage ratios for every marketplace deck;
   - **Cross-Disciplinary Flashcard Cart (Cart & Selective Stash)**: Selective item and whole-deck stash into the floating Cart Dock; 1-click batch export to `.lvcards` bundles or direct cloning into SiYuan;

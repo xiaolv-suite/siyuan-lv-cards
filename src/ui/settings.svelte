@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { showMessage } from "@/libs/notice";
+    import { showMessage, lvEcosystem } from "@/libs/notice";
     import { MODULE_DEFS } from "@/core/modules";
     import { scopeCustomCardCss } from "@/core/card-face";
     import { PERSONA_PRESETS, type PersonaPreset } from "@/core/personas";
@@ -1860,6 +1860,13 @@
                 {/snippet}
             </LvRow>
         {/if}
+        <LvRow label="小驴全家桶协同状态" hint="当前思源工作区中小驴系列插件自协商与生态健康状态">
+            {#snippet children()}
+                <span class="ft__smaller" style="color: var(--lv-color-text-muted); padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--lv-color-surface) 80%, transparent); border: 1px solid var(--lv-border);">
+                    {lvEcosystem.getStatusBadgeText()}
+                </span>
+            {/snippet}
+        </LvRow>
     </LvSection>
     {/if}
 
