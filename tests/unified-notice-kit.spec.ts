@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { lvNotify } from "../src/libs/lv-notice-kit";
+import { lvNotify, lvTicker, withDocLock, lvSurfaceStack } from "../src/libs/lv-notice-kit";
 import {
     showMessage,
     notifyBatchCardCreation,
@@ -16,6 +16,12 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if (window.__LV_NOTICE_HUB__) {
             window.__LV_NOTICE_HUB__.destroy();
         }
+        if (window.__LV_TICKER__) {
+            window.__LV_TICKER__.destroy();
+        }
+        if (window.__LV_DOC_LOCKS__) {
+            window.__LV_DOC_LOCKS__.clear();
+        }
         localStorage.clear();
     });
 
@@ -23,6 +29,12 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         vi.useRealTimers();
         if (window.__LV_NOTICE_HUB__) {
             window.__LV_NOTICE_HUB__.destroy();
+        }
+        if (window.__LV_TICKER__) {
+            window.__LV_TICKER__.destroy();
+        }
+        if (window.__LV_DOC_LOCKS__) {
+            window.__LV_DOC_LOCKS__.clear();
         }
         const oldHost = document.getElementById("lv-notice-host");
         if (oldHost) oldHost.remove();
@@ -182,5 +194,95 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         expect(btn.classList.contains("lv-inline-feedback-active")).toBe(false);
         expect(btn.getAttribute("title")).toBeNull();
         btn.remove();
+    });
+
+    describe("第二阶段：系统资源与并发加固 (Phase 2)", () => {
+        it("lvTicker.onMinute：消灭定时器风暴，每分钟整点统一对齐唤醒", () => {
+            let tickCount = 0;
+            const unsub = lvTicker.onMinute("siyuan-lv-cards", () => {
+                tickCount++;
+            });
+
+            // 59秒内不触发第二次
+            vi.advanceTimersByTime(59000);
+            expect(tickCount).toBe(0);
+
+            // 60秒时统一对齐唤醒
+            vi.advanceTimersByTime(2000);
+            expect(tickCount).toBe(1);
+
+            // 再次推进 60秒
+            vi.advanceTimersByTime(60000);
+            expect(tickCount).toBe(2);
+
+            unsub();
+            vi.advanceTimersByTime(60000);
+            expect(tickCount).toBe(2);
+        });
+
+        it("lvTicker.onDateCross：跨日零点准时触发，无需后台频繁轮询比对日期", () => {
+            let crossedDateKey = "";
+            const unsub = lvTicker.onDateCross("siyuan-lv-cards", (newDate) => {
+                crossedDateKey = newDate;
+            });
+
+            // 推进时间越过午夜
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
+            const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+
+            // 推进 25 小时
+            vi.advanceTimersByTime(25 * 3600 * 1000);
+            expect(crossedDateKey).toBe(tomorrowKey);
+
+            unsub();
+        });
+
+        it("withDocLock：同文档排队互斥串行执行，避免内核 write lock 冲突", async () => {
+            const executionOrder: string[] = [];
+
+            const task1 = withDocLock("doc-1", async () => {
+                await new Promise((r) => setTimeout(r, 50));
+                executionOrder.push("task1-done");
+                return "res1";
+            });
+
+            const task2 = withDocLock("doc-1", async () => {
+                executionOrder.push("task2-start");
+                return "res2";
+            });
+
+            // 针对不同 docId 的任务不阻塞，并行执行
+            const taskOther = withDocLock("doc-2", async () => {
+                executionOrder.push("task-other");
+                return "res-other";
+            });
+
+            // 推进 10ms，doc-2 优先完成
+            vi.advanceTimersByTime(10);
+            await taskOther;
+            expect(executionOrder).toContain("task-other");
+
+            // 推进 50ms，doc-1 的 task1 完成后 task2 立即执行
+            vi.advanceTimersByTime(50);
+            const [r1, r2] = await Promise.all([task1, task2]);
+            expect(r1).toBe("res1");
+            expect(r2).toBe("res2");
+            expect(executionOrder.indexOf("task1-done")).toBeLessThan(executionOrder.indexOf("task2-start"));
+        });
+
+        it("withDocLock：某任务抛出异常时自动释放锁，不阻塞后续排队任务", async () => {
+            const taskFail = withDocLock("doc-fail", async () => {
+                throw new Error("write crash");
+            });
+
+            await expect(taskFail).rejects.toThrow("write crash");
+
+            // 锁已正确释放，后续任务正常运行
+            const taskSuccess = await withDocLock("doc-fail", async () => {
+                return "recovered";
+            });
+            expect(taskSuccess).toBe("recovered");
+        });
     });
 });

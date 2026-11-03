@@ -12,6 +12,7 @@ import {
 } from "./marketplace";
 import { getRiffDecks, createRiffDeck, addRiffCards, type RiffDeck } from "@/api/riff";
 import { getNotebooks, createDocWithMd, appendBlock, setBlockAttrs } from "@/api/siyuan";
+import { withDocLock } from "@/libs/lv-notice-kit";
 import { applyPackageCardMetadata } from "./lvcards-import";
 
 export interface CustomMarketplaceSource {
@@ -190,19 +191,22 @@ export async function installMarketplaceItemToDeck(
       return { success: false, count: 0, error: "在笔记本中创建闪卡归档文档失败" };
     }
 
-    // 5. 逐卡或分批将卡片 Markdown 内容追加到文档中
-    const createdBlockIds: string[] = [];
-    for (const card of pkg.cards) {
-      // 组装格式良好的卡片内容（包含问答结构和卡片标记）
-      const cardMd = `${card.markdown}\n{: custom-riff-decks="${targetDeckId}" }`;
-      const blockRes = await _appendBlock("markdown", cardMd, docId);
-      if (Array.isArray(blockRes) && blockRes.length > 0) {
-        const blkId = typeof blockRes[0] === "string" ? blockRes[0] : (blockRes[0] as any)?.id;
-        if (blkId) {
-          createdBlockIds.push(blkId);
+    // 5. 逐卡或分批将卡片 Markdown 内容追加到文档中（文档写锁排队，避免并发冲突）
+    const createdBlockIds: string[] = await withDocLock(docId, async () => {
+      const blockIds: string[] = [];
+      for (const card of pkg.cards) {
+        // 组装格式良好的卡片内容（包含问答结构和卡片标记）
+        const cardMd = `${card.markdown}\n{: custom-riff-decks="${targetDeckId}" }`;
+        const blockRes = await _appendBlock("markdown", cardMd, docId);
+        if (Array.isArray(blockRes) && blockRes.length > 0) {
+          const blkId = typeof blockRes[0] === "string" ? blockRes[0] : (blockRes[0] as any)?.id;
+          if (blkId) {
+            blockIds.push(blkId);
+          }
         }
       }
-    }
+      return blockIds;
+    });
 
     if (createdBlockIds.length === 0) {
       return { success: false, count: 0, error: "卡片块写入思源文档失败" };

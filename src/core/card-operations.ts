@@ -6,6 +6,7 @@
 import { addRiffCards, invalidateDueCache } from "../api/due-shared";
 import { getRiffCardsByBlockIDs, removeRiffCards } from "../api/riff";
 import { appendBlock, createDocWithMd, setBlockAttrs } from "../api/siyuan";
+import { withDocLock } from "../libs/lv-notice-kit";
 import { attachCardSourceBacklink, buildSourceLinkAttrs } from "./block-attributes";
 import { detachCard, type CardRelationsData } from "./card-relations";
 import { validateCardEntry } from "./card-entry-gate";
@@ -99,20 +100,23 @@ export async function executeQuickCardCreation(
         ? attachCardSourceBacklink(input.markdown, input.sourceBlockID || input.sourceDocID, input.sourceTitle)
         : input.markdown;
 
-    const ids = await appendBlock("markdown", cardMarkdown, docID);
-    if (!ids || ids.length === 0) {
-        throw new Error("quickCardFail");
-    }
-    const blockID = ids[0];
-    await addRiffCards(input.deckID, [blockID]);
-
-    if (input.sourceDocID || input.sourceBlockID || input.inPlaceDocID) {
-        try {
-            await setBlockAttrs(blockID, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
-        } catch {
-            // 属性写入旁路容错
+    const blockID = await withDocLock(docID, async () => {
+        const ids = await appendBlock("markdown", cardMarkdown, docID);
+        if (!ids || ids.length === 0) {
+            throw new Error("quickCardFail");
         }
-    }
+        const blkId = ids[0];
+        await addRiffCards(input.deckID, [blkId]);
+
+        if (input.sourceDocID || input.sourceBlockID || input.inPlaceDocID) {
+            try {
+                await setBlockAttrs(blkId, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
+            } catch {
+                // 属性写入旁路容错
+            }
+        }
+        return blkId;
+    });
 
     // R59 题型属性（选择题/判断题/填空）——复习端 parseInteractiveQuiz 依赖这些键
     if (input.examAttrs && Object.keys(input.examAttrs).length > 0) {

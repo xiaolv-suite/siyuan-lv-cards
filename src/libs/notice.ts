@@ -5,6 +5,9 @@
 import { showMessage as siyuanShowMessage } from "siyuan";
 import {
     lvNotify,
+    lvTicker,
+    withDocLock,
+    lvSurfaceStack,
     type CardNoticeOptions,
     type CapsuleNoticeOptions,
     type SilentNoticeOptions,
@@ -16,6 +19,9 @@ import {
 
 export {
     lvNotify,
+    lvTicker,
+    withDocLock,
+    lvSurfaceStack,
     type CardNoticeOptions,
     type CapsuleNoticeOptions,
     type SilentNoticeOptions,

@@ -1,6 +1,7 @@
 import { computeBadgeDescriptor } from "@/core/badge-reminder";
 import { cachedDueCount } from "@/api/due-shared";
 import { lvLog } from "@/libs/log";
+import { lvTicker } from "@/libs/lv-notice-kit";
 import type { ExamPlan } from "@/core/exam";
 
 export interface TopbarHost {
@@ -33,6 +34,7 @@ export class TopbarController {
     private topBarElement: HTMLElement | null = null;
     private topBarContextMenuHandler: ((evt: MouseEvent) => void) | null = null;
     private badgeTimer: ReturnType<typeof setInterval> | null = null;
+    private badgeTimerUnsub: (() => void) | null = null;
     private badgeSeq = 0;
     private lastDue = 0;
     private iconSvg: string;
@@ -50,16 +52,25 @@ export class TopbarController {
         return this.topBarElement;
     }
 
-    public startBadgeTimer(intervalMs = 60000) {
+    public startBadgeTimer(_intervalMs = 60000) {
+        if (this.badgeTimerUnsub) {
+            this.badgeTimerUnsub();
+            this.badgeTimerUnsub = null;
+        }
         if (this.badgeTimer) {
             clearInterval(this.badgeTimer);
+            this.badgeTimer = null;
         }
-        this.badgeTimer = setInterval(() => {
+        this.badgeTimerUnsub = lvTicker.onMinute("siyuan-lv-cards", () => {
             this.refreshDueBadge();
-        }, intervalMs);
+        });
     }
 
     public destroy() {
+        if (this.badgeTimerUnsub) {
+            this.badgeTimerUnsub();
+            this.badgeTimerUnsub = null;
+        }
         if (this.badgeTimer) {
             clearInterval(this.badgeTimer);
             this.badgeTimer = null;

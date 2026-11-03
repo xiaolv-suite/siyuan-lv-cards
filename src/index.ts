@@ -1,7 +1,7 @@
 import "./index.scss";
 
 import { Plugin, getAllEditor, openTab, getAllTabs } from "siyuan";
-import { showMessage, lvNotify, notifyDailyReviewReminder, notifyBatchCardCreation } from "./libs/notice";
+import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
@@ -363,6 +363,8 @@ export default class LvCardsPlugin extends Plugin {
     public static readonly TOPBAR_ICON_ID = TopbarController.TOPBAR_ICON_ID;
     private topbarController: TopbarController | null = null;
     private badgeTimer: ReturnType<typeof setInterval> | null = null;
+    private badgeTimerUnsub: (() => void) | null = null;
+    private dateCrossUnsub: (() => void) | null = null;
     public presentationPrivacyController = createPresentationPrivacyController();
     /** 首次布局后的引导延迟句柄，卸载时必须取消。 */
     private onboardingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1125,6 +1127,19 @@ export default class LvCardsPlugin extends Plugin {
 
         // 注册全生态统一通知套件协调者（去中心化自协商与热接管）
         this.noticeHubCleaner = lvNotify.registerPlugin("siyuan-lv-cards");
+
+        // 零点复习池重算：接入 lvTicker.onDateCross，零点准时重算今日 Due 卡池
+        this.dateCrossUnsub = lvTicker.onDateCross("siyuan-lv-cards", async (todayKey: string) => {
+            lvLog("info", `[lvTicker] date crossed to ${todayKey}, recalculating due pool`);
+            if (rollDateIfNeeded(this.suspendToday)) {
+                await this.persist.save(SUSPEND_TODAY_DATA, this.suspendToday);
+            }
+            invalidateDueCache();
+            this.refreshDueBadge();
+            try {
+                (this.eventBus as any).emit(LV_EVENTS.storesChanged, storesChangedEvent([SUSPEND_TODAY_DATA]));
+            } catch { /* 旁路 */ }
+        });
     }
 
     onLayoutReady() {
@@ -1140,8 +1155,12 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
-    /** 角标心跳（440）：间隔可在设置调（30/60s 或关闭），保存设置后即时生效 */
+    /** 角标心跳与主时钟（消灭高频唤醒，统一由 lvTicker.onMinute 驱动） */
     private setupBadgeTimer() {
+        if (this.badgeTimerUnsub) {
+            this.badgeTimerUnsub();
+            this.badgeTimerUnsub = null;
+        }
         if (this.badgeTimer) {
             clearInterval(this.badgeTimer);
             this.badgeTimer = null;
@@ -1150,12 +1169,12 @@ export default class LvCardsPlugin extends Plugin {
         if (!sec || sec < 5) {
             return; // 关闭心跳（0 或非法值）
         }
-        this.badgeTimer = setInterval(() => {
+        this.badgeTimerUnsub = lvTicker.onMinute("siyuan-lv-cards", () => {
             this.refreshDueBadge();
             this.checkDailyReminder();
             this.checkBacklogWarn();
             this.checkExamMilestones();
-        }, sec * 1000);
+        });
     }
 
     /** 每日到期提醒：到设定时间且仍有到期卡时通知一次（X 组，基础版） */
@@ -1287,6 +1306,14 @@ export default class LvCardsPlugin extends Plugin {
             }
             lvLog("info", "[unload] done: " + (Date.now() - unloadStart) + "ms");
         });
+        if (this.badgeTimerUnsub) {
+            this.badgeTimerUnsub();
+            this.badgeTimerUnsub = null;
+        }
+        if (this.dateCrossUnsub) {
+            this.dateCrossUnsub();
+            this.dateCrossUnsub = null;
+        }
         if (this.badgeTimer) {
             clearInterval(this.badgeTimer);
             this.badgeTimer = null;
@@ -1829,19 +1856,21 @@ export default class LvCardsPlugin extends Plugin {
                         throw new Error(this.i18n.quickCardFail);
                     }
                     const qaIds: string[] = [];
-                    for (const it of picked.filter(p => p.kind === "qa")) {
-                        // 单块问答：附带指向标记原块的反链引用与块属性
-                        const rawQa = serializeQaCard(it.front, it.back);
-                        const cardMarkdown = `${rawQa}\n\n> 来源：(( ${it.blockID} "原笔记" ))`;
-                        const ids = await appendBlock("markdown", cardMarkdown, docID);
-                        if (ids?.length) {
-                            qaIds.push(ids[0]);
-                            void setBlockAttrs(ids[0], {
-                                "custom-lv-source-doc": rootID,
-                                "custom-lv-source-block": it.blockID,
-                            }).catch(() => {});
+                    await withDocLock(docID, async () => {
+                        for (const it of picked.filter(p => p.kind === "qa")) {
+                            // 单块问答：附带指向标记原块的反链引用与块属性
+                            const rawQa = serializeQaCard(it.front, it.back);
+                            const cardMarkdown = `${rawQa}\n\n> 来源：(( ${it.blockID} "原笔记" ))`;
+                            const ids = await appendBlock("markdown", cardMarkdown, docID);
+                            if (ids?.length) {
+                                qaIds.push(ids[0]);
+                                void setBlockAttrs(ids[0], {
+                                    "custom-lv-source-doc": rootID,
+                                    "custom-lv-source-block": it.blockID,
+                                }).catch(() => {});
+                            }
                         }
-                    }
+                    });
                     const wholePicked = picked.filter(p => p.kind === "whole").map(p => p.blockID);
                     for (const id of wholePicked) {
                         void setBlockAttrs(id, {
@@ -2439,59 +2468,61 @@ export default class LvCardsPlugin extends Plugin {
             await this.persistAIJobsOnce(`${job.id}:commit-start:${deckID}`);
         }
         const blockIDs: string[] = [];
-        for (const card of cards) {
-            // 断点恢复只处理 pending 候选；已创建候选保留原 blockID，
-            // 避免重试/双击在内核中生成重复卡片。
-            const candidate = job?.candidates[card.origIndex];
-            if (candidate?.status === "created" && candidate.blockID) {
-                blockIDs.push(candidate.blockID);
-                await this.rememberSourceFingerprint(candidate.blockID, docID);
-                continue;
-            }
-            // 写入前先按作业+候选稳定标记查找。若内核写成功后进程在记账前崩溃，
-            // 重试会复用原块而不是再造一张重复卡；标记是 HTML 注释，不会出现在卡面。
-            const marker = buildAiCardMarker(job?.id, card.origIndex);
-            let blockID = "";
-            if (marker) {
-                try {
-                    const escapedDoc = docID.replace(/'/g, "''");
-                    const escapedMarker = marker.replace(/'/g, "''");
-                    const rows = await sqlQuery(`SELECT id FROM blocks WHERE root_id='${escapedDoc}' AND markdown LIKE '%${escapedMarker}%' LIMIT 1`);
-                    blockID = String(rows[0]?.id ?? "");
-                } catch {
-                    // 查询不可用时仍允许继续写入；成功后候选状态会阻止同一进程内重复。
+        await withDocLock(docID, async () => {
+            for (const card of cards) {
+                // 断点恢复只处理 pending 候选；已创建候选保留原 blockID，
+                // 避免重试/双击在内核中生成重复卡片。
+                const candidate = job?.candidates[card.origIndex];
+                if (candidate?.status === "created" && candidate.blockID) {
+                    blockIDs.push(candidate.blockID);
+                    await this.rememberSourceFingerprint(candidate.blockID, docID);
+                    continue;
+                }
+                // 写入前先按作业+候选稳定标记查找。若内核写成功后进程在记账前崩溃，
+                // 重试会复用原块而不是再造一张重复卡；标记是 HTML 注释，不会出现在卡面。
+                const marker = buildAiCardMarker(job?.id, card.origIndex);
+                let blockID = "";
+                if (marker) {
+                    try {
+                        const escapedDoc = docID.replace(/'/g, "''");
+                        const escapedMarker = marker.replace(/'/g, "''");
+                        const rows = await sqlQuery(`SELECT id FROM blocks WHERE root_id='${escapedDoc}' AND markdown LIKE '%${escapedMarker}%' LIMIT 1`);
+                        blockID = String(rows[0]?.id ?? "");
+                    } catch {
+                        // 查询不可用时仍允许继续写入；成功后候选状态会阻止同一进程内重复。
+                    }
+                }
+                let cardMarkdown = buildAiCardBlockMarkdown(card.q, card.a, marker);
+                if (sourceMeta?.docId) {
+                    const cleanLabel = (sourceMeta.label || "原笔记").replace(/["\n\r]/g, " ").trim();
+                    cardMarkdown += `\n\n> 来源：(( ${sourceMeta.docId} "${cleanLabel}" ))`;
+                }
+                if (!blockID) {
+                    const ids = await appendBlock("markdown", cardMarkdown, docID);
+                    blockID = ids[0] ?? "";
+                }
+                if (!blockID) throw new Error(this.i18n.quickCardFail);
+                blockIDs.push(blockID);
+                if (sourceMeta?.docId) {
+                    void setBlockAttrs(blockID, {
+                        "custom-lv-source-doc": sourceMeta.docId,
+                    }).catch(() => {});
+                }
+                // 微小缓冲，避免连续高频写锁造成内核 SQLite 元数据未就绪
+                await new Promise(r => setTimeout(r, 60));
+                // ADR-7：逐卡入组成功即记账（单卡批），origIndex 指向作业 candidates 原位（✕ 移除后仍正确）
+                await addRiffCards(deckID, [blockID]);
+                await this.rememberSourceFingerprint(blockID, docID, cardMarkdown);
+                if (job) {
+                    const r = transitionJob(job, { type: "CARD_CREATED", index: card.origIndex, blockID });
+                    if (r.ok) {
+                        job = r.job;
+                        this.upsertAIJob(job);
+                        await this.persistAIJobsOnce(`${job.id}:card:${card.origIndex}:${blockID}`);
+                    }
                 }
             }
-            let cardMarkdown = buildAiCardBlockMarkdown(card.q, card.a, marker);
-            if (sourceMeta?.docId) {
-                const cleanLabel = (sourceMeta.label || "原笔记").replace(/["\n\r]/g, " ").trim();
-                cardMarkdown += `\n\n> 来源：(( ${sourceMeta.docId} "${cleanLabel}" ))`;
-            }
-            if (!blockID) {
-                const ids = await appendBlock("markdown", cardMarkdown, docID);
-                blockID = ids[0] ?? "";
-            }
-            if (!blockID) throw new Error(this.i18n.quickCardFail);
-            blockIDs.push(blockID);
-            if (sourceMeta?.docId) {
-                void setBlockAttrs(blockID, {
-                    "custom-lv-source-doc": sourceMeta.docId,
-                }).catch(() => {});
-            }
-            // 微小缓冲，避免连续高频写锁造成内核 SQLite 元数据未就绪
-            await new Promise(r => setTimeout(r, 60));
-            // ADR-7：逐卡入组成功即记账（单卡批），origIndex 指向作业 candidates 原位（✕ 移除后仍正确）
-            await addRiffCards(deckID, [blockID]);
-            await this.rememberSourceFingerprint(blockID, docID, cardMarkdown);
-            if (job) {
-                const r = transitionJob(job, { type: "CARD_CREATED", index: card.origIndex, blockID });
-                if (r.ok) {
-                    job = r.job;
-                    this.upsertAIJob(job);
-                    await this.persistAIJobsOnce(`${job.id}:card:${card.origIndex}:${blockID}`);
-                }
-            }
-        }
+        });
         // 未勾选/被移除的候选记 CARD_SKIPPED，使 COMMIT_DONE 可通过（保留勾选但未导入的语义留痕）
         if (job) {
             for (let idx = 0; idx < job.candidates.length; idx++) {
