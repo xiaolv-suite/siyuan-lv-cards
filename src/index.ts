@@ -1051,11 +1051,12 @@ export default class LvCardsPlugin extends Plugin {
         const results: LvSearchResultItem[] = [];
 
         try {
-            // 1. 卡包匹配
+            // 1. 卡包匹配 (名称匹配或搜"牌组/卡包"通用词)
             const { getRiffDecks } = await import("./api/riff");
             const decks = await getRiffDecks().catch(() => []);
+            const isDeckGenericQuery = kw.includes("牌组") || kw.includes("卡包") || kw.includes("deck");
             for (const deck of decks) {
-                if (deck.name && deck.name.toLowerCase().includes(kw.toLowerCase())) {
+                if (deck.name && (isDeckGenericQuery || deck.name.toLowerCase().includes(kw.toLowerCase()))) {
                     results.push({
                         id: `deck-${deck.id}`,
                         source: "闪卡",
@@ -1070,15 +1071,15 @@ export default class LvCardsPlugin extends Plugin {
                 }
             }
 
-            // 2. 闪卡块匹配 (带有 custom-riff-decks 属性或闪卡标记的块)
+            // 2. 闪卡块匹配 (带有 custom-riff-decks 属性或闪卡标记的块，搜索 content 与 markdown)
             const rows = await sqlQuery(
-                `SELECT id, content, root_id, updated FROM blocks WHERE (ial LIKE '%custom-riff-decks=%' OR ial LIKE '%custom-flashcard%') AND content LIKE '%${safeKw}%' ORDER BY updated DESC LIMIT 15`
+                `SELECT id, content, markdown, root_id, updated FROM blocks WHERE (ial LIKE '%custom-riff-decks=%' OR ial LIKE '%custom-flashcard%') AND (content LIKE '%${safeKw}%' OR markdown LIKE '%${safeKw}%') ORDER BY updated DESC LIMIT 15`
             ).catch(() => []);
 
             if (Array.isArray(rows)) {
                 for (const row of rows) {
                     const blockId = String(row.id);
-                    const content = String(row.content || "").trim();
+                    const content = String(row.content || row.markdown || "").trim();
                     const firstLine = content.split("\n")[0] || content;
                     results.push({
                         id: blockId,
@@ -1120,11 +1121,13 @@ export default class LvCardsPlugin extends Plugin {
                 }
             }
 
-            // 2. 将错题格式化为闪卡内容
+            // 2. 将错题格式化为闪卡内容（题干 + ==答案== 挖空包裹 + 解析）
             if (!question) return false;
-            let cardMd = `**问题**：${question}\n\n**答案**：${answer || "见解析"}`;
+            const cleanQ = question.replace(/==/g, "").trim();
+            const cleanA = (answer || "见题目解析").replace(/==/g, "").trim();
+            let cardMd = `${cleanQ}\n\n==${cleanA}==`;
             if (analysis) {
-                cardMd += `\n\n> 💡 **解析**：${analysis}`;
+                cardMd += `\n\n> 💡 **解析**：${analysis.replace(/==/g, "").trim()}`;
             }
 
             const nbs = await getNotebooks();

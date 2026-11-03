@@ -230,6 +230,15 @@ async function runBrowserWalkthrough(webUrl) {
                 detail: "statCells=" + statCells.length,
             });
 
+            // 仪表盘全生态协同状态指示徽章 (lvEcosystem)
+            const ecoBadge = document.querySelector("[data-testid='ecosystem-status-badge']");
+            const hasEcoText = ecoBadge ? ecoBadge.textContent.includes("🐴 小驴全家桶协同正常") : false;
+            walk.push({
+                name: "仪表盘全生态协同指示徽章渲染与状态感知",
+                pass: Boolean(ecoBadge && hasEcoText),
+                detail: ecoBadge?.textContent?.trim() || "未渲染",
+            });
+
             // 2. 点击「卡包管理」直达按钮
             const dmBtn = Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("卡包管理"));
             if (dmBtn) {
@@ -457,6 +466,61 @@ async function runBrowserWalkthrough(webUrl) {
             });
             walk.push({ name: "隐藏面板无残留泄漏", pass: !leak });
 
+            // 5. 全生态去中心化通知中心与 Coordinator 校验
+            const noticeHub = window.__LV_NOTICE_HUB__;
+            const hasNoticeHub = Boolean(noticeHub && typeof noticeHub.post === "function");
+            walk.push({
+                name: "去中心化通知中心 (lvNotify Coordinator) 协议就绪",
+                pass: hasNoticeHub,
+                detail: "hostPlugin=" + (noticeHub?.hostPlugin || "none"),
+            });
+
+            // 6. 小驴罗盘入口与极速二级行动调度 (lvLaunchpad)
+            const launchpad = window.__LV_LAUNCHPAD__;
+            const launchpadItems = launchpad ? launchpad.getItems() : [];
+            const cardsLaunchItem = launchpadItems.find(i => i.id === "siyuan-lv-cards");
+            const has4Actions = cardsLaunchItem && cardsLaunchItem.actions && cardsLaunchItem.actions.length === 4;
+            let actionDispatched = false;
+            if (launchpad && cardsLaunchItem) {
+                actionDispatched = launchpad.executeAction("siyuan-lv-cards", "重新计算卡片遗忘曲线排期");
+            }
+            walk.push({
+                name: "小驴罗盘 (lvLaunchpad) 闪卡入口与二级行动调度",
+                pass: Boolean(cardsLaunchItem && has4Actions && actionDispatched),
+                detail: "actions=" + (cardsLaunchItem?.actions?.length || 0),
+            });
+
+            // 7. 全生态穿透搜索切面检索校验 (lvOmnisearch)
+            const omnisearch = window.__LV_OMNISEARCH__;
+            let searchOk = false;
+            let searchCount = 0;
+            if (omnisearch && typeof omnisearch.search === "function") {
+                const searchRes = await omnisearch.search("牌组").catch(() => []);
+                searchCount = searchRes.length;
+                searchOk = Array.isArray(searchRes);
+            }
+            walk.push({
+                name: "全生态穿透搜索 (lvOmnisearch) 卡片与牌组检索切面",
+                pass: searchOk && searchCount >= 1,
+                detail: "hits=" + searchCount,
+            });
+
+            // 8. 跨插件智能自动化联动规则执行 (lvAutomation)
+            const automation = window.__LV_AUTOMATION__;
+            let autoTriggerOk = false;
+            if (automation && typeof automation.trigger === "function") {
+                const trigRes = await automation.trigger("siyuan-exam", "wrong-question", {
+                    question: "端到端自动化联动测试题：TCP是哪一层的协议？",
+                    answer: "传输层",
+                    paperName: "e2e全景自动化走查",
+                }).catch(() => null);
+                autoTriggerOk = trigRes && trigRes.triggered >= 1 && trigRes.success >= 1;
+            }
+            walk.push({
+                name: "跨插件自动化联动 (lvAutomation) 考试错题自动制卡规则",
+                pass: Boolean(autoTriggerOk),
+            });
+
             resolve(JSON.stringify({ walk }));
         })
     `);
@@ -515,6 +579,23 @@ async function main() {
                 isAttachedIsolated = true;
                 process.env.SIYUAN_E2E_ALLOW_SHARED = "1";
                 console.log(`[e2e] 自动附着 D 盘隔离测试环境：${base} (token=${token.slice(0, 4)}…)`);
+
+                // 同步最新 dist 构建产物到隔离环境插件目录
+                const isoPluginDir = path.join(isolatedMeta.ws || "D:/siyuan-isolated-lv-cards", "data", "plugins", PLUGIN_ID);
+                if (fs.existsSync(isoPluginDir)) {
+                    for (const f of ["index.js", "index.css", "plugin.json"]) {
+                        if (fs.existsSync(path.join(DIST, f))) {
+                            fs.copyFileSync(path.join(DIST, f), path.join(isoPluginDir, f));
+                        }
+                    }
+                    const chunksSrc = path.join(DIST, "chunks");
+                    if (fs.existsSync(chunksSrc)) {
+                        fs.mkdirSync(path.join(isoPluginDir, "chunks"), { recursive: true });
+                        for (const f of fs.readdirSync(chunksSrc)) {
+                            fs.copyFileSync(path.join(chunksSrc, f), path.join(isoPluginDir, "chunks", f));
+                        }
+                    }
+                }
             }
         } catch {
             isAttachedIsolated = false;

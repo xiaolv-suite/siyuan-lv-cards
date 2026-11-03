@@ -263,13 +263,13 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
             });
 
             // 推进时间越过午夜
-            const now = new Date();
-            const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
-            const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+            const startTs = Date.now();
+            const advanceMs = 24 * 3600 * 1000 + 2000;
+            vi.advanceTimersByTime(advanceMs);
+            const targetDate = new Date(startTs + advanceMs);
+            const expectedKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}-${String(targetDate.getDate()).padStart(2, "0")}`;
 
-            // 推进 25 小时
-            vi.advanceTimersByTime(25 * 3600 * 1000);
-            expect(crossedDateKey).toBe(tomorrowKey);
+            expect(crossedDateKey).toBe(expectedKey);
 
             unsub();
         });
