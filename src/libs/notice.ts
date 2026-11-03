@@ -25,7 +25,7 @@ export {
     type LvNoticePacket,
 };
 
-const CARD_CREATE_PATTERN = /(卡片|制卡|卡组|卡包|闪卡|收纳至材料收件箱|已创建|生成|入库)/i;
+const CARD_CREATE_PATTERN = /(卡片|制卡|卡组|卡包|闪卡|收纳至材料收件箱|已创建|生成|入库|抽取|进度)/i;
 
 /**
  * 全局统一通知包装器（完全兼容旧版 showMessage 签名）

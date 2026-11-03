@@ -80,6 +80,18 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         expect(cards?.[0].textContent).toContain("×3");
     });
 
+    it("大批量文档抽取制卡进度折叠更新，自动计数并更新最新消息文本", () => {
+        showMessage("正在抽取制卡进度 10/50");
+        showMessage("正在抽取制卡进度 25/50");
+        showMessage("正在抽取制卡进度 50/50");
+
+        const host = document.getElementById("lv-notice-host");
+        const capsules = host?.querySelectorAll(".lv-notice-capsule");
+        expect(capsules?.length).toBe(1);
+        expect(capsules?.[0].textContent).toContain("正在抽取制卡进度 50/50");
+        expect(capsules?.[0].textContent).toContain("×3");
+    });
+
     it("通用 showMessage 智能分流：错误提升为 Card 且带关闭，常规为 Capsule", () => {
         // 常规 info
         showMessage("已复制到剪贴板", 2000, "info");
