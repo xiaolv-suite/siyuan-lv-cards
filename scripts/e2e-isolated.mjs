@@ -514,7 +514,13 @@ async function runBrowserWalkthrough(webUrl) {
                     answer: "传输层",
                     paperName: "e2e全景自动化走查",
                 }).catch(() => null);
-                autoTriggerOk = trigRes && trigRes.triggered >= 1 && trigRes.success >= 1;
+                // 严苛断言：规则真实执行且全部成功（execute 透传真实制卡结果，杜绝假阳性）
+                autoTriggerOk = Boolean(trigRes) && trigRes.triggered >= 1 && trigRes.success === trigRes.triggered;
+                if (!autoTriggerOk) {
+                    // 失败根因回溯：读取通知中心的静默审计历史（catch 分支会写入失败详情）
+                    const hist = (window.__LV_NOTICE_HUB__?.getHistory?.() || []).filter(p => p.category === "exam-card-sync-fail");
+                    walk.push({ name: "联动失败根因", pass: true, detail: hist[0]?.message || "无审计记录" });
+                }
             }
             walk.push({
                 name: "跨插件自动化联动 (lvAutomation) 考试错题自动制卡规则",
