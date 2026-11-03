@@ -2,7 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { rafThrottle } from "@/libs/throttle";
     import { openTab } from "siyuan";
-    import { showMessage, notifyInline } from "@/libs/notice";
+    import { showMessage, notifyInline, lvActivity } from "@/libs/notice";
     import {
         getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
         batchSetRiffCardsDueTime, getRiffCards, getNotebookRiffCards, getTreeRiffCards,
@@ -969,6 +969,31 @@
                     const s = ctx.getSessionState();
                     if (s && !s.completed) ctx.saveSessionState(markSessionCompleted(s));
                     ctx.emitSessionFinished({ new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip });
+                }
+                // 今日活动流广播 (lvActivity，Epoch 7 Phase 3 全生态今日成果汇流)
+                if (finished && reviewedIDs.length > 0) {
+                    const reviewedCount = reviewedIDs.length;
+                    let activeDeckName = "闪卡";
+                    if (scopeKey.startsWith("deck:")) {
+                        const dId = scopeKey.slice(5);
+                        const d = decks.find(dk => dk.id === dId);
+                        if (d?.name) activeDeckName = d.name;
+                    } else if (sessionCardMap.size > 0) {
+                        const firstCard = sessionCardMap.values().next().value;
+                        if (firstCard?.deckID) {
+                            const d = decks.find(dk => dk.id === firstCard.deckID);
+                            if (d?.name) activeDeckName = d.name;
+                        }
+                    }
+                    const elapsedMinutes = Math.max(1, Math.round((Date.now() - sessionStartedAt) / 60000));
+                    try {
+                        lvActivity.record({
+                            source: "闪卡",
+                            category: "card",
+                            title: `完成「${activeDeckName}」复习 (${reviewedCount}张)`,
+                            detail: `耗时 ${elapsedMinutes} 分钟`,
+                        });
+                    } catch { /* 旁路 */ }
                 }
                 // 联动小驴打卡（Ecosystem Federation Epoch 6 / 智能零配置打卡）
                 if (!cramActive && finished && reviewedIDs.length > 0) {

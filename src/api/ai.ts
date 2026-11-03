@@ -9,6 +9,7 @@ import { fetchSyncPost } from "siyuan";
 import { AICanceledError, AIHttpError, extractAIErrorCode, isAICanceled, isRecoverableAIError, parseRetryAfter } from "./ai-errors";
 import { classifyAiFailure, nextLadderStep, type LadderStep } from "../core/ai-degradation";
 import { RequestError, requestWithPolicy } from "../libs/request";
+import { lvAi } from "../libs/lv-notice-kit";
 
 // 错误分类从零依赖模块再导出（单测不经 siyuan 包解析；调用方仍从 @/api/ai 引入）
 export { AICanceledError, AIHttpError, extractAIErrorCode, isAICanceled, isRecoverableAIError, parseRetryAfter };
@@ -137,46 +138,60 @@ async function chatCompletions(cfg: AIConfig, system: string, user: string, opts
     const timeoutMs = opts.timeoutMs ?? 15000;
     opts.onProvider?.("primary");
     try {
-        // 外部 provider 也必须经过共享请求策略：统一的取消、超时、错误边界和
-        // 后续可观测策略由 requestWithPolicy 持有；AI 生成是写侧语义，默认不重试。
+        // 全面接入统一 AI 网关 lvAi.chat（自动享受并发限流与 429 指数退避）
         return await requestWithPolicy(
-            async signal => {
-                const resp = await fetch(normalizeEndpoint(cfg.endpoint) + "/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}),
-                    },
-                    body: JSON.stringify({
+            signal => {
+                if (cfg.apiKey) {
+                    lvAi.setConfig({
+                        endpoint: cfg.endpoint,
+                        apiKey: cfg.apiKey,
                         model: cfg.model || "gpt-4o-mini",
-                        messages: [
-                            { role: "system", content: system },
-                            { role: "user", content: user },
-                        ],
-                        temperature: 0.4,
-                    }),
+                    });
+                } else {
+                    const shared = lvAi.getConfig();
+                    if (shared?.apiKey) {
+                        cfg = {
+                            ...cfg,
+                            endpoint: cfg.endpoint || shared.endpoint,
+                            apiKey: shared.apiKey,
+                            model: cfg.model || shared.model,
+                        };
+                    }
+                }
+
+                return lvAi.chat({
+                    source: "闪卡",
+                    messages: [
+                        { role: "system", content: system },
+                        { role: "user", content: user },
+                    ],
+                    endpoint: cfg.endpoint,
+                    apiKey: cfg.apiKey,
+                    model: cfg.model || "gpt-4o-mini",
                     signal,
+                    priority: "high",
+                }).then(res => res.content, (err: any) => {
+                    if (err instanceof AIHttpError) throw err;
+                    const httpMatch = err?.message?.match(/HTTP (\d+)(?::\s*([\s\S]*))?/i);
+                    if (httpMatch) {
+                        const status = parseInt(httpMatch[1], 10);
+                        let code: string | undefined;
+                        if (httpMatch[2]) {
+                            try {
+                                const parsed = JSON.parse(httpMatch[2].trim());
+                                code = extractAIErrorCode(parsed);
+                            } catch { /* 非 JSON 错误响应忽略 */ }
+                        }
+                        throw new AIHttpError(status, code);
+                    }
+                    throw err;
                 });
-                if (!resp.ok) {
-                    // 只读取机器码，不把服务端 message/details（可能回显材料）带入 UI 或日志。
-                    let code: string | undefined;
-                    try {
-                        code = extractAIErrorCode(await resp.clone().json());
-                    } catch { /* 非 JSON 错误响应仍可按 HTTP 状态分类 */ }
-                    throw new AIHttpError(resp.status, code, parseRetryAfter(resp.headers?.get("retry-after")));
-                }
-                try {
-                    const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-                    return String(j?.choices?.[0]?.message?.content ?? "");
-                } catch {
-                    throw new Error("AI parse failed");
-                }
             },
             { timeoutMs, signal: opts.signal, readOnly: false },
         );
     } catch (e) {
         // 区分「调用方取消」与「超时」：前者不可恢复，后者按网络故障可 fallback/重试
-        if (opts.signal?.aborted) {
+        if (opts.signal?.aborted || isAICanceled(e)) {
             throw new AICanceledError();
         }
         if (e instanceof RequestError && e.category === "timeout") {

@@ -8,6 +8,8 @@ import {
     lvTicker,
     withDocLock,
     lvSurfaceStack,
+    lvAi,
+    lvActivity,
     type CardNoticeOptions,
     type CapsuleNoticeOptions,
     type SilentNoticeOptions,
@@ -15,6 +17,10 @@ import {
     type LvNoticeAction,
     type LvNoticeSnoozeOption,
     type LvNoticePacket,
+    type LvAiConfig,
+    type LvAiRequestOptions,
+    type LvAiResponse,
+    type LvActivityRecord,
 } from "./lv-notice-kit";
 
 export {
@@ -22,6 +28,8 @@ export {
     lvTicker,
     withDocLock,
     lvSurfaceStack,
+    lvAi,
+    lvActivity,
     type CardNoticeOptions,
     type CapsuleNoticeOptions,
     type SilentNoticeOptions,
@@ -29,6 +37,10 @@ export {
     type LvNoticeAction,
     type LvNoticeSnoozeOption,
     type LvNoticePacket,
+    type LvAiConfig,
+    type LvAiRequestOptions,
+    type LvAiResponse,
+    type LvActivityRecord,
 };
 
 const CARD_CREATE_PATTERN = /(卡片|制卡|卡组|卡包|闪卡|收纳至材料收件箱|已创建|生成|入库|抽取|进度)/i;

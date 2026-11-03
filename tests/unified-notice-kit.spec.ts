@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { lvNotify, lvTicker, withDocLock, lvSurfaceStack } from "../src/libs/lv-notice-kit";
+import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity } from "../src/libs/lv-notice-kit";
 import {
     showMessage,
     notifyBatchCardCreation,
@@ -22,6 +22,7 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if (window.__LV_DOC_LOCKS__) {
             window.__LV_DOC_LOCKS__.clear();
         }
+        lvAi.destroy();
         localStorage.clear();
     });
 
@@ -36,6 +37,7 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if (window.__LV_DOC_LOCKS__) {
             window.__LV_DOC_LOCKS__.clear();
         }
+        lvAi.destroy();
         const oldHost = document.getElementById("lv-notice-host");
         if (oldHost) oldHost.remove();
         localStorage.clear();
@@ -283,6 +285,89 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
                 return "recovered";
             });
             expect(taskSuccess).toBe("recovered");
+        });
+    });
+
+    describe("第三阶段：统一AI网关与活动汇流 (Phase 3)", () => {
+        it("lvAi：共享凭据配置存取与无Key时安全报错", async () => {
+            expect(lvAi.getConfig()).toBeNull();
+
+            // 未配置时调用应明确提示配置
+            await expect(lvAi.chat({
+                source: "闪卡",
+                messages: [{ role: "user", content: "hello" }],
+            })).rejects.toThrow("[LvAiGateway] 未配置共享 API Key");
+
+            // 配置共享 Key
+            lvAi.setConfig({
+                endpoint: "https://api.deepseek.com/v1",
+                apiKey: "sk-shared-test-key",
+                model: "deepseek-chat",
+            });
+
+            const cfg = lvAi.getConfig();
+            expect(cfg?.apiKey).toBe("sk-shared-test-key");
+            expect(cfg?.model).toBe("deepseek-chat");
+        });
+
+        it("lvAi.chat：正常发起对话请求并正确解析返回", async () => {
+            lvAi.setConfig({
+                endpoint: "https://api.deepseek.com/v1",
+                apiKey: "sk-shared-test-key",
+                model: "deepseek-chat",
+            });
+
+            const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+                expect(url).toBe("https://api.deepseek.com/v1/chat/completions");
+                expect(init.method).toBe("POST");
+                expect((init.headers as any).Authorization).toBe("Bearer sk-shared-test-key");
+                return new Response(JSON.stringify({
+                    choices: [{ message: { content: "AI 生成的闪卡内容" } }],
+                    model: "deepseek-chat",
+                    usage: { total_tokens: 42 },
+                }), { status: 200 });
+            });
+            vi.stubGlobal("fetch", fetchMock);
+
+            const res = await lvAi.chat({
+                source: "闪卡",
+                messages: [{ role: "user", content: "请出题" }],
+            });
+
+            expect(res.content).toBe("AI 生成的闪卡内容");
+            expect(res.model).toBe("deepseek-chat");
+            expect(res.totalTokens).toBe(42);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it("lvActivity：记录复习成果并支持一键汇编 Markdown", () => {
+            let listened: any = null;
+            const unsub = lvActivity.onActivity((rec) => {
+                listened = rec;
+            });
+
+            lvActivity.record({
+                source: "闪卡",
+                category: "card",
+                title: "完成「英语核心词汇」复习 (30张)",
+                detail: "耗时 12 分钟",
+            });
+
+            expect(listened).not.toBeNull();
+            expect(listened.title).toBe("完成「英语核心词汇」复习 (30张)");
+            expect(listened.detail).toBe("耗时 12 分钟");
+            expect(listened.category).toBe("card");
+
+            const records = lvActivity.getTodayRecords();
+            expect(records.length).toBeGreaterThanOrEqual(1);
+
+            const md = lvActivity.formatAsMarkdown();
+            expect(md).toContain("### 🐴 小驴全家桶 · 今日活动汇编");
+            expect(md).toContain("[闪卡]");
+            expect(md).toContain("完成「英语核心词汇」复习 (30张)");
+            expect(md).toContain("耗时 12 分钟");
+
+            unsub();
         });
     });
 });
