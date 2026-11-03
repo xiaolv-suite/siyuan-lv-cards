@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity, lvBackup, lvEcosystem, lvLaunchpad } from "../src/libs/lv-notice-kit";
+import { lvNotify, lvTicker, withDocLock, lvSurfaceStack, lvAi, lvActivity, lvBackup, lvEcosystem, lvLaunchpad, lvOmnisearch, lvAutomation } from "../src/libs/lv-notice-kit";
 import {
     showMessage,
     notifyBatchCardCreation,
@@ -34,6 +34,12 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         if ((window as any).__LV_LAUNCHPAD__) {
             delete (window as any).__LV_LAUNCHPAD__;
         }
+        if ((window as any).__LV_OMNISEARCH__) {
+            delete (window as any).__LV_OMNISEARCH__;
+        }
+        if ((window as any).__LV_AUTOMATION__) {
+            delete (window as any).__LV_AUTOMATION__;
+        }
         localStorage.clear();
     });
 
@@ -59,6 +65,12 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
         }
         if ((window as any).__LV_LAUNCHPAD__) {
             delete (window as any).__LV_LAUNCHPAD__;
+        }
+        if ((window as any).__LV_OMNISEARCH__) {
+            delete (window as any).__LV_OMNISEARCH__;
+        }
+        if ((window as any).__LV_AUTOMATION__) {
+            delete (window as any).__LV_AUTOMATION__;
         }
         const oldHost = document.getElementById("lv-notice-host");
         if (oldHost) oldHost.remove();
@@ -524,6 +536,103 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
             // 注销
             unreg();
             expect(lvLaunchpad.getItems().find(i => i.id === "siyuan-lv-cards")).toBeUndefined();
+        });
+    });
+
+    describe("第七阶段：穿透搜索与跨插件自动化联动 (Phase 7)", () => {
+        it("lvOmnisearch：注册穿透搜索切面并支持跨插件多维命中与相关度排序", async () => {
+            const unregCards = lvOmnisearch.registerProvider("siyuan-lv-cards", (keyword) => {
+                if (keyword.includes("英语") || keyword.includes("word")) {
+                    return [
+                        {
+                            id: "card-1",
+                            source: "闪卡",
+                            category: "card",
+                            title: "英语核心高频词汇卡",
+                            snippet: "abandon - 放弃",
+                            badge: "考研词汇",
+                            onClick: () => {},
+                        },
+                    ];
+                }
+                return [];
+            });
+
+            const unregExam = lvOmnisearch.registerProvider("siyuan-exam", (keyword) => {
+                if (keyword.includes("英语")) {
+                    return [
+                        {
+                            id: "exam-1",
+                            source: "考试",
+                            category: "exam",
+                            title: "2026考研英语真题模拟卷",
+                            snippet: "难度：★★★★☆",
+                            badge: "试卷",
+                            onClick: () => {},
+                        },
+                    ];
+                }
+                return [];
+            });
+
+            // 搜索 "英语"
+            const results = await lvOmnisearch.search("英语");
+            expect(results.length).toBe(2);
+            expect(results.some(r => r.source === "闪卡" && r.title.includes("英语核心高频词汇卡"))).toBe(true);
+            expect(results.some(r => r.source === "考试" && r.title.includes("2026考研英语真题模拟卷"))).toBe(true);
+
+            // 搜索无匹配
+            const emptyRes = await lvOmnisearch.search("物理机械波");
+            expect(emptyRes.length).toBe(0);
+
+            unregCards();
+            unregExam();
+        });
+
+        it("lvAutomation：跨插件联动规则注册、触发与执行 (小驴考试错题 ➔ 自动同步闪卡)", async () => {
+            let syncPayload: any = null;
+
+            const unreg = lvAutomation.registerRule({
+                id: "rule-exam-to-cards",
+                name: "考试做错题 ➔ 自动同步闪卡生成复习卡",
+                desc: "小驴考试做错题时，自动在闪卡生成待复习卡片",
+                enabled: true,
+                triggerSource: "siyuan-exam",
+                triggerType: "wrong-question",
+                actionPlugin: "siyuan-lv-cards",
+                actionName: "create-card",
+                execute: async (payload: any) => {
+                    syncPayload = payload;
+                    return true;
+                },
+            });
+
+            const rules = lvAutomation.getRules();
+            const examRule = rules.find(r => r.id === "rule-exam-to-cards");
+            expect(examRule).toBeDefined();
+            expect(examRule?.enabled).toBe(true);
+
+            // 模拟小驴考试触发做错题
+            const triggerResult = await lvAutomation.trigger("siyuan-exam", "wrong-question", {
+                question: "TCP 三次握手的第二个包是什么标志位？",
+                answer: "SYN+ACK",
+                analysis: "客户端发送 SYN，服务端回应 SYN+ACK",
+                paperName: "计算机408期末模拟",
+            });
+
+            expect(triggerResult.triggered).toBe(1);
+            expect(triggerResult.success).toBe(1);
+            expect(syncPayload?.question).toContain("TCP 三次握手");
+            expect(syncPayload?.answer).toBe("SYN+ACK");
+
+            // 禁用规则后不再触发
+            lvAutomation.toggleRule("rule-exam-to-cards", false);
+            expect(lvAutomation.getRules().find(r => r.id === "rule-exam-to-cards")?.enabled).toBe(false);
+
+            const triggerResultDisabled = await lvAutomation.trigger("siyuan-exam", "wrong-question", { question: "test" });
+            expect(triggerResultDisabled.triggered).toBe(0);
+
+            unreg();
         });
     });
 });

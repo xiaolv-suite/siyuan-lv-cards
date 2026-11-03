@@ -1,7 +1,7 @@
 import "./index.scss";
 
 import { Plugin, getAllEditor, openTab, getAllTabs } from "siyuan";
-import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad } from "./libs/notice";
+import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad, lvOmnisearch, lvAutomation, type LvSearchResultItem } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
@@ -446,6 +446,8 @@ export default class LvCardsPlugin extends Plugin {
     private noticeHubCleaner?: () => void;
     private backupCleaner?: () => void;
     private launchpadCleaner?: () => void;
+    private omnisearchCleaner?: () => void;
+    private autoRuleCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
     private aiBatchesMutationVersion = 0;
     private costLedgerMutationVersion = 0;
@@ -1041,6 +1043,111 @@ export default class LvCardsPlugin extends Plugin {
         });
     }
 
+    /** 响应小驴穿透搜索 (lvOmnisearch) 检索卡片与牌组切面 */
+    public async searchCardsForOmnisearch(keyword: string): Promise<LvSearchResultItem[]> {
+        const kw = (keyword || "").trim();
+        if (!kw) return [];
+        const safeKw = kw.replace(/'/g, "''");
+        const results: LvSearchResultItem[] = [];
+
+        try {
+            // 1. 卡包匹配
+            const { getRiffDecks } = await import("./api/riff");
+            const decks = await getRiffDecks().catch(() => []);
+            for (const deck of decks) {
+                if (deck.name && deck.name.toLowerCase().includes(kw.toLowerCase())) {
+                    results.push({
+                        id: `deck-${deck.id}`,
+                        source: "闪卡",
+                        category: "deck",
+                        title: `牌组: ${deck.name}`,
+                        snippet: `共包含 ${deck.size ?? 0} 张闪卡`,
+                        badge: `${deck.size ?? 0} 张`,
+                        onClick: () => {
+                            this.openTabOf(TAB_DASHBOARD, { tab: "manage" });
+                        },
+                    });
+                }
+            }
+
+            // 2. 闪卡块匹配 (带有 custom-riff-decks 属性或闪卡标记的块)
+            const rows = await sqlQuery(
+                `SELECT id, content, root_id, updated FROM blocks WHERE (ial LIKE '%custom-riff-decks=%' OR ial LIKE '%custom-flashcard%') AND content LIKE '%${safeKw}%' ORDER BY updated DESC LIMIT 15`
+            ).catch(() => []);
+
+            if (Array.isArray(rows)) {
+                for (const row of rows) {
+                    const blockId = String(row.id);
+                    const content = String(row.content || "").trim();
+                    const firstLine = content.split("\n")[0] || content;
+                    results.push({
+                        id: blockId,
+                        source: "闪卡",
+                        category: "card",
+                        title: firstLine.length > 36 ? firstLine.slice(0, 36) + "..." : firstLine,
+                        snippet: content.length > 80 ? content.slice(0, 80) + "..." : content,
+                        badge: "记忆卡",
+                        linkBlockId: blockId,
+                        onClick: () => {
+                            this.openTabOf(TAB_REVIEW, { scope: `card:${blockId}` });
+                        },
+                    });
+                }
+            }
+        } catch {
+            // 旁路容错
+        }
+        return results;
+    }
+
+    /** 响应跨插件自动化规则 (lvAutomation)：从小驴考试做错题自动生成闪卡 */
+    public async createCardFromWrongQuestion(payload: any): Promise<boolean> {
+        if (!payload) return false;
+        try {
+            const question = String(payload.question || payload.title || payload.stem || "").trim();
+            const answer = String(payload.answer || payload.standardAnswer || "").trim();
+            const analysis = String(payload.analysis || payload.explanation || payload.memo || "").trim();
+            const sourceBlockId = payload.blockId || payload.blockID;
+
+            // 1. 如果已有来源块 ID，直接打上闪卡标记入库
+            if (sourceBlockId) {
+                try {
+                    await addRiffCards("default", [String(sourceBlockId)]);
+                    notifyBatchCardCreation(`已自动同步错题到待复习闪卡`);
+                    return true;
+                } catch {
+                    // 若直接入库失败，降级为新建闪卡
+                }
+            }
+
+            // 2. 将错题格式化为闪卡内容
+            if (!question) return false;
+            let cardMd = `**问题**：${question}\n\n**答案**：${answer || "见解析"}`;
+            if (analysis) {
+                cardMd += `\n\n> 💡 **解析**：${analysis}`;
+            }
+
+            const nbs = await getNotebooks();
+            const defaultNb = Array.isArray(nbs) ? nbs[0]?.id : (nbs as any)?.notebooks?.[0]?.id;
+            if (!defaultNb) return false;
+
+            await executeQuickCardCreation({
+                nbId: defaultNb,
+                deckID: "default",
+                markdown: cardMd,
+                sourceBlockID: sourceBlockId ? String(sourceBlockId) : undefined,
+                sourceTitle: payload.examName || payload.paperName || "小驴考试错题",
+                examAttrs: payload.examType ? { "custom-exam-type": String(payload.examType) } : undefined,
+            });
+
+            notifyBatchCardCreation(`已自动将考试错题转化为闪卡入库`);
+            return true;
+        } catch (err) {
+            lvLog("warn", `[lvAutomation] createCardFromWrongQuestion failed: ${err instanceof Error ? err.message : String(err)}`);
+            return false;
+        }
+    }
+
     async onload() {
         // AT-6：启动性能计时起点（onload 首行）
         this.perf.markStart();
@@ -1252,6 +1359,27 @@ export default class LvCardsPlugin extends Plugin {
 
         // 注册小驴罗盘极速弹射坞入口与二级行动（Epoch 7 Phase 5 Protocol v1.4.0）
         this.registerLaunchpadEntry();
+
+        // 注册全生态穿透搜索切面（Epoch 7 Phase 7 Protocol v1.6.0）
+        this.omnisearchCleaner = lvOmnisearch.registerProvider("siyuan-lv-cards", (keyword) => {
+            return this.searchCardsForOmnisearch(keyword);
+        });
+
+        // 注册跨插件联动自动化规则（考试做错题 ➔ 自动同步闪卡生成复习卡）
+        this.autoRuleCleaner = lvAutomation.registerRule({
+            id: "rule-exam-to-cards",
+            name: "考试做错题 ➔ 自动同步闪卡生成复习卡",
+            desc: "小驴考试做错题时，自动在闪卡生成待复习卡片",
+            enabled: true,
+            triggerSource: "siyuan-exam",
+            triggerType: "wrong-question",
+            actionPlugin: "siyuan-lv-cards",
+            actionName: "create-card",
+            execute: async (payload: any) => {
+                await this.createCardFromWrongQuestion(payload);
+                return true;
+            }
+        });
     }
 
     onLayoutReady() {
@@ -1371,6 +1499,14 @@ export default class LvCardsPlugin extends Plugin {
 
     onunload() {
         const unloadStart = Date.now();
+        if (this.omnisearchCleaner) {
+            this.omnisearchCleaner();
+            this.omnisearchCleaner = undefined;
+        }
+        if (this.autoRuleCleaner) {
+            this.autoRuleCleaner();
+            this.autoRuleCleaner = undefined;
+        }
         if (this.launchpadCleaner) {
             this.launchpadCleaner();
             this.launchpadCleaner = undefined;

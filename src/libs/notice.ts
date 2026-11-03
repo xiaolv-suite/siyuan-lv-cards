@@ -13,6 +13,8 @@ import {
     lvBackup,
     lvEcosystem,
     lvLaunchpad,
+    lvOmnisearch,
+    lvAutomation,
     type CardNoticeOptions,
     type CapsuleNoticeOptions,
     type SilentNoticeOptions,
@@ -27,6 +29,9 @@ import {
     type LvEcosystemFullBackup,
     type LvEcosystemDiagnostics,
     type LvLaunchpadItem,
+    type LvSearchResultItem,
+    type LvSearchProvider,
+    type LvAutomationRule,
 } from "./lv-notice-kit";
 
 export {
@@ -39,6 +44,8 @@ export {
     lvBackup,
     lvEcosystem,
     lvLaunchpad,
+    lvOmnisearch,
+    lvAutomation,
     type CardNoticeOptions,
     type CapsuleNoticeOptions,
     type SilentNoticeOptions,
@@ -53,6 +60,9 @@ export {
     type LvEcosystemFullBackup,
     type LvEcosystemDiagnostics,
     type LvLaunchpadItem,
+    type LvSearchResultItem,
+    type LvSearchProvider,
+    type LvAutomationRule,
 };
 
 const CARD_CREATE_PATTERN = /(卡片|制卡|卡组|卡包|闪卡|收纳至材料收件箱|已创建|生成|入库|抽取|进度)/i;
