@@ -172,7 +172,11 @@ export function maskDelimitedQaInHtml(root: Node): boolean {
             slot.setAttribute("data-type", "mark");
             slot.setAttribute("aria-hidden", "true");
             slot.title = `Anki 挖空（点击揭晓）：${answerText}`;
-            slot.innerHTML = `<span class="lv-mask-slot">［ ${hintText} ］</span>`;
+            // hintText 来自卡片原文（用户可控），必须经 textContent 注入防 XSS
+            const slotLabel = document.createElement("span");
+            slotLabel.className = "lv-mask-slot";
+            slotLabel.textContent = `［ ${hintText} ］`;
+            slot.replaceChildren(slotLabel);
 
             node.nodeValue = before;
             const afterNode = document.createTextNode(after);
