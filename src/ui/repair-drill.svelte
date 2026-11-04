@@ -139,6 +139,16 @@
     <div class="lv-drill-head">
         <LvSteps steps={stepLabels} current={step - 1} />
         <span class="lv-tag lv-tag--brand">{t.drillBadge}</span>
+        <div class="fn__flex-1"></div>
+        <button
+            type="button"
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            aria-label="关闭修卡演练"
+            title="关闭 (Esc)"
+            onclick={onClose}
+        >
+            <LvIcon name="close" size={13} />
+        </button>
     </div>
 
     <!-- 样例选择器（T10 扩容 + CF-15 真实水蛭卡实战导入） -->

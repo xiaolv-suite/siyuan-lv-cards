@@ -2,6 +2,7 @@
     // T13 ⌘K 命令面板（docs/42 §3.10）：输入过滤 + 分组结果 + ↑↓/Enter/Esc 键盘流。
     // 纯展示组件：命令表与执行回调由宿主注入（core/palette.ts 承担过滤逻辑）。
     import { filterPaletteCommands, flattenPaletteGroups, loadRecentCommandIds, recordRecentCommandId, type PaletteCommand } from "@/core/palette";
+    import LvIcon from "./LvIcon.svelte";
 
     let {
         commands,
@@ -100,23 +101,34 @@
 </script>
 
 <div class="lv-palette" role="dialog" aria-label={placeholder} tabindex="-1" onkeydown={onKeydown}>
-    <!-- svelte-ignore a11y_autofocus -->
-    <input
-        id={inputId}
-        type="text"
-        bind:value={query}
-        {placeholder}
-        autofocus
-        role="combobox"
-        aria-label={placeholder}
-        aria-autocomplete="list"
-        aria-controls={listboxId}
-        aria-expanded="true"
-        aria-activedescendant={activeOptionId}
-        oncompositionstart={() => (composing = true)}
-        oncompositionend={() => (composing = false)}
-        onkeydown={(e: KeyboardEvent) => { e.stopPropagation(); onKeydown(e); }}
-    />
+    <div class="lv-palette-head">
+        <!-- svelte-ignore a11y_autofocus -->
+        <input
+            id={inputId}
+            type="text"
+            bind:value={query}
+            {placeholder}
+            autofocus
+            role="combobox"
+            aria-label={placeholder}
+            aria-autocomplete="list"
+            aria-controls={listboxId}
+            aria-expanded="true"
+            aria-activedescendant={activeOptionId}
+            oncompositionstart={() => (composing = true)}
+            oncompositionend={() => (composing = false)}
+            onkeydown={(e: KeyboardEvent) => { e.stopPropagation(); onKeydown(e); }}
+        />
+        <button
+            type="button"
+            class="lv-palette-close"
+            aria-label="关闭命令面板"
+            title="关闭 (Esc)"
+            onclick={onClose}
+        >
+            <LvIcon name="close" size={14} />
+        </button>
+    </div>
     <div id={listboxId} class="lv-palette-body" role="listbox" aria-label={placeholder}>
         {#if flat.length === 0}
             <div class="lv-palette-empty">{labels.empty ?? ""}</div>
@@ -161,17 +173,46 @@
         max-height: calc(100dvh - 56px);
         box-sizing: border-box;
     }
+    .lv-palette-head {
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        flex-shrink: 0;
+    }
     .lv-palette input {
         width: 100%;
         box-sizing: border-box;
-        flex-shrink: 0;
+        flex: 1;
+        min-width: 0;
         border: 0;
-        border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         border-radius: 0;
         padding: calc(var(--lv-space-unit) * 6 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 8);
         font-size: var(--lv-type-body-sm-size);
         background: transparent;
         touch-action: manipulation;
+    }
+    .lv-palette-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border: 0;
+        background: transparent;
+        color: var(--lv-color-text-muted);
+        cursor: pointer;
+        touch-action: manipulation;
+        border-radius: var(--lv-r-circle);
+        margin-right: 6px;
+        transition: all var(--lv-dur-1) var(--lv-ease);
+    }
+    .lv-palette-close:hover {
+        background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        color: var(--lv-color-text);
+    }
+    .lv-palette-close:active {
+        transform: scale(0.94);
     }
     .lv-palette input:focus-visible {
         outline: none;

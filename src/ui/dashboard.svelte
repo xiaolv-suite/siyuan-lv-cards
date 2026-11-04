@@ -459,6 +459,7 @@
     let forecast7Days = $state<ForecastDay[]>([]);
     let forecast7Max = $state(1);
     let forecast7Total = $state(0);
+    let mobileForecastExpanded = $state(false);
 
     function update7DayForecast(baseNow = new Date()) {
         const f7 = get7DayForecast(forecastRawCards, { today: baseNow, dailyNewTarget: targets.new, smooth: smoothLoadEnabled });
@@ -1247,28 +1248,46 @@
                 </div>
             </div>
             {#if forecast7Days.length > 0}
-                <div class="lv-forecast-bars-row" role="region" aria-label={t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}>
-                    {#each forecast7Days as day, idx}
-                        {@const totalDay = day.reviews + day.news}
-                        {@const barHeightPct = Math.max(6, Math.min(100, Math.round((totalDay / Math.max(1, forecast7Max)) * 100)))}
-                        <div class="lv-forecast-col" title={`${day.date}：复习 ${day.reviews} + 新卡 ${day.news}（共 ${totalDay} 张）`}>
-                            <span class="lv-forecast-count">{totalDay}</span>
-                            <div class="lv-forecast-bar-track">
-                                <div class="lv-forecast-bar-fill" style={`height: ${barHeightPct}%;`}>
-                                    {#if day.reviews > 0}
-                                        <div class="lv-forecast-seg-review" style={`height: ${Math.round((day.reviews / Math.max(1, totalDay)) * 100)}%;`}></div>
-                                    {/if}
+                <!-- Mobile Spec v1 深化：手机端收纳为单行徽记，点开才展开 7 日柱状图 -->
+                <button
+                    type="button"
+                    class="lv-forecast-mobile-badge"
+                    aria-expanded={mobileForecastExpanded}
+                    onclick={() => (mobileForecastExpanded = !mobileForecastExpanded)}
+                >
+                    <span class="lv-forecast-badge-icon"><LvIcon name="timer" size={14} /></span>
+                    <span class="lv-forecast-badge-text">
+                        今日 <strong>{(forecast7Days[0]?.reviews ?? 0) + (forecast7Days[0]?.news ?? 0)}</strong> · 明日 <strong>{(forecast7Days[1]?.reviews ?? 0) + (forecast7Days[1]?.news ?? 0)}</strong> · 7日负载
+                    </span>
+                    <span class="lv-forecast-badge-toggle">
+                        {mobileForecastExpanded ? "收起" : "展开"}
+                        <LvIcon name={mobileForecastExpanded ? "chevron-up" : "chevron-down"} size={13} />
+                    </span>
+                </button>
+                <div class="lv-forecast-bars-container" class:lv-forecast-bars-hidden-mobile={!mobileForecastExpanded}>
+                    <div class="lv-forecast-bars-row" role="region" aria-label={t.dashboard.forecast7Title ?? "未来 7 日复习负载预报"}>
+                        {#each forecast7Days as day, idx}
+                            {@const totalDay = day.reviews + day.news}
+                            {@const barHeightPct = Math.max(6, Math.min(100, Math.round((totalDay / Math.max(1, forecast7Max)) * 100)))}
+                            <div class="lv-forecast-col" title={`${day.date}：复习 ${day.reviews} + 新卡 ${day.news}（共 ${totalDay} 张）`}>
+                                <span class="lv-forecast-count">{totalDay}</span>
+                                <div class="lv-forecast-bar-track">
+                                    <div class="lv-forecast-bar-fill" style={`height: ${barHeightPct}%;`}>
+                                        {#if day.reviews > 0}
+                                            <div class="lv-forecast-seg-review" style={`height: ${Math.round((day.reviews / Math.max(1, totalDay)) * 100)}%;`}></div>
+                                        {/if}
+                                    </div>
                                 </div>
+                                <span class="lv-forecast-label">{idx === 0 ? (t.dashboard.todayLabel ?? "今天") : idx === 1 ? (t.dashboard.tomorrowLabel ?? "明天") : day.date.slice(5)}</span>
                             </div>
-                            <span class="lv-forecast-label">{idx === 0 ? (t.dashboard.todayLabel ?? "今天") : idx === 1 ? (t.dashboard.tomorrowLabel ?? "明天") : day.date.slice(5)}</span>
-                        </div>
-                    {/each}
-                </div>
-                <div class="lv-today-week-summary">
-                    <span>{(t.dashboard.forecast7TotalDue ?? "总预计到期 ${n} 张").replace("${n}", String(forecast7Total))}</span>
-                    {#if smoothLoadEnabled}
-                        <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> {t.dashboard.smoothLoadBadge ?? "削峰填谷已优化"}</span>
-                    {/if}
+                        {/each}
+                    </div>
+                    <div class="lv-today-week-summary">
+                        <span>{(t.dashboard.forecast7TotalDue ?? "总预计到期 ${n} 张").replace("${n}", String(forecast7Total))}</span>
+                        {#if smoothLoadEnabled}
+                            <span class="lv-chip2 lv-chip2--primary"><LvIcon name="check" size={11} /> {t.dashboard.smoothLoadBadge ?? "削峰填谷已优化"}</span>
+                        {/if}
+                    </div>
                 </div>
             {:else}
                 <div class="lv-today-week-summary">
@@ -1623,6 +1642,51 @@
         display: flex;
         flex-direction: column;
         gap: var(--lv-sp-3);
+    }
+    .lv-forecast-mobile-badge {
+        display: none;
+    }
+    @media (max-width: 780px) {
+        .lv-forecast-mobile-badge {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            width: 100%;
+            min-height: 42px;
+            padding: 8px 14px;
+            border-radius: var(--lv-r-pill);
+            background: color-mix(in srgb, var(--lv-color-brand) 7%, var(--lv-color-surface));
+            border: 1px solid color-mix(in srgb, var(--lv-color-brand) 18%, transparent);
+            color: var(--lv-color-text);
+            font-size: var(--lv-type-control-size);
+            cursor: pointer;
+            touch-action: manipulation;
+            box-sizing: border-box;
+
+            &:active {
+                transform: scale(0.98);
+            }
+        }
+        .lv-forecast-badge-icon {
+            color: var(--lv-color-brand);
+            display: grid;
+            place-items: center;
+        }
+        .lv-forecast-badge-text strong {
+            color: var(--lv-color-brand);
+            font-variant-numeric: tabular-nums;
+        }
+        .lv-forecast-badge-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            font-size: var(--lv-type-meta-size);
+            color: var(--lv-color-text-muted);
+        }
+        .lv-forecast-bars-hidden-mobile {
+            display: none !important;
+        }
     }
     .lv-forecast-title-group {
         display: flex;

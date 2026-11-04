@@ -350,7 +350,7 @@ function cloneStore<T>(value: T): T {
     }
 }
 
-const ICON_LV_CARDS_SVG = '<symbol id="iconLvCards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="14" height="16" rx="2.5" fill="none"/><path d="M4 18V5a2.5 2.5 0 0 1 2.5-2.5H17" fill="none"/><path d="m10 14 2.2 2.2 4.3-4.4" fill="none"/></symbol>';
+const ICON_LV_CARDS_SVG = '<symbol id="iconLvCards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="14" height="16" rx="2.5" fill="none"/><path d="M4 18V5a2.5 2.5 0 0 1 2.5-2.5H17" fill="none"/><path d="m10 14 2.2 2.2 4.3-4.4" fill="none"/></symbol><symbol id="icon-lv-cards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="14" height="16" rx="2.5" fill="none"/><path d="M4 18V5a2.5 2.5 0 0 1 2.5-2.5H17" fill="none"/><path d="m10 14 2.2 2.2 4.3-4.4" fill="none"/></symbol>';
 
 const noop = () => {};
 
@@ -1035,7 +1035,7 @@ export default class LvCardsPlugin extends Plugin {
             id: "siyuan-lv-cards",
             name: "闪卡",
             fullName: "小驴闪卡",
-            svgIcon: "icon-lv-cards",
+            svgIcon: "iconLvCards",
             color: "#f43f5e",
             desc: "间隔复习 · 记忆曲线",
             digit: 6,

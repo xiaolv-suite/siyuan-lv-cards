@@ -4,6 +4,7 @@
     import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
     import { parsePastedQuestionText } from "@/core/question-splitter";
     import { extractDroppedBlockText } from "@/core/drag-drop";
+    import { compressImageFile } from "@/core/image-compress";
     import { showMessage, lvLaunchpad } from "@/libs/notice";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
@@ -195,9 +196,30 @@
     let qTextareaEl: HTMLTextAreaElement | undefined = $state();
     let aTextareaEl: HTMLTextAreaElement | undefined = $state();
     let newNameInputEl: HTMLInputElement | undefined = $state();
+    let imageInputEl: HTMLInputElement | undefined = $state();
+    let imageProcessing = $state(false);
     let disposed = false;
     let deckAutoFocused = false;
     onDestroy(() => { disposed = true; });
+
+    async function handleImageUpload(e: Event) {
+        const input = e.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        imageProcessing = true;
+        try {
+            const dataUrl = await compressImageFile(file, 500 * 1024);
+            const alt = file.name ? file.name.replace(/\.[^.]+$/, "") : "image";
+            insertSnippet(`\n\n![${alt}](${dataUrl})\n\n`);
+            lvLaunchpad.haptic(10);
+            showMessage("图片已压缩并插入卡面", 2000, "info");
+        } catch (err: any) {
+            showMessage("图片处理失败: " + (err?.message ?? err), 3000, "error");
+        } finally {
+            imageProcessing = false;
+            if (input) input.value = "";
+        }
+    }
 
     function insertCloze() {
         if (!qTextareaEl) return;
@@ -224,6 +246,10 @@
     }
 
     function insertSnippet(snippet: string) {
+        // 真机教训：实时读取 document.activeElement 重算聚焦目标，不单依赖失焦事件
+        const active = typeof document !== "undefined" ? document.activeElement : null;
+        if (active === aTextareaEl) lastFocusedField = "a";
+        else if (active === qTextareaEl) lastFocusedField = "q";
         const targetEl = lastFocusedField === "a" && aTextareaEl ? aTextareaEl : qTextareaEl;
         if (!targetEl) return;
         const start = targetEl.selectionStart ?? 0;
@@ -690,6 +716,17 @@
         <span class="lv-qc-step" role="listitem"><b>2</b>{t.quickCardStep2 ?? "写问题与答案"}</span>
         <LvIcon name="chevron-right" size={12} />
         <span class="lv-qc-step" role="listitem"><b>3</b>{t.quickCardStep3 ?? "Ctrl+Enter 一键制卡"}</span>
+        {#if onClose}
+            <button
+                type="button"
+                class="b3-button b3-button--small b3-button--text lv-qc-close-icon"
+                aria-label="关闭"
+                title="关闭"
+                onclick={onClose}
+            >
+                <LvIcon name="close" size={14} />
+            </button>
+        {/if}
     </div>
     <div class="lv-qc-toolbar">
         <div class="lv-qc-template" role="group" aria-label={t.quickCardTemplateLabel}>
@@ -887,6 +924,24 @@
                 <div class="lv-qc-label-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                     <span class="lv-qc-label">{t.quickCardQ} <span class="lv-qc-count" class:lv-qc-count-warn={q.length > 60}>{q.length} 字</span></span>
                     <span style="display: inline-flex; gap: 6px; align-items: center;">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            style="display: none;"
+                            bind:this={imageInputEl}
+                            onchange={handleImageUpload}
+                        />
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            aria-label="插入图片素材"
+                            title="插入图片素材 (压缩至500KB内)"
+                            disabled={busy || imageProcessing}
+                            onclick={(e) => { e.stopPropagation(); imageInputEl?.click(); }}
+                        >
+                            <LvIcon name="image" size={12} />
+                            <span>{imageProcessing ? "处理中…" : "插入图片"}</span>
+                        </button>
                         <button
                             type="button"
                             class="b3-button b3-button--small b3-button--outline lv-btn-tool"
@@ -1223,7 +1278,7 @@
         <div class="ft__smaller lv-qc-error" role="alert" aria-live="assertive">{errorMsg}</div>
     {/if}
     <div class="b3-dialog__action lv-qc-actions">
-        {#if !embedded}
+        {#if !embedded || lvLaunchpad.isMobileFrontend()}
             <button
                 class="b3-button b3-button--cancel"
                 disabled={busy}
@@ -1250,6 +1305,29 @@
     .lv-quickcard {
         padding: var(--lv-sp-4);
         container: lv-quickcard / inline-size;
+    }
+    .lv-qc-steps {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        margin-bottom: var(--lv-sp-3);
+        flex-wrap: wrap;
+    }
+    .lv-qc-close-icon {
+        margin-left: auto;
+        color: var(--lv-color-text-muted);
+        cursor: pointer;
+        padding: 4px;
+        min-height: 32px;
+        min-width: 32px;
+        border-radius: var(--lv-r-circle);
+        display: grid;
+        place-items: center;
+        touch-action: manipulation;
+    }
+    .lv-qc-close-icon:hover {
+        background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+        color: var(--lv-color-text);
     }
     .lv-qc-doc-banner {
         display: flex;

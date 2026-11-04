@@ -1,8 +1,10 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import LvIcon from "@/ui/kit/LvIcon.svelte";
     import { countUp } from "@/ui/kit/countup";
     import { END_REASONS, type EndReason } from "@/core/session-state";
     import { PURPOSE_PROFILES, type SessionPurpose } from "@/core/session-purpose";
+    import { lvLaunchpad } from "@/libs/notice";
 
     let {
         t,
@@ -79,6 +81,16 @@
             onOpenManager();
         }
     }
+
+    onMount(() => {
+        // Mobile Spec v1 深化：复习结束会话小结展示 + 触感双震反馈
+        try {
+            lvLaunchpad.haptic(25);
+            setTimeout(() => {
+                try { lvLaunchpad.haptic(25); } catch { /* 旁路 */ }
+            }, 90);
+        } catch { /* 旁路 */ }
+    });
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -86,6 +98,13 @@
 <div class="lv-center lv-done">
     <!-- T07 结果面（R52 results）：单面板 + check 徽 + 大数字统计 + 行式补充 + NEXT 软面板 -->
     <div class="lv-done-panel">
+        <!-- Mobile Spec v1 深化：会话小结卡（替代直接静默退出） -->
+        <div class="lv-done-summary-card" role="status" aria-label="本次复习小结">
+            <span class="lv-done-summary-pill">
+                <LvIcon name="check" size={15} />
+                <span><strong>{totalAnswered} 张</strong> · 用时 <strong>{sessionDuration || "0秒"}</strong> · 正确率 <strong>{retentionRate}%</strong></span>
+            </span>
+        </div>
         <div class="lv-done-head">
             <span class="check lv-done-check" aria-hidden="true"><LvIcon name="check" size={24} /></span>
             <div class="lv-done-headtext">
@@ -222,6 +241,37 @@
         box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         padding: var(--lv-sp-5);
         text-align: left;
+    }
+    .lv-done-summary-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--lv-sp-4);
+        animation: lvDonePop 0.28s var(--lv-ease, ease) both;
+    }
+    .lv-done-summary-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 18px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 25%, transparent);
+        color: var(--lv-color-brand);
+        font-size: var(--lv-type-control-size);
+        box-shadow: var(--lv-shadow-1);
+    }
+    .lv-done-summary-pill strong {
+        color: var(--lv-color-brand);
+        font-weight: var(--lv-fw-bold);
+        font-variant-numeric: tabular-nums;
+    }
+    @keyframes lvDonePop {
+        from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .lv-done-summary-card { animation: none; }
     }
     .lv-done-head {
         display: flex;

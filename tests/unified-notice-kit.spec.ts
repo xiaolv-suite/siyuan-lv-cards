@@ -496,7 +496,7 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
                 id: "siyuan-lv-cards",
                 name: "闪卡",
                 fullName: "小驴闪卡",
-                svgIcon: "icon-lv-cards",
+                svgIcon: "iconLvCards",
                 color: "#f43f5e",
                 desc: "间隔复习 · 记忆曲线",
                 digit: 6,

@@ -964,6 +964,7 @@
                 }
                 const finished = !sessionDone; // 只在首次进入完成态时广播
                 sessionDone = true;
+                disarmReviewHistory(); // Mobile Spec v1 深化：正常完成卡片后清理返回手势历史占位
                 const hasWork = reviewedIDs.length > 0 || sessionSkipped.length > 0;
                 if (!cramActive && finished && hasWork) {
                     const s = ctx.getSessionState();
@@ -1060,9 +1061,55 @@
         await loadQueue();
     }
 
+    // Mobile Spec v1 深化：复习会话进度保护（Android 返回手势/返回键拦截与落盘退出确认）
+    let reviewHistoryArmed = false;
+    let reviewPopHandler: (() => void) | undefined;
+
+    function armReviewHistory() {
+        if (reviewHistoryArmed || typeof window === "undefined" || sessionDone || !current) return;
+        try {
+            const hist = (window as unknown as { history?: History }).history;
+            if (!hist || typeof hist.pushState !== "function") return;
+            hist.pushState({ lvCards: true }, "");
+            reviewHistoryArmed = true;
+            reviewPopHandler = () => {
+                reviewHistoryArmed = false;
+                reviewPopHandler = undefined;
+                if (sessionDone || !current) return;
+                const rawMsg = t.review?.backConfirm;
+                const confirmMsg = typeof rawMsg === "function" ? rawMsg() : (rawMsg ?? "复习进行中，退出将计入本次已复习卡片");
+                const confirmed = window.confirm(confirmMsg);
+                if (confirmed) {
+                    persistSession();
+                    ctx.openDashboard();
+                } else {
+                    armReviewHistory();
+                }
+            };
+            window.addEventListener("popstate", reviewPopHandler, { once: true });
+        } catch { /* 历史不可用环境静默 */ }
+    }
+
+    function disarmReviewHistory() {
+        if (reviewPopHandler && typeof window !== "undefined") {
+            try { window.removeEventListener("popstate", reviewPopHandler); } catch { /* ignore */ }
+            reviewPopHandler = undefined;
+        }
+        if (reviewHistoryArmed && typeof window !== "undefined") {
+            reviewHistoryArmed = false;
+            try {
+                const hist = (window as unknown as { history?: History & { state?: unknown } }).history;
+                if (hist?.state?.lvCards && typeof hist.back === "function") {
+                    hist.back();
+                }
+            } catch { /* ignore */ }
+        }
+    }
+
     async function setCurrent(card: RiffDueCard) {
         resetCardState();
         current = card;
+        if (!sessionDone && current) armReviewHistory();
         if (card?.cardID) {
             sessionCardMap.set(card.cardID, card);
             if (isCardStarred(card) && !sessionStarredCardIDs.has(card.cardID)) {
@@ -2283,6 +2330,7 @@
 
     onDestroy(() => {
         isDisposed = true;
+        disarmReviewHistory();
         throttledViewportChange.cancel();
         clearAutoSubmitTimer();
         if (targetCelebrationTimer) {
@@ -2324,7 +2372,7 @@
 >
     <!-- R57 复习顶栏：独立复习页签缺少 Hub 外壳时的固定返回路径（完成屏也可见） -->
         <div class="lv-review-topbar">
-            <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openDashboard()} title={t.review?.returnHome ?? "返回闪卡主页"}>
+            <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => { disarmReviewHistory(); ctx.openDashboard(); }} title={t.review?.returnHome ?? "返回闪卡主页"}>
                 <LvIcon name="chevron-left" size={13} />
                 <span>{t.review?.backToHub ?? "返回闪卡中心"}</span>
             </button>
