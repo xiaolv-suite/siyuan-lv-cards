@@ -47,6 +47,7 @@
                 class="b3-text-field"
                 style="width: 70px"
                 type="number"
+                inputMode="numeric"
                 min="1"
                 max="36500"
                 step="1"

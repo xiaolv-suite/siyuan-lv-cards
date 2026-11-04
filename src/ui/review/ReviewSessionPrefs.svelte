@@ -200,6 +200,7 @@
             <input
                 class="b3-text-field b3-text-field--small lv-budget-custom"
                 type="number"
+                inputMode="numeric"
                 min="5"
                 max="480"
                 step="5"

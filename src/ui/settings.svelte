@@ -1146,16 +1146,19 @@
             </button>
         {/snippet}
         <LvRow label={t.settings.dailyNewTarget} hint="推荐默认 10 张，设为 0 则不设每日目标">
-            <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.dailyNewTarget} />
+            <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="0" bind:value={draft.dailyNewTarget} />
+            inputMode="numeric"
         </LvRow>
         <LvRow label={t.settings.dailyReviewTarget} hint="推荐默认 20 张，设为 0 则不设每日目标">
-            <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.dailyReviewTarget} />
+            <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="0" bind:value={draft.dailyReviewTarget} />
+            inputMode="numeric"
         </LvRow>
         <LvRow label={t.settings.topbarDirectReview}>
             <LvSwitch bind:checked={draft.topbarDirectReview} />
         </LvRow>
         <LvRow label={t.settings.batchLimit} hint={t.settings.batchLimitHint}>
-            <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.batchLimit} />
+            <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="0" bind:value={draft.batchLimit} />
+            inputMode="numeric"
         </LvRow>
         <LvRow label={t.settings.randomOrder}>
             <LvSwitch bind:checked={draft.randomOrder} />
@@ -1192,7 +1195,8 @@
             <LvSwitch bind:checked={draft.dailyTipEnabled} />
         </LvRow>
         <LvRow label={t.settings.leechThreshold} hint="默认 8 次，达到该遗忘次数时标记为易混淆卡">
-            <input class="b3-text-field fn__size-60" type="number" min="1" bind:value={draft.leechThreshold} />
+            <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="1" bind:value={draft.leechThreshold} />
+            inputMode="numeric"
         </LvRow>
     </LvSection>
     {/if}
@@ -1292,7 +1296,8 @@
         </LvRow>
         {#if draft.ttsEnabled}
             <LvRow label={t.settings.ttsRate}>
-                <input class="b3-text-field fn__size-60" type="number" min="0.5" max="2" step="0.1" bind:value={draft.ttsRate} />
+                <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="0.5" max="2" step="0.1" bind:value={draft.ttsRate} />
+                inputMode="numeric"
             </LvRow>
             <LvRow label={t.settings.ttsVoice} hint={t.settings.ttsVoiceHint}>
                 {#snippet children()}
@@ -1355,7 +1360,8 @@
                 <input class="b3-text-field fn__size-60" type="time" bind:value={draft.reminderTime} />
             </LvRow>
             <LvRow label={t.settings.backlogDays}>
-                <input class="b3-text-field fn__size-60" type="number" min="1" bind:value={draft.backlogDays} />
+                <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="1" bind:value={draft.backlogDays} />
+                inputMode="numeric"
             </LvRow>
         {/if}
     </LvSection>
@@ -1551,7 +1557,8 @@
                         <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); align-items: center; flex-wrap: wrap">
                             <LvSwitch bind:checked={draft.aiCostBudgetEnabled} />
                             <span class="ft__smaller ft__on-surface">{t.settings.aiCostMonthlyCap}</span>
-                            <input class="b3-text-field fn__size-60" type="number" min="0" bind:value={draft.aiCostMonthlyCap} />
+                            <input class="b3-text-field fn__size-60" type="number" inputMode="numeric" min="0" bind:value={draft.aiCostMonthlyCap} />
+                            inputMode="numeric"
                             <span class="ft__smaller ft__on-surface">{t.settings.aiCostUsed.replace("${n}", String(ctx.costLedger.monthUsed()))}</span>
                         </div>
                     {/snippet}

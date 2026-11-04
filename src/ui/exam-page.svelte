@@ -476,6 +476,7 @@
                     aria-describedby={fieldErrors.totalCards ? "exam-total-error" : undefined}
                     data-exam-field="totalCards"
                     type="number"
+                    inputMode="numeric"
                     min="1"
                     max="1000000"
                     step="1"
@@ -493,6 +494,7 @@
                     aria-describedby={fieldErrors.cramDays ? "exam-cram-error" : undefined}
                     data-exam-field="cramDays"
                     type="number"
+                    inputMode="numeric"
                     min="0"
                     max="365"
                     step="1"

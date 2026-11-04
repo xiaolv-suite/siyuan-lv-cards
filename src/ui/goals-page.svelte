@@ -250,7 +250,8 @@
             </label>
             <label class="lv-field">
                 <span>{t.minutes}</span>
-                <input class="b3-text-field" type="number" min="0" step="5" bind:value={form.minutesPerDay} />
+                <input class="b3-text-field" type="number" inputMode="numeric" min="0" step="5" bind:value={form.minutesPerDay} />
+                inputMode="numeric"
             </label>
             <label class="lv-field">
                 <span>{t.criteriaLabel}</span>
