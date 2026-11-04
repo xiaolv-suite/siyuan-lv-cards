@@ -141,6 +141,8 @@
         { id: "learning", label: i18n.hubPrimaryLearning ?? "学习", icon: "learn" },
         { id: "settings", label: i18n.hubPrimarySettings ?? "设置", icon: "settings" },
     ] satisfies { id: string; label: string; icon: LvIconName; badge?: string | number; badgeLabel?: string }[]));
+    // Mobile Spec v1：手机端底部主导航收敛 ≤5 项——设置折叠为浮动齿轮入口（桌面专属设置面不占拇指导航）
+    const mobileTabs = $derived(primaryTabs.filter(tab => tab.id !== "settings"));
     // 外部入口仍使用这些旧 id。它们是上下文页面，不再全部挤在一级导航。
     // svelte-ignore state_referenced_locally -- legacy routes are fixed for the Hub mount.
     const legacyTabs = [
@@ -683,8 +685,11 @@
             </div>
         </section>
     </div>
+    <button class="lv-hub-mobile-gear" onclick={openFullSettings} aria-label={i18n.hubPrimarySettings ?? "设置"} title={i18n.hubPrimarySettings ?? "设置"}>
+        <LvIcon name="settings" size={18} />
+    </button>
     <nav class="lv-hub-mobile-nav" aria-label={i18n.hubPrimaryLabel ?? "主要导航"}>
-        {#each primaryTabs as tab (tab.id)}
+        {#each mobileTabs as tab (tab.id)}
             <button class:lv-hub-mobile-active={primaryFor(active) === tab.id} class="lv-hub-mobile-btn" aria-current={primaryFor(active) === tab.id ? "page" : undefined} aria-label={tab.badgeLabel ? `${tab.label}，${tab.badgeLabel}` : undefined} onclick={() => switchTab(tab.id)}>
                 <span class="lv-hub-mobile-icon">
                     <LvIcon name={tab.icon} size={19} />
@@ -711,7 +716,13 @@
         height: 100%;
         display: flex;
         flex-direction: column;
+        position: relative;
         container: lv-hub / inline-size;
+    }
+
+    /* Mobile Spec v1：设置折叠为浮动齿轮（桌面隐藏，≤780px 容器内常驻右上角，触控目标 ≥44px） */
+    .lv-hub-mobile-gear {
+        display: none;
     }
 
     .lv-r54-shell {
@@ -1012,11 +1023,43 @@
     .lv-r54-health-dot-neutral { background: var(--lv-color-brand); }
 
     @container lv-hub (max-width: 780px) {
-        .lv-r54-shell { grid-template-columns: 1fr; }
+        .lv-r54-shell { grid-template-columns: 1fr; margin: 8px 8px 0; }
         .lv-r54-sidebar { display: none; }
         .lv-r54-settings { padding: var(--lv-sp-4); }
         .lv-r54-health-grid { grid-template-columns: 1fr; }
         .lv-r54-settings-action { align-items: flex-start; flex-direction: column; }
+        .lv-hub-mobile-gear {
+            display: grid;
+            place-items: center;
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 0px) + 14px);
+            right: calc(env(safe-area-inset-right, 0px) + 12px);
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 1px solid var(--lv-border);
+            border-radius: var(--lv-r-circle);
+            background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
+            backdrop-filter: blur(10px) saturate(1.1);
+            -webkit-backdrop-filter: blur(10px) saturate(1.1);
+            color: var(--lv-color-text-muted);
+            cursor: pointer;
+            z-index: 6;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            box-shadow: var(--lv-shadow-1);
+            transition: color var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
+
+            &:active {
+                transform: scale(0.94);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
     }
 
     @container lv-hub (max-width: 780px) {

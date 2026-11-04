@@ -482,7 +482,7 @@ async function runBrowserWalkthrough(webUrl) {
             const has4Actions = cardsLaunchItem && cardsLaunchItem.actions && cardsLaunchItem.actions.length === 4;
             let actionDispatched = false;
             if (launchpad && cardsLaunchItem) {
-                actionDispatched = launchpad.executeAction("siyuan-lv-cards", "重新计算卡片遗忘曲线排期");
+                actionDispatched = launchpad.executeAction("siyuan-lv-cards", "水蛭卡预警");
             }
             walk.push({
                 name: "小驴罗盘 (lvLaunchpad) 闪卡入口与二级行动调度",

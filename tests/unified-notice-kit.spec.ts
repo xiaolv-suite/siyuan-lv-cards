@@ -503,10 +503,10 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
                 badge: "25 待复习",
                 badgeType: "error",
                 actions: [
-                    "开始今日25张卡复习会话",
-                    "从当前文档选区一键抽取制卡",
-                    "重新计算卡片遗忘曲线排期",
-                    "管理牌组与核心卡包",
+                    "开始今日复习",
+                    "快速制卡",
+                    "水蛭卡预警",
+                    "管理牌组与卡包",
                 ],
                 onClick: () => { clicked = true; },
                 onAction: (act) => { actionTriggered = act; },
@@ -525,8 +525,8 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
             expect(clicked).toBe(true);
 
             // 触发二级行动
-            cardsItem?.onAction?.("开始今日25张卡复习会话");
-            expect(actionTriggered).toBe("开始今日25张卡复习会话");
+            cardsItem?.onAction?.("开始今日复习");
+            expect(actionTriggered).toBe("开始今日复习");
 
             // 修改状态为 pinned（置顶）
             lvLaunchpad.setPluginState("siyuan-lv-cards", "pinned");

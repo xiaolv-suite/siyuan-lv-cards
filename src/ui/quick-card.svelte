@@ -4,7 +4,7 @@
     import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
     import { parsePastedQuestionText } from "@/core/question-splitter";
     import { extractDroppedBlockText } from "@/core/drag-drop";
-    import { showMessage } from "@/libs/notice";
+    import { showMessage, lvLaunchpad } from "@/libs/notice";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -577,6 +577,7 @@
                 await (onCreate as any)(...callArgs);
                 if (disposed) return;
                 rememberDeck(deckID, deckName);
+                lvLaunchpad.haptic(10); // Mobile Spec v1：制卡成功触感确认
                 if (embedded) {
                     resetChoiceForm();
                     previewAnswer = false;
@@ -613,6 +614,7 @@
                 }
                 if (disposed) return;
                 rememberDeck(deckID, deckName);
+                lvLaunchpad.haptic(10); // Mobile Spec v1：制卡成功触感确认
                 if (embedded) {
                     q = "";
                     a = "";
@@ -640,6 +642,7 @@
                 await (onCreate as any)(...callArgs);
                 if (disposed) return;
                 rememberDeck(deckID, deckName);
+                lvLaunchpad.haptic(10); // Mobile Spec v1：制卡成功触感确认
                 if (embedded) {
                     q = "";
                     a = "";
@@ -721,13 +724,30 @@
                 </button>
             </div>
             {#if decks.length > 0}
-                <div class="lv-qc-deck-inputs">
+                <div class="lv-qc-deck-inputs lv-qc-deck-inputs--pick">
                     <select class="b3-select" aria-label={t.deckPickerTitle} bind:value={selected} disabled={busy}>
                         {#each decks as d (d.id)}
                             <option value={d.id}>{d.name}</option>
                         {/each}
                     </select>
                     <input class="b3-text-field lv-qc-new" aria-label={t.deckNewName} placeholder={t.deckNewName} bind:value={newName} bind:this={newNameInputEl} disabled={busy} />
+                </div>
+                <!-- Mobile Spec v1：牌组 chips 选择（手机端替代下拉直选，桌面端隐藏） -->
+                <div class="lv-qc-deck-chips" role="listbox" aria-label={t.deckPickerTitle}>
+                    {#each decks as d (d.id)}
+                        <button
+                            type="button"
+                            class="lv-qc-deck-chip"
+                            class:lv-qc-deck-chip-active={selected === d.id}
+                            role="option"
+                            aria-selected={selected === d.id}
+                            disabled={busy}
+                            title={d.name}
+                            onclick={() => (selected = d.id)}
+                        >
+                            {d.name}
+                        </button>
+                    {/each}
                 </div>
             {:else if deckLoadBusy}
                 <div class="ft__smaller ft__on-surface" role="status" aria-busy="true">{t.quickCardDeckLoading ?? "正在读取卡组…"}</div>
@@ -1191,11 +1211,13 @@
         </div>
     {/if}
     {#if createdNotice}
+        {#key createdNotice}
         <div class="lv-qc-success" role="status" aria-live="polite">
             <LvIcon name="check" size={15} />
             <span class="lv-qc-success-text">{createdNotice}</span>
             <span class="lv-qc-success-hint">{t.quickCardContinueHint ?? "可继续写下一张"}</span>
         </div>
+        {/key}
     {/if}
     {#if errorMsg}
         <div class="ft__smaller lv-qc-error" role="alert" aria-live="assertive">{errorMsg}</div>
@@ -1598,7 +1620,18 @@
         font-weight: var(--lv-fw-medium);
         max-width: 100%;
         box-sizing: border-box;
+        /* Mobile Spec v1：制卡成功 inline 微动效（随 {#key} 重放） */
+        animation: lvQcSuccessPop 0.26s var(--lv-ease, ease) both;
     }
+    @keyframes lvQcSuccessPop {
+        from { opacity: 0; transform: translateY(3px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .lv-qc-success { animation: none; }
+    }
+    /* Mobile Spec v1：牌组 chips（桌面隐藏，≤780px 容器内启用） */
+    .lv-qc-deck-chips { display: none; }
     .lv-qc-success-text { color: var(--lv-color-success); }
     .lv-qc-success-hint {
         margin-left: auto;
@@ -1614,6 +1647,67 @@
         .lv-qc-toolbar { flex-direction: column; }
         .lv-qc-deck { width: 100%; max-width: none; }
         .lv-qc-preview-face { min-height: 220px; }
+        /* Mobile Spec v1：牌组 chips 化——下拉+新建输入行收起，chips 横滑直选（空库新建输入不受影响） */
+        .lv-qc-deck-inputs--pick { display: none; }
+        .lv-qc-deck-chips {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            margin: 2px 0 6px;
+            padding-bottom: 4px;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .lv-qc-deck-chips::-webkit-scrollbar { display: none; }
+        .lv-qc-deck-chip {
+            flex: none;
+            max-width: 48%;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 14px;
+            border: 1px solid var(--lv-border);
+            border-radius: 999px;
+            background: var(--lv-color-surface);
+            color: var(--lv-color-text);
+            font-size: var(--lv-type-control-size);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+            &:active { transform: scale(0.96); }
+            &:focus-visible { outline: none; box-shadow: var(--lv-focus-ring); }
+        }
+        .lv-qc-deck-chip-active {
+            border-color: var(--lv-primary-border);
+            background: var(--lv-primary-soft);
+            color: var(--lv-color-brand);
+            font-weight: var(--lv-fw-semibold);
+        }
+        /* 大输入框：拇指键盘舒适区；16px 防 iOS 聚焦自动放大 */
+        .lv-qc-editor textarea.b3-text-field {
+            min-height: 150px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        /* 大保存按钮：拇指区直达（embedded 态无取消键，主键占满一行） */
+        .lv-qc-actions {
+            justify-content: stretch;
+            padding-bottom: max(4px, env(safe-area-inset-bottom));
+        }
+        .lv-qc-actions .lv-btn-primary {
+            flex: 1;
+            min-height: 52px;
+            font-size: 15px;
+        }
     }
     @container lv-quickcard (max-width: 480px) {
         .lv-qc-preview-heading { flex-direction: column; gap: 3px; }

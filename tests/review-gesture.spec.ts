@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
     reviewSwipeAction,
+    resolveMobileCardSwitch,
     shouldIgnoreSwipeTarget,
     resolveTouchSwipe,
     mapSwipeActionToOutcome,
@@ -9,6 +10,20 @@ import {
 } from "../src/core/review-gesture";
 
 describe("review swipe semantics", () => {
+    describe("resolveMobileCardSwitch 手机端横滑切卡判定 (Mobile Spec v1)", () => {
+        it("横向位移显著超过 60px 阈值且大于纵向位移 1.2 倍时判定为切卡", () => {
+            expect(resolveMobileCardSwitch(75, 10)).toBe("next");
+            expect(resolveMobileCardSwitch(-80, 20)).toBe("next");
+            expect(resolveMobileCardSwitch(120, 0)).toBe("next");
+        });
+
+        it("未达 60px 阈值或纵向位移过大时返回 null", () => {
+            expect(resolveMobileCardSwitch(50, 0)).toBeNull();
+            expect(resolveMobileCardSwitch(70, 65)).toBeNull();
+            expect(resolveMobileCardSwitch(0, 90)).toBeNull();
+        });
+    });
+
     it("question side reveals only on an upward swipe and never rates horizontally", () => {
         expect(reviewSwipeAction(false, 90, 0)).toBeNull();
         expect(reviewSwipeAction(false, -90, 0)).toBeNull();

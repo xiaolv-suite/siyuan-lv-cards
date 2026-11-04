@@ -403,6 +403,7 @@ describe("review async action guards", () => {
         await fireEvent.keyDown(window, { key: " ", code: "Space" });
         expect(view.container.querySelector(".lv-btn-rate")).toBeTruthy();
         expect(reviewRiffCard).not.toHaveBeenCalled();
+        view.unmount();
     });
 
     it("preserves native toolbar activation keys without revealing or rating a card", async () => {

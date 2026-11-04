@@ -367,11 +367,27 @@
             }
         }
 
+        /* Mobile Spec v1：评级按钮固定底部拇指区（≥52px、间距充分、安全区避让、不透明底防透字） */
         @media (max-width: 740px) {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            gap: var(--lv-sp-3);
+            margin-top: var(--lv-sp-2);
+            padding-top: var(--lv-sp-3);
+            padding-bottom: max(var(--lv-sp-3), env(safe-area-inset-bottom));
+            background: linear-gradient(
+                to bottom,
+                color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 62%, transparent),
+                var(--lv-bg-page, var(--b3-theme-background)) 32%
+            );
+            border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             .lv-btn-rate {
                 max-width: none;
+                min-height: 52px;
+            }
+            .lv-btn-wide {
+                grid-column: 1 / -1;
+                min-height: 52px;
             }
         }
 

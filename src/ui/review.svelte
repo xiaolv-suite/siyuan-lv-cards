@@ -2,7 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { rafThrottle } from "@/libs/throttle";
     import { openTab } from "siyuan";
-    import { showMessage, notifyInline, lvActivity } from "@/libs/notice";
+    import { showMessage, notifyInline, lvActivity, lvLaunchpad } from "@/libs/notice";
     import {
         getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
         batchSetRiffCardsDueTime, getRiffCards, getNotebookRiffCards, getTreeRiffCards,
@@ -31,7 +31,7 @@
     import { deriveReturnBanner } from "@/core/return-triage";
     import { applyQueuePipeline, calculateReviewAccuracy, toggleCardStar, formatStarToggleFeedback, combineExcludedCardIDs, filterActiveSessionCards, mergeQualityExcludedCardIDs } from "@/core/review-queue-pipeline";
     import type { SessionPurpose } from "@/core/session-purpose";
-    import { resolveTouchSwipe, mapSwipeActionToOutcome, extractSingleTouchCoords, extractChangedTouchCoords } from "@/core/review-gesture";
+    import { resolveTouchSwipe, resolveMobileCardSwitch, shouldIgnoreSwipeTarget, mapSwipeActionToOutcome, extractSingleTouchCoords, extractChangedTouchCoords } from "@/core/review-gesture";
     import { playReviewSfx, speakReviewText, speakAnswerText, closeReviewAudio, shouldAutoSpeakDictation } from "@/core/review-audio";
     import { resolveReviewKeyAction, shouldIgnoreReviewKeydown, resolveModalKeydownAction, isAnyReviewModalOpen, resolveRatingFromShortcutAction, isInputOrEditable } from "@/core/review-shortcuts";
     import { createReviewCountdown, formatCountdown, isCountdownEligible, shouldRestartCountdownOnResume, type ReviewCountdownController } from "@/core/review-countdown";
@@ -1401,6 +1401,7 @@
         sessionSkip = snap.counters.skip;
         persistSession(); // 撤销后的计数同样落盘（AQ-2）
         restartTimeout();
+        triggerHaptic(12); // Mobile Spec v1：撤销（含右滑撤销切卡）以触感确认生效
         showMessage(t.review.undoDone, 1500, "info");
     }
 
@@ -1948,6 +1949,21 @@
         const touchEnd = extractChangedTouchCoords(e);
         if (!touchEnd) return;
         const anyModal = Boolean(showPauseModal || showSessionOptionsModal || showMoreToolbar || isOverlayTarget(e.target));
+        // Mobile Spec v1：手机端横滑＝切卡不评级（左滑换下一张，右滑撤销并触感确认）；
+        // 竖直手势（上滑翻面/答案侧上下评分）保持既有语义，桌面端触屏不变
+        if (lvLaunchpad.isMobileFrontend() && !anyModal && !shouldIgnoreSwipeTarget(e.target)) {
+            const dx = touchEnd.x - touchStartX;
+            const dy = touchEnd.y - touchStartY;
+            if (resolveMobileCardSwitch(dx, dy)) {
+                if (dx > 0) {
+                    // 右滑＝撤销上一动作（恢复切走/误评的卡），撤销成功有触感确认
+                    undoHistory();
+                } else if (!submitting && !actionBusy) {
+                    void skip(); // 左滑＝换下一张（不评级，可撤销）
+                }
+                return;
+            }
+        }
         const action = resolveTouchSwipe(showAnswer, { x: touchStartX, y: touchStartY }, touchEnd, e.target, anyModal);
         const outcome = mapSwipeActionToOutcome(action);
         if (outcome?.type === "rate") {

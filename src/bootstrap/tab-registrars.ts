@@ -61,10 +61,29 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
 
             void deps.loadHubMount().then((mnt) => {
                 if (hubDisposed) return;
-                handle = mnt(div, {
-                    i18n: plugin.i18n,
-                    initialTab: (this.data?.tab as string) || "overview",
-                    initialBlockID: typeof this.data?.focusBlockID === "string" ? this.data.focusBlockID : "",
+                handle = mnt(div, buildHubMountProps(plugin, deps, this.data));
+            }).catch((e: unknown) => {
+                if (!hubDisposed) deps.mountChunkFallback(div, plugin.i18n, e);
+            });
+            this.element.appendChild(div);
+            this.destroy = () => {
+                hubDisposed = true;
+                handle?.destroy();
+            };
+        },
+    });
+}
+
+/**
+ * 闪卡中心（Hub）宿主装配属性（Mobile Spec v1）：
+ * 页签 init 与手机端全屏 Dialog 宿主共用同源装配，避免双份 props 漂移。
+ * data 为页签/入口携带的打开参数（tab、focusBlockID）。
+ */
+export function buildHubMountProps(plugin: any, deps: TabDeps, data?: Record<string, unknown>): Record<string, unknown> {
+    return {
+        i18n: plugin.i18n,
+        initialTab: (data?.tab as string) || "overview",
+        initialBlockID: typeof data?.focusBlockID === "string" ? data.focusBlockID : "",
                     uiMode: plugin.settings.uiMode,
                     openWizard: () => plugin.openAIWizard(),
                     openDrill: () => plugin.openRepairDrill(),
@@ -531,17 +550,7 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
                             })(),
                         }),
                     },
-                });
-            }).catch((e: unknown) => {
-                if (!hubDisposed) deps.mountChunkFallback(div, plugin.i18n, e);
-            });
-            this.element.appendChild(div);
-            this.destroy = () => {
-                hubDisposed = true;
-                handle?.destroy();
-            };
-        },
-    });
+    };
 }
 
 export function registerReviewTab(plugin: any, deps: TabDeps): void {

@@ -3,6 +3,17 @@ export type ReviewSwipeAction = "good" | "again" | "hard" | "easy" | "reveal" | 
 
 const SWIPE_THRESHOLD = 60;
 
+/**
+ * 手机端横滑切卡判定（Mobile Spec v1）：左右滑动＝换下一张（不评级）。
+ * 横向位移超过阈值且显著大于纵向位移时成立；竖直手势（上滑翻面/上下评分）不受影响，
+ * 桌面端触屏仍走 reviewSwipeAction 的既有评分语义。
+ */
+export function resolveMobileCardSwitch(dx: number, dy: number): "next" | null {
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return null;
+    if (Math.abs(dx) <= Math.abs(dy) * 1.2) return null;
+    return "next";
+}
+
 export function reviewSwipeAction(showAnswer: boolean, dx: number, dy: number): ReviewSwipeAction {
     if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return null;
 

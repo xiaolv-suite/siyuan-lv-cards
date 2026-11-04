@@ -6,7 +6,7 @@ import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
 import { setDialogMounter } from "./libs/dialog";
-import { svelteDialog, confirmDialogBool } from "./libs/dialog";
+import { svelteDialog, simpleDialog, confirmDialogBool } from "./libs/dialog";
 
 // AT-17：UI chunk（独立 IIFE 自带 svelte）经全局取 siyuan 模块——shell 在此注入单一事实源
 (window as unknown as { __lvSiyuan: unknown }).__lvSiyuan = siyuanNamespace;
@@ -90,8 +90,10 @@ import { TopbarController } from "./bootstrap/topbar-controller";
 import {
     registerDashboardTab,
     registerReviewTab,
+    buildHubMountProps,
     TAB_DASHBOARD,
     TAB_REVIEW,
+    type TabDeps,
 } from "./bootstrap/tab-registrars";
 import {
     buildRepairDrillDialogArgs,
@@ -446,6 +448,10 @@ export default class LvCardsPlugin extends Plugin {
     private noticeHubCleaner?: () => void;
     private backupCleaner?: () => void;
     private launchpadCleaner?: () => void;
+    /** Mobile Spec v1：手机端罗盘统一入口（顶栏+悬浮球双入口）清理函数 */
+    private mobileEntryCleaner?: () => void;
+    /** Mobile Spec v1：手机端闪卡中心全屏 Dialog 单例宿主（替代页签形态） */
+    private mobileHubDialog: { close: () => void; element: HTMLElement } | null = null;
     private omnisearchCleaner?: () => void;
     private autoRuleCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
@@ -1012,6 +1018,9 @@ export default class LvCardsPlugin extends Plugin {
             invalidateDueCache();
             this.refreshDueBadge();
             showMessage("已重新计算卡片遗忘曲线排期与待复习卡池", 2500, "info");
+        } else if (act.includes("水蛭")) {
+            // Mobile Spec v1：水蛭卡预警直达维护债务页（后收位，手机弹射坞直办）
+            this.openTabOf(TAB_DASHBOARD, { tab: "maintenance" });
         } else if (act.includes("牌组") || act.includes("卡包") || act.includes("管理")) {
             this.openTabOf(TAB_DASHBOARD, { tab: "manage" });
         } else {
@@ -1033,10 +1042,11 @@ export default class LvCardsPlugin extends Plugin {
             badge: due > 0 ? `${due} 待复习` : undefined,
             badgeType: "error",
             actions: [
-                "开始今日25张卡复习会话",
-                "从当前文档选区一键抽取制卡",
-                "重新计算卡片遗忘曲线排期",
-                "管理牌组与核心卡包",
+                // Mobile Spec v1：罗盘 actions 重写为 3~5 个手机直办动作（前显=复习/制卡/水蛭预警，后收=卡包管理）
+                "开始今日复习",
+                "快速制卡",
+                "水蛭卡预警",
+                "管理牌组与卡包",
             ],
             onClick: () => this.openReviewTab(),
             onAction: (action) => this.handleQuickAction(action),
@@ -1392,6 +1402,8 @@ export default class LvCardsPlugin extends Plugin {
 
         // 注册小驴罗盘极速弹射坞入口与二级行动（Epoch 7 Phase 5 Protocol v1.4.0）
         this.registerLaunchpadEntry();
+        // Mobile Spec v1：手机端罗盘统一入口（顶栏按钮+悬浮球，桌面端 no-op），onunload 干净注销
+        this.mobileEntryCleaner = lvLaunchpad.ensureMobileEntry();
 
         // 注册全生态穿透搜索切面（Epoch 7 Phase 7 Protocol v1.6.0）
         this.omnisearchCleaner = lvOmnisearch.registerProvider("siyuan-lv-cards", (keyword) => {
@@ -1542,6 +1554,15 @@ export default class LvCardsPlugin extends Plugin {
         if (this.launchpadCleaner) {
             this.launchpadCleaner();
             this.launchpadCleaner = undefined;
+        }
+        if (this.mobileEntryCleaner) {
+            this.mobileEntryCleaner();
+            this.mobileEntryCleaner = undefined;
+        }
+        if (this.mobileHubDialog) {
+            // Mobile Spec v1：卸载时收拢手机端全屏宿主（零孤儿 DOM）
+            try { this.mobileHubDialog.close(); } catch { /* 已销毁 */ }
+            this.mobileHubDialog = null;
         }
         if (this.backupCleaner) {
             this.backupCleaner();
@@ -2044,7 +2065,8 @@ export default class LvCardsPlugin extends Plugin {
 
     private async openQuickCard(prefillQ = "") {
         try {
-            const view = await this.createQuickCardView(false, prefillQ);
+            // Mobile Spec v1：手机端快速制卡成功后停留继续录入（embedded 形态复用 studio 契约）
+            const view = await this.createQuickCardView(lvLaunchpad.isMobileFrontend(), prefillQ);
             svelteDialog({
                 title: this.i18n.quickCardTitle,
                 component: view.Component,
@@ -3281,7 +3303,50 @@ export default class LvCardsPlugin extends Plugin {
         return changed;
     }
 
+    /** Mobile Spec v1：手机端闪卡中心宿主——全屏 Dialog，复用页签同源装配属性（buildHubMountProps 防双份漂移） */
+    private async openHubMobileDialog(data?: Record<string, unknown>) {
+        if (this.mobileHubDialog) {
+            // 单例去重：仅切换子页（与桌面页签 lv-switch-tab 契约一致）
+            if (data?.tab) {
+                this.mobileHubDialog.element
+                    .querySelector(".lv-hub")
+                    ?.dispatchEvent(new CustomEvent("lv-switch-tab", {
+                        detail: { tab: String(data.tab), focusBlockID: data?.focusBlockID },
+                    }));
+            }
+            return;
+        }
+        try {
+            const deps: TabDeps = { loadHubMount, loadReviewMount, mountChunkFallback, loadHubServices };
+            const mnt = await loadHubMount();
+            const container = document.createElement("div");
+            container.className = "lv-hub-mobile-host";
+            const handle = mnt(container, buildHubMountProps(this as any, deps, data));
+            const { dialog, close } = simpleDialog({
+                title: this.i18n.menuDashboard ?? "闪卡中心",
+                ele: container,
+                width: "100vw",
+                height: "100dvh",
+                callback: () => {
+                    this.mobileHubDialog = null;
+                    handle.destroy();
+                },
+            });
+            dialog.element.classList.add("lv-hub-mobile-dialog");
+            this.mobileHubDialog = { close, element: dialog.element };
+        } catch (e) {
+            this.mobileHubDialog = null;
+            this.reportDialogOpenFailure(this.i18n.menuDashboard ?? "闪卡中心", e);
+        }
+    }
+
     private openTabOf(type: string, data?: Record<string, unknown>) {
+        // Mobile Spec v1：手机端宿主无页签模型——闪卡中心改为全屏 Dialog 宿主（100vw/100dvh + safe-area），
+        // 单例复用：已打开时仅派发 lv-switch-tab 切换子页，不重复弹层
+        if (type === TAB_DASHBOARD && lvLaunchpad.isMobileFrontend()) {
+            void this.openHubMobileDialog(data);
+            return;
+        }
         // 真机验收修正（v0.110.2）：Plugin 实例在 3.8.6 上没有 openTab 方法（旧实例 API 已移除，
         // 仅剩模块级 openTab 函数）——此前经 anySelf 绕过类型检查，真机点击入口即抛
         // "this.openTab is not a function"。改用模块级 openTab + custom 页签契约。
