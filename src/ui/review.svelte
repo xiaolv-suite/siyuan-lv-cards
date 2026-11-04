@@ -1949,6 +1949,9 @@
     // 触屏滑卡手势（M3·FR10）：右=良好 左=遗忘 上=翻面
     let touchStartX = 0;
     let touchStartY = 0;
+    // 快速连滑节流（移动端防漏评）：手势冷却 180ms，动画播完才响应下一次滑动
+    let lastSwipeHandledAt = 0;
+    const SWIPE_COOLDOWN_MS = 180;
 
     function onTouchStart(e: TouchEvent) {
         const coords = extractSingleTouchCoords(e);
@@ -2002,6 +2005,10 @@
             const dx = touchEnd.x - touchStartX;
             const dy = touchEnd.y - touchStartY;
             if (resolveMobileCardSwitch(dx, dy)) {
+                // 连滑节流：冷却期内忽略本次手势，避免动画未完时连滑漏评/重复撤销
+                const now = Date.now();
+                if (now - lastSwipeHandledAt < SWIPE_COOLDOWN_MS) return;
+                lastSwipeHandledAt = now;
                 if (dx > 0) {
                     // 右滑＝撤销上一动作（恢复切走/误评的卡），撤销成功有触感确认
                     undoHistory();
