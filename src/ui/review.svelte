@@ -2021,8 +2021,16 @@
         const action = resolveTouchSwipe(showAnswer, { x: touchStartX, y: touchStartY }, touchEnd, e.target, anyModal);
         const outcome = mapSwipeActionToOutcome(action);
         if (outcome?.type === "rate") {
+            // 翻面后评分：若翻面动作已完成（>=150ms），即便接近 180ms 节流边界也立即响应，防止快手手势漏评
+            const now = Date.now();
+            if (submitting || actionBusy) return;
+            if (now - lastSwipeHandledAt < SWIPE_COOLDOWN_MS && (now - answerRevealedAt < 150)) return;
+            lastSwipeHandledAt = now;
             void rate(outcome.rating);
         } else if (outcome?.type === "reveal" && faceReady) {
+            const now = Date.now();
+            if (now - lastSwipeHandledAt < SWIPE_COOLDOWN_MS) return;
+            lastSwipeHandledAt = now;
             revealAnswer();
         }
     }

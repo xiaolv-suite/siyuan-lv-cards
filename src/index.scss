@@ -12,7 +12,7 @@
     --lv-accent-gold: #945A17; /* 温暖星光金 / 警示暖色 */
     --lv-color-brand: #5E59CB;
     --lv-color-brand-strong: #504ABD;
-    --lv-color-on-brand: #FFFFFF;
+    --lv-color-on-brand: var(--b3-theme-on-primary, #FFFFFF);
     --lv-color-text: #272635; /* 标题与正文近黑（融入微弱紫相，非死黑，明度18%） */
     --lv-color-text-muted: #6C6A7B; /* 辅助文字（对比度超 5:1） */
     --lv-color-canvas: #F7F7FA; /* 极浅同族底色：HSL(243°, 4%, 97.5%)，与卡片明度差2.5% */
@@ -227,7 +227,7 @@ body[data-theme-mode="dark"],
     --lv-accent-gold: #FBBF24;
     --lv-color-brand: #B5AFFF;
     --lv-color-brand-strong: #C3BEFF;
-    --lv-color-on-brand: #181820;
+    --lv-color-on-brand: var(--b3-theme-on-primary, #181820);
     --lv-color-text: #F0EEF8;
     --lv-color-text-muted: #B2AEC4;
     --lv-color-canvas: #15151E;

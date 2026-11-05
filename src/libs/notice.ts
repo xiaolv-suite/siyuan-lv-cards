@@ -67,6 +67,42 @@ export {
 
 const CARD_CREATE_PATTERN = /(卡片|制卡|卡组|卡包|闪卡|收纳至材料收件箱|已创建|生成|入库|抽取|进度)/i;
 
+const batchCapsuleMap = new Map<string, { count: number; timer: ReturnType<typeof setTimeout> }>();
+
+function postFoldedCapsule(options: { source?: string; category?: string; message: string; duration?: number; level?: LvNoticeLevel }): string {
+    const category = options.category;
+    if (category) {
+        const existing = batchCapsuleMap.get(category);
+        const host = typeof document !== "undefined" ? document.getElementById("lv-notice-host") : null;
+        const capsule = host?.querySelector(".lv-notice-capsule");
+        if (existing && capsule) {
+            existing.count += 1;
+            clearTimeout(existing.timer);
+            const count = existing.count;
+            existing.timer = setTimeout(() => batchCapsuleMap.delete(category), options.duration ?? 2500);
+            const badge = capsule.querySelector(".lv-notice-repeat");
+            if (badge) {
+                badge.textContent = `×${count}`;
+            } else {
+                const span = document.createElement("span");
+                span.className = "lv-notice-repeat";
+                span.textContent = `×${count}`;
+                capsule.appendChild(span);
+            }
+            const spans = capsule.querySelectorAll("span:not(.lv-notice-source-badge):not(.lv-notice-repeat)");
+            if (spans.length > 0) {
+                spans[0].textContent = options.message;
+            }
+            return "";
+        }
+        batchCapsuleMap.set(category, {
+            count: 1,
+            timer: setTimeout(() => batchCapsuleMap.delete(category), options.duration ?? 2500),
+        });
+    }
+    return lvNotify.capsule(options);
+}
+
 /**
  * 全局统一通知包装器（完全兼容旧版 showMessage 签名）
  * - 错误信息 -> 提升为交互卡片 (lvNotify.card)，延长驻留，支持明确关闭
@@ -89,7 +125,7 @@ export function showMessage(message: string, timeout = 3000, type: "info" | "err
         });
     } else {
         const isCardCreation = CARD_CREATE_PATTERN.test(message);
-        lvNotify.capsule({
+        postFoldedCapsule({
             source: "小驴闪卡",
             category: isCardCreation ? "card-create" : undefined,
             message,
@@ -103,7 +139,7 @@ export function showMessage(message: string, timeout = 3000, type: "info" | "err
  * 强制指定 category: "card-create"，保证批量或连点操作下绝对合流计数
  */
 export function notifyBatchCardCreation(message: string, duration = 2500): string {
-    return lvNotify.capsule({
+    return postFoldedCapsule({
         source: "小驴闪卡",
         category: "card-create",
         message,

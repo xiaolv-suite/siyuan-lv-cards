@@ -1908,8 +1908,12 @@ export default class LvCardsPlugin extends Plugin {
 
     private async generateExamReport(plan: ExamPlan) {
         const md = await this.buildExamReportMd(plan);
-        await navigator.clipboard.writeText(md);
-        showMessage(this.i18n.examReportCopied, 2500, "info");
+        try {
+            await navigator.clipboard.writeText(md);
+            showMessage(this.i18n.examReportCopied, 2500, "info");
+        } catch {
+            showMessage(this.i18n.diagFail ?? "复制到剪贴板失败", 3000, "error");
+        }
     }
 
     /** 落盘笔记本（605）：设置指定优先，否则第一个打开的笔记本 */

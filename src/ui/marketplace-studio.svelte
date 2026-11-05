@@ -184,7 +184,7 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 1000);
     }
 
     function handleToggleCart(item: MarketplaceCartItem) {

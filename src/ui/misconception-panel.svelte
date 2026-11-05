@@ -5,6 +5,7 @@
     import LvIcon from "./kit/LvIcon.svelte";
     import type { MisconceptionCluster } from "../core/misconception-cluster";
     import { exportMisconceptionReportMarkdown } from "../core/misconception-cluster";
+    import { showMessage } from "@/libs/notice";
 
     let {
         clusters = [],
@@ -39,7 +40,10 @@
             onExportReport(md);
         } else {
             // 复制至剪贴板兜底
-            navigator.clipboard?.writeText(md);
+            navigator.clipboard?.writeText(md).then(
+                () => showMessage(t.copied ?? "报告已复制到剪贴板", 2000, "info"),
+                () => { /* 剪贴板不可用静默 */ }
+            );
         }
     }
 </script>

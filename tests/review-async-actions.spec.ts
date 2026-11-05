@@ -143,6 +143,12 @@ describe("review async action guards", () => {
     afterEach(() => {
         cleanup();
         vi.restoreAllMocks();
+        if (typeof window !== "undefined") {
+            const stack = (window as any).__LV_SURFACE_STACK__;
+            if (Array.isArray(stack)) {
+                stack.length = 0;
+            }
+        }
     });
 
     it("discards a choice-generation response after the current card changes", async () => {

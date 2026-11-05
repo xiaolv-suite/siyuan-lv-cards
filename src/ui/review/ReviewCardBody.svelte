@@ -80,17 +80,27 @@
 
     $effect(() => {
         if (!cardHtml) return;
-        // 数学公式：旧宿主 initKaTeX 优先；3.8.x 网页端无此 API，回落到宿主自带 KaTeX 资产渲染空壳节点
+        // 追踪 showAnswer：翻面时答案区公式揭晓，重新触发 KaTeX 渲染；锁高避免公式展开瞬间卡面高度跳动
+        void showAnswer;
         if (mathTokensPresent(cardHtml)) {
+            const prevHeight = contentEl?.clientHeight ?? 0;
+            if (prevHeight > 0 && contentEl) {
+                contentEl.style.minHeight = `${prevHeight}px`;
+            }
             const timer = setTimeout(() => {
                 try {
                     if (contentEl && typeof (window as any).siyuan?.initKaTeX === "function") {
                         (window as any).siyuan.initKaTeX(contentEl);
                     }
                 } catch {}
-                void renderMathIn(contentEl);
-            }, 50);
-            return () => clearTimeout(timer);
+                void renderMathIn(contentEl).finally(() => {
+                    if (contentEl) contentEl.style.minHeight = "";
+                });
+            }, 30);
+            return () => {
+                clearTimeout(timer);
+                if (contentEl) contentEl.style.minHeight = "";
+            };
         }
     });
 </script>
