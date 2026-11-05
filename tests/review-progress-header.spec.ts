@@ -106,7 +106,7 @@ describe("ReviewProgressHeader 复习顶栏元信息与进度条组件", () => {
         });
 
         expect(getByTestId("review-cram-chip")).toBeTruthy();
-        expect(getByText("冲刺模式")).toBeTruthy();
+        expect(getByText(/突击快刷模式|冲刺模式/)).toBeTruthy();
 
         expect(getByTestId("review-budget-chip")).toBeTruthy();
         expect(getByText("14:59")).toBeTruthy();

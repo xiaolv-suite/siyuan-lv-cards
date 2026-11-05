@@ -454,6 +454,7 @@ export default class LvCardsPlugin extends Plugin {
     private mobileHubDialog: { close: () => void; element: HTMLElement } | null = null;
     private omnisearchCleaner?: () => void;
     private autoRuleCleaner?: () => void;
+    private gleanRuleCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
     private aiBatchesMutationVersion = 0;
     private costLedgerMutationVersion = 0;
@@ -1191,6 +1192,82 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
+    /** 响应跨插件自动化规则 (lvAutomation)：从小驴拾遗高亮摘录自动生成闪卡 */
+    public async createCardFromGlean(payload: any): Promise<boolean> {
+        if (!payload) return false;
+        try {
+            const front = String(payload.front || "").trim();
+            const back = String(payload.back || "").trim();
+            const tags = payload.tags;
+            const sourceBlockId = payload.sourceBlockId ? String(payload.sourceBlockId) : undefined;
+            const sourceTitle = String(payload.sourceTitle || "小驴拾遗").trim();
+
+            if (!front) return false;
+
+            // 解析落牌卡组：优先第一个现有卡组，空库时兜底创建专用拾遗卡包
+            const riff = await import("./api/riff");
+            const decks = await riff.getRiffDecks().catch(() => []);
+            let deckID = decks[0]?.id ?? "";
+            if (!deckID) {
+                try {
+                    const created = await riff.createRiffDeck("小驴拾遗卡包");
+                    deckID = created.id;
+                } catch {
+                    deckID = "default";
+                }
+            }
+
+            // 格式化为单块标准问答/挖空卡
+            let cardMd = "";
+            if (back) {
+                const cleanF = front.replace(/==/g, "").replace(/\s*\n+\s*/g, " ").trim();
+                const cleanB = back.replace(/==/g, "").replace(/\s*\n+\s*/g, " ").trim();
+                cardMd = `${cleanF} ==${cleanB}==`;
+            } else if (front.includes("==")) {
+                cardMd = front.trim();
+            } else {
+                cardMd = `${front.trim()} ==详见原文==`;
+            }
+
+            const nbs = await getNotebooks();
+            const defaultNb = Array.isArray(nbs) ? nbs[0]?.id : (nbs as any)?.notebooks?.[0]?.id;
+            if (!defaultNb) return false;
+
+            const created = await executeQuickCardCreation({
+                nbId: defaultNb,
+                deckID,
+                markdown: cardMd,
+                sourceBlockID: sourceBlockId,
+                sourceTitle,
+            });
+
+            // 标签处理
+            if (tags && created.blockID) {
+                try {
+                    const tagStr = Array.isArray(tags) ? tags.join(" ") : String(tags);
+                    if (tagStr.trim()) {
+                        await setBlockAttrs(created.blockID, { "custom-riff-tags": tagStr.trim() });
+                    }
+                } catch { /* 旁路 */ }
+            }
+
+            notifyBatchCardCreation(`已自动将拾遗高亮转化为闪卡入库`);
+            return true;
+        } catch (err) {
+            const detail = err instanceof Error ? err.message : String(err);
+            lvLog("warn", `[lvAutomation] createCardFromGlean failed: ${detail}`);
+            try {
+                lvNotify.silent({
+                    source: "小驴闪卡",
+                    category: "glean-card-sync-fail",
+                    message: `[拾遗联动] 自动制卡失败: ${detail}`,
+                    level: "warn",
+                });
+            } catch { /* 旁路 */ }
+            return false;
+        }
+    }
+
     async onload() {
         // AT-6：启动性能计时起点（onload 首行）
         this.perf.markStart();
@@ -1424,6 +1501,21 @@ export default class LvCardsPlugin extends Plugin {
                 return await this.createCardFromWrongQuestion(payload);
             }
         });
+
+        // 注册跨插件联动自动化规则（拾遗高亮 ➔ 自动同步闪卡生成复习卡）
+        this.gleanRuleCleaner = lvAutomation.registerRule({
+            id: "rule-glean-to-cards",
+            name: "拾遗高亮 ➔ 自动同步闪卡生成复习卡",
+            desc: "小驴拾遗高亮制卡请求时，自动在闪卡生成待复习新卡",
+            enabled: true,
+            triggerSource: "siyuan-glean",
+            triggerType: "create-card-request",
+            actionPlugin: "siyuan-lv-cards",
+            actionName: "create-card",
+            execute: async (payload: any) => {
+                return await this.createCardFromGlean(payload);
+            }
+        });
     }
 
     onLayoutReady() {
@@ -1550,6 +1642,10 @@ export default class LvCardsPlugin extends Plugin {
         if (this.autoRuleCleaner) {
             this.autoRuleCleaner();
             this.autoRuleCleaner = undefined;
+        }
+        if (this.gleanRuleCleaner) {
+            this.gleanRuleCleaner();
+            this.gleanRuleCleaner = undefined;
         }
         if (this.launchpadCleaner) {
             this.launchpadCleaner();

@@ -12,6 +12,7 @@
         hasSvgCanvas = false,
         isStarred = false,
         isMarkedIssue = false,
+        isCramMode = false,
         actionBusy = false,
         lastAnswered = null,
         reversedRecall = $bindable(false),
@@ -20,6 +21,7 @@
         prefsOpen = false,
         hasOverrides = false,
         t,
+        onOpenCramModal = () => {},
         onAdjustFontScale,
         onOpenCanvasInEditor,
         onToggleStar,
@@ -45,6 +47,7 @@
         hasSvgCanvas?: boolean;
         isStarred?: boolean;
         isMarkedIssue?: boolean;
+        isCramMode?: boolean;
         actionBusy?: boolean;
         dismissBusy?: boolean;
         lastAnswered?: any;
@@ -54,6 +57,7 @@
         prefsOpen?: boolean;
         hasOverrides?: boolean;
         t: any;
+        onOpenCramModal?: () => void;
         onScopeChange?: () => void;
         onAdjustFontScale: (delta: number) => void;
         onOpenSessionOptions?: () => void;
@@ -144,6 +148,20 @@
         <LvIcon name="book" size={13} />
         <span class="lv-scope-summary-text">{scopeSummaryLabel}{#if purposeLabel && purpose !== "review"} · {purposeLabel}{/if}</span>
         {#if hasOverrides}<span aria-hidden="true">●</span>{/if}
+    </button>
+
+    <button
+        type="button"
+        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn lv-cram-btn"
+        class:lv-cram-btn-active={isCramMode}
+        title={isCramMode ? "⚡ 突击快刷模式中（排期保护）" : "⚡ 考前突击快刷"}
+        aria-label="考前突击快刷"
+        disabled={actionBusy}
+        onclick={onOpenCramModal}
+        data-testid="review-tb-cram-btn"
+    >
+        <LvIcon name="zap" size={13} />
+        <span class="lv-tool-btn-label">{isCramMode ? "突击中" : "⚡ 考前突击快刷"}</span>
     </button>
 
     <div class="fn__flex-1"></div>
@@ -240,6 +258,19 @@
                 >
                     <span class="lv-menu-icon"><LvIcon name="settings" size={16} /></span>
                     <span>{t.review?.tbPrefs ?? "本场偏好"}{hasOverrides ? " ●" : ""}</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="lv-toolbar-menu-item"
+                    class:lv-active={isCramMode}
+                    disabled={actionBusy}
+                    title="⚡ 考前突击快刷"
+                    onclick={() => { onOpenCramModal(); showMoreToolbar = false; }}
+                    data-testid="review-menu-cram-btn"
+                >
+                    <span class="lv-menu-icon"><LvIcon name="zap" size={16} /></span>
+                    <span>{isCramMode ? "⚡ 突击快刷中（排期保护）" : "⚡ 考前突击快刷…"}</span>
                 </button>
 
                 <button
@@ -449,6 +480,26 @@
                 border-color: var(--lv-color-brand);
                 color: var(--lv-color-brand);
                 background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
+            }
+
+            &.lv-cram-btn {
+                color: #d97706;
+                :global(svg) {
+                    color: #f59e0b;
+                }
+
+                &:hover:not(:disabled) {
+                    border-color: #f59e0b;
+                    color: #b45309;
+                    background: color-mix(in srgb, #f59e0b 10%, var(--lv-color-surface));
+                }
+
+                &.lv-cram-btn-active {
+                    border-color: #f59e0b;
+                    background: color-mix(in srgb, #f59e0b 16%, var(--lv-color-surface));
+                    color: #b45309;
+                    font-weight: var(--lv-fw-semibold, 600);
+                }
             }
         }
 

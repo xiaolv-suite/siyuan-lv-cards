@@ -72,6 +72,8 @@
     import ReviewAnswerSection from "./review/ReviewAnswerSection.svelte";
     import ReviewRequeueWaiting from "./review/ReviewRequeueWaiting.svelte";
     import ReviewCardBody from "./review/ReviewCardBody.svelte";
+    import ReviewCramModal from "./review/ReviewCramModal.svelte";
+    import { type CramScope } from "@/core/cram-mode";
     import LvIcon from "./kit/LvIcon.svelte";
 
     export interface ReviewSettings {
@@ -129,6 +131,7 @@
         initialScope?: string;
         /** 初始 cram 模式（考前：lapses 降序） */
         initialCram?: boolean;
+        isCramMode?: boolean;
         appendRevlog: (entry: { cardID: string; deckID: string; blockID: string; rating: number; source: "plugin" }) => void;
         rollbackRevlog?: (cardID?: string) => void;
         /** BJ-4：遗忘卡错误原因标注（旁路增强，支持块属性同步） */
@@ -258,7 +261,12 @@
     // svelte-ignore state_referenced_locally
     let scopeKey = $state(normalizeScopeKey(initialScope));
     // svelte-ignore state_referenced_locally
-    let cramActive = $state(initialCram === true);
+    let isCramMode = $state(Boolean(initialCram || ctx.isCramMode));
+    // svelte-ignore state_referenced_locally
+    let cramActive = $state(Boolean(initialCram || ctx.isCramMode));
+    let cramScope = $state<CramScope>("all");
+    let cramRandomOrder = $state(false);
+    let showCramModal = $state(false);
     let decks: RiffDeck[] = $state([]);
     let notebooks: Notebook[] = $state([]);
     let sessionNew = $state(0);
@@ -868,32 +876,42 @@
                 // Cram 突击快刷模式下，按当前范围（卡组/笔记本/文档/全局）拉取全量卡片并与到期队列去重合并
                 try {
                     const deckID = scopeKey.startsWith("deck:") ? scopeKey.slice(5) : "";
-                    const allRes = scopeKey.startsWith("notebook:")
-                        ? await getNotebookRiffCards?.(scopeKey.slice(9), 1, 100)
-                        : scopeKey.startsWith("doc:")
-                            ? await getTreeRiffCards?.(scopeKey.slice(4), 1, 100)
-                            : await getRiffCards?.(deckID, 1, 100);
                     const existingCardIDs = new Set(cards.map(c => c.cardID));
                     const existingBlockIDs = new Set(cards.map(c => c.blockID).filter(Boolean));
-                    for (const b of allRes?.blocks ?? []) {
-                        const rc = (b as any).riffCard ?? (b as any).RiffCard;
-                        const cid = String(rc?.id ?? rc?.cardID ?? b.id ?? "");
-                        const bid = String(b.id ?? "");
-                        if (!cid || kernelReviewedIDs.includes(cid)) continue;
-                        if (existingCardIDs.has(cid) || (bid && existingBlockIDs.has(bid))) continue;
-                        if (rc) {
-                            existingCardIDs.add(cid);
-                            if (bid) existingBlockIDs.add(bid);
-                            cards.push({
-                                cardID: cid,
-                                deckID: String(rc.deckID ?? deckID),
-                                blockID: bid || cid,
-                                state: Number(rc.state ?? 0),
-                                reps: Number(rc.reps ?? 0),
-                                lapses: Number(rc.lapses ?? 0),
-                            } as RiffDueCard);
+                    let page = 1;
+                    let pageCount = 1;
+                    do {
+                        const allRes = scopeKey.startsWith("notebook:")
+                            ? await getNotebookRiffCards?.(scopeKey.slice(9), page, 100)
+                            : scopeKey.startsWith("doc:")
+                                ? await getTreeRiffCards?.(scopeKey.slice(4), page, 100)
+                                : await getRiffCards?.(deckID, page, 100);
+                        if (!allRes || typeof allRes !== "object") break;
+                        pageCount = Number(allRes.pageCount ?? 1);
+                        for (const b of allRes?.blocks ?? []) {
+                            const rc = (b as any).riffCard ?? (b as any).RiffCard;
+                            const cid = String(rc?.id ?? rc?.cardID ?? b.id ?? "");
+                            const bid = String(b.id ?? "");
+                            if (!cid || kernelReviewedIDs.includes(cid)) continue;
+                            if (existingCardIDs.has(cid) || (bid && existingBlockIDs.has(bid))) continue;
+                            if (rc) {
+                                existingCardIDs.add(cid);
+                                if (bid) existingBlockIDs.add(bid);
+                                cards.push({
+                                    cardID: cid,
+                                    deckID: String(rc.deckID ?? deckID),
+                                    blockID: bid || cid,
+                                    state: Number(rc.state ?? 0),
+                                    reps: Number(rc.reps ?? 0),
+                                    lapses: Number(rc.lapses ?? 0),
+                                    due: String(rc.due ?? ""),
+                                    stability: typeof rc.stability === "number" ? rc.stability : undefined,
+                                    difficulty: typeof rc.difficulty === "number" ? rc.difficulty : undefined,
+                                } as unknown as RiffDueCard);
+                            }
                         }
-                    }
+                        page += 1;
+                    } while (page <= pageCount && page <= 10);
                     cards = cards.filter(c => !kernelReviewedIDs.includes(c.cardID));
                 } catch {
                     /* 静默降级 */
@@ -933,13 +951,14 @@
             // 管道处理：范围筛选、批次截断、同源兄弟卡防剧透推迟与排序
             queue = applyQueuePipeline(cards, {
                 scopeKey,
-                batchLimit: eff().batchLimit,
+                batchLimit: (cramActive || isCramMode) ? 0 : eff().batchLimit,
                 burySiblings: eff().burySiblings,
-                cramActive,
+                cramActive: cramActive || isCramMode,
+                cramScope,
                 reverseOrder: eff().reverseOrder,
-                randomOrder: eff().randomOrder,
+                randomOrder: (cramActive || isCramMode) ? cramRandomOrder : eff().randomOrder,
                 shuffleFn: shuffleArray,
-                leechThreshold: eff().leechThreshold,
+                leechThreshold: (cramActive || isCramMode) && cramScope === "leech" ? 5 : eff().leechThreshold,
             });
             // BI-27 返场分流：跨天返场且上日有收工原因 → 今日方案横幅（展示性，不自动改预算/队列）。
             if (!recovery) {
@@ -966,7 +985,7 @@
                 sessionDone = true;
                 disarmReviewHistory(); // Mobile Spec v1 深化：正常完成卡片后清理返回手势历史占位
                 const hasWork = reviewedIDs.length > 0 || sessionSkipped.length > 0;
-                if (!cramActive && finished && hasWork) {
+                if (!(cramActive || isCramMode) && finished && hasWork) {
                     const s = ctx.getSessionState();
                     if (s && !s.completed) ctx.saveSessionState(markSessionCompleted(s));
                     ctx.emitSessionFinished({ new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip });
@@ -974,30 +993,40 @@
                 // 今日活动流广播 (lvActivity，Epoch 7 Phase 3 全生态今日成果汇流)
                 if (finished && reviewedIDs.length > 0) {
                     const reviewedCount = reviewedIDs.length;
-                    let activeDeckName = "闪卡";
-                    if (scopeKey.startsWith("deck:")) {
-                        const dId = scopeKey.slice(5);
-                        const d = decks.find(dk => dk.id === dId);
-                        if (d?.name) activeDeckName = d.name;
-                    } else if (sessionCardMap.size > 0) {
-                        const firstCard = sessionCardMap.values().next().value;
-                        if (firstCard?.deckID) {
-                            const d = decks.find(dk => dk.id === firstCard.deckID);
+                    if (cramActive || isCramMode) {
+                        try {
+                            lvActivity.record({
+                                source: "闪卡",
+                                category: "card",
+                                title: `突击快刷 ${reviewedCount} 张`,
+                            });
+                        } catch { /* 旁路 */ }
+                    } else {
+                        let activeDeckName = "闪卡";
+                        if (scopeKey.startsWith("deck:")) {
+                            const dId = scopeKey.slice(5);
+                            const d = decks.find(dk => dk.id === dId);
                             if (d?.name) activeDeckName = d.name;
+                        } else if (sessionCardMap.size > 0) {
+                            const firstCard = sessionCardMap.values().next().value;
+                            if (firstCard?.deckID) {
+                                const d = decks.find(dk => dk.id === firstCard.deckID);
+                                if (d?.name) activeDeckName = d.name;
+                            }
                         }
+                        const elapsedMinutes = Math.max(1, Math.round((Date.now() - sessionStartedAt) / 60000));
+                        try {
+                            lvActivity.record({
+                                source: "闪卡",
+                                category: "card",
+                                title: `完成「${activeDeckName}」复习 (${reviewedCount}张)`,
+                                detail: `耗时 ${elapsedMinutes} 分钟`,
+                            });
+                        } catch { /* 旁路 */ }
                     }
-                    const elapsedMinutes = Math.max(1, Math.round((Date.now() - sessionStartedAt) / 60000));
-                    try {
-                        lvActivity.record({
-                            source: "闪卡",
-                            category: "card",
-                            title: `完成「${activeDeckName}」复习 (${reviewedCount}张)`,
-                            detail: `耗时 ${elapsedMinutes} 分钟`,
-                        });
-                    } catch { /* 旁路 */ }
                 }
                 // 联动小驴打卡（Ecosystem Federation Epoch 6 / 智能零配置打卡）
-                if (!cramActive && finished && reviewedIDs.length > 0) {
+                if (!(cramActive || isCramMode) && finished && reviewedIDs.length > 0) {
                     const reviewedCount = reviewedIDs.length;
                     let checkinItemId = eff().checkinItemId;
                     let autoMatched = false;
@@ -1357,7 +1386,7 @@
     }
 
     /** 完成页会话时长（544）：本页面挂载即会话起点，恢复会话也从恢复点起算 */
-    let sessionStartedAt = Date.now();
+    let sessionStartedAt = $state(Date.now());
     function sessionDurationText(): string {
         return formatSessionDuration(sessionStartedAt);
     }
@@ -1473,7 +1502,7 @@
                 return;
             }
             // Cram 考前突击快刷模式（对标 FSRS/Obsidian Cram）：纯过筛练习，不修改内核排期 due/interval
-            if (cramActive) {
+            if (cramActive || isCramMode) {
                 writeSucceeded = true;
                 playSfx(rating);
                 reviewedIDs = [...reviewedIDs, current.cardID];
@@ -1483,15 +1512,11 @@
                     forgottenCardIDs = nextForgotten;
                 }
                 const wasNew = isCardNew(ctx.getRevlog(), current.cardID);
-                const prevTargetMet = (sessionNew + sessionReview) >= eff().dailyReviewTarget && eff().dailyReviewTarget > 0;
                 const nextCounters = updateSessionCountersOnRate(
                     { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
                     rating,
                     wasNew
                 );
-                if (!prevTargetMet && (nextCounters.new + nextCounters.review) >= eff().dailyReviewTarget && eff().dailyReviewTarget > 0) {
-                    triggerTargetCelebration();
-                }
                 sessionNew = nextCounters.new;
                 sessionReview = nextCounters.review;
                 sessionForget = nextCounters.forget;
@@ -1499,7 +1524,6 @@
                 if (rating === 1 && eff().requeueAgain) {
                     queueDelayedRequeue(current);
                 }
-                persistSession();
                 announce(t.review.liveRated, "polite");
                 await next();
                 return;
@@ -2072,6 +2096,7 @@
 
     function resetCramSessionState() {
         cramActive = true;
+        isCramMode = true;
         purpose = "practice";
         clearPendingRequeues();
         recovery = null;
@@ -2086,6 +2111,28 @@
         sessionQuizTotal = 0;
         sessionQuizCorrect = 0;
         sessionDone = false;
+        sessionStartedAt = Date.now();
+    }
+
+    function openCramModal() {
+        showCramModal = true;
+    }
+
+    function startCramSession(options: { scope: CramScope; randomOrder: boolean }) {
+        cramScope = options.scope;
+        cramRandomOrder = options.randomOrder;
+        resetCramSessionState();
+        showCramModal = false;
+        void loadQueue();
+    }
+
+    function exitCramSession() {
+        cramActive = false;
+        isCramMode = false;
+        purpose = "review";
+        showCramModal = false;
+        sessionDone = false;
+        void loadQueue();
     }
 
     function startCramAll() {
@@ -2494,11 +2541,13 @@
             {endPicked}
             starredCardCount={sessionStarredCardIDs.size || starredCardIDs.size}
             sessionDuration={sessionDurationText()}
+            sessionMinutes={Math.max(1, Math.round((Date.now() - sessionStartedAt) / 60000))}
             targetProgress={targetProgressText()}
+            isCramMode={cramActive || isCramMode}
             onPickEnd={pickEnd}
-            onReturnHome={() => ctx.openDashboard()}
+            onReturnHome={isCramMode ? exitCramSession : () => ctx.openDashboard()}
             onOpenManager={() => ctx.openDashboard("manage")}
-            onReviewAgain={loadQueue}
+            onReviewAgain={isCramMode ? () => { resetCramSessionState(); void loadQueue(); } : loadQueue}
             onCramForgotten={startCramForgotten}
             onCramStarred={startCramStarred}
         />
@@ -2507,7 +2556,7 @@
             <ReviewProgressHeader
                 {headScopeLabel}
                 {entryCtx}
-                {cramActive}
+                cramActive={cramActive || isCramMode}
                 {budgetMin}
                 {budgetExpired}
                 budgetClockText={budgetClockText()}
@@ -2542,6 +2591,7 @@
                 {hasSvgCanvas}
                 isStarred={isCardStarred(current)}
                 isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
+                isCramMode={cramActive || isCramMode}
                 {actionBusy}
                 {dismissBusy}
                 {lastAnswered}
@@ -2551,6 +2601,7 @@
                 {prefsOpen}
                 {hasOverrides}
                 {t}
+                onOpenCramModal={openCramModal}
                 onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
                 onAdjustFontScale={adjustFontScale}
                 onOpenSessionOptions={openSessionOptions}
@@ -2785,6 +2836,17 @@
         onSuspendToday={suspendToday}
         onDismissCard={() => void dismissCurrentCard()}
         onCloseZoomedImage={closeZoomedImage}
+    />
+
+    <ReviewCramModal
+        open={showCramModal}
+        {t}
+        initialScope={cramScope}
+        initialRandomOrder={cramRandomOrder}
+        isCramActive={cramActive || isCramMode}
+        onClose={() => (showCramModal = false)}
+        onStart={startCramSession}
+        onExitCram={exitCramSession}
     />
 </div>
 

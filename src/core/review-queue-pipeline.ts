@@ -6,6 +6,7 @@
 
 import { filterBurySiblings, disperseSiblings } from "./sibling-cards";
 import { DEFAULT_LEECH_THRESHOLD, isLeechCard } from "./revlog";
+import { isCardDueThisWeek, CRAM_LEECH_THRESHOLD, type CramScope } from "./cram-mode";
 
 export interface QueuePipelineCard {
     cardID: string;
@@ -14,6 +15,8 @@ export interface QueuePipelineCard {
     blockID?: string;
     sourceBlockId?: string;
     isLeech?: boolean;
+    due?: string | number;
+    nextDues?: Record<string, string>;
 }
 
 export interface QueuePipelineOptions<TCard> {
@@ -22,6 +25,7 @@ export interface QueuePipelineOptions<TCard> {
     burySiblings?: boolean;
     disperseSiblings?: boolean;
     cramActive?: boolean;
+    cramScope?: CramScope;
     reverseOrder?: boolean;
     randomOrder?: boolean;
     shuffleFn?: (cards: TCard[]) => TCard[];
@@ -41,21 +45,31 @@ export function applyQueuePipeline<TCard extends QueuePipelineCard>(
         isLeech: isLeechCard(c, options.leechThreshold ?? DEFAULT_LEECH_THRESHOLD),
     }) as TCard);
 
+    // 0. Cram 突击快刷专属范围筛选（全部卡片 / 本周待复习 / 仅水蛭卡 lapses≥5）
+    if (options.cramActive && options.cramScope) {
+        if (options.cramScope === "leech") {
+            const threshold = options.leechThreshold ?? CRAM_LEECH_THRESHOLD;
+            result = result.filter(c => (c.lapses ?? 0) >= threshold);
+        } else if (options.cramScope === "weekDue") {
+            result = result.filter(c => isCardDueThisWeek(c as any));
+        }
+    }
+
     // 1. 仅新卡 / 仅旧卡模式（睡前巩固包）
     if (options.scopeKey === "new" || options.scopeKey === "old") {
         result = result.filter(c => (options.scopeKey === "new") === (c.state === 0));
     }
 
     // 2. 排序策略（必须在兄弟卡防剧透与批次截断前执行，保证考前冲刺高难卡、全局倒序/乱序真正生效）
-    if (options.cramActive) {
-        // 考前冲刺：遗忘多次的高难卡优先
-        result.sort((a, b) => b.lapses - a.lapses);
+    if (options.randomOrder && options.shuffleFn) {
+        // 随机乱序（Cram 或常规随机）
+        result = options.shuffleFn(result);
+    } else if (options.cramActive) {
+        // 考前冲刺非乱序：遗忘多次的高难卡优先
+        result.sort((a, b) => (b.lapses ?? 0) - (a.lapses ?? 0));
     } else if (options.reverseOrder) {
         // 倒序模式：最新到期优先
         result.reverse();
-    } else if (options.randomOrder && options.shuffleFn) {
-        // 随机乱序
-        result = options.shuffleFn(result);
     }
 
     // 3. 同源兄弟卡防剧透推迟或自动错峰排列（Anki Bury / Disperse Siblings）

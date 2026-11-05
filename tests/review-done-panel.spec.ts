@@ -129,4 +129,38 @@ describe("ReviewDonePanel 复习完成面板组件", () => {
         await fireEvent.click(getByText("再来一组"));
         expect(onReviewAgain).toHaveBeenCalled();
     });
+
+    it("突击快刷模式 (isCramMode: true) 结算卡契约与操作按钮响应", async () => {
+        const onReturnHome = vi.fn();
+        const onReviewAgain = vi.fn();
+
+        const { getByTestId, getByText } = render(ReviewDonePanel, {
+            props: {
+                ...defaultProps,
+                isCramMode: true,
+                sessionNew: 2,
+                sessionReview: 5,
+                sessionForget: 3,
+                sessionMinutes: 4,
+                onReturnHome,
+                onReviewAgain,
+            },
+        });
+
+        // 验证顶部突击小结胶囊文案
+        const summary = getByTestId("cram-done-summary");
+        expect(summary).toBeTruthy();
+        expect(summary.textContent).toContain("突击完成！共过题 10 张 · 耗时 4 分钟 · 算法排期未受干扰");
+
+        // 验证主操作区支持再刷与退出
+        const againBtn = getByTestId("cram-again-btn");
+        expect(againBtn).toBeTruthy();
+        await fireEvent.click(againBtn);
+        expect(onReviewAgain).toHaveBeenCalledOnce();
+
+        const exitBtn = getByTestId("cram-exit-btn");
+        expect(exitBtn).toBeTruthy();
+        await fireEvent.click(exitBtn);
+        expect(onReturnHome).toHaveBeenCalledOnce();
+    });
 });

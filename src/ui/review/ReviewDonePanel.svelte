@@ -23,7 +23,9 @@
         endPicked = null,
         starredCardCount = 0,
         sessionDuration = "",
+        sessionMinutes = 1,
         targetProgress = "",
+        isCramMode = false,
         onPickEnd,
         onReturnHome,
         onOpenManager,
@@ -47,7 +49,9 @@
         endPicked?: string | null;
         starredCardCount?: number;
         sessionDuration?: string;
+        sessionMinutes?: number;
         targetProgress?: string;
+        isCramMode?: boolean;
         onPickEnd: (r: EndReason) => void;
         onReturnHome: () => void;
         onOpenManager: () => void;
@@ -99,18 +103,31 @@
     <!-- T07 结果面（R52 results）：单面板 + check 徽 + 大数字统计 + 行式补充 + NEXT 软面板 -->
     <div class="lv-done-panel">
         <!-- Mobile Spec v1 深化：会话小结卡（替代直接静默退出） -->
-        <div class="lv-done-summary-card" role="status" aria-label="本次复习小结">
-            <span class="lv-done-summary-pill">
-                <LvIcon name="check" size={15} />
-                <span><strong>{totalAnswered} 张</strong> · 用时 <strong>{sessionDuration || "0秒"}</strong> · 正确率 <strong>{retentionRate}%</strong></span>
-            </span>
+        <div class="lv-done-summary-card" role="status" aria-label={isCramMode ? "突击快刷小结" : "本次复习小结"}>
+            {#if isCramMode}
+                <span class="lv-done-summary-pill lv-done-summary-pill--cram" data-testid="cram-done-summary">
+                    <LvIcon name="zap" size={15} />
+                    <span>突击完成！共过题 <strong>{totalAnswered}</strong> 张 · 耗时 <strong>{sessionMinutes} 分钟</strong> · 算法排期未受干扰</span>
+                </span>
+            {:else}
+                <span class="lv-done-summary-pill">
+                    <LvIcon name="check" size={15} />
+                    <span><strong>{totalAnswered} 张</strong> · 用时 <strong>{sessionDuration || "0秒"}</strong> · 正确率 <strong>{retentionRate}%</strong></span>
+                </span>
+            {/if}
         </div>
         <div class="lv-done-head">
-            <span class="check lv-done-check" aria-hidden="true"><LvIcon name="check" size={24} /></span>
+            <span class="check lv-done-check" class:lv-done-check--cram={isCramMode} aria-hidden="true">
+                <LvIcon name={isCramMode ? "zap" : "check"} size={24} />
+            </span>
             <div class="lv-done-headtext">
-                <div class="lv-done-title">{t.review?.done ?? "今日已完成"}</div>
+                <div class="lv-done-title">{isCramMode ? "突击快刷已完成" : (t.review?.done ?? "今日已完成")}</div>
                 <div class="lv-done-sub">
-                    {t.review?.doneNew ?? "新学"} {sessionNew} · {t.review?.doneReview ?? "复习"} {sessionReview} · {t.review?.doneForget ?? "遗忘"} {sessionForget} · {t.review?.doneSkip ?? "跳过"} {sessionSkip}
+                    {#if isCramMode}
+                        共过题 {totalAnswered} · 自评熟练 {sessionNew + sessionReview} · 需强化 {sessionForget} · 跳过 {sessionSkip}
+                    {:else}
+                        {t.review?.doneNew ?? "新学"} {sessionNew} · {t.review?.doneReview ?? "复习"} {sessionReview} · {t.review?.doneForget ?? "遗忘"} {sessionForget} · {t.review?.doneSkip ?? "跳过"} {sessionSkip}
+                    {/if}
                 </div>
             </div>
             <div class="lv-done-bubbles">
@@ -132,7 +149,7 @@
             <div class="lv-done-stat">
                 <span class="lv-done-stat-label">{t.review?.doneAnsweredLabel ?? "本场作答"}</span>
                 <span class="lv-hero-num" use:countUp={totalAnswered}>{totalAnswered}</span>
-                <p>{PURPOSE_PROFILES[purpose]?.grading === "informal" ? t.review?.purposeInformal : t.review?.doneConfirm}</p>
+                <p>{isCramMode ? "仅内存计数（零排期污染）" : (PURPOSE_PROFILES[purpose]?.grading === "informal" ? t.review?.purposeInformal : t.review?.doneConfirm)}</p>
             </div>
             <div class="lv-done-stat">
                 <span class="lv-done-stat-label">{t.review?.doneSkip ?? "跳过"}</span>
@@ -142,13 +159,13 @@
             <div class="lv-done-stat">
                 <span class="lv-done-stat-label">{t.review?.sessionTime ?? "用时"}</span>
                 <span class="lv-hero-num">{sessionDuration}</span>
-                <p>{targetProgress}</p>
+                <p>{isCramMode ? `突击用时约 ${sessionMinutes} 分钟` : targetProgress}</p>
             </div>
         </div>
         {#if budgetMin > 0}
             <div class="lv-notice">{budgetExpired ? t.review?.budgetDoneTip : t.review?.budgetDoneRemind ?? "本场预算未用完，剩余卡片会保留在队列里，随时可以再来一批。"}</div>
         {/if}
-        {#if remainingDue !== null && remainingDue > 0}
+        {#if !isCramMode && remainingDue !== null && remainingDue > 0}
             <div class="lv-notice">{(t.review?.remainingDue ?? "还有 ${n} 张待复习").replace("${n}", String(remainingDue))}</div>
         {/if}
         {#if streakMilestone}
@@ -157,24 +174,26 @@
         {#if dailyTip}
             <div class="lv-done-tip">{dailyTip}</div>
         {/if}
-        <!-- BI-8：收工原因收集 -->
-        <div class="lv-done-end-box" role="group" aria-label={t.endReason?.title ?? "收工原因"}>
-            <span class="lv-done-end-title">{t.endReason?.title ?? "收工原因"}</span>
-            <div class="lv-done-end-chips">
-                {#each END_REASONS as r (r)}
-                    <button
-                        type="button"
-                        class="lv-chipbtn"
-                        class:lv-chipbtn-active={endPicked === r}
-                        aria-pressed={endPicked === r}
-                        onclick={() => onPickEnd(r)}
-                    >
-                        {#if endPicked === r}<LvIcon name="check" size={12} />{/if}
-                        <span>{t.endReason?.[r] ?? r}</span>
-                    </button>
-                {/each}
+        {#if !isCramMode}
+            <!-- BI-8：收工原因收集 -->
+            <div class="lv-done-end-box" role="group" aria-label={t.endReason?.title ?? "收工原因"}>
+                <span class="lv-done-end-title">{t.endReason?.title ?? "收工原因"}</span>
+                <div class="lv-done-end-chips">
+                    {#each END_REASONS as r (r)}
+                        <button
+                            type="button"
+                            class="lv-chipbtn"
+                            class:lv-chipbtn-active={endPicked === r}
+                            aria-pressed={endPicked === r}
+                            onclick={() => onPickEnd(r)}
+                        >
+                            {#if endPicked === r}<LvIcon name="check" size={12} />{/if}
+                            <span>{t.endReason?.[r] ?? r}</span>
+                        </button>
+                    {/each}
+                </div>
             </div>
-        </div>
+        {/if}
         {#if sessionSkip > 0 || sessionForget > 0 || starredCardCount > 0}
             <div class="lv-done-next">
                 <div class="lv-eyebrow">{t.review?.nextTitle ?? "下一步建议"}</div>
@@ -203,30 +222,51 @@
             </div>
         {/if}
         <div class="fn__flex lv-done-actions" style="justify-content: center; gap: var(--lv-sp-2)">
-            <button
-                class="b3-button lv-btn-primary"
-                title={`${t.review?.returnHome ?? "返回闪卡主页"} (Enter)`}
-                aria-keyshortcuts="Enter"
-                onclick={onReturnHome}
-            >
-                <LvIcon name="home" size={16} /> <span>{t.review?.returnHome ?? "返回闪卡主页"}</span>
-            </button>
-            <button
-                class="b3-button b3-button--outline lv-btn-tool"
-                title={`${t.menuManager ?? "卡片管理"} (m)`}
-                aria-keyshortcuts="m"
-                onclick={onOpenManager}
-            >
-                <LvIcon name="cards" size={14} /> <span>{t.menuManager ?? "卡片管理"}</span>
-            </button>
-            <button
-                class="b3-button b3-button--outline lv-btn-tool"
-                title={`${t.review?.again ?? "再来一组"} (r)`}
-                aria-keyshortcuts="r"
-                onclick={onReviewAgain}
-            >
-                <LvIcon name="refresh" size={14} /> <span>{t.review?.again ?? "再来一组"}</span>
-            </button>
+            {#if isCramMode}
+                <button
+                    class="b3-button lv-btn-primary"
+                    title="再刷一组 (r)"
+                    aria-keyshortcuts="r"
+                    onclick={onReviewAgain}
+                    data-testid="cram-again-btn"
+                >
+                    <LvIcon name="refresh" size={14} /> <span>再刷一组</span>
+                </button>
+                <button
+                    class="b3-button b3-button--outline lv-btn-tool"
+                    title="退出快刷 (Enter)"
+                    aria-keyshortcuts="Enter"
+                    onclick={onReturnHome}
+                    data-testid="cram-exit-btn"
+                >
+                    <LvIcon name="home" size={16} /> <span>退出快刷</span>
+                </button>
+            {:else}
+                <button
+                    class="b3-button lv-btn-primary"
+                    title={`${t.review?.returnHome ?? "返回闪卡主页"} (Enter)`}
+                    aria-keyshortcuts="Enter"
+                    onclick={onReturnHome}
+                >
+                    <LvIcon name="home" size={16} /> <span>{t.review?.returnHome ?? "返回闪卡主页"}</span>
+                </button>
+                <button
+                    class="b3-button b3-button--outline lv-btn-tool"
+                    title={`${t.menuManager ?? "卡片管理"} (m)`}
+                    aria-keyshortcuts="m"
+                    onclick={onOpenManager}
+                >
+                    <LvIcon name="cards" size={14} /> <span>{t.menuManager ?? "卡片管理"}</span>
+                </button>
+                <button
+                    class="b3-button b3-button--outline lv-btn-tool"
+                    title={`${t.review?.again ?? "再来一组"} (r)`}
+                    aria-keyshortcuts="r"
+                    onclick={onReviewAgain}
+                >
+                    <LvIcon name="refresh" size={14} /> <span>{t.review?.again ?? "再来一组"}</span>
+                </button>
+            {/if}
         </div>
     </div>
 </div>
@@ -265,6 +305,36 @@
         color: var(--lv-color-brand);
         font-weight: var(--lv-fw-bold);
         font-variant-numeric: tabular-nums;
+    }
+    .lv-done-summary-pill--cram {
+        background: color-mix(in srgb, #f59e0b 14%, var(--lv-color-surface));
+        border-color: color-mix(in srgb, #f59e0b 45%, transparent);
+        color: #d97706;
+
+        :global(svg) {
+            color: #d97706;
+        }
+
+        strong {
+            color: #b45309;
+        }
+    }
+    :global([data-theme-mode="dark"]) .lv-done-summary-pill--cram {
+        background: color-mix(in srgb, #f59e0b 20%, #1e1e24);
+        border-color: color-mix(in srgb, #f59e0b 60%, transparent);
+        color: #fbbf24;
+
+        :global(svg) {
+            color: #fbbf24;
+        }
+
+        strong {
+            color: #fde68a;
+        }
+    }
+    .lv-done-check--cram {
+        color: #f59e0b;
+        background: color-mix(in srgb, #f59e0b 16%, transparent);
     }
     @keyframes lvDonePop {
         from { opacity: 0; transform: translateY(-4px) scale(0.97); }

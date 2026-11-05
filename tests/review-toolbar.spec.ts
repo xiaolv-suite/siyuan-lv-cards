@@ -142,4 +142,43 @@ describe("ReviewToolbar 复习顶栏与更多命令气泡组件", () => {
         await fireEvent.click(getByTitle("暂停"));
         expect(onPause).toHaveBeenCalledOnce();
     });
+
+    it("点击突击快刷按钮触发 onOpenCramModal 回调，并支持突击状态渲染", async () => {
+        const onOpenCramModal = vi.fn();
+        const { getByTestId, rerender } = render(ReviewToolbar, {
+            props: {
+                scopeKey: "all",
+                current: { cardID: "c1" },
+                t: mockT,
+                isCramMode: false,
+                onOpenCramModal,
+                onAdjustFontScale: vi.fn(),
+                onToggleStar: vi.fn(),
+                onToggleMarkIssue: vi.fn(),
+                onPause: vi.fn(),
+                onUndo: vi.fn(),
+                onSkip: vi.fn(),
+                onToggleContext: vi.fn(),
+                onTogglePrefs: vi.fn(),
+                onTogglePeek: vi.fn(),
+                onOpenInEditor: vi.fn(),
+                onRefreshCard: vi.fn(),
+                onOpenMemoEditor: vi.fn(),
+                onOpenRetireModal: vi.fn(),
+                onOpenHelp: vi.fn(),
+            },
+        });
+
+        const cramBtn = getByTestId("review-tb-cram-btn");
+        expect(cramBtn).toBeTruthy();
+        expect(cramBtn.textContent).toContain("考前突击快刷");
+
+        await fireEvent.click(cramBtn);
+        expect(onOpenCramModal).toHaveBeenCalledOnce();
+
+        // 重新渲染为 isCramMode: true
+        rerender({ isCramMode: true });
+        expect(cramBtn.classList.contains("lv-cram-btn-active")).toBe(true);
+        expect(cramBtn.textContent).toContain("突击中");
+    });
 });

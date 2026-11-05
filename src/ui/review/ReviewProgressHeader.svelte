@@ -107,7 +107,12 @@
         </span>
     {/if}
     <div class="fn__flex-1"></div>
-    {#if cramActive}<span class="lv-chip2 lv-chip2--error" data-testid="review-cram-chip">{t?.exam?.cramOn ?? "冲刺模式"}</span>{/if}
+    {#if cramActive}
+        <span class="lv-chip2 lv-cram-golden-chip" data-testid="review-cram-chip" data-test-badge="cram-golden" title="突击快刷模式：不更新排期参数，不写 revlog">
+            <LvIcon name="zap" size={12} />
+            <span>⚡ 突击快刷模式（排期保护中）</span>
+        </span>
+    {/if}
     {#if budgetMin > 0}
         <!-- BI-12：预算倒计时；到点转为中性提示（不自动结束、不算失败） -->
         {#if budgetExpired}
@@ -243,5 +248,26 @@
     .lv-tags {
         display: flex;
         gap: var(--lv-sp-1);
+    }
+    .lv-cram-golden-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: color-mix(in srgb, #f59e0b 16%, var(--lv-color-surface, #ffffff));
+        border: 1px solid color-mix(in srgb, #f59e0b 60%, transparent);
+        color: #d97706;
+        font-weight: var(--lv-fw-semibold, 600);
+        padding: 2px 8px;
+        border-radius: var(--lv-r-tag, 999px);
+        box-shadow: 0 0 8px color-mix(in srgb, #f59e0b 25%, transparent);
+
+        :global(svg) {
+            color: #f59e0b;
+        }
+    }
+    :global([data-theme-mode="dark"]) .lv-cram-golden-chip {
+        background: color-mix(in srgb, #f59e0b 22%, #1e1e24);
+        border-color: color-mix(in srgb, #f59e0b 70%, transparent);
+        color: #fbbf24;
     }
 </style>
