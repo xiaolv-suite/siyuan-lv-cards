@@ -80,6 +80,12 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
         }
     });
     dialog.element.classList.add("lv-dialog");
+    // 点击遮罩背景快速关闭
+    dialog.element.addEventListener("click", (e) => {
+        if (e.target === dialog.element || (e.target as HTMLElement).classList?.contains("b3-dialog__scrim")) {
+            dialog.destroy();
+        }
+    });
 
     const target: HTMLElement = dialog.element.querySelector(".b3-dialog__content>div.ft__breakword");
     if (typeof content === "string") {
@@ -139,6 +145,12 @@ export const simpleDialog = (args: {
         contentEl.appendChild(args.ele);
     }
     dialog.element.classList.add("lv-dialog");
+    // 点击遮罩背景快速关闭
+    dialog.element.addEventListener("click", (e) => {
+        if (e.target === dialog.element || (e.target as HTMLElement).classList?.contains("b3-dialog__scrim")) {
+            dialog.destroy();
+        }
+    });
     return {
         dialog,
         close: dialog.destroy.bind(dialog)
