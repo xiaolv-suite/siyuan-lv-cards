@@ -21,6 +21,7 @@ export const CARDS_BRIDGE_CAPABILITIES = [
     "hasCapability",
     "getOverview",
     "receiveExtract",
+    "createCard",
     "daily-task-export",
     "today-summary",
 ] as const;
@@ -81,6 +82,13 @@ export interface CardsBridgeApi {
     openHub(tab?: string): Promise<ActionResult<boolean>>;
     openReview(options?: ReviewOpenOptions): Promise<ActionResult<boolean>>;
     receiveExtract(envelope: ExtractEnvelope): Promise<ActionResult<{ blockID?: string; enrolled?: boolean }>>;
+    createCard?(options: {
+        front: string;
+        back?: string;
+        tags?: string[];
+        deckName?: string;
+        sourceDocId?: string;
+    }): Promise<ActionResult<{ blockID?: string; ok?: boolean }>>;
     generateDailyTaskMarkdown(options?: { customPrefix?: string }): Promise<ActionResult<{ markdown: string; dueCount: number }>>;
     getTodaySummaryText(options?: { customPrefix?: string }): Promise<ActionResult<{ text: string; dueCount: number }>>;
 }
@@ -163,6 +171,30 @@ export function buildCardsBridge(host: CardsBridgeHost): CardsBridgeApi {
                 return wrap("extract-failed", () => host.receiveExtract!(envelope));
             }
             return Promise.resolve({ ok: false, code: "not-supported", message: "receiveExtract is not supported by current host" });
+        },
+        createCard: (options: {
+            front: string;
+            back?: string;
+            tags?: string[];
+            deckName?: string;
+            sourceDocId?: string;
+        }) => {
+            const content = options.back?.trim()
+                ? `${options.front.trim()} ==${options.back.trim()}==`
+                : options.front.trim();
+            return wrap("create-card-failed", async () => {
+                if (typeof host.receiveExtract === "function") {
+                    const res = await host.receiveExtract({
+                        content,
+                        sourceBlockId: options.sourceDocId || "",
+                        sourceDocId: options.sourceDocId,
+                        sourceTitle: options.deckName || "外部同步",
+                        tags: options.tags,
+                    });
+                    return { ok: Boolean(res?.enrolled ?? true), blockID: res?.blockID };
+                }
+                return { ok: false };
+            });
         },
         generateDailyTaskMarkdown: (opts?: { customPrefix?: string }) => {
             return wrap("daily-task-failed", async () => {
