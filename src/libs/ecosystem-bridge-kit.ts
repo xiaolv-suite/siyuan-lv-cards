@@ -596,7 +596,9 @@ export async function getExamOverviewSafely(): Promise<{ name: string; days: num
         if (typeof exam.getOverview === "function") {
             const overview: any = exam.getOverview();
             if (overview && typeof overview === "object") {
-                const examDateStr = overview.examDate || overview.targetDate;
+                const stats: any = overview.stats;
+                const activeWrong = stats?.activeWrong ?? stats?.activeWrongCount ?? overview.activeWrongCount;
+                const examDateStr = overview.examDate || overview.targetDate || stats?.examDate;
                 if (examDateStr && typeof examDateStr === "string") {
                     const target = new Date(examDateStr);
                     if (!Number.isNaN(target.getTime())) {
@@ -606,9 +608,16 @@ export async function getExamOverviewSafely(): Promise<{ name: string; days: num
                         return {
                             name: overview.examTitle || overview.title || "小驴考试目标",
                             days,
-                            activeWrongCount: overview.activeWrongCount,
+                            activeWrongCount: activeWrong,
                         };
                     }
+                }
+                if (typeof activeWrong === "number") {
+                    return {
+                        name: overview.examTitle || overview.title || "小驴考试",
+                        days: 0,
+                        activeWrongCount: activeWrong,
+                    };
                 }
             }
         }
