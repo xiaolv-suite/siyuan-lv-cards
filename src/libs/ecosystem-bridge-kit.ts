@@ -464,17 +464,32 @@ export async function logCheckinEventSafely(options: {
         "checkin",
         "events.record.batch",
         async (bridge) => {
-            const results = await bridge.recordEventsBatch([{
-                itemId: options.itemId,
-                value: options.value ?? 1,
-                unit: options.unit,
-                source: "api",
-                externalRef: options.externalRef,
-                note: options.note,
-                occurredAt: options.occurredAt ?? new Date().toISOString(),
-            }]);
-            const r = results[0];
-            return r?.kind === "recorded" || r?.kind === "duplicate";
+            if (typeof bridge.recordEventsBatch === "function") {
+                const results = await bridge.recordEventsBatch([{
+                    itemId: options.itemId,
+                    value: options.value ?? 1,
+                    unit: options.unit,
+                    source: "api",
+                    externalRef: options.externalRef,
+                    note: options.note,
+                    occurredAt: options.occurredAt ?? new Date().toISOString(),
+                }]);
+                const r = results?.[0];
+                return r?.kind === "recorded" || r?.kind === "duplicate";
+            }
+            if (typeof (bridge as any).recordEvent === "function") {
+                const r = await (bridge as any).recordEvent({
+                    itemId: options.itemId,
+                    value: options.value ?? 1,
+                    unit: options.unit,
+                    source: "api",
+                    externalRef: options.externalRef,
+                    note: options.note,
+                    occurredAt: options.occurredAt ?? new Date().toISOString(),
+                });
+                return r?.kind === "recorded" || r?.kind === "duplicate" || r?.status === "recorded" || r?.status === "duplicate" || Boolean(r);
+            }
+            return false;
         },
         () => false
     );
