@@ -178,6 +178,41 @@ describe("小驴闪卡对外窗口桥与事件总线（Epoch 6）", () => {
         expect(doneTaskRes.data.markdown).toBe("- [x] 记忆复习：今日已无待复习闪卡");
     });
 
+    it("receiveExtract：支持接收小驴拾遗等外部推送的渐进摘录", async () => {
+        const receiveExtractSpy = vi.fn().mockResolvedValue({ blockID: "b-123", enrolled: true });
+        const host = makeHost({
+            receiveExtract: receiveExtractSpy,
+        });
+        const bridge = buildCardsBridge(host);
+        const res = await bridge.receiveExtract({
+            content: "渐进高亮核心内容",
+            sourceBlockId: "b-123",
+            sourceTitle: "参考文档",
+        });
+
+        expect(res.ok).toBe(true);
+        if (res.ok) {
+            expect(res.data.enrolled).toBe(true);
+            expect(res.data.blockID).toBe("b-123");
+        }
+        expect(receiveExtractSpy).toHaveBeenCalledWith({
+            content: "渐进高亮核心内容",
+            sourceBlockId: "b-123",
+            sourceTitle: "参考文档",
+        });
+
+        // host 未实现时优雅降级
+        const noExtractBridge = buildCardsBridge(makeHost());
+        const unsupportedRes = await noExtractBridge.receiveExtract({
+            content: "某内容",
+            sourceBlockId: "b-999",
+        });
+        expect(unsupportedRes.ok).toBe(false);
+        if (!unsupportedRes.ok) {
+            expect(unsupportedRes.code).toBe("not-supported");
+        }
+    });
+
     it("dispatchCardReviewedEvent：通过 window.dispatchEvent 派发标准生态事件", () => {
         const dispatchSpy = vi.spyOn(window, "dispatchEvent");
         try {

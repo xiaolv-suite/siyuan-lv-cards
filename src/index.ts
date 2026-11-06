@@ -46,6 +46,7 @@ import { buildStarredAttrs, buildLeechAttrs, buildErrorReasonAttrs } from "./cor
 import { buildDynamicBoardMarkdown, DYNAMIC_BOARD_DOC_PATH } from "./core/dynamic-notebook";
 import { aiChat, estimateTokens, parseCards, isAICanceled } from "./api/ai";
 import { rollDateIfNeeded, type SuspendTodayData } from "./core/suspend-today";
+import { type ExtractEnvelope } from "./core/incremental-learning";
 import { createSuspendTodayMutations } from "./core/suspend-today-persistence";
 import { createSnapshotMutationQueue } from "./core/snapshot-mutation-queue";
 import { normalizeLedger, type LedgerEntry } from "./core/import-ledgers";
@@ -455,6 +456,7 @@ export default class LvCardsPlugin extends Plugin {
     private omnisearchCleaner?: () => void;
     private autoRuleCleaner?: () => void;
     private gleanRuleCleaner?: () => void;
+    private incrementalExtractCleaner?: () => void;
     private aiBatches: AIBatchesData = { version: 1, batches: [] };
     private aiBatchesMutationVersion = 0;
     private costLedgerMutationVersion = 0;
@@ -1192,15 +1194,16 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
-    /** 响应跨插件自动化规则 (lvAutomation)：从小驴拾遗高亮摘录自动生成闪卡 */
+    /** 响应跨插件自动化规则 (lvAutomation) 与渐进摘录 (incremental-extract)：从小驴拾遗高亮摘录自动生成闪卡 */
     public async createCardFromGlean(payload: any): Promise<boolean> {
         if (!payload) return false;
         try {
-            const front = String(payload.front || "").trim();
+            const front = String(payload.front || payload.text || payload.content || "").trim();
             const back = String(payload.back || "").trim();
             const tags = payload.tags;
-            const sourceBlockId = payload.sourceBlockId ? String(payload.sourceBlockId) : undefined;
-            const sourceTitle = String(payload.sourceTitle || "小驴拾遗").trim();
+            const sourceBlockId = payload.sourceBlockId || payload.sourceBlockID || payload.blockId ? String(payload.sourceBlockId || payload.sourceBlockID || payload.blockId) : undefined;
+            const sourceDocId = payload.sourceDocId || payload.sourceDocID || payload.docId ? String(payload.sourceDocId || payload.sourceDocID || payload.docId) : undefined;
+            const sourceTitle = String(payload.sourceTitle || payload.docTitle || "小驴拾遗").trim();
 
             if (!front) return false;
 
@@ -1238,16 +1241,24 @@ export default class LvCardsPlugin extends Plugin {
                 deckID,
                 markdown: cardMd,
                 sourceBlockID: sourceBlockId,
+                sourceDocID: sourceDocId,
                 sourceTitle,
             });
 
-            // 标签处理
-            if (tags && created.blockID) {
+            // 标签处理与渐进摘录血缘属性写入
+            if (created.blockID) {
                 try {
-                    const tagStr = Array.isArray(tags) ? tags.join(" ") : String(tags);
-                    if (tagStr.trim()) {
-                        await setBlockAttrs(created.blockID, { "custom-riff-tags": tagStr.trim() });
+                    const attrs: Record<string, string> = {
+                        "custom-lv-card-type": "extract",
+                        "custom-lv-dismissed": "false",
+                    };
+                    if (sourceBlockId) attrs["custom-lv-source-block"] = sourceBlockId;
+                    if (sourceDocId) attrs["custom-lv-source-doc"] = sourceDocId;
+                    if (tags) {
+                        const tagStr = Array.isArray(tags) ? tags.join(" ") : String(tags);
+                        if (tagStr.trim()) attrs["custom-riff-tags"] = tagStr.trim();
                     }
+                    await setBlockAttrs(created.blockID, attrs);
                 } catch { /* 旁路 */ }
             }
 
@@ -1266,6 +1277,21 @@ export default class LvCardsPlugin extends Plugin {
             } catch { /* 旁路 */ }
             return false;
         }
+    }
+
+    /** 对外桥接口实现：接收外部（如小驴拾遗）推送的渐进摘录包 */
+    public async receiveExtract(envelope: ExtractEnvelope): Promise<{ blockID?: string; enrolled?: boolean }> {
+        if (!envelope) return { enrolled: false };
+        const front = String(envelope.content || "").trim();
+        if (!front) return { enrolled: false };
+        const success = await this.createCardFromGlean({
+            front,
+            tags: envelope.tags,
+            sourceBlockId: envelope.sourceBlockId,
+            sourceDocId: envelope.sourceDocId,
+            sourceTitle: envelope.sourceTitle,
+        });
+        return { blockID: envelope.sourceBlockId, enrolled: success };
     }
 
     async onload() {
@@ -1370,6 +1396,7 @@ export default class LvCardsPlugin extends Plugin {
             },
             openHub: tab => this.openTabOf(TAB_DASHBOARD, tab ? { tab } : undefined),
             openReview: opts => this.openTabOf(TAB_REVIEW, opts as Record<string, unknown>),
+            receiveExtract: async (envelope: ExtractEnvelope) => this.receiveExtract(envelope),
         });
 
         // 向小驴雷切工作台安全注册待复习闪卡组件（Ecosystem Federation Epoch 6 / Bento 3.0）
@@ -1516,6 +1543,20 @@ export default class LvCardsPlugin extends Plugin {
                 return await this.createCardFromGlean(payload);
             }
         });
+
+        // 监听生态事件 lv-cards:incremental-extract（小驴拾遗原生派发）
+        if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+            const onIncrementalExtract = (evt: Event) => {
+                const detail = (evt as CustomEvent).detail;
+                if (detail) {
+                    void this.createCardFromGlean(detail);
+                }
+            };
+            window.addEventListener("lv-cards:incremental-extract", onIncrementalExtract);
+            this.incrementalExtractCleaner = () => {
+                window.removeEventListener("lv-cards:incremental-extract", onIncrementalExtract);
+            };
+        }
     }
 
     onLayoutReady() {
@@ -1646,6 +1687,10 @@ export default class LvCardsPlugin extends Plugin {
         if (this.gleanRuleCleaner) {
             this.gleanRuleCleaner();
             this.gleanRuleCleaner = undefined;
+        }
+        if (this.incrementalExtractCleaner) {
+            this.incrementalExtractCleaner();
+            this.incrementalExtractCleaner = undefined;
         }
         if (this.launchpadCleaner) {
             this.launchpadCleaner();
