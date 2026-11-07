@@ -9,6 +9,7 @@
 import { Dialog } from "siyuan";
 import type { Component } from "svelte";
 import { trapFocus, type FocusTrap } from "./focus-trap";
+import { lvSurfaceStack } from "./lv-notice-kit";
 
 /**
  * AT-17（v0.174.0）：对话框组件挂载器注入点。
@@ -133,12 +134,31 @@ export const simpleDialog = (args: {
     width?: string, height?: string,
     callback?: () => void;
 }) => {
+    let closed = false;
+    const surfaceId = `dialog_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const popSurface = lvSurfaceStack.push({
+        id: surfaceId,
+        type: "dialog",
+        dismiss: () => {
+            if (closed) return false;
+            closed = true;
+            dialog.destroy();
+            return true;
+        },
+    });
+
     const dialog = new Dialog({
         title: `<div class="lv-dialog-title-wrap">${args.title}</div>`,
         content: `<div class="lv-cards-dialog-content dialog-content" style="display: flex; height: 100%;"></div>`,
         width: args.width,
         height: args.height,
-        destroyCallback: args.callback
+        destroyCallback: () => {
+            if (!closed) {
+                closed = true;
+                popSurface();
+            }
+            args.callback?.();
+        }
     });
     const contentEl = dialog.element.querySelector(".lv-cards-dialog-content") || dialog.element.querySelector(".dialog-content");
     if (contentEl) {
@@ -148,12 +168,22 @@ export const simpleDialog = (args: {
     // 点击遮罩背景快速关闭
     dialog.element.addEventListener("click", (e) => {
         if (e.target === dialog.element || (e.target as HTMLElement).classList?.contains("b3-dialog__scrim")) {
-            dialog.destroy();
+            if (!closed) {
+                closed = true;
+                popSurface();
+                dialog.destroy();
+            }
         }
     });
     return {
         dialog,
-        close: dialog.destroy.bind(dialog)
+        close: () => {
+            if (!closed) {
+                closed = true;
+                popSurface();
+                dialog.destroy();
+            }
+        }
     };
 }
 
