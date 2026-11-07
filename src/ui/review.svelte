@@ -1035,7 +1035,7 @@
                         if (checkinItemId) autoMatched = true;
                     }
                     if (checkinItemId && reviewedCount > 0) {
-                        const today = new Date().toISOString().slice(0, 10);
+                        const today = todayKey();
                         const accuracy = calculateReviewAccuracy({
                             newCount: sessionNew,
                             reviewCount: sessionReview,

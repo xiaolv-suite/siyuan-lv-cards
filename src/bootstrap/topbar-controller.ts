@@ -2,7 +2,7 @@ import { computeBadgeDescriptor } from "@/core/badge-reminder";
 import { cachedDueCount } from "@/api/due-shared";
 import { lvLog } from "@/libs/log";
 import { lvTicker } from "@/libs/lv-notice-kit";
-import type { ExamPlan } from "@/core/exam";
+import { todayKey, type ExamPlan } from "@/core/exam";
 
 export interface TopbarHost {
     i18n: Record<string, any>;
@@ -138,7 +138,7 @@ export class TopbarController {
             if (seq !== this.badgeSeq) return;
             this.lastDue = count;
             const activePlan = this.host.examPlans.plans.find(p => p.enabled && p.examDate);
-            const today = todayDateStr ?? new Date().toISOString().slice(0, 10);
+            const today = todayDateStr ?? todayKey();
             const todayStat = this.host.revlog.days[today];
             const descriptor = computeBadgeDescriptor({
                 reviewEnabled: !!this.host.settings.modules.review,
@@ -177,7 +177,7 @@ export class TopbarController {
 
         // 里程碑提醒（30/7/1 天，每天每档一次，内存态）
         if (desc.milestoneDays && plan) {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = todayKey();
             const key = `${plan.id}:${desc.milestoneDays}:${today}`;
             if (!this.milestonesSeen.has(key)) {
                 this.milestonesSeen.add(key);

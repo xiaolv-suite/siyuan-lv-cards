@@ -3745,7 +3745,12 @@ export default class LvCardsPlugin extends Plugin {
                         return result;
                     },
                     importRevlogMerge: async (fileText: string, onFork?: "skip" | "preferImport") => {
-                        const imported = JSON.parse(fileText);
+                        let imported: unknown;
+                        try {
+                            imported = JSON.parse(fileText);
+                        } catch {
+                            throw new Error("导入数据格式无效，不是合法的 JSON 文件");
+                        }
                         const previous = this.revlog;
                         const next = normalizeRevlog(cloneStore(previous));
                         const result = mergeRevlog(next, imported, { onFork });
