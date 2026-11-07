@@ -393,6 +393,8 @@ export default class LvCardsPlugin extends Plugin {
     private cachedRevlogVersion = -1;
     private cachedReviewedBlockIDs: Set<string> | null = null;
     private cachedLapsesMap: Record<string, number> | null = null;
+    /** 渐进摘录制卡 3 秒幂等去重防重复入库缓存 */
+    private recentExtractMap = new Map<string, number>();
 
     getRevlogBlockIndex(): { reviewedSet: Set<string>; lapsesMap: Record<string, number> } {
         if (this.cachedRevlogVersion === this.revlogMutationVersion && this.cachedReviewedBlockIDs && this.cachedLapsesMap) {
@@ -1202,6 +1204,19 @@ export default class LvCardsPlugin extends Plugin {
             const back = String(payload.back || "").trim();
             const tags = payload.tags;
             const sourceBlockId = payload.sourceBlockId || payload.sourceBlockID || payload.blockId ? String(payload.sourceBlockId || payload.sourceBlockID || payload.blockId) : undefined;
+            if (sourceBlockId) {
+                const now = Date.now();
+                const last = this.recentExtractMap.get(sourceBlockId);
+                if (last && now - last < 3000) {
+                    return true;
+                }
+                this.recentExtractMap.set(sourceBlockId, now);
+                if (this.recentExtractMap.size > 200) {
+                    for (const [k, t] of this.recentExtractMap) {
+                        if (now - t > 10000) this.recentExtractMap.delete(k);
+                    }
+                }
+            }
             const sourceDocId = payload.sourceDocId || payload.sourceDocID || payload.docId ? String(payload.sourceDocId || payload.sourceDocID || payload.docId) : undefined;
             const sourceTitle = String(payload.sourceTitle || payload.docTitle || "小驴拾遗").trim();
 
@@ -1280,10 +1295,10 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** 对外桥接口实现：接收外部（如小驴拾遗）推送的渐进摘录包 */
-    public async receiveExtract(envelope: ExtractEnvelope): Promise<{ blockID?: string; enrolled?: boolean }> {
-        if (!envelope) return { enrolled: false };
+    public async receiveExtract(envelope: ExtractEnvelope): Promise<{ blockID?: string; enrolled?: boolean; ok?: boolean }> {
+        if (!envelope) return { enrolled: false, ok: false };
         const front = String(envelope.content || "").trim();
-        if (!front) return { enrolled: false };
+        if (!front) return { enrolled: false, ok: false };
         const success = await this.createCardFromGlean({
             front,
             tags: envelope.tags,
@@ -1291,7 +1306,7 @@ export default class LvCardsPlugin extends Plugin {
             sourceDocId: envelope.sourceDocId,
             sourceTitle: envelope.sourceTitle,
         });
-        return { blockID: envelope.sourceBlockId, enrolled: success };
+        return { blockID: envelope.sourceBlockId, enrolled: success, ok: success };
     }
 
     async onload() {
