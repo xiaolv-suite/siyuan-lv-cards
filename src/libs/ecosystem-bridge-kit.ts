@@ -611,7 +611,7 @@ export async function getExamOverviewSafely(): Promise<{ name: string; days: num
                 const activeWrong = stats?.activeWrong ?? stats?.activeWrongCount ?? overview.activeWrongCount;
                 const examDateStr = overview.examDate || overview.targetDate || stats?.examDate;
                 if (examDateStr && typeof examDateStr === "string") {
-                    const target = new Date(examDateStr);
+                    const target = new Date(examDateStr.includes("T") ? examDateStr : examDateStr.replace(/-/g, "/"));
                     if (!Number.isNaN(target.getTime())) {
                         const now = new Date();
                         const diffMs = target.getTime() - now.getTime();
