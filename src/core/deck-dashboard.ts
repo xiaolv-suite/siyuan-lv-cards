@@ -114,7 +114,8 @@ export function buildDeckDashboard(
     for (const [deckID, row] of rows) {
         const pass = passBy.get(deckID) ?? 0;
         const fail = failBy.get(deckID) ?? 0;
-        row.retention = pass + fail < minSamples ? null : Math.round((pass / (pass + fail)) * 100);
+        const totalSamples = pass + fail;
+        row.retention = totalSamples < minSamples || totalSamples === 0 ? null : Math.round((pass / totalSamples) * 100);
         const total7 = row.reviews7 + row.forgotten7;
         row.passRate7 = total7 > 0 ? Math.round((row.reviews7 / total7) * 100) : null;
     }
