@@ -6,37 +6,42 @@
 
 :root {
     // 颜色语义层：R54 唯一规范基线调色板（浅色质感纸面工作台，全量派生自语义令牌）
-    --lv-brand: #5E59CB; /* 经典长春花紫 / 品牌操作主色 (HSL 243°, 54%, 58%) */
-    --lv-brand-hover: #504ABD;
-    --lv-brand-soft: #EEECFB;
-    --lv-accent-gold: #945A17; /* 温暖星光金 / 警示暖色 */
-    --lv-color-brand: #5E59CB;
-    --lv-color-brand-strong: #504ABD;
-    --lv-color-on-brand: var(--b3-theme-on-primary, #FFFFFF);
-    --lv-color-text: #272635; /* 标题与正文近黑（融入微弱紫相，非死黑，明度18%） */
-    --lv-color-text-muted: #6C6A7B; /* 辅助文字（对比度超 5:1） */
-    --lv-color-canvas: #F7F7FA; /* 极浅同族底色：HSL(243°, 4%, 97.5%)，与卡片明度差2.5% */
-    --lv-color-canvas-subtle: #F1F1F8;
-    --lv-color-surface: #FFFFFF; /* 纯白内容卡片 */
-    --lv-color-surface-subtle: #F1F1F8;
-    --lv-color-surface-raised: #FFFFFF;
-    --lv-color-surface-accent-dark: #171723; /* 深色对比重音卡片：明度12%近黑带紫相 */
-    --lv-color-on-accent-dark: #FFFFFF;
-    --lv-color-on-accent-dark-muted: #A1A0B5;
+    --lv-brand: rgb(94, 89, 203); /* 经典长春花紫 / 品牌操作主色 (HSL 243°, 54%, 58%) */
+    --lv-brand-hover: rgb(80, 74, 189);
+    --lv-brand-soft: rgb(238, 236, 251);
+    --lv-accent-gold: rgb(148, 90, 23); /* 温暖星光金 / 警示暖色 */
+    --lv-color-brand: rgb(94, 89, 203);
+    --lv-color-brand-strong: rgb(80, 74, 189);
+    --lv-color-on-brand: var(--b3-theme-on-primary, rgb(255, 255, 255));
+    --lv-color-text: rgb(39, 38, 53); /* 标题与正文近黑（融入微弱紫相，非死黑，明度18%） */
+    --lv-color-text-muted: rgb(108, 106, 123); /* 辅助文字（对比度超 5:1） */
+    --lv-color-canvas: rgb(247, 247, 250); /* 极浅同族底色：HSL(243°, 4%, 97.5%)，与卡片明度差2.5% */
+    --lv-color-canvas-subtle: rgb(241, 241, 248);
+    --lv-color-surface: rgb(255, 255, 255); /* 纯白内容卡片 */
+    --lv-color-surface-subtle: rgb(241, 241, 248);
+    --lv-color-surface-raised: rgb(255, 255, 255);
+    --lv-color-surface-accent-dark: rgb(23, 23, 35); /* 深色对比重音卡片：明度12%近黑带紫相 */
+    --lv-color-on-accent-dark: rgb(255, 255, 255);
+    --lv-color-on-accent-dark-muted: rgb(161, 160, 181);
 
     // 两色分工：从主题色(243°)顺时针偏移28°派生的【数据语义色】(215°天青碧水蓝)
     // 专属负责成绩、连续天数、热力、留存率等正向数据展示，绝不与交互操作主色混用
-    --lv-color-data: #0284C7;
-    --lv-data-soft: #E0F2FE;
-    --lv-color-on-data-soft: #0369A1;
+    --lv-color-data: rgb(2, 132, 199);
+    --lv-data-soft: rgb(224, 242, 254);
+    --lv-color-on-data-soft: rgb(3, 105, 161);
     --lv-data-border: rgba(2, 132, 199, 0.25);
 
-    --lv-color-danger: #C0394B;
-    --lv-color-warning: #945A17;
-    --lv-color-success: #2E7D5B;
-    --lv-color-on-danger: #FFFFFF;
-    --lv-color-on-success: #FFFFFF;
-    --lv-color-on-warning: #FFFFFF;
+    --lv-color-danger: rgb(192, 57, 75);
+    --lv-color-warning: rgb(148, 90, 23);
+    --lv-color-success: rgb(46, 125, 91);
+    --lv-color-on-danger: rgb(255, 255, 255);
+    --lv-color-on-success: rgb(255, 255, 255);
+    --lv-color-on-warning: rgb(255, 255, 255);
+    --lv-success: var(--lv-color-success);
+    --lv-danger: var(--lv-color-danger);
+    --lv-warning: var(--lv-color-warning);
+    --lv-info: var(--lv-color-data);
+    --lv-brand-secondary: var(--lv-color-brand-strong);
     --lv-surface-hover: rgba(39, 38, 53, 0.04);
 
     // 类型档位：组件默认组合与字号清单见 docs/47。
@@ -171,19 +176,19 @@
     --lv-card-max: 880px;
 
     // 语义派生面（R54 原型对齐，高对比度保证）
-    --lv-primary-soft: #EEECFB;
+    --lv-primary-soft: rgb(238, 236, 251);
     --lv-primary-softer: color-mix(in srgb, var(--lv-color-brand) 6%, transparent);
     --lv-primary-border: color-mix(in srgb, var(--lv-color-brand) 20%, transparent);
-    --lv-color-on-brand-soft: #4F4799;
-    --lv-danger-soft: #FCF0F1;
+    --lv-color-on-brand-soft: rgb(79, 71, 153);
+    --lv-danger-soft: rgb(252, 240, 241);
     --lv-danger-border: color-mix(in srgb, var(--lv-color-danger) 20%, transparent);
-    --lv-color-on-danger-soft: #A34151;
-    --lv-warn-soft: #FFF0D4;
-    --lv-color-on-warning-soft: #855318;
-    --lv-good-soft: #EDF6F1;
-    --lv-color-on-success-soft: #32654D;
-    --lv-border: #E8E7F0;
-    --lv-border-strong: #D2D0E0;
+    --lv-color-on-danger-soft: rgb(163, 65, 81);
+    --lv-warn-soft: rgb(255, 240, 212);
+    --lv-color-on-warning-soft: rgb(133, 83, 24);
+    --lv-good-soft: rgb(237, 246, 241);
+    --lv-color-on-success-soft: rgb(50, 101, 77);
+    --lv-border: rgb(232, 231, 240);
+    --lv-border-strong: rgb(210, 208, 224);
 
     // 表面与海拔：多层叠加漫反射阴影（近距小模糊 + 远距大模糊，统一向下光源）
     // Elevation 1：内容卡片近距轻柔托底，白卡浮起感
@@ -220,50 +225,57 @@
 
 :root[data-theme-mode="dark"],
 body[data-theme-mode="dark"],
-.theme--dark {
-    --lv-brand: #B5AFFF; /* 柔和长春花紫 */
-    --lv-brand-hover: #C3BEFF;
-    --lv-brand-soft: #343046;
-    --lv-accent-gold: #FBBF24;
-    --lv-color-brand: #B5AFFF;
-    --lv-color-brand-strong: #C3BEFF;
-    --lv-color-on-brand: var(--b3-theme-on-primary, #181820);
-    --lv-color-text: #F0EEF8;
-    --lv-color-text-muted: #B2AEC4;
-    --lv-color-canvas: #15151E;
-    --lv-color-canvas-subtle: #1E1E2A;
-    --lv-color-surface: #20202C;
-    --lv-color-surface-subtle: #272736;
-    --lv-color-surface-raised: #292837;
-    --lv-color-surface-accent-dark: #101017;
-    --lv-color-on-accent-dark: #F0EEF8;
-    --lv-color-on-accent-dark-muted: #9F9CAD;
+[data-theme-mode="dark"],
+.theme--dark,
+.body--dark {
+    --lv-brand: rgb(181, 175, 255); /* 柔和长春花紫 */
+    --lv-brand-hover: rgb(195, 190, 255);
+    --lv-brand-soft: rgb(52, 48, 70);
+    --lv-accent-gold: rgb(251, 191, 36);
+    --lv-color-brand: rgb(181, 175, 255);
+    --lv-color-brand-strong: rgb(195, 190, 255);
+    --lv-color-on-brand: var(--b3-theme-on-primary, rgb(24, 24, 32));
+    --lv-color-text: rgb(240, 238, 248);
+    --lv-color-text-muted: rgb(178, 174, 196);
+    --lv-color-canvas: rgb(21, 21, 30);
+    --lv-color-canvas-subtle: rgb(30, 30, 42);
+    --lv-color-surface: rgb(32, 32, 44);
+    --lv-color-surface-subtle: rgb(39, 39, 54);
+    --lv-color-surface-raised: rgb(41, 40, 55);
+    --lv-color-surface-accent-dark: rgb(16, 16, 23);
+    --lv-color-on-accent-dark: rgb(240, 238, 248);
+    --lv-color-on-accent-dark-muted: rgb(159, 156, 173);
 
     // 两色分工：深色下的【数据语义色】(明耀天青水蓝)
-    --lv-color-data: #38BDF8;
-    --lv-data-soft: #0C2B42;
-    --lv-color-on-data-soft: #7DD3FC;
+    --lv-color-data: rgb(56, 189, 248);
+    --lv-data-soft: rgb(12, 43, 66);
+    --lv-color-on-data-soft: rgb(125, 211, 252);
     --lv-data-border: rgba(56, 189, 248, 0.3);
 
-    --lv-color-danger: #F87171;
-    --lv-color-warning: #FBBF24;
-    --lv-color-success: #6EE7B7;
-    --lv-color-on-danger: #181820;
-    --lv-color-on-success: #181820;
-    --lv-color-on-warning: #181820;
+    --lv-color-danger: rgb(248, 113, 113);
+    --lv-color-warning: rgb(251, 191, 36);
+    --lv-color-success: rgb(110, 231, 183);
+    --lv-color-on-danger: rgb(24, 24, 32);
+    --lv-color-on-success: rgb(24, 24, 32);
+    --lv-color-on-warning: rgb(24, 24, 32);
+    --lv-success: var(--lv-color-success);
+    --lv-danger: var(--lv-color-danger);
+    --lv-warning: var(--lv-color-warning);
+    --lv-info: var(--lv-color-data);
+    --lv-brand-secondary: var(--lv-color-brand-strong);
     --lv-surface-hover: rgba(255, 255, 255, 0.05);
-    --lv-border: #353443;
-    --lv-border-strong: #48465B;
-    --lv-primary-soft: #343046;
+    --lv-border: rgb(53, 52, 67);
+    --lv-border-strong: rgb(72, 70, 91);
+    --lv-primary-soft: rgb(52, 48, 70);
     --lv-primary-softer: rgba(181, 175, 255, 0.08);
     --lv-primary-border: rgba(181, 175, 255, 0.28);
-    --lv-color-on-brand-soft: #D0C9FF;
-    --lv-warn-soft: #3B3126;
-    --lv-color-on-warning-soft: #F4C78A;
-    --lv-good-soft: #28382F;
-    --lv-color-on-success-soft: #A0D9BB;
-    --lv-danger-soft: #402B33;
-    --lv-color-on-danger-soft: #FFADB9;
+    --lv-color-on-brand-soft: rgb(208, 201, 255);
+    --lv-warn-soft: rgb(59, 49, 38);
+    --lv-color-on-warning-soft: rgb(244, 199, 138);
+    --lv-good-soft: rgb(40, 56, 47);
+    --lv-color-on-success-soft: rgb(160, 217, 187);
+    --lv-danger-soft: rgb(64, 43, 51);
+    --lv-color-on-danger-soft: rgb(255, 173, 185);
     --lv-inset-shine: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     --lv-glass: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
 }
@@ -422,12 +434,17 @@ body[data-theme-mode="dark"],
     border-radius: var(--lv-card-radius);
     padding: var(--lv-card-padding);
     min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     box-shadow: var(--lv-shadow-card), var(--lv-inset-shine);
     transition: box-shadow var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease),
         border-color var(--lv-dur-2) var(--lv-ease);
 
     // R53 窄屏：宽内容（热力图/日历/表格）在卡片内横滚，不撑破页宽
     @media (max-width: 740px) {
+        overflow-x: auto;
+    }
+    @container lv-hub (max-width: 740px) {
         overflow-x: auto;
     }
 }
@@ -1967,7 +1984,7 @@ pre,
 
 .lv-interactive-choice-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
     gap: var(--lv-sp-3);
 }
 
@@ -2147,6 +2164,15 @@ pre,
     user-select: none;
     -webkit-user-select: none;
     transition: all var(--lv-dur-2) var(--lv-ease);
+    min-width: 0;
+
+    @media (max-width: 480px) {
+        gap: var(--lv-sp-2);
+        padding: var(--lv-sp-2) var(--lv-sp-3);
+        .lv-judge-kbd-badge {
+            display: none;
+        }
+    }
 
     &:focus-visible {
         outline: none;
@@ -2277,14 +2303,18 @@ pre,
         }
         .lv-fill-input {
             flex: 1;
+            min-width: 0;
+            width: 100%;
             border: none;
             background: transparent;
+            color: var(--lv-color-text);
             font-size: var(--lv-type-body-sm-size);
             padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 4);
             touch-action: manipulation;
             &:focus { outline: none; }
         }
         .lv-fill-submit-btn {
+            flex-shrink: 0;
             border-radius: var(--lv-r-pill);
             padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 8);
             font-weight: var(--lv-fw-semibold);
@@ -2296,6 +2326,19 @@ pre,
             &:focus-visible {
                 outline: none;
                 box-shadow: var(--lv-focus-ring);
+            }
+        }
+        @media (max-width: 480px) {
+            gap: var(--lv-sp-1);
+            padding: calc(var(--lv-space-unit) * 2);
+            .lv-fill-icon {
+                margin-left: calc(var(--lv-space-unit) * 3);
+            }
+            .lv-fill-input {
+                padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 2);
+            }
+            .lv-fill-submit-btn {
+                padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 5);
             }
         }
     }
@@ -2803,15 +2846,15 @@ pre,
 
     .b3-dialog__container {
         border-radius: var(--lv-r-dialog, 16px) !important;
-        background: var(--b3-theme-surface, var(--lv-safe-surface, #ffffff)) !important;
-        border: 1px solid var(--b3-border-color, var(--lv-safe-border, rgba(0, 0, 0, 0.08))) !important;
+        background: var(--b3-theme-surface, var(--lv-color-surface)) !important;
+        border: 1px solid var(--b3-border-color, var(--lv-border)) !important;
         box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.22), 0 4px 16px -2px rgba(0, 0, 0, 0.08) !important;
         overflow: hidden;
     }
 
     .b3-dialog__header {
         background: transparent !important;
-        border-bottom: 1px solid var(--b3-border-color, var(--lv-safe-border, rgba(0, 0, 0, 0.08))) !important;
+        border-bottom: 1px solid var(--b3-border-color, var(--lv-border)) !important;
 
         .b3-dialog__close {
             cursor: pointer;
@@ -2845,13 +2888,91 @@ pre,
 
     .b3-dialog__action {
         background: transparent !important;
-        border-top: 1px solid var(--b3-border-color, var(--lv-safe-border, rgba(0, 0, 0, 0.08))) !important;
+        border-top: 1px solid var(--b3-border-color, var(--lv-border)) !important;
     }
 
     .b3-dialog__scrim {
         background: rgba(18, 19, 28, 0.42);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
+    }
+
+    @media (max-width: 680px) {
+        &:not(.lv-dialog--panel) {
+            .b3-dialog__container {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                height: var(--lv-vv-h, 100dvh) !important;
+                max-width: 100vw !important;
+                max-height: var(--lv-vv-h, 100dvh) !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                overflow: hidden !important;
+            }
+            .b3-dialog__header {
+                flex: none;
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                gap: var(--lv-sp-2);
+                min-height: calc(46px + env(safe-area-inset-top, 0px));
+                padding: env(safe-area-inset-top, 0px) calc(env(safe-area-inset-right, 0px) + var(--lv-sp-2)) 0 calc(env(safe-area-inset-left, 0px) + var(--lv-sp-3));
+                background: var(--lv-color-surface) !important;
+
+                .lv-dialog-title-wrap {
+                    flex: 1;
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: var(--lv-type-title-size);
+                    font-weight: var(--lv-fw-heading);
+                }
+
+                .b3-dialog__close,
+                .lv-mobile-dialog-close {
+                    flex: none;
+                    display: inline-flex !important;
+                    align-items: center;
+                    justify-content: center;
+                    width: 44px !important;
+                    height: 44px !important;
+                    min-width: 44px !important;
+                    min-height: 44px !important;
+                    padding: 0 !important;
+                    margin-left: auto;
+                    border: none;
+                    border-radius: var(--lv-r-circle);
+                    background: transparent;
+                    color: var(--lv-color-text);
+                    font-size: var(--lv-type-title-size);
+                }
+            }
+            .b3-dialog__body,
+            .b3-dialog__content {
+                flex: 1 1 0 !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .lv-cards-dialog-content {
+                flex: 1 1 0 !important;
+                min-height: 0 !important;
+                width: 100%;
+                max-width: 100vw;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+        }
     }
 }
 

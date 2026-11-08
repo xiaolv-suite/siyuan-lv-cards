@@ -1799,9 +1799,15 @@
             .lv-toolbar-caption { width: auto; margin-left: 0; }
         }
         .lv-batchbar {
-            align-items: stretch;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            &::-webkit-scrollbar { display: none; }
             .fn__flex-1 { display: none; }
-            > .b3-button { flex: 1 1 auto; }
+            > * { flex: 0 0 auto; white-space: nowrap; }
         }
         .lv-row { flex-wrap: wrap; }
     }
@@ -1991,18 +1997,35 @@
             margin-bottom: var(--lv-sp-2);
             gap: var(--lv-sp-2);
         }
-    }
-
-    @container lv-hub (max-width: 420px) {
         .lv-batchbar {
-            > .b3-button { flex-basis: 45%; white-space: normal; }
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            &::-webkit-scrollbar { display: none; }
+            .fn__flex-1 { display: none; }
+            > * { flex: 0 0 auto; white-space: nowrap; }
         }
         .lv-list .lv-row {
             flex-wrap: nowrap;
             padding: var(--lv-sp-2) var(--lv-sp-3);
             gap: var(--lv-sp-2);
             .lv-row-main { flex: 1 1 0; min-width: 0; }
-            > .b3-button { flex: none; width: auto; margin-left: 0; }
+            > .b3-button { flex: none; width: auto; margin-left: 0; padding: 0 var(--lv-sp-2); }
+            > .lv-btn-tool span { display: none; }
+        }
+    }
+
+    @container lv-hub (max-width: 420px) {
+        .lv-list .lv-row {
+            flex-wrap: nowrap;
+            padding: var(--lv-sp-2) var(--lv-sp-3);
+            gap: var(--lv-sp-2);
+            .lv-row-main { flex: 1 1 0; min-width: 0; }
+            > .b3-button { flex: none; width: auto; margin-left: 0; padding: 0 var(--lv-sp-2); }
+            > .lv-btn-tool span { display: none; }
         }
     }
 </style>

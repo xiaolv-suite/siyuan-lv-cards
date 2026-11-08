@@ -257,16 +257,16 @@ export function calculateItemQualityMetrics(
   }
 
   const typeConfig: Record<string, { label: string; color: string }> = {
-    single: { label: "单选", color: "var(--lv-brand, #3b82f6)" },
-    multiple: { label: "多选", color: "var(--lv-info, #0ea5e9)" },
-    judge: { label: "判断", color: "var(--lv-success, #10b981)" },
-    fill: { label: "填空", color: "var(--lv-warning, #f59e0b)" },
-    short: { label: "问答", color: "var(--lv-brand-secondary, #8b5cf6)" },
+    single: { label: "单选", color: "var(--lv-color-brand)" },
+    multiple: { label: "多选", color: "var(--lv-color-data)" },
+    judge: { label: "判断", color: "var(--lv-color-success)" },
+    fill: { label: "填空", color: "var(--lv-color-warning)" },
+    short: { label: "问答", color: "var(--lv-color-brand-strong)" },
   };
 
   const typeDistribution: TypeDistributionItem[] = Object.keys(typeMap).map((k) => {
     const count = typeMap[k] || 0;
-    const cfg = typeConfig[k] || { label: "问答", color: "var(--lv-brand, #3b82f6)" };
+    const cfg = typeConfig[k] || { label: "问答", color: "var(--lv-color-brand)" };
     return {
       type: k as QuestionType,
       label: cfg.label,
@@ -305,21 +305,21 @@ export function calculateItemQualityMetrics(
         label: "基础 (★1-2)",
         count: easy,
         pct: Math.round((easy / total) * 100),
-        color: "var(--lv-success, #10b981)",
+        color: "var(--lv-color-success)",
       },
       {
         level: "medium" as const,
         label: "进阶 (★3-4)",
         count: medium,
         pct: Math.round((medium / total) * 100),
-        color: "var(--lv-brand, #3b82f6)",
+        color: "var(--lv-color-brand)",
       },
       {
         level: "hard" as const,
         label: "拔高 (★5)",
         count: hard,
         pct: Math.round((hard / total) * 100),
-        color: "var(--lv-danger, #ef4444)",
+        color: "var(--lv-color-danger)",
       },
     ] as const
   )

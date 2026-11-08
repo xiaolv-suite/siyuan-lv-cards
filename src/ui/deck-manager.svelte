@@ -954,7 +954,7 @@
         flex-shrink: 0;
     }
     .lv-btn-pinned {
-        color: #f59e0b !important;
+        color: var(--lv-color-warning) !important;
     }
     .lv-dm-sort-select {
         height: 26px;

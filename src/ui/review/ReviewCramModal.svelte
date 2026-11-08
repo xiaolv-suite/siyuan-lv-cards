@@ -210,15 +210,11 @@
         gap: 8px;
         font-size: var(--lv-type-title-size);
         font-weight: var(--lv-fw-semibold);
-        color: #d97706;
+        color: var(--lv-color-warning);
 
         :global(svg) {
-            color: #f59e0b;
+            color: var(--lv-color-warning);
         }
-    }
-
-    :global([data-theme-mode="dark"]) .lv-cram-title {
-        color: #fbbf24;
     }
 
     .lv-cram-body {
@@ -233,13 +229,13 @@
         gap: 10px;
         padding: 10px 12px;
         border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, #f59e0b 12%, var(--lv-color-surface));
-        border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+        background: var(--lv-warn-soft);
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 35%, transparent);
         font-size: var(--lv-type-caption-size);
         line-height: var(--lv-lh-reading);
 
         .lv-cram-protection-icon {
-            color: #d97706;
+            color: var(--lv-color-warning);
             margin-top: 1px;
             flex-shrink: 0;
         }
@@ -250,21 +246,8 @@
             gap: 2px;
 
             strong {
-                color: #b45309;
+                color: var(--lv-color-on-warning-soft);
             }
-        }
-    }
-
-    :global([data-theme-mode="dark"]) .lv-cram-protection-notice {
-        background: color-mix(in srgb, #f59e0b 16%, #1a1a20);
-        border-color: color-mix(in srgb, #f59e0b 50%, transparent);
-
-        .lv-cram-protection-icon {
-            color: #fbbf24;
-        }
-
-        .lv-cram-protection-text strong {
-            color: #fde68a;
         }
     }
 
@@ -301,14 +284,14 @@
         transition: all var(--lv-dur-fast) var(--lv-ease);
 
         &:hover {
-            border-color: color-mix(in srgb, #f59e0b 50%, var(--lv-border));
-            background: color-mix(in srgb, #f59e0b 6%, var(--lv-color-canvas));
+            border-color: color-mix(in srgb, var(--lv-color-warning) 50%, var(--lv-border));
+            background: color-mix(in srgb, var(--lv-color-warning) 6%, var(--lv-color-canvas));
         }
 
         &.lv-selected {
-            border-color: #f59e0b;
-            background: color-mix(in srgb, #f59e0b 14%, var(--lv-color-surface));
-            box-shadow: 0 0 0 1px #f59e0b;
+            border-color: var(--lv-color-warning);
+            background: color-mix(in srgb, var(--lv-color-warning) 14%, var(--lv-color-surface));
+            box-shadow: 0 0 0 1px var(--lv-color-warning);
         }
     }
 
@@ -325,8 +308,8 @@
             transition: all var(--lv-dur-fast) var(--lv-ease);
 
             &.lv-checked {
-                border-color: #f59e0b;
-                background: #f59e0b;
+                border-color: var(--lv-color-warning);
+                background: var(--lv-color-warning);
 
                 &::after {
                     content: "";
@@ -334,7 +317,7 @@
                     width: 6px;
                     height: 6px;
                     border-radius: 50%;
-                    background: #ffffff;
+                    background: var(--lv-color-on-warning);
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
@@ -377,19 +360,20 @@
     .lv-cram-actions {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: var(--lv-sp-2);
         margin-top: var(--lv-sp-2);
         padding-top: var(--lv-sp-3);
         border-top: 1px solid var(--lv-border);
 
         .lv-btn-cram-start {
-            background: #d97706;
-            color: #ffffff;
-            border-color: #d97706;
+            background: var(--lv-color-warning);
+            color: var(--lv-color-on-warning);
+            border-color: var(--lv-color-warning);
 
             &:hover {
-                background: #b45309;
-                border-color: #b45309;
+                background: color-mix(in srgb, var(--lv-color-warning) 85%, black);
+                border-color: color-mix(in srgb, var(--lv-color-warning) 85%, black);
             }
         }
     }

@@ -251,12 +251,19 @@
     .lv-cal-sw.past2 { background: color-mix(in srgb, var(--lv-color-data) 26%, var(--lv-color-surface)); }
     .lv-cal-sw.past3 { background: color-mix(in srgb, var(--lv-color-data) 42%, var(--lv-color-surface)); }
     .lv-cal-sw.future2 { background: color-mix(in srgb, var(--lv-color-warning) 24%, var(--lv-color-surface)); }
+    .lv-cal-forecast {
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
     .lv-forecast {
         display: flex;
         gap: calc(var(--lv-space-unit) * 1);
         align-items: stretch;
         height: 92px;
         margin-top: calc(var(--lv-space-unit) * 4);
+        min-width: min(100%, 280px);
     }
     .lv-forecast-col {
         flex: 1;

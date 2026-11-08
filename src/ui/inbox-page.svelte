@@ -482,9 +482,15 @@
 
     @media (max-width: 740px) {
         .lv-batchbar {
-            align-items: stretch;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            &::-webkit-scrollbar { display: none; }
             .fn__flex-1 { display: none; }
-            > .b3-button { flex: 1 1 auto; }
+            > * { flex: 0 0 auto; white-space: nowrap; }
         }
         .lv-row { flex-wrap: wrap; }
         .lv-row > .b3-button { margin-left: calc(var(--lv-space-unit) * 14); }
@@ -496,6 +502,5 @@
             .lv-content { flex-basis: calc(100% - 28px); }
             > .b3-button { width: calc(100% - 28px); margin-left: 28px; }
         }
-        .lv-batchbar > .b3-button { flex-basis: 45%; white-space: normal; }
     }
 </style>

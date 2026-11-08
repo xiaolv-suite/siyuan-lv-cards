@@ -409,7 +409,25 @@
             }
         }
 
-        :global(.lv-keyboard-open) & {
+        :global(.lv-keyboard-open) &,
+        :global(.lv-vv-keyboard-open) & {
+            position: static;
+            margin-top: 0;
+            padding-top: var(--lv-sp-1);
+            padding-bottom: var(--lv-sp-1);
+            border-top: 0;
+            background: transparent;
+
+            .lv-btn-rate {
+                min-height: 40px;
+                padding: var(--lv-sp-1) var(--lv-sp-2);
+            }
+            .lv-btn-wide {
+                min-height: 40px;
+            }
+        }
+
+        @media (max-height: 460px) {
             position: static;
             margin-top: 0;
             padding-top: var(--lv-sp-1);

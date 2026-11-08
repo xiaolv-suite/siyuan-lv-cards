@@ -337,7 +337,7 @@
                         x={(r.x + 0.01) * 100}
                         y={Math.min(98, (r.y + 0.04) * 100)}
                         font-size="3.4"
-                        fill="var(--lv-color-on-brand, #fff)"
+                        fill="var(--lv-color-on-brand)"
                         pointer-events="none"
                     >#{i + 1}</text>
                 {/each}

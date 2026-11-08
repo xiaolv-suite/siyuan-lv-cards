@@ -225,6 +225,13 @@
         grid-template-columns: 1fr 1fr;
         gap: var(--lv-sp-2);
 
+        @media (max-width: 520px) {
+            grid-template-columns: 1fr;
+        }
+        @container (max-width: 520px) {
+            grid-template-columns: 1fr;
+        }
+
         .lv-choice-opt {
             text-align: left;
             border: 1px solid var(--lv-border);

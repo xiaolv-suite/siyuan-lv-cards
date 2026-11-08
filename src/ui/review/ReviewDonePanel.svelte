@@ -308,34 +308,21 @@
         font-variant-numeric: tabular-nums;
     }
     .lv-done-summary-pill--cram {
-        background: color-mix(in srgb, #f59e0b 14%, var(--lv-color-surface));
-        border-color: color-mix(in srgb, #f59e0b 45%, transparent);
-        color: #d97706;
+        background: var(--lv-warn-soft);
+        border-color: color-mix(in srgb, var(--lv-color-warning) 45%, transparent);
+        color: var(--lv-color-on-warning-soft);
 
         :global(svg) {
-            color: #d97706;
+            color: var(--lv-color-warning);
         }
 
         strong {
-            color: #b45309;
-        }
-    }
-    :global([data-theme-mode="dark"]) .lv-done-summary-pill--cram {
-        background: color-mix(in srgb, #f59e0b 20%, #1e1e24);
-        border-color: color-mix(in srgb, #f59e0b 60%, transparent);
-        color: #fbbf24;
-
-        :global(svg) {
-            color: #fbbf24;
-        }
-
-        strong {
-            color: #fde68a;
+            color: var(--lv-color-warning);
         }
     }
     .lv-done-check--cram {
-        color: #f59e0b;
-        background: color-mix(in srgb, #f59e0b 16%, transparent);
+        color: var(--lv-color-warning);
+        background: color-mix(in srgb, var(--lv-color-warning) 16%, transparent);
     }
     @keyframes lvDonePop {
         from { opacity: 0; transform: translateY(-4px) scale(0.97); }
@@ -495,6 +482,7 @@
         line-height: var(--lv-lh-reading, 1.65);
     }
     .lv-done-actions {
+        flex-wrap: wrap;
         gap: var(--lv-sp-2);
         justify-content: flex-end;
         margin-top: var(--lv-sp-4);
@@ -513,6 +501,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
         gap: var(--lv-sp-2);
         font-size: var(--lv-type-body-size);
         padding: calc(var(--lv-space-unit) * 2) 0;
@@ -523,7 +512,31 @@
         }
     }
     .lv-done {
+        width: 100%;
+        max-width: 620px;
         animation: lv-done-fade var(--lv-dur-3) var(--lv-ease) both;
+    }
+    @media (max-width: 560px) {
+        .lv-done-panel {
+            padding: var(--lv-sp-3);
+        }
+        .lv-done-summary-pill {
+            border-radius: var(--lv-r-l);
+            padding: 8px 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            text-align: center;
+        }
+        .lv-done-bubbles {
+            margin-left: 0;
+            justify-content: flex-start;
+        }
+        .lv-done-stats {
+            gap: var(--lv-sp-2);
+        }
+        .lv-done-stat .lv-hero-num {
+            font-size: clamp(22px, 6.5vw, 34px);
+        }
     }
     @keyframes lv-done-fade {
         from { opacity: 0; transform: translateY(4px); }

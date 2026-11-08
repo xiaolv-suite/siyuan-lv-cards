@@ -2105,5 +2105,32 @@
             box-shadow: 0 0 0 1px var(--lv-color-brand), var(--lv-shadow-card);
         }
         .lv-persona-name { font-weight: var(--lv-fw-semibold); margin-bottom: 2px; text-wrap: balance; }
+
+        @media (max-width: 680px) {
+            padding: var(--lv-sp-3);
+            max-width: 100%;
+
+            .lv-settings-nav-rail {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                margin: calc(var(--lv-sp-3) * -1) calc(var(--lv-sp-3) * -1) var(--lv-sp-3);
+                padding: var(--lv-sp-2) var(--lv-sp-3);
+                &::-webkit-scrollbar {
+                    display: none;
+                }
+            }
+            .lv-settings-nav-chip {
+                flex: 0 0 auto;
+                white-space: nowrap;
+                height: 32px;
+            }
+            .lv-settings-sticky-footer {
+                margin: var(--lv-sp-3) calc(var(--lv-sp-3) * -1) calc(var(--lv-sp-3) * -1);
+                padding: var(--lv-sp-2) var(--lv-sp-3) max(var(--lv-sp-2), env(safe-area-inset-bottom, 0px));
+                flex-wrap: wrap;
+            }
+        }
     }
 </style>

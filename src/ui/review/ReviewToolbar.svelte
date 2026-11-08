@@ -509,9 +509,9 @@
             }
 
             &.lv-cram-btn {
-                color: #d97706;
+                color: var(--lv-color-warning);
                 :global(svg) {
-                    color: #f59e0b;
+                    color: var(--lv-color-warning);
                 }
 
                 .lv-cram-label-short {
@@ -528,15 +528,15 @@
                 }
 
                 &:hover:not(:disabled) {
-                    border-color: #f59e0b;
-                    color: #b45309;
-                    background: color-mix(in srgb, #f59e0b 10%, var(--lv-color-surface));
+                    border-color: var(--lv-color-warning);
+                    color: var(--lv-color-on-warning-soft);
+                    background: var(--lv-warn-soft);
                 }
 
                 &.lv-cram-btn-active {
-                    border-color: #f59e0b;
-                    background: color-mix(in srgb, #f59e0b 16%, var(--lv-color-surface));
-                    color: #b45309;
+                    border-color: var(--lv-color-warning);
+                    background: var(--lv-warn-soft);
+                    color: var(--lv-color-on-warning-soft);
                     font-weight: var(--lv-fw-semibold, 600);
                 }
             }

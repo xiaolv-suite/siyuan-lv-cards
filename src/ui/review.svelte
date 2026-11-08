@@ -2902,7 +2902,8 @@
             gap: var(--lv-sp-2);
         }
 
-        &.lv-keyboard-open {
+        &.lv-keyboard-open,
+        :global(.lv-vv-keyboard-open) & {
             padding-top: calc(var(--lv-sp-1) + env(safe-area-inset-top, 0));
             padding-bottom: calc(var(--lv-sp-1) + env(safe-area-inset-bottom, 0));
             gap: var(--lv-sp-1);
@@ -2914,6 +2915,24 @@
                 flex: 1 1 auto;
                 min-height: 104px;
                 padding: var(--lv-sp-3) var(--lv-sp-3);
+            }
+        }
+
+        @media (max-height: 460px) {
+            padding-top: calc(var(--lv-sp-1) + env(safe-area-inset-top, 0));
+            padding-bottom: calc(var(--lv-sp-1) + env(safe-area-inset-bottom, 0));
+            gap: var(--lv-sp-1);
+
+            .lv-review-topbar {
+                min-height: 32px;
+            }
+            .lv-head {
+                gap: var(--lv-sp-1);
+            }
+            .lv-card {
+                flex: 1 1 auto;
+                min-height: 96px;
+                padding: var(--lv-sp-2) var(--lv-sp-3);
             }
         }
 
@@ -3097,7 +3116,7 @@
             padding: var(--lv-sp-2) var(--lv-sp-4);
             margin: var(--lv-sp-2) auto;
             border-radius: var(--b3-border-radius);
-            background: linear-gradient(135deg, color-mix(in srgb, var(--b3-theme-primary) 15%, transparent), color-mix(in srgb, #f59e0b 15%, transparent));
+            background: linear-gradient(135deg, color-mix(in srgb, var(--b3-theme-primary) 15%, transparent), color-mix(in srgb, var(--lv-color-warning) 15%, transparent));
             border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 40%, transparent);
             box-shadow: 0 4px 14px color-mix(in srgb, var(--b3-theme-primary) 20%, transparent);
             overflow: hidden;
@@ -3128,9 +3147,9 @@
                 opacity: 0.85;
                 animation: lv-confetti-float 2.8s ease-out infinite;
 
-                &:nth-child(3n) { background: #3b82f6; }
-                &:nth-child(3n + 1) { background: #10b981; }
-                &:nth-child(3n + 2) { background: #f59e0b; }
+                &:nth-child(3n) { background: var(--lv-color-data); }
+                &:nth-child(3n + 1) { background: var(--lv-color-success); }
+                &:nth-child(3n + 2) { background: var(--lv-color-warning); }
 
                 &:nth-child(1) { left: 10%; animation-delay: 0.1s; }
                 &:nth-child(2) { left: 20%; animation-delay: 0.4s; }

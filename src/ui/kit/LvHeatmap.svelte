@@ -46,10 +46,12 @@
 </div>
 
 <style>
-    .lv-heatmap-wrap { min-width: 0; }
+    .lv-heatmap-wrap { min-width: 0; width: 100%; max-width: 100%; overflow: hidden; }
     .lv-heat-scroll {
+        width: 100%;
         max-width: 100%;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
         padding-bottom: calc(var(--lv-space-unit) * 2);
         scrollbar-width: thin;
         scrollbar-color: var(--lv-border-strong, transparent) transparent;

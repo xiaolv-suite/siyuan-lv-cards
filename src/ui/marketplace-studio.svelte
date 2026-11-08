@@ -255,13 +255,13 @@
 
     function getCategoryColor(cat: MarketplaceCategory): string {
         switch (cat) {
-            case "math": return "var(--lv-brand, #3b82f6)";
-            case "computer": return "var(--lv-info, #0ea5e9)";
-            case "language": return "var(--lv-success, #10b981)";
-            case "qualification": return "var(--lv-danger, #ef4444)";
-            case "humanities": return "var(--lv-warning, #f59e0b)";
-            case "science": return "var(--lv-brand-secondary, #6366f1)";
-            case "general": return "var(--lv-brand, #3b82f6)";
+            case "math": return "var(--lv-color-brand)";
+            case "computer": return "var(--lv-color-data)";
+            case "language": return "var(--lv-color-success)";
+            case "qualification": return "var(--lv-color-danger)";
+            case "humanities": return "var(--lv-color-warning)";
+            case "science": return "var(--lv-color-brand-strong)";
+            case "general": return "var(--lv-color-brand)";
             default: return "var(--b3-theme-surface)";
         }
     }
@@ -748,7 +748,7 @@
                                 <button
                                     type="button"
                                     class="lv-btn sm lv-btn--ghost"
-                                    style="padding: 2px 6px; color: var(--lv-danger, #ef4444);"
+                                    style="padding: 2px 6px; color: var(--lv-color-danger);"
                                     onclick={() => (cart = removeFromCart(cart, c.id))}
                                 >
                                     ✕
@@ -877,8 +877,8 @@
         font-weight: 600;
         padding: 2px 8px;
         border-radius: 999px;
-        background: rgba(16, 185, 129, 0.12);
-        color: var(--lv-success, #10b981);
+        background: var(--lv-good-soft);
+        color: var(--lv-color-success);
     }
 
     .lv-market-subtitle {
@@ -965,17 +965,17 @@
     }
 
     .lv-stat-value.brand {
-        color: var(--lv-brand, #3b82f6);
+        color: var(--lv-color-brand);
     }
 
     .lv-stat-value.success {
-        color: var(--lv-success, #10b981);
+        color: var(--lv-color-success);
     }
 
     .lv-stat-divider {
         width: 1px;
         height: 24px;
-        background: var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        background: var(--b3-border-color, var(--lv-border));
     }
 
     .lv-market-stats-meta {
@@ -990,7 +990,7 @@
     .lv-market-filter-card {
         padding: 12px 16px;
         background: var(--b3-theme-surface);
-        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        border: 1px solid var(--b3-border-color, var(--lv-border));
         border-radius: var(--lv-r-2, 8px);
         display: flex;
         flex-direction: column;
@@ -1007,7 +1007,7 @@
     .lv-market-search-box {
         position: relative;
         flex: 1;
-        min-width: 260px;
+        min-width: min(220px, 100%);
     }
 
     .lv-market-search-input {
@@ -1028,6 +1028,8 @@
         display: flex;
         align-items: center;
         gap: 6px;
+        flex-wrap: wrap;
+        min-width: 0;
     }
 
     .lv-market-categories {
@@ -1044,7 +1046,7 @@
         font-size: 12px;
         border-radius: 999px;
         background: var(--b3-theme-background);
-        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.1));
+        border: 1px solid var(--b3-border-color, var(--lv-border));
         cursor: pointer;
         color: var(--b3-theme-on-background);
         transition: all 0.15s ease;
@@ -1056,27 +1058,27 @@
     }
 
     .lv-chip.active {
-        background: var(--lv-brand, #3b82f6);
-        color: #fff;
+        background: var(--lv-color-brand);
+        color: var(--lv-color-on-brand);
         border-color: transparent;
     }
 
     .lv-chip--acc {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--lv-brand, #3b82f6);
+        background: var(--lv-primary-soft);
+        color: var(--lv-color-brand);
         border-color: transparent;
     }
 
     .verified-tag {
-        color: var(--lv-success, #10b981);
-        background: rgba(16, 185, 129, 0.1);
+        color: var(--lv-color-success);
+        background: var(--lv-good-soft);
         border-color: transparent;
     }
 
     .lv-market-error-banner {
         padding: 10px 14px;
-        background: rgba(239, 68, 68, 0.1);
-        color: var(--lv-danger, #ef4444);
+        background: var(--lv-danger-soft);
+        color: var(--lv-color-danger);
         border-radius: var(--lv-r-2, 6px);
         display: flex;
         align-items: center;
@@ -1086,7 +1088,7 @@
 
     .lv-market-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
         gap: 16px;
     }
 
@@ -1301,12 +1303,12 @@
     }
 
     .lv-preview-face.front {
-        border-left: 3px solid var(--lv-brand, #3b82f6);
+        border-left: 3px solid var(--lv-color-brand);
         padding-left: 6px;
     }
 
     .lv-preview-face.back {
-        border-left: 3px solid var(--lv-success, #10b981);
+        border-left: 3px solid var(--lv-color-success);
         padding-left: 6px;
     }
 
@@ -1323,7 +1325,7 @@
 
     .lv-flip-tip {
         font-size: 10px;
-        color: var(--lv-brand, #3b82f6);
+        color: var(--lv-color-brand);
     }
 
     .lv-face-stem {
@@ -1342,7 +1344,7 @@
 
     .lv-face-answer {
         font-size: 12px;
-        color: var(--lv-success, #10b981);
+        color: var(--lv-color-success);
         font-weight: 600;
     }
 
@@ -1358,6 +1360,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
     }
 
@@ -1393,7 +1396,7 @@
         right: 0;
         top: 0;
         bottom: 0;
-        width: min(380px, 90vw);
+        width: min(380px, 100vw);
         background: var(--b3-theme-surface);
         box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
         z-index: 999;
@@ -1403,7 +1406,7 @@
 
     .lv-cart-drawer-header {
         padding: 16px 20px;
-        border-bottom: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        border-bottom: 1px solid var(--b3-border-color, var(--lv-border));
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -1424,7 +1427,7 @@
     .lv-cart-item {
         padding: 8px 12px;
         background: var(--b3-theme-background);
-        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        border: 1px solid var(--b3-border-color, var(--lv-border));
         border-radius: 6px;
         display: flex;
         justify-content: space-between;
@@ -1434,7 +1437,7 @@
 
     .lv-cart-item-source {
         font-size: 10px;
-        color: var(--lv-brand, #3b82f6);
+        color: var(--lv-color-brand);
         font-weight: 600;
         margin-bottom: 2px;
     }
@@ -1447,7 +1450,7 @@
 
     .lv-cart-drawer-footer {
         padding: 14px 20px;
-        border-top: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.08));
+        border-top: 1px solid var(--b3-border-color, var(--lv-border));
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -1482,19 +1485,19 @@
     }
 
     .lv-delta-stat-box.green {
-        color: var(--lv-success, #10b981);
-        border: 1px solid rgba(16, 185, 129, 0.2);
+        color: var(--lv-color-success);
+        border: 1px solid color-mix(in srgb, var(--lv-color-success) 25%, transparent);
     }
 
     .lv-delta-stat-box.blue {
-        color: var(--lv-brand, #3b82f6);
-        border: 1px solid rgba(59, 130, 246, 0.2);
+        color: var(--lv-color-brand);
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 25%, transparent);
     }
 
     .lv-delta-stat-box.gray {
         color: var(--b3-theme-on-surface);
         opacity: 0.8;
-        border: 1px solid var(--b3-border-color, rgba(0, 0, 0, 0.1));
+        border: 1px solid var(--b3-border-color, var(--lv-border));
     }
 
     .lv-stat-num {

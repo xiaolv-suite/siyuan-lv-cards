@@ -229,7 +229,7 @@
             }
         });
         // 底色填充，避免透明背景导出后不可见
-        const bg = getComputedStyle(document.body).getPropertyValue("--b3-theme-surface").trim() || "#ffffff";
+        const bg = getComputedStyle(document.body).getPropertyValue("--b3-theme-surface").trim() || getComputedStyle(document.documentElement).getPropertyValue("--lv-color-surface").trim() || "rgb(255, 255, 255)";
         const xml = new XMLSerializer().serializeToString(clone);
         const rect = `<rect x="0" y="0" width="100%" height="100%" fill="${bg}"/>`;
         const svgWithBg = xml.replace(/(<svg[^>]*>)/, `$1${rect}`);
@@ -2023,9 +2023,9 @@
         cursor: default;
         content-visibility: auto;
         &--pinned {
-            border-color: color-mix(in srgb, #f59e0b 40%, var(--lv-border));
+            border-color: color-mix(in srgb, var(--lv-color-warning) 40%, var(--lv-border));
             .lv-deck-icon-badge {
-                color: #f59e0b;
+                color: var(--lv-color-warning);
             }
         }
         contain-intrinsic-size: 0 56px;
@@ -2332,18 +2332,49 @@
         flex-shrink: 0;
     }
 
+    @media (max-width: 780px) {
+        .lv-today-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .lv-today-stats .lv-stat-cell:nth-child(2n) { border-right: none; }
+        .lv-today-stats .lv-stat-cell:nth-child(-n+2) { border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
+    }
+    @media (max-width: 560px) {
+        .lv-first-use-steps { grid-template-columns: 1fr; }
+        .lv-today-week-head {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-2);
+        }
+        .lv-today-deck {
+            padding: var(--lv-sp-2) var(--lv-sp-3);
+            gap: var(--lv-sp-2);
+
+            .lv-today-deck-main-btn {
+                min-width: 0;
+                flex: 1 1 130px;
+            }
+            .lv-today-deck-actions {
+                gap: var(--lv-sp-1);
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+    }
+
     .lv-airow {
         align-items: center;
-        gap: var(--lv-sp-3);
+        flex-wrap: wrap;
+        gap: var(--lv-sp-2);
         padding: var(--lv-sp-2) 0;
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         &:last-child { border-bottom: none; }
     }
 
     .lv-curve {
+        display: block;
         width: 100%;
         max-width: 480px;
-        overflow: visible;
+        height: auto;
+        overflow: hidden;
         .lv-curve-axis { stroke: var(--lv-border-strong); stroke-width: 1.5; }
         .lv-curve-dot {
             fill: var(--lv-color-data);

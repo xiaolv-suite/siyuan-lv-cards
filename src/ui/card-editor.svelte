@@ -197,18 +197,20 @@
         flex-direction: column;
         gap: var(--lv-sp-2);
 
-        @media (min-width: 520px) {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--lv-sp-3);
-            align-items: stretch;
+        @media (min-width: 760px) {
+            @container (min-width: 640px) {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: var(--lv-sp-3);
+                align-items: stretch;
 
-            .lv-editor-input,
-            .lv-editor-diff {
-                height: 100%;
-                min-height: 130px;
-                max-height: 220px;
-                box-sizing: border-box;
+                .lv-editor-input,
+                .lv-editor-diff {
+                    height: 100%;
+                    min-height: 130px;
+                    max-height: 220px;
+                    box-sizing: border-box;
+                }
             }
         }
     }

@@ -49,7 +49,7 @@
             <span class="lv-drawer-actions">
                 {#if actions}{@render actions()}{/if}
                 <button
-                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-drawer-close"
                     onclick={onclose}
                     aria-label={closeLabel}
                     aria-keyshortcuts="Escape"
@@ -96,15 +96,18 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
         gap: var(--lv-sp-2);
         padding: calc(var(--lv-space-unit) * 11) calc(var(--lv-space-unit) * 12) calc(var(--lv-space-unit) * 8 + var(--lv-space-hairline));
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
-    .lv-drawer-title { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-title-size); text-wrap: balance; }
+    .lv-drawer-title { font-weight: var(--lv-fw-bold); font-size: var(--lv-type-title-size); text-wrap: balance; min-width: 0; }
     .lv-drawer-actions {
         display: inline-flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: var(--lv-sp-2);
+        margin-left: auto;
 
         button {
             touch-action: manipulation;
@@ -119,8 +122,43 @@
     }
     .lv-drawer-body {
         flex: 1;
-        overflow: auto;
+        min-height: 0;
+        min-width: 0;
+        container-type: inline-size;
+        overflow-y: auto;
+        overflow-x: hidden;
         overscroll-behavior: contain;
         padding: calc(var(--lv-space-unit) * 11) calc(var(--lv-space-unit) * 12);
+    }
+
+    @media (max-width: 680px) {
+        .lv-drawer {
+            inset: 0 !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            height: var(--lv-vv-h, 100dvh) !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .lv-drawer-head {
+            padding: calc(env(safe-area-inset-top, 0px) + var(--lv-sp-2)) var(--lv-sp-3) var(--lv-sp-2);
+            gap: var(--lv-sp-2);
+        }
+        .lv-drawer-actions {
+            gap: var(--lv-sp-1);
+        }
+        .lv-drawer-close {
+            width: 44px !important;
+            height: 44px !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            padding: 0 !important;
+            justify-content: center;
+        }
+        .lv-drawer-body {
+            padding: var(--lv-sp-3) var(--lv-sp-3) max(var(--lv-sp-4), env(safe-area-inset-bottom, 0px));
+        }
     }
 </style>

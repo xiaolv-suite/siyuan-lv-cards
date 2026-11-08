@@ -266,22 +266,17 @@
         flex-shrink: 0;
         white-space: nowrap;
         gap: var(--lv-sp-1);
-        background: color-mix(in srgb, #f59e0b 16%, var(--lv-color-surface, #ffffff));
-        border: 1px solid color-mix(in srgb, #f59e0b 60%, transparent);
-        color: #d97706;
+        background: var(--lv-warn-soft);
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 60%, transparent);
+        color: var(--lv-color-on-warning-soft);
         font-weight: var(--lv-fw-semibold, 600);
         padding: 2px 8px;
         border-radius: var(--lv-r-tag, 999px);
-        box-shadow: 0 0 8px color-mix(in srgb, #f59e0b 25%, transparent);
+        box-shadow: 0 0 8px color-mix(in srgb, var(--lv-color-warning) 25%, transparent);
 
         :global(svg) {
-            color: #f59e0b;
+            color: var(--lv-color-warning);
         }
-    }
-        :global([data-theme-mode="dark"]) .lv-cram-golden-chip {
-        background: color-mix(in srgb, #f59e0b 22%, #1e1e24);
-        border-color: color-mix(in srgb, #f59e0b 70%, transparent);
-        color: #fbbf24;
     }
     @media (max-width: 560px) {
         .lv-head-row {
