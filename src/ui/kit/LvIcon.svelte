@@ -115,7 +115,7 @@
     class="lv-icon"
     width={size}
     height={size}
-    style={`width:${size}px;height:${size}px;`}
+    style={`width:${size}px;height:${size}px;fill:none!important;stroke:currentColor!important;`}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
