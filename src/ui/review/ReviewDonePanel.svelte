@@ -74,13 +74,14 @@
 
     function onWindowKeydown(e: KeyboardEvent) {
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
-        if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const key = e.key.toLowerCase();
+        if ((key === "enter" || key === "escape") && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
             onReturnHome();
-        } else if (e.key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        } else if (key === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
             onReviewAgain();
-        } else if (e.key === "m" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        } else if (key === "m" && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
             onOpenManager();
         }

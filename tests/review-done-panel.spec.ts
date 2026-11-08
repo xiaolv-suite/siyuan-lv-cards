@@ -130,6 +130,35 @@ describe("ReviewDonePanel 复习完成面板组件", () => {
         expect(onReviewAgain).toHaveBeenCalled();
     });
 
+    it("键盘快捷键（Enter/Escape 返回主页、R/r 再来一组、M/m 打开卡库）正常响应", async () => {
+        const onReturnHome = vi.fn();
+        const onOpenManager = vi.fn();
+        const onReviewAgain = vi.fn();
+        render(ReviewDonePanel, {
+            props: { ...defaultProps, onReturnHome, onOpenManager, onReviewAgain },
+        });
+
+        // Escape 返回主页
+        await fireEvent.keyDown(window, { key: "Escape" });
+        expect(onReturnHome).toHaveBeenCalledTimes(1);
+
+        // Enter 返回主页
+        await fireEvent.keyDown(window, { key: "Enter" });
+        expect(onReturnHome).toHaveBeenCalledTimes(2);
+
+        // R 键（大小写均支持）
+        await fireEvent.keyDown(window, { key: "r" });
+        expect(onReviewAgain).toHaveBeenCalledTimes(1);
+        await fireEvent.keyDown(window, { key: "R" });
+        expect(onReviewAgain).toHaveBeenCalledTimes(2);
+
+        // M 键（大小写均支持）
+        await fireEvent.keyDown(window, { key: "m" });
+        expect(onOpenManager).toHaveBeenCalledTimes(1);
+        await fireEvent.keyDown(window, { key: "M" });
+        expect(onOpenManager).toHaveBeenCalledTimes(2);
+    });
+
     it("突击快刷模式 (isCramMode: true) 结算卡契约与操作按钮响应", async () => {
         const onReturnHome = vi.fn();
         const onReviewAgain = vi.fn();
