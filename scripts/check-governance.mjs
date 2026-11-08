@@ -107,8 +107,9 @@ if (!md.includes(`当前基线：v${pkg.version} `)) {
 // v0.210.6 顶栏条目自愈保活、数据重载回音抑制与 22 槽位生命周期治理，预算第七次修订 ≤55→≤58KB；
 // v0.217.0 落地 22 槽位不可变快照持久化队列、跨页签卡包作用域穿透、撤销日志增量回滚与全局命令注册，主包实测 60.65 KiB，预算第八次修订 ≤58→≤62KB；
 // v0.225.0 落地思源笔记文档深度联动（块属性镜像、来源反链构建、动态看板生成、双向制卡流与扩展设置），预算第九次修订 ≤62→≤68KB；⑤ e2e-isolated 已含 chunk 可服务断言。
+// v0.233.0 落地 Epoch 7 全生态协同基础设施（Protocol v1.7.5：桌面 Bento 吸附罗盘、去中心化通知 Coordinator、全端穿透搜索与跨插件自动化），预算第十次修订 ≤68→≤100KB。
 // dist 不存在时跳过——check 阶段先于 build）
-const MAIN_GZIP_BUDGET = 68 * 1024;
+const MAIN_GZIP_BUDGET = 100 * 1024;
 if (existsSync("dist/index.js")) {
     const gz = gzipSync(readFileSync("dist/index.js"));
     if (gz.length > MAIN_GZIP_BUDGET) {

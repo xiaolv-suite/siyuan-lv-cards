@@ -161,7 +161,11 @@
         align-items: center;
         gap: var(--lv-sp-2);
         min-width: 0;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        min-height: 36px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
 
         .b3-button {
             touch-action: manipulation;

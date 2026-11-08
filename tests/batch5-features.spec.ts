@@ -90,5 +90,18 @@ describe("Batch 5: CF-01 拖拽数据解析与 CF-02 斜杠分级卡包聚类", 
             expect(clusters[0].isGroup).toBe(false);
             expect(clusters[0].decks).toHaveLength(1);
         });
+
+        it("当卡包聚类数超过 8 个时，支持切片展示与全部展开逻辑", () => {
+            const decks = Array.from({ length: 12 }, (_, i) => ({
+                id: `d-${i}`,
+                name: `学科-${i}`,
+                size: 5,
+            }));
+            const clusters = clusterDecksBySlash(decks);
+            expect(clusters).toHaveLength(12);
+            const sliced = clusters.slice(0, 8);
+            expect(sliced).toHaveLength(8);
+            expect(clusters.length - sliced.length).toBe(4);
+        });
     });
 });

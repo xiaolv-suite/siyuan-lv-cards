@@ -161,7 +161,14 @@
         data-testid="review-tb-cram-btn"
     >
         <LvIcon name="zap" size={13} />
-        <span class="lv-tool-btn-label">{isCramMode ? "突击中" : "⚡ 考前突击快刷"}</span>
+        <span class="lv-tool-btn-label">
+            {#if isCramMode}
+                突击中
+            {:else}
+                <span class="lv-cram-label-full">⚡ 考前突击快刷</span>
+                <span class="lv-cram-label-short">⚡ 快刷</span>
+            {/if}
+        </span>
     </button>
 
     <div class="fn__flex-1"></div>
@@ -486,6 +493,19 @@
                 color: #d97706;
                 :global(svg) {
                     color: #f59e0b;
+                }
+
+                .lv-cram-label-short {
+                    display: none;
+                }
+
+                @media (max-width: 900px) {
+                    .lv-cram-label-full { display: none; }
+                    .lv-cram-label-short { display: inline; }
+                }
+                @container (max-width: 900px) {
+                    .lv-cram-label-full { display: none; }
+                    .lv-cram-label-short { display: inline; }
                 }
 
                 &:hover:not(:disabled) {

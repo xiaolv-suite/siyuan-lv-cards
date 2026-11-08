@@ -96,6 +96,7 @@
     let decks: RiffDeck[] = $state([]);
     let pinnedDeckIds = $state<string[]>(loadPinnedDeckIds());
     let showAllEmptyDecks = $state(false);
+    let showAllClusters = $state(false);
     const activeDecks = $derived(decks.filter(d => (d.size ?? 0) > 0));
     const emptyDecks = $derived(decks.filter(d => (d.size ?? 0) === 0));
     const displayedDecks = $derived.by(() => {
@@ -114,6 +115,7 @@
         collapsedClusters = next;
     }
     const clusteredDecks = $derived(clusterDecksBySlash(displayedDecks));
+    const visibleClusters = $derived(showAllClusters ? clusteredDecks : clusteredDecks.slice(0, 8));
     let dueCount = $state(0);
     let newCount = $state(0);
     // T01（docs/39 批 2）：今日行动 hero——当日未收场会话可「继续本场」；深度统计默认展开
@@ -1077,7 +1079,7 @@
                 {/snippet}
 
                 <div class="lv-today-decks-list">
-                    {#each clusteredDecks.slice(0, 8) as cluster (cluster.prefix)}
+                    {#each visibleClusters as cluster (cluster.prefix)}
                         {#if cluster.isGroup}
                             <div class="lv-deck-cluster">
                                 <button
@@ -1110,6 +1112,18 @@
                         {/if}
                     {/each}
                 </div>
+                {#if clusteredDecks.length > 8}
+                    <div class="lv-empty-decks-bar" style="margin-bottom: var(--lv-sp-2);">
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            onclick={() => (showAllClusters = !showAllClusters)}
+                        >
+                            <LvIcon name={showAllClusters ? "chevron-up" : "chevron-down"} size={12} />
+                            <span>{showAllClusters ? "收起多余卡包分组" : `其余 ${clusteredDecks.length - 8} 个卡包分组已折叠，点击展开全部 (${clusteredDecks.length})`}</span>
+                        </button>
+                    </div>
+                {/if}
                 {#if activeDecks.length > 0 && emptyDecks.length > 0}
                     <div class="lv-empty-decks-bar">
                         <button
