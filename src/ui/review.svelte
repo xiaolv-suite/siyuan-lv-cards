@@ -48,7 +48,7 @@
     import { friendlyError } from "@/api/errors";
     import { triggerHaptic, getRatingHapticPattern } from "@/core/haptic";
     import { lvLog } from "@/libs/log";
-    import { resolveCardBreadcrumbsFromRows, buildHPathQuerySql, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
+    import { resolveCardBreadcrumbsFromRows, buildHPathQuerySql, buildRecursiveAncestorSql, createBreadcrumbCache, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, createInitialEphemeralQuizState, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely, findMatchingCheckinItemId } from "@/libs/ecosystem-bridge-kit";
     import { ATTR_LV_DISMISSED, buildDismissAttrs } from "@/core/incremental-learning";
@@ -555,6 +555,7 @@
     let currentHPath = $state("");
     let currentBreadcrumbs = $state<ReviewBreadcrumbChain | null>(null);
     let hideBreadcrumbParentPath = $state(false);
+    const breadcrumbCache = createBreadcrumbCache(256);
     // 汲取自渐进学习插件：给未来的自己留助记线索
     let cardMemo = $state("");
     let showMemoEditor = $state(false);
@@ -751,12 +752,24 @@
                     occl = null;
                 }
             }
-            // 汲取自闪卡小助手 ZY：查询卡片所属文档路径与知识语境
+            // 汲取自闪卡小助手 ZY 与 RemNote：查询卡片所属文档层级路径与标题面包屑上下文
             try {
-                if (siyuanApi.sqlQuery) {
-                    const rows = await siyuanApi.sqlQuery(buildHPathQuerySql(blockID));
+                if (breadcrumbCache.has(blockID)) {
+                    const cached = breadcrumbCache.get(blockID)!;
+                    if (seq === loadSeq) {
+                        currentHPath = cached.currentHPath;
+                        currentBreadcrumbs = cached.currentBreadcrumbs;
+                    }
+                } else if (siyuanApi.sqlQuery) {
+                    let rows: any[] | null = null;
+                    try {
+                        rows = await siyuanApi.sqlQuery(buildRecursiveAncestorSql(blockID));
+                    } catch {
+                        rows = await siyuanApi.sqlQuery(buildHPathQuerySql(blockID));
+                    }
                     if (seq === loadSeq) {
                         const pathRes = resolveCardBreadcrumbsFromRows(blockID, rows);
+                        breadcrumbCache.set(blockID, pathRes);
                         currentHPath = pathRes.currentHPath;
                         currentBreadcrumbs = pathRes.currentBreadcrumbs;
                     }

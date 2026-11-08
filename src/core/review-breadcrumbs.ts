@@ -204,29 +204,167 @@ export interface CardPathResolution {
 }
 
 /**
- * 解析 SQL 查询返回的行记录提取路径与面包屑
+ * 构造按块 ID 查询所属文档 hpath 的 SQL 语句（防止单引号注入）
+ */
+export function buildHPathQuerySql(blockID: string): string {
+    const safeID = String(blockID ?? "").replace(/'/g, "''");
+    return `SELECT hpath FROM blocks WHERE id = '${safeID}' LIMIT 1`;
+}
+
+/**
+ * 构造基于 SQLite CTE 递归查询块所属祖先标题链与根文档的 SQL 语句（防止单引号注入）。
+ * 沿 parent_id 一路递归至 root_id，最大递归深度设为 10，足以覆盖绝大多数复杂文档大纲。
+ */
+export function buildRecursiveAncestorSql(blockID: string): string {
+    const safeID = String(blockID ?? "").replace(/'/g, "''");
+    return `WITH RECURSIVE ancestors(id, parent_id, root_id, type, subtype, content, hpath, sort, depth) AS (
+  SELECT id, parent_id, root_id, type, subtype, content, hpath, sort, 0
+  FROM blocks
+  WHERE id = '${safeID}'
+  UNION ALL
+  SELECT b.id, b.parent_id, b.root_id, b.type, b.subtype, b.content, b.hpath, b.sort, a.depth + 1
+  FROM blocks b
+  JOIN ancestors a ON b.id = a.parent_id
+  WHERE a.parent_id != '' AND a.depth < 10
+)
+SELECT id, parent_id, root_id, type, subtype, content, hpath, sort, depth FROM ancestors ORDER BY depth DESC;`;
+}
+
+/**
+ * 从 CTE 递归查询结果行中提取根文档标题与祖先标题列表并解析为面包屑链条
+ */
+export function resolveBreadcrumbsFromAncestorRows(
+    cardID: string,
+    rows: any[] | null | undefined,
+    options: { maxDisplayChars?: number; maxDepth?: number } = {}
+): CardPathResolution {
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return { currentHPath: "", currentBreadcrumbs: null };
+    }
+
+    // 1. 查找根文档节点（type === 'd'，通常位于 depth 最大的一行）
+    let docTitle = "";
+    let docId = "";
+    let rawHPath = "";
+
+    const docRow = rows.find(r => r.type === "d") || rows[0];
+    if (docRow) {
+        docId = docRow.id;
+        rawHPath = docRow.hpath || "";
+        docTitle = cleanTitleText(docRow.content || docRow.hpath || "");
+        if (docTitle.startsWith("/")) {
+            docTitle = docTitle.replace(/^\/+/, "").split("/")[0] || docTitle;
+        }
+    }
+
+    // 2. 收集所有祖先标题节点（type === 'h'），按 depth 从大到小排列（自顶向下）
+    const headingRows = rows
+        .filter(r => r.type === "h" && r.content)
+        .sort((a, b) => (Number(b.depth ?? 0)) - (Number(a.depth ?? 0)));
+
+    const ancestorHeadings = headingRows.map(h => ({
+        id: String(h.id),
+        title: cleanTitleText(String(h.content)),
+    })).filter(h => Boolean(h.title));
+
+    // 3. 如果成功提取到祖先标题，组装层级面包屑链
+    if (ancestorHeadings.length > 0) {
+        const chain = resolveReviewBreadcrumbs({
+            cardId: cardID,
+            docTitle: docTitle || undefined,
+            docId: docId || undefined,
+            ancestorHeadings,
+            maxDisplayChars: options.maxDisplayChars ?? 14,
+            maxDepth: options.maxDepth ?? 3,
+        });
+
+        // 生成友好路径展示（如 "算法笔记 › 二叉树 › 平衡二叉树"）
+        const pathSegments = [docTitle, ...ancestorHeadings.map(h => h.title)].filter(Boolean);
+        const currentHPath = pathSegments.join(" › ");
+
+        return {
+            currentHPath,
+            currentBreadcrumbs: chain,
+        };
+    }
+
+    // 4. 降级逻辑：若未提取到祖先标题行，回退到按 hpath 解析
+    if (!rawHPath && rows[0]?.hpath) {
+        rawHPath = rows[0].hpath;
+    }
+    if (rawHPath) {
+        const hpathStr = String(rawHPath);
+        return {
+            currentHPath: formatHPathDisplay(hpathStr),
+            currentBreadcrumbs: parseHPathToBreadcrumbs(cardID, hpathStr, options),
+        };
+    }
+
+    return { currentHPath: "", currentBreadcrumbs: null };
+}
+
+/**
+ * 解析 SQL 查询返回的行记录提取路径与面包屑（自适应递归行或单行 hpath）
  */
 export function resolveCardBreadcrumbsFromRows(
     cardID: string,
-    rows: any[] | null | undefined
+    rows: any[] | null | undefined,
+    options: { maxDisplayChars?: number; maxDepth?: number } = {}
 ): CardPathResolution {
-    const rawHPath = rows?.[0]?.hpath;
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return { currentHPath: "", currentBreadcrumbs: null };
+    }
+
+    // 自动判定：如果返回行包含 type/depth 字段，按递归祖先提取
+    const isAncestorRows = rows.some(r => r.type !== undefined || r.depth !== undefined);
+    if (isAncestorRows) {
+        return resolveBreadcrumbsFromAncestorRows(cardID, rows, options);
+    }
+
+    // 否则按传统单行 hpath 解析
+    const rawHPath = rows[0]?.hpath;
     if (!rawHPath) {
         return { currentHPath: "", currentBreadcrumbs: null };
     }
     const hpathStr = String(rawHPath);
     return {
         currentHPath: formatHPathDisplay(hpathStr),
-        currentBreadcrumbs: parseHPathToBreadcrumbs(cardID, hpathStr),
+        currentBreadcrumbs: parseHPathToBreadcrumbs(cardID, hpathStr, options),
     };
 }
 
 /**
- * 构造按块 ID 查询所属文档 hpath 的 SQL 语句（防止单引号注入）
+ * 轻量 LRU 缓存，用于避免复习同文档卡片时高频重复执行祖先 SQL 查询
  */
-export function buildHPathQuerySql(blockID: string): string {
-    const safeID = String(blockID ?? "").replace(/'/g, "''");
-    return `SELECT hpath FROM blocks WHERE id = '${safeID}' LIMIT 1`;
+export function createBreadcrumbCache(capacity: number = 256) {
+    const cache = new Map<string, CardPathResolution>();
+    return {
+        get(key: string): CardPathResolution | undefined {
+            if (!cache.has(key)) return undefined;
+            const val = cache.get(key)!;
+            cache.delete(key);
+            cache.set(key, val);
+            return val;
+        },
+        set(key: string, value: CardPathResolution) {
+            if (cache.has(key)) {
+                cache.delete(key);
+            } else if (cache.size >= capacity) {
+                const firstKey = cache.keys().next().value;
+                if (firstKey) cache.delete(firstKey);
+            }
+            cache.set(key, value);
+        },
+        has(key: string): boolean {
+            return cache.has(key);
+        },
+        clear() {
+            cache.clear();
+        },
+        size(): number {
+            return cache.size;
+        }
+    };
 }
 
 
