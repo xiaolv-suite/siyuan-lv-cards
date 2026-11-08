@@ -27,7 +27,7 @@
     };
 
     let {
-        i18n, dashboardBase, managerCtx, exam, inbox, goals, maintenance, recovery, uiMode = "advanced", initialTab = "overview", initialBlockID = "", onTabChange,
+        i18n, dashboardBase, managerCtx, exam, inbox, goals, maintenance, recovery, uiMode = "advanced", initialTab = "overview", initialBlockID = "", onTabChange, onCloseMobile,
         openWizard, openDrill, openChallenge, openPairing, openQuickCard, loadWizardView, loadQuickCardView, openSettings, openPalette, getSettingsHealth,
     }: {
         i18n: any;
@@ -119,6 +119,7 @@
         initialTab?: string;
         initialBlockID?: string;
         onTabChange?: (id: string) => void;
+        onCloseMobile?: () => void;
     } = $props();
 
     // R54 主导航只保留五个稳定入口；旧 route id 继续作为内部页面 id，
@@ -378,7 +379,9 @@
     // T13/openTabOf 去重（docs/40）：外部（顶栏/命令面板）复用既有中心页签时，
     // 经根元素派发 lv-switch-tab 事件切换子页——避免每次入口都新开一个中心
     let hubRoot = $state<HTMLElement | null>(null);
+    let keyboardOpen = $state(false);
     let onSwitchTab: ((e: Event) => void) | null = null;
+    let unbindVisualViewport: (() => void) | null = null;
     onMount(() => {
         onSwitchTab = (e: Event) => {
             const detail = (e as CustomEvent<string | { tab?: string; focusBlockID?: string }>).detail;
@@ -389,6 +392,28 @@
             }
         };
         hubRoot?.addEventListener("lv-switch-tab", onSwitchTab);
+        if (typeof window !== "undefined") {
+            const vv = window.visualViewport;
+            let baselineH = Math.max(window.innerHeight || 0, Math.round(vv?.height ?? 0));
+            const syncViewport = () => {
+                const innerH = window.innerHeight || 0;
+                const rawH = vv ? vv.height : innerH;
+                const vvH = Math.max(180, Math.round(rawH || innerH));
+                if (vvH > baselineH) baselineH = vvH;
+                hubRoot?.style.setProperty("--lv-vv-h", `${vvH}px`);
+                const refH = Math.max(baselineH, innerH);
+                keyboardOpen = refH > 0 && refH - vvH > 110;
+            };
+            syncViewport();
+            vv?.addEventListener("resize", syncViewport);
+            vv?.addEventListener("scroll", syncViewport);
+            window.addEventListener("resize", syncViewport);
+            unbindVisualViewport = () => {
+                vv?.removeEventListener("resize", syncViewport);
+                vv?.removeEventListener("scroll", syncViewport);
+                window.removeEventListener("resize", syncViewport);
+            };
+        }
         if (inbox) {
             unsubscribeInbox = inbox.subscribe(() => {
                 inboxOpenCount = inbox?.get().items.filter(item => item.status !== "dismissed").length ?? 0;
@@ -403,6 +428,8 @@
     });
     onDestroy(() => {
         hubRoot?.removeEventListener("lv-switch-tab", onSwitchTab ?? (() => {}));
+        unbindVisualViewport?.();
+        unbindVisualViewport = null;
         unsubscribeInbox?.();
         unsubscribeExamPlans?.();
     });
@@ -422,7 +449,28 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<div class="lv-hub" bind:this={hubRoot}>
+<div class="lv-hub" class:lv-hub--keyboard-open={keyboardOpen} bind:this={hubRoot}>
+    <header class="lv-hub-mobile-topbar">
+        <div class="lv-hub-mobile-title">
+            <span class="lv-hub-mobile-brand-icon"><LvIcon name="cards" size={17} /></span>
+            <strong>{primaryTabs.find(item => item.id === primaryFor(active))?.label ?? (i18n.menuDashboard ?? "闪卡中心")}</strong>
+        </div>
+        <div class="lv-hub-mobile-top-actions">
+            {#if openPalette}
+                <button type="button" class="lv-hub-mobile-topbtn" onclick={() => openPalette?.()} aria-label={i18n.cmdPalette ?? "命令面板"} title={i18n.cmdPalette ?? "命令面板"}>
+                    <LvIcon name="search" size={17} />
+                </button>
+            {/if}
+            <button type="button" class="lv-hub-mobile-gear" onclick={openFullSettings} aria-label={i18n.hubPrimarySettings ?? "设置"} title={i18n.hubPrimarySettings ?? "设置"}>
+                <LvIcon name="settings" size={18} />
+            </button>
+            {#if onCloseMobile}
+                <button type="button" class="lv-hub-mobile-close" onclick={onCloseMobile} aria-label={i18n.common?.close ?? "关闭"} title={i18n.common?.close ?? "关闭"}>
+                    <LvIcon name="close" size={18} />
+                </button>
+            {/if}
+        </div>
+    </header>
     <!-- R54 工作台外壳：桌面左侧稳定主入口；旧模块作为学习页中的上下文工具。 -->
     <div class="lv-r54-shell">
         <aside class="lv-r54-sidebar" aria-label={i18n.hubPrimaryLabel ?? "主要导航"}>
@@ -688,9 +736,6 @@
             </div>
         </section>
     </div>
-    <button class="lv-hub-mobile-gear" onclick={openFullSettings} aria-label={i18n.hubPrimarySettings ?? "设置"} title={i18n.hubPrimarySettings ?? "设置"}>
-        <LvIcon name="settings" size={18} />
-    </button>
     <nav class="lv-hub-mobile-nav" aria-label={i18n.hubPrimaryLabel ?? "主要导航"}>
         {#each mobileTabs as tab (tab.id)}
             <button class:lv-hub-mobile-active={primaryFor(active) === tab.id} class="lv-hub-mobile-btn" aria-current={primaryFor(active) === tab.id ? "page" : undefined} aria-label={tab.badgeLabel ? `${tab.label}，${tab.badgeLabel}` : undefined} onclick={() => switchTab(tab.id)}>
@@ -723,7 +768,8 @@
         container: lv-hub / inline-size;
     }
 
-    /* Mobile Spec v1：设置折叠为浮动齿轮（桌面隐藏，≤780px 容器内常驻右上角，触控目标 ≥44px） */
+    /* Mobile Spec v2：紧凑单行顶栏整合标题、设置齿轮与关闭钮，桌面端隐藏，杜绝悬浮按钮遮挡子页内容 */
+    .lv-hub-mobile-topbar,
     .lv-hub-mobile-gear {
         display: none;
     }
@@ -1041,33 +1087,64 @@
     .lv-r54-health-dot-neutral { background: var(--lv-color-brand); }
 
     @container lv-hub (max-width: 780px) {
-        .lv-r54-shell { grid-template-columns: 1fr; margin: 8px 8px 0; }
-        .lv-r54-sidebar { display: none; }
-        .lv-r54-settings { padding: var(--lv-sp-4); }
-        .lv-r54-health-grid { grid-template-columns: 1fr; }
-        .lv-r54-settings-action { align-items: flex-start; flex-direction: column; }
-        .lv-hub-mobile-gear {
+        .lv-hub-mobile-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--lv-sp-2);
+            flex: none;
+            min-height: calc(46px + env(safe-area-inset-top, 0px));
+            padding: env(safe-area-inset-top, 0px) calc(env(safe-area-inset-right, 0px) + var(--lv-sp-2)) 0 calc(env(safe-area-inset-left, 0px) + var(--lv-sp-3));
+            background: var(--lv-color-surface);
+            border-bottom: 1px solid var(--lv-border);
+            z-index: var(--lv-z-card-control);
+        }
+        .lv-hub-mobile-title {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--lv-sp-2);
+            min-width: 0;
+            color: var(--lv-color-text);
+            font-size: var(--lv-type-title-size);
+            font-weight: var(--lv-fw-heading);
+        }
+        .lv-hub-mobile-brand-icon {
+            display: inline-grid;
+            place-items: center;
+            color: var(--lv-color-brand);
+            flex: none;
+        }
+        .lv-hub-mobile-top-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--lv-sp-1);
+            flex: none;
+        }
+        .lv-hub-mobile-gear,
+        .lv-hub-mobile-topbtn,
+        .lv-hub-mobile-close {
             display: grid;
             place-items: center;
-            position: absolute;
-            top: calc(env(safe-area-inset-top, 0px) + 14px);
-            right: calc(env(safe-area-inset-right, 0px) + 12px);
+            position: static;
             width: 44px;
             height: 44px;
+            min-width: 44px;
+            min-height: 44px;
             padding: 0;
-            border: 1px solid var(--lv-border);
+            border: 0;
             border-radius: var(--lv-r-circle);
-            background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
-            backdrop-filter: blur(10px) saturate(1.1);
-            -webkit-backdrop-filter: blur(10px) saturate(1.1);
+            background: transparent;
             color: var(--lv-color-text-muted);
             cursor: pointer;
-            z-index: 6;
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
-            box-shadow: var(--lv-shadow-1);
-            transition: color var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease);
+            transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
+
+            &:hover {
+                background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+                color: var(--lv-color-text);
+            }
 
             &:active {
                 transform: scale(0.94);
@@ -1078,25 +1155,41 @@
                 box-shadow: var(--lv-focus-ring);
             }
         }
+        .lv-r54-shell {
+            grid-template-columns: 1fr;
+            margin: 0;
+            border-radius: 0;
+            border: 0;
+            box-shadow: none;
+        }
+        .lv-r54-sidebar { display: none; }
+        .lv-r54-settings { padding: var(--lv-sp-3); }
+        .lv-r54-health-grid { grid-template-columns: 1fr; }
+        .lv-r54-settings-action { align-items: flex-start; flex-direction: column; }
     }
 
     @container lv-hub (max-width: 780px) {
-        .lv-hub-bar { padding-bottom: var(--lv-sp-2); }
+        .lv-hub-bar { padding: var(--lv-sp-2) var(--lv-sp-3) var(--lv-sp-1); }
+        .lv-hub-subnav { margin: 0 0 var(--lv-sp-1); }
         .lv-hub-mobile-nav {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: calc(var(--lv-space-unit) * 1);
             flex: none;
-            padding: calc(var(--lv-space-unit) * 3) var(--lv-sp-3) max(calc(var(--lv-space-unit) * 3), env(safe-area-inset-bottom));
+            padding: calc(var(--lv-space-unit) * 2) var(--lv-sp-2) max(calc(var(--lv-space-unit) * 2), env(safe-area-inset-bottom));
             border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-            background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
+            background: color-mix(in srgb, var(--lv-color-surface) 94%, transparent);
             backdrop-filter: blur(14px) saturate(1.15);
             -webkit-backdrop-filter: blur(14px) saturate(1.15);
             box-shadow: 0 -1px 3px color-mix(in srgb, black 3%, transparent);
         }
+        .lv-hub--keyboard-open .lv-hub-mobile-nav,
+        :global(.lv-vv-keyboard-open) .lv-hub-mobile-nav {
+            display: none !important;
+        }
         .lv-hub-mobile-btn {
             display: flex;
-            min-height: 48px;
+            min-height: 46px;
             align-items: center;
             justify-content: center;
             flex-direction: column;
@@ -1127,14 +1220,25 @@
             font-weight: var(--lv-fw-heading);
         }
         .lv-hub-mobile-icon { position: relative; display: grid; width: 24px; height: 24px; place-items: center; }
-        .lv-hub-mobile-count { position: absolute; top: -4px; right: -13px; display: grid; min-width: 16px; height: 16px; place-items: center; padding: 0 3px; border: 1px solid var(--lv-color-surface); border-radius: 999px; background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: var(--lv-type-micro-size); font-variant-numeric: tabular-nums; line-height: var(--lv-lh-tight); }
+        .lv-hub-mobile-count { position: absolute; top: -4px; right: -13px; display: grid; min-width: 16px; height: 16px; place-items: center; padding: 0 3px; border: 1px solid var(--lv-color-surface); border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: var(--lv-type-micro-size); font-variant-numeric: tabular-nums; line-height: var(--lv-lh-tight); }
         .lv-hub-mobile-label { line-height: var(--lv-lh-icon); }
     }
 
-    @container lv-hub (max-width: 740px) {
-        .lv-hub-bar { padding-left: var(--lv-sp-4); padding-right: var(--lv-sp-4); }
-    }
-    @container lv-hub (max-width: 420px) {
-        .lv-hub-bar { padding-left: var(--lv-sp-3); padding-right: var(--lv-sp-3); }
+    @container lv-hub (max-width: 560px) {
+        :global(.lv-page) {
+            padding: var(--lv-sp-3) var(--lv-sp-3) var(--lv-sp-4);
+        }
+        :global(.lv-pagehead) {
+            gap: var(--lv-sp-2);
+            margin-bottom: var(--lv-sp-2);
+        }
+        :global(.lv-pagehead .lv-eyebrow),
+        :global(.lv-pagehead .lv-pagehead-sub) {
+            display: none;
+        }
+        :global(.lv-pagehead .lv-pagehead-title) {
+            font-size: var(--lv-type-title-size);
+            margin: 0;
+        }
     }
 </style>

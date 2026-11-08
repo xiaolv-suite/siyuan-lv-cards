@@ -1059,7 +1059,7 @@
         {#if ctx.openManagerDeck && decks.length > 0}
             <LvSection id="sec-today-decks" title={t.dashboard.decksToday ?? "我的卡组"}>
                 {#snippet actions()}
-                    <div style="display: flex; gap: var(--lv-sp-2); align-items: center;">
+                    <div class="lv-today-decks-head-actions">
                         <button
                             type="button"
                             class="b3-button b3-button--small b3-button--outline lv-btn-tool"
@@ -2158,8 +2158,34 @@
         .lv-today-stats .lv-stat-cell:nth-child(2n) { border-right: none; }
         .lv-today-stats .lv-stat-cell:nth-child(-n+2) { border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
     }
+    .lv-today-decks-head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-1);
+        align-items: center;
+    }
+
     @container lv-hub (max-width: 560px) {
         .lv-first-use-steps { grid-template-columns: 1fr; }
+        .lv-today-week-head {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-2);
+        }
+        .lv-today-deck {
+            padding: var(--lv-sp-2) var(--lv-sp-3);
+            gap: var(--lv-sp-2);
+
+            .lv-today-deck-main-btn {
+                min-width: 0;
+                flex: 1 1 130px;
+            }
+            .lv-today-deck-actions {
+                gap: var(--lv-sp-1);
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
     }
 
     .lv-todo-quiet {

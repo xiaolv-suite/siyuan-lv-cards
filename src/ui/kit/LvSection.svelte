@@ -33,14 +33,18 @@
        cannot redefine headings in unrelated views. */
     .lv-section2 > .lv-secthead {
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-2);
 
         span:first-child {
             text-wrap: balance;
+            min-width: 0;
         }
     }
     .lv-section2 > .lv-secthead .lv-secthead-actions {
         display: inline-flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: var(--lv-sp-1);
 
         :global(.b3-button) {

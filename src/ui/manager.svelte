@@ -191,6 +191,16 @@
         Boolean(filterText.trim() || statusFilter !== "all" || cardTypeFilter !== "all" || leechOnly || starredOnly || sortMode !== "default" || pickedSaved)
     );
 
+    let mobileFiltersOpen = $state(false);
+    const activeSecondaryFilterCount = $derived(
+        (deckScope ? 1 : 0)
+        + (sortMode !== "default" ? 1 : 0)
+        + (statusFilter !== "all" ? 1 : 0)
+        + (cardTypeFilter !== "all" ? 1 : 0)
+        + (leechOnly ? 1 : 0)
+        + (starredOnly ? 1 : 0)
+    );
+
     let filteredBlocks = $derived(
         (() => {
             const lowerFilter = deferredFilter ? deferredFilter.toLowerCase() : "";
@@ -937,19 +947,31 @@
             {/if}
         </div>
         <button
-            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+            type="button"
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-mgr-filter-toggle"
+            class:lv-mgr-filter-toggle--active={mobileFiltersOpen || activeSecondaryFilterCount > 0}
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="lv-mgr-filters-panel"
+            onclick={() => (mobileFiltersOpen = !mobileFiltersOpen)}
+        >
+            <span>筛选{activeSecondaryFilterCount > 0 ? ` (${activeSecondaryFilterCount})` : ""}</span>
+            <span aria-hidden="true">{mobileFiltersOpen ? "▴" : "▾"}</span>
+        </button>
+        <button
+            class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-mgr-refresh-btn"
             disabled={loading || batchBusy !== null}
             title={`${loading ? t.dashboard.loading : t.dashboard.refresh} (r)`}
             aria-keyshortcuts="r"
             onclick={load}
         >
             <LvIcon name="refresh" size={13} />
-            <span>{loading ? t.dashboard.loading : t.dashboard.refresh}</span>
+            <span class="lv-mgr-refresh-label">{loading ? t.dashboard.loading : t.dashboard.refresh}</span>
         </button>
     {/snippet}
 
-    <!-- T-管理器 R53 工具行：排序/筛选/保存独立于页头搜索 -->
+    <!-- T-管理器 R53 工具行：排序/筛选/保存独立于页头搜索；窄屏默认折叠进面板 -->
     <div class="lv-mgr-toolbar">
+        <div id="lv-mgr-filters-panel" class="lv-mgr-filters-panel" class:is-open={mobileFiltersOpen}>
         {#if filterText}
             <button class="b3-button b3-button--small lv-btn-ghost" title={t.manager.saveFilter} disabled={!filterText.trim()} onclick={saveCurrent}><LvIcon name="star" size={15} /> {t.manager.saveFilter}</button>
         {/if}
@@ -1017,6 +1039,7 @@
                 <span>重置</span>
             </button>
         {/if}
+        </div>
         <div class="lv-toolbar-right">
             <span class="lv-toolbar-caption">{t.manager.total}: {total}</span>
             {#if filteredBlocks.length > 0}
@@ -1756,6 +1779,13 @@
         }
     }
 
+    .lv-mgr-filter-toggle {
+        display: none;
+    }
+    .lv-mgr-filters-panel {
+        display: contents;
+    }
+
     /* 窄屏工具栏：搜索、筛选和批量动作分行，避免中文按钮互相挤压。 */
     @container lv-hub (max-width: 740px) {
         .lv-filter {
@@ -1766,7 +1796,7 @@
             align-items: stretch;
             .lv-sort { flex: 1 1 135px; max-width: none; }
             .lv-chipbtn { flex: 0 1 auto; }
-            .lv-toolbar-caption { width: 100%; margin-left: 0; }
+            .lv-toolbar-caption { width: auto; margin-left: 0; }
         }
         .lv-batchbar {
             align-items: stretch;
@@ -1774,22 +1804,205 @@
             > .b3-button { flex: 1 1 auto; }
         }
         .lv-row { flex-wrap: wrap; }
-        .lv-list .lv-row > .b3-button { margin-left: calc(var(--lv-space-unit) * 14); }
+    }
+
+    /* Mobile Spec v2：≤560px 默认仅展示单行「搜索框 + [筛选 ▾]」，折叠 4 个 select 与次级筛选，保障卡片列表占屏 ≥ 65% */
+    @container lv-hub (max-width: 560px) {
+        :global(#lv-manager-page .lv-pagehead-main) {
+            display: none;
+        }
+        :global(#lv-manager-page .lv-pagehead) {
+            margin-bottom: var(--lv-sp-2);
+        }
+        :global(#lv-manager-page .lv-pagehead-actions) {
+            display: flex;
+            flex-wrap: nowrap;
+            width: 100%;
+            gap: var(--lv-sp-2);
+            align-items: center;
+        }
+        .lv-filter-wrap {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .lv-filter {
+            width: 100%;
+            min-width: 0;
+            height: 36px;
+        }
+        .lv-mgr-filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--lv-sp-1);
+            min-height: 36px;
+            padding: 0 var(--lv-sp-3);
+            flex-shrink: 0;
+            white-space: nowrap;
+
+            &.lv-mgr-filter-toggle--active {
+                border-color: var(--lv-color-brand);
+                color: var(--lv-color-brand);
+                background: var(--lv-primary-soft);
+            }
+        }
+        .lv-mgr-refresh-btn {
+            min-height: 36px;
+            min-width: 36px;
+            padding: 0 var(--lv-sp-2);
+            flex-shrink: 0;
+            justify-content: center;
+            .lv-mgr-refresh-label {
+                display: none;
+            }
+        }
+        .lv-mgr-toolbar {
+            margin-bottom: var(--lv-sp-2);
+            gap: var(--lv-sp-2);
+        }
+        .lv-mgr-filters-panel {
+            display: none;
+
+            &.is-open {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--lv-sp-2);
+                width: 100%;
+                padding: var(--lv-sp-2);
+                background: var(--lv-color-surface);
+                border: 1px solid var(--lv-border);
+                border-radius: var(--lv-r-m);
+
+                .lv-deck-selector {
+                    max-width: none !important;
+                    grid-column: 1 / -1;
+                }
+                .lv-sort {
+                    width: 100%;
+                    max-width: none;
+                }
+                .lv-chipbtn {
+                    justify-content: center;
+                    width: 100%;
+                }
+            }
+        }
+        .lv-toolbar-right {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: var(--lv-sp-2);
+        }
+        .lv-mgr-deck-scope {
+            padding: var(--lv-sp-2) var(--lv-sp-3);
+            margin-bottom: var(--lv-sp-2);
+            gap: var(--lv-sp-2);
+        }
+    }
+
+    @media (max-width: 560px) {
+        :global(#lv-manager-page .lv-pagehead-main) {
+            display: none;
+        }
+        :global(#lv-manager-page .lv-pagehead) {
+            margin-bottom: var(--lv-sp-2);
+        }
+        :global(#lv-manager-page .lv-pagehead-actions) {
+            display: flex;
+            flex-wrap: nowrap;
+            width: 100%;
+            gap: var(--lv-sp-2);
+            align-items: center;
+        }
+        .lv-filter-wrap {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .lv-filter {
+            width: 100%;
+            min-width: 0;
+            height: 36px;
+        }
+        .lv-mgr-filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--lv-sp-1);
+            min-height: 36px;
+            padding: 0 var(--lv-sp-3);
+            flex-shrink: 0;
+            white-space: nowrap;
+
+            &.lv-mgr-filter-toggle--active {
+                border-color: var(--lv-color-brand);
+                color: var(--lv-color-brand);
+                background: var(--lv-primary-soft);
+            }
+        }
+        .lv-mgr-refresh-btn {
+            min-height: 36px;
+            min-width: 36px;
+            padding: 0 var(--lv-sp-2);
+            flex-shrink: 0;
+            justify-content: center;
+            .lv-mgr-refresh-label {
+                display: none;
+            }
+        }
+        .lv-mgr-toolbar {
+            margin-bottom: var(--lv-sp-2);
+            gap: var(--lv-sp-2);
+        }
+        .lv-mgr-filters-panel {
+            display: none;
+
+            &.is-open {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--lv-sp-2);
+                width: 100%;
+                padding: var(--lv-sp-2);
+                background: var(--lv-color-surface);
+                border: 1px solid var(--lv-border);
+                border-radius: var(--lv-r-m);
+
+                .lv-deck-selector {
+                    max-width: none !important;
+                    grid-column: 1 / -1;
+                }
+                .lv-sort {
+                    width: 100%;
+                    max-width: none;
+                }
+                .lv-chipbtn {
+                    justify-content: center;
+                    width: 100%;
+                }
+            }
+        }
+        .lv-toolbar-right {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: var(--lv-sp-2);
+        }
+        .lv-mgr-deck-scope {
+            padding: var(--lv-sp-2) var(--lv-sp-3);
+            margin-bottom: var(--lv-sp-2);
+            gap: var(--lv-sp-2);
+        }
     }
 
     @container lv-hub (max-width: 420px) {
-        .lv-mgr-toolbar {
-            .lv-sort { flex-basis: 100%; }
-            .lv-chipbtn { width: 100%; justify-content: center; }
-        }
         .lv-batchbar {
             > .b3-button { flex-basis: 45%; white-space: normal; }
         }
         .lv-list .lv-row {
+            flex-wrap: nowrap;
             padding: var(--lv-sp-2) var(--lv-sp-3);
             gap: var(--lv-sp-2);
-            .lv-row-main { flex-basis: calc(100% - 28px); }
-            > .b3-button { width: calc(100% - 28px); margin-left: 28px; }
+            .lv-row-main { flex: 1 1 0; min-width: 0; }
+            > .b3-button { flex: none; width: auto; margin-left: 0; }
         }
     }
 </style>

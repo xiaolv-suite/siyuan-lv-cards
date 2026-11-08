@@ -916,7 +916,7 @@ TCP 建立连接需要进行三次握手：
     </div>
 
     {#if step === 1}
-        <div transition:fade={{ duration: getMotionDuration("normal") }}>
+        <div class="lv-aiwiz-step" transition:fade={{ duration: getMotionDuration("normal") }}>
             <!-- T02 完整工作面（docs/13 §4）：左=来源清单与载入，右=材料编辑与参数 -->
             <div class="lv-wb">
                 <div class="lv-wb-side">
@@ -1224,7 +1224,7 @@ TCP 建立连接需要进行三次握手：
                     </div>
                 </div>
             {/if}
-            <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2)">
+            <div class="fn__flex lv-aiwiz-actions" style="justify-content: flex-end; gap: var(--lv-sp-2)">
                 <button
                     class="b3-button b3-button--cancel"
                     aria-keyshortcuts="Escape"
@@ -1244,7 +1244,7 @@ TCP 建立连接需要进行三次握手：
             </div>
         </div>
     {:else}
-        <div transition:fade={{ duration: getMotionDuration("normal") }}>
+        <div class="lv-aiwiz-step" transition:fade={{ duration: getMotionDuration("normal") }}>
             {#if restoredCandidates}
                 <div class="lv-aiwiz-resume" role="status">
                     {t.aiWizard.recoveredCandidates.replace("${source}", recoveryJob?.sourceLabel ?? "")}
@@ -1451,7 +1451,7 @@ TCP 建立连接需要进行三次握手：
             {#if errorMsg}
                 <div class="ft__smaller" style="color: var(--lv-color-danger); margin-bottom: var(--lv-sp-2); max-width: 48em; text-wrap: pretty; line-height: var(--lv-lh-reading, 1.65);" role="alert" aria-live="assertive">{errorMsg}</div>
             {/if}
-            <div class="fn__flex" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
+            <div class="fn__flex lv-aiwiz-actions lv-aiwiz-actions--step2" style="justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
                 <button
                     class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                     disabled={creating}
@@ -1903,5 +1903,55 @@ TCP 建立连接需要进行三次握手：
     .lv-candidate-search-input {
         height: 28px;
         font-size: var(--lv-type-smaller-size);
+    }
+
+    @media (max-width: 640px) {
+        .lv-aiwiz:not(.lv-aiwiz-embedded) {
+            padding: var(--lv-sp-3) var(--lv-sp-3) 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+
+            .lv-aiwiz-step {
+                flex: 1 1 auto;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+        }
+        .lv-wb-textarea {
+            min-height: 132px;
+            font-size: 16px;
+        }
+        .lv-aiwiz-list {
+            max-height: none;
+            overflow: visible;
+        }
+        .lv-aiwiz-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: var(--lv-z-card-control);
+            flex-wrap: wrap;
+            background: var(--lv-color-surface);
+            border-top: 1px solid var(--lv-border);
+            padding: var(--lv-sp-2) 0 max(var(--lv-sp-2), env(safe-area-inset-bottom, 0px));
+            margin-top: var(--lv-sp-2);
+
+            .b3-button {
+                min-height: 44px;
+            }
+            .lv-btn-primary {
+                flex: 1 1 auto;
+            }
+        }
+        .lv-aiwiz-actions--step2 {
+            input.b3-text-field,
+            select.b3-select {
+                flex: 1 1 130px;
+                min-width: 0;
+                width: auto !important;
+                max-width: none !important;
+            }
+        }
     }
 </style>

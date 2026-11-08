@@ -6,7 +6,7 @@ import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
 import { setDialogMounter } from "./libs/dialog";
-import { svelteDialog, simpleDialog, confirmDialogBool } from "./libs/dialog";
+import { svelteDialog, simpleDialog, confirmDialogBool, bindMobileVisualViewport } from "./libs/dialog";
 
 // AT-17：UI chunk（独立 IIFE 自带 svelte）经全局取 siyuan 模块——shell 在此注入单一事实源
 (window as unknown as { __lvSiyuan: unknown }).__lvSiyuan = siyuanNamespace;
@@ -92,6 +92,7 @@ import {
     registerDashboardTab,
     registerReviewTab,
     buildHubMountProps,
+    buildReviewMountProps,
     TAB_DASHBOARD,
     TAB_REVIEW,
     type TabDeps,
@@ -455,6 +456,8 @@ export default class LvCardsPlugin extends Plugin {
     private mobileEntryCleaner?: () => void;
     /** Mobile Spec v1：手机端闪卡中心全屏 Dialog 单例宿主（替代页签形态） */
     private mobileHubDialog: { close: () => void; element: HTMLElement } | null = null;
+    /** Mobile Spec v2：手机端复习工作台全屏 Dialog 单例宿主（打通 TAB_REVIEW 移动端路由） */
+    private mobileReviewDialog: { close: () => void; element: HTMLElement } | null = null;
     private omnisearchCleaner?: () => void;
     private autoRuleCleaner?: () => void;
     private gleanRuleCleaner?: () => void;
@@ -1716,6 +1719,10 @@ export default class LvCardsPlugin extends Plugin {
             this.mobileEntryCleaner();
             this.mobileEntryCleaner = undefined;
         }
+        if (this.mobileReviewDialog) {
+            try { this.mobileReviewDialog.close(); } catch { /* 已销毁 */ }
+            this.mobileReviewDialog = null;
+        }
         if (this.mobileHubDialog) {
             // Mobile Spec v1：卸载时收拢手机端全屏宿主（零孤儿 DOM）
             try { this.mobileHubDialog.close(); } catch { /* 已销毁 */ }
@@ -2224,16 +2231,38 @@ export default class LvCardsPlugin extends Plugin {
         };
     }
 
+    private isMobileHost(): boolean {
+        if ((this as unknown as { isMobile?: boolean }).isMobile) return true;
+        if (lvLaunchpad.isMobileFrontend()) return true;
+        try {
+            const fe = typeof siyuanNamespace.getFrontend === "function" ? siyuanNamespace.getFrontend() : "";
+            return fe === "mobile" || fe === "browser-mobile";
+        } catch {
+            return false;
+        }
+    }
+
     private async openQuickCard(prefillQ = "") {
         try {
-            // Mobile Spec v1：手机端快速制卡成功后停留继续录入（embedded 形态复用 studio 契约）
-            const view = await this.createQuickCardView(lvLaunchpad.isMobileFrontend(), prefillQ);
-            svelteDialog({
+            const mobile = this.isMobileHost();
+            // Mobile Spec v1/v2：手机端全屏自适应 visualViewport，制卡成功后停留继续录入
+            const view = await this.createQuickCardView(mobile, prefillQ);
+            let unbindVv: (() => void) | null = null;
+            const { dialog } = svelteDialog({
                 title: this.i18n.quickCardTitle,
                 component: view.Component,
-                width: "min(620px, 94vw)",
+                width: mobile ? "100vw" : "min(620px, 94vw)",
+                height: mobile ? "100dvh" : undefined,
                 props: view.props,
+                callback: () => {
+                    unbindVv?.();
+                    unbindVv = null;
+                },
             });
+            if (mobile) {
+                dialog.element.classList.add("lv-mobile-sheet-dialog");
+                unbindVv = bindMobileVisualViewport(dialog.element);
+            }
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.quickCardTitle, e);
         }
@@ -2242,11 +2271,14 @@ export default class LvCardsPlugin extends Plugin {
     /** R59 选中文本制卡：题面预填选区文本，且自动关联来源块（就近原位制卡） */
     private async openQuickCardFromSelection(blockID: string, selectionText: string) {
         try {
+            const mobile = this.isMobileHost();
             const view = await this.createQuickCardView(false, selectionText);
-            svelteDialog({
+            let unbindVv: (() => void) | null = null;
+            const { dialog } = svelteDialog({
                 title: this.i18n.quickCardTitle,
                 component: view.Component,
-                width: "min(620px, 94vw)",
+                width: mobile ? "100vw" : "min(620px, 94vw)",
+                height: mobile ? "100dvh" : undefined,
                 props: {
                     ...view.props,
                     activeDoc: await this.loadCurrentDoc().then(d => d ? { name: d.name, docId: d.docId ?? "" } : null).catch(() => null),
@@ -2257,7 +2289,15 @@ export default class LvCardsPlugin extends Plugin {
                             sourceDocID: options?.sourceDocID,
                         }),
                 },
+                callback: () => {
+                    unbindVv?.();
+                    unbindVv = null;
+                },
             });
+            if (mobile) {
+                dialog.element.classList.add("lv-mobile-sheet-dialog");
+                unbindVv = bindMobileVisualViewport(dialog.element);
+            }
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.quickCardTitle, e);
         }
@@ -2880,14 +2920,25 @@ export default class LvCardsPlugin extends Plugin {
 
     private async openAIWizard(initialSource = "", onCreated?: () => void) {
         try {
+            const mobile = this.isMobileHost();
             const view = await this.createAIWizardView(initialSource, onCreated);
-            svelteDialog({
+            let unbindVv: (() => void) | null = null;
+            const { dialog } = svelteDialog({
                 title: this.i18n.aiWizardTitle,
                 component: view.Component,
-                // T03：候选审核需要来源/编辑/卡面对照空间，加宽至 860
-                width: "min(860px, 94vw)",
+                // T03：候选审核需要来源/编辑/卡面对照空间，加宽至 860；手机端全屏自适应 visualViewport
+                width: mobile ? "100vw" : "min(860px, 94vw)",
+                height: mobile ? "100dvh" : undefined,
                 props: view.props,
+                callback: () => {
+                    unbindVv?.();
+                    unbindVv = null;
+                },
             });
+            if (mobile) {
+                dialog.element.classList.add("lv-mobile-sheet-dialog");
+                unbindVv = bindMobileVisualViewport(dialog.element);
+            }
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.aiWizardTitle, e);
         }
@@ -3464,9 +3515,9 @@ export default class LvCardsPlugin extends Plugin {
         return changed;
     }
 
-    /** Mobile Spec v1：手机端闪卡中心宿主——全屏 Dialog，复用页签同源装配属性（buildHubMountProps 防双份漂移） */
+    /** Mobile Spec v1/v2：手机端闪卡中心宿主——全屏 Dialog，复用页签同源装配属性（buildHubMountProps 防双份漂移） */
     private async openHubMobileDialog(data?: Record<string, unknown>) {
-        if (this.mobileHubDialog) {
+        if (this.mobileHubDialog && this.mobileHubDialog.element.isConnected) {
             // 单例去重：仅切换子页（与桌面页签 lv-switch-tab 契约一致）
             if (data?.tab) {
                 this.mobileHubDialog.element
@@ -3477,23 +3528,32 @@ export default class LvCardsPlugin extends Plugin {
             }
             return;
         }
+        this.mobileHubDialog = null;
         try {
             const deps: TabDeps = { loadHubMount, loadReviewMount, mountChunkFallback, loadHubServices };
             const mnt = await loadHubMount();
             const container = document.createElement("div");
             container.className = "lv-hub-mobile-host";
-            const handle = mnt(container, buildHubMountProps(this as any, deps, data));
+            let unbindVv: (() => void) | null = null;
+            const handle = mnt(container, buildHubMountProps(this as any, deps, data, {
+                onCloseMobile: () => {
+                    this.mobileHubDialog?.close();
+                },
+            }));
             const { dialog, close } = simpleDialog({
                 title: this.i18n.menuDashboard ?? "闪卡中心",
                 ele: container,
                 width: "100vw",
                 height: "100dvh",
                 callback: () => {
+                    unbindVv?.();
+                    unbindVv = null;
                     this.mobileHubDialog = null;
                     handle.destroy();
                 },
             });
             dialog.element.classList.add("lv-hub-mobile-dialog");
+            unbindVv = bindMobileVisualViewport(dialog.element);
             this.mobileHubDialog = { close, element: dialog.element };
         } catch (e) {
             this.mobileHubDialog = null;
@@ -3501,12 +3561,65 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
-    private openTabOf(type: string, data?: Record<string, unknown>) {
-        // Mobile Spec v1：手机端宿主无页签模型——闪卡中心改为全屏 Dialog 宿主（100vw/100dvh + safe-area），
-        // 单例复用：已打开时仅派发 lv-switch-tab 切换子页，不重复弹层
-        if (type === TAB_DASHBOARD && lvLaunchpad.isMobileFrontend()) {
-            void this.openHubMobileDialog(data);
+    /** Mobile Spec v2：手机端复习工作台全屏 Dialog 宿主（复用 buildReviewMountProps 同源装配，支持与闪卡中心双向流转） */
+    private async openReviewMobileDialog(data?: Record<string, unknown>) {
+        if (this.mobileReviewDialog && this.mobileReviewDialog.element.isConnected) {
+            this.mobileReviewDialog.element
+                .querySelector(".lv-review")
+                ?.dispatchEvent(new CustomEvent("lv-switch-scope", {
+                    detail: { ...(data ?? {}), cram: Boolean(data?.cram) },
+                }));
             return;
+        }
+        this.mobileReviewDialog = null;
+        try {
+            const mnt = await loadReviewMount();
+            const container = document.createElement("div");
+            container.className = "lv-hub-mobile-host lv-review-mobile-host";
+            let unbindVv: (() => void) | null = null;
+            const handle = mnt(container, buildReviewMountProps(this as any, data, {
+                onOpenDashboard: (tab?: string) => {
+                    const prevReview = this.mobileReviewDialog;
+                    this.mobileReviewDialog = null;
+                    prevReview?.close();
+                    void this.openHubMobileDialog(tab ? { tab } : undefined);
+                },
+                onClose: () => {
+                    this.mobileReviewDialog?.close();
+                },
+            }));
+            const { dialog, close } = simpleDialog({
+                title: this.i18n.menuReview ?? "闪卡复习",
+                ele: container,
+                width: "100vw",
+                height: "100dvh",
+                callback: () => {
+                    unbindVv?.();
+                    unbindVv = null;
+                    this.mobileReviewDialog = null;
+                    handle.destroy();
+                },
+            });
+            dialog.element.classList.add("lv-hub-mobile-dialog", "lv-review-mobile-dialog");
+            unbindVv = bindMobileVisualViewport(dialog.element);
+            this.mobileReviewDialog = { close, element: dialog.element };
+        } catch (e) {
+            this.mobileReviewDialog = null;
+            this.reportDialogOpenFailure(this.i18n.menuReview ?? "闪卡复习", e);
+        }
+    }
+
+    private openTabOf(type: string, data?: Record<string, unknown>) {
+        // Mobile Spec v1/v2：手机端宿主无页签模型——闪卡中心与复习工作台统一改为全屏 Dialog 宿主（100vw/var(--lv-vv-h, 100dvh) + safe-area）
+        if (this.isMobileHost()) {
+            if (type === TAB_DASHBOARD) {
+                void this.openHubMobileDialog(data);
+                return;
+            }
+            if (type === TAB_REVIEW) {
+                void this.openReviewMobileDialog(data);
+                return;
+            }
         }
         // 真机验收修正（v0.110.2）：Plugin 实例在 3.8.6 上没有 openTab 方法（旧实例 API 已移除，
         // 仅剩模块级 openTab 函数）——此前经 anySelf 绕过类型检查，真机点击入口即抛

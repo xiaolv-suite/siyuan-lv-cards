@@ -1325,6 +1325,16 @@
     .lv-quickcard {
         padding: var(--lv-sp-4);
         container: lv-quickcard / inline-size;
+        box-sizing: border-box;
+    }
+    :global(.lv-mobile-sheet-dialog) .lv-quickcard {
+        height: 100%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: var(--lv-sp-3) var(--lv-sp-3) 0;
     }
     .lv-qc-steps {
         display: flex;
@@ -1337,9 +1347,11 @@
         margin-left: auto;
         color: var(--lv-color-text-muted);
         cursor: pointer;
-        padding: 4px;
-        min-height: 32px;
-        min-width: 32px;
+        padding: var(--lv-sp-1);
+        min-height: 44px;
+        min-width: 44px;
+        width: 44px;
+        height: 44px;
         border-radius: var(--lv-r-circle);
         display: grid;
         place-items: center;
@@ -1742,9 +1754,27 @@
         .lv-qc-preview { position: sticky; top: var(--lv-sp-4); }
     }
     @container lv-quickcard (max-width: 780px) {
-        .lv-qc-toolbar { flex-direction: column; }
+        .lv-qc-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--lv-sp-3);
+        }
+        .lv-qc-template {
+            display: flex;
+            max-width: 100%;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            &::-webkit-scrollbar { display: none; }
+            button {
+                flex: none;
+                white-space: nowrap;
+                padding: 0 var(--lv-sp-3);
+            }
+        }
         .lv-qc-deck { width: 100%; max-width: none; }
-        .lv-qc-preview-face { min-height: 220px; }
+        .lv-qc-preview-face { min-height: 180px; }
         /* Mobile Spec v1：牌组 chips 化——下拉+新建输入行收起，chips 横滑直选（空库新建输入不受影响） */
         .lv-qc-deck-inputs--pick { display: none; }
         .lv-qc-deck-chips {
@@ -1792,19 +1822,29 @@
         }
         /* 大输入框：拇指键盘舒适区；16px 防 iOS 聚焦自动放大 */
         .lv-qc-editor textarea.b3-text-field {
-            min-height: 150px;
+            min-height: 120px;
             font-size: 16px;
             line-height: 1.6;
         }
-        /* 大保存按钮：拇指区直达（embedded 态无取消键，主键占满一行） */
+        /* 大保存按钮固定可见：软键盘弹起时随 --lv-vv-h 吸附在可视底部 */
         .lv-qc-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: var(--lv-z-card-control);
+            margin-top: auto;
             justify-content: stretch;
-            padding-bottom: max(4px, env(safe-area-inset-bottom));
+            background: var(--lv-color-surface);
+            border-top: 1px solid var(--lv-border);
+            padding: var(--lv-sp-2) 0 max(var(--lv-sp-2), env(safe-area-inset-bottom));
+        }
+        .lv-qc-actions .b3-button--cancel {
+            min-height: 46px;
+            min-width: 72px;
         }
         .lv-qc-actions .lv-btn-primary {
             flex: 1;
-            min-height: 52px;
-            font-size: 15px;
+            min-height: 46px;
+            font-size: var(--lv-type-body-size);
         }
     }
     @container lv-quickcard (max-width: 480px) {

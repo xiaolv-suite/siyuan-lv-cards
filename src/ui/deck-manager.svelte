@@ -861,8 +861,8 @@
     }
     .lv-dm-discovered-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+        gap: var(--lv-sp-2);
     }
     .lv-dm-discovered-card {
         display: flex;
@@ -892,8 +892,8 @@
     }
     .lv-dm-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+        gap: var(--lv-sp-3);
     }
     .lv-dm-deck-card {
         padding: 14px 16px;
@@ -1051,5 +1051,133 @@
         gap: 10px;
         padding: 48px 16px;
         color: var(--lv-color-text-muted);
+    }
+
+    @media (max-width: 560px) {
+        .lv-deck-manager {
+            padding: var(--lv-sp-3);
+        }
+        .lv-dm-header {
+            gap: var(--lv-sp-2);
+            margin-bottom: var(--lv-sp-3);
+            padding-bottom: var(--lv-sp-2);
+        }
+        .lv-dm-stats-pills {
+            flex-wrap: wrap;
+        }
+        .lv-dm-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--lv-sp-2);
+            margin-bottom: var(--lv-sp-3);
+        }
+        .lv-dm-actions {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-2);
+        }
+        .lv-dm-filters {
+            flex-wrap: wrap;
+            width: 100%;
+            min-width: 0;
+            gap: var(--lv-sp-2);
+        }
+        .lv-dm-segmented {
+            display: flex;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            &::-webkit-scrollbar { display: none; }
+        }
+        .lv-dm-segment-btn {
+            flex: none;
+            white-space: nowrap;
+        }
+        .lv-dm-search-input {
+            flex: 1 1 140px;
+            min-width: 0;
+            width: auto;
+        }
+        .lv-dm-sort-select {
+            flex: none;
+            max-width: 118px;
+        }
+        .lv-dm-discovered-head {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-2);
+        }
+        .lv-dm-deck-card {
+            padding: var(--lv-sp-3);
+        }
+        .lv-dm-card-actions {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-1);
+        }
+    }
+
+    @container lv-hub (max-width: 560px) {
+        .lv-deck-manager {
+            padding: var(--lv-sp-3);
+        }
+        .lv-dm-header {
+            gap: var(--lv-sp-2);
+            margin-bottom: var(--lv-sp-3);
+            padding-bottom: var(--lv-sp-2);
+        }
+        .lv-dm-stats-pills {
+            flex-wrap: wrap;
+        }
+        .lv-dm-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--lv-sp-2);
+            margin-bottom: var(--lv-sp-3);
+        }
+        .lv-dm-actions {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-2);
+        }
+        .lv-dm-filters {
+            flex-wrap: wrap;
+            width: 100%;
+            min-width: 0;
+            gap: var(--lv-sp-2);
+        }
+        .lv-dm-segmented {
+            display: flex;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            &::-webkit-scrollbar { display: none; }
+        }
+        .lv-dm-segment-btn {
+            flex: none;
+            white-space: nowrap;
+        }
+        .lv-dm-search-input {
+            flex: 1 1 140px;
+            min-width: 0;
+            width: auto;
+        }
+        .lv-dm-sort-select {
+            flex: none;
+            max-width: 118px;
+        }
+        .lv-dm-discovered-head {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-2);
+        }
+        .lv-dm-deck-card {
+            padding: var(--lv-sp-3);
+        }
+        .lv-dm-card-actions {
+            flex-wrap: wrap;
+            gap: var(--lv-sp-1);
+        }
     }
 </style>

@@ -79,11 +79,17 @@ export function registerDashboardTab(plugin: any, deps: TabDeps): void {
  * 页签 init 与手机端全屏 Dialog 宿主共用同源装配，避免双份 props 漂移。
  * data 为页签/入口携带的打开参数（tab、focusBlockID）。
  */
-export function buildHubMountProps(plugin: any, deps: TabDeps, data?: Record<string, unknown>): Record<string, unknown> {
+export function buildHubMountProps(
+    plugin: any,
+    deps: TabDeps,
+    data?: Record<string, unknown>,
+    hooks?: { onCloseMobile?: () => void },
+): Record<string, unknown> {
     return {
         i18n: plugin.i18n,
         initialTab: (data?.tab as string) || "overview",
         initialBlockID: typeof data?.focusBlockID === "string" ? data.focusBlockID : "",
+        onCloseMobile: hooks?.onCloseMobile,
                     uiMode: plugin.settings.uiMode,
                     openWizard: () => plugin.openAIWizard(),
                     openDrill: () => plugin.openRepairDrill(),
@@ -553,6 +559,193 @@ export function buildHubMountProps(plugin: any, deps: TabDeps, data?: Record<str
     };
 }
 
+/**
+ * 复习工作台（Review）宿主装配属性（Mobile Spec v2）：
+ * 桌面页签 init 与手机端全屏 Dialog 宿主共用同源装配，避免双份 props 漂移。
+ */
+export function buildReviewMountProps(
+    plugin: any,
+    data?: Record<string, unknown>,
+    hooks?: {
+        onOpenDashboard?: (tab?: string) => void;
+        onClose?: () => void;
+    },
+): Record<string, unknown> {
+    return {
+        initialScope: (data?.scope as string) ?? plugin.settings.lastReviewScope,
+        initialCram: data?.cram === true,
+        initialEntry: ((): { entryKind: EntryKind; sourceID: string; scopeKey: string; returnPoint: string; createdAt: number } | null => {
+            const direct = data?.entry as { entryKind: EntryKind; sourceID: string; returnPoint: string } | undefined;
+            if (direct?.sourceID) {
+                return { ...direct, scopeKey: String((data?.scope as string) ?? ""), createdAt: Date.now() };
+            }
+            const scope = (data?.scope as string) ?? plugin.settings.lastReviewScope ?? "";
+            const fresh = plugin.entryContexts.contexts
+                .filter((c: any) => c.scopeKey === scope && isContextFresh(c, Date.now()));
+            return fresh.length ? { ...fresh[fresh.length - 1] } : null;
+        })(),
+        ctx: {
+            i18n: plugin.i18n,
+            app: plugin.app,
+            onClose: hooks?.onClose,
+            preferredBudgetMin: () => plugin.settings.sessionBudgetMin,
+            settings: () => ({
+                ratingStyle: plugin.settings.ratingStyle,
+                timeoutMode: plugin.settings.timeoutMode,
+                timeoutSeconds: plugin.settings.timeoutSeconds,
+                randomOrder: plugin.settings.randomOrder,
+                cardMaxWidth: plugin.settings.cardMaxWidth,
+                choiceEnabled: plugin.settings.choiceEnabled,
+                mixedRotation: plugin.settings.mixedRotation,
+                ttsEnabled: plugin.settings.ttsEnabled,
+                ttsRate: plugin.settings.ttsRate,
+                ttsVoice: plugin.settings.ttsVoice,
+                dictationEnabled: plugin.settings.dictationEnabled,
+                requeueAgain: plugin.settings.requeueAgain,
+                dailyReviewTarget: plugin.settings.dailyReviewTarget,
+                cardFontScale: plugin.settings.cardFontScale,
+                ratingDensity: plugin.settings.ratingDensity,
+                hideMetaUntilAnswer: plugin.settings.hideMetaUntilAnswer,
+                reverseOrder: plugin.settings.reverseOrder,
+                dailyTipEnabled: plugin.settings.dailyTipEnabled,
+                sfxEnabled: plugin.settings.sfxEnabled,
+                sfxStyle: plugin.settings.sfxStyle,
+                batchLimit: plugin.settings.batchLimit,
+                typingEnabled: plugin.settings.typingEnabled,
+                typingStrict: plugin.settings.typingStrict,
+                answerTimeCapSec: plugin.settings.answerTimeCapSec,
+                burySiblings: plugin.settings.burySiblings,
+                customCardCss: plugin.settings.customCardCss,
+                checkinItemId: plugin.settings.checkinItemId,
+                leechThreshold: plugin.settings.leechThreshold,
+            }),
+            getStarredCardIDs: () => plugin.settings.starredCards,
+            toggleStarCard: async (id: string) => plugin.toggleStarCard(id),
+            appendRevlog: (e: any) => plugin.appendRevlog(e),
+            rollbackRevlog: (cardID?: string) => plugin.rollbackRevlog(cardID),
+            tagErrorReason: (cardID: string, reason: string, blockID?: string) => {
+                plugin.tagErrorReason(cardID, reason as ErrorReason, blockID);
+            },
+            getKOBySource: (blockID: string) => {
+                const obj = findBySource(plugin.knowledgeObjects, blockID);
+                if (!obj) return null;
+                const cap = obj.instances.find((i: any) => !i.disabled && i.capability)?.capability ?? null;
+                return { fact: obj.fact, capability: cap };
+            },
+            getRevlog: () => plugin.revlog,
+            isSuspendedToday: (cardID: string) => isSuspended(plugin.suspendToday, cardID),
+            suspendToday: (cardID: string) => {
+                void plugin.suspendTodayMutations.suspend([cardID]).catch(() => {});
+            },
+            removeFromDeck: (blockID: string) => plugin.removeCardsFromDeck([blockID]),
+            openDashboard: (tab?: string) => {
+                if (hooks?.onOpenDashboard) {
+                    hooks.onOpenDashboard(tab);
+                    return;
+                }
+                plugin.openTabOf(TAB_DASHBOARD, tab ? { tab } : undefined);
+            },
+            returnToEntry: (returnPoint: string) => plugin.returnToEntryPoint(returnPoint),
+            dismissEntry: (entryKind: EntryKind, sourceID: string) => {
+                if (removeContext(plugin.entryContexts, entryKind, sourceID)) {
+                    plugin.saveEntryContexts();
+                }
+            },
+            onScopePersist: (key: string) => {
+                const previous = normalizeSettings(cloneStore(plugin.settings));
+                plugin.settings.lastReviewScope = key;
+                void plugin.saveSettingsNow().catch(() => {
+                    plugin.settings = previous;
+                    plugin.setupBadgeTimer();
+                });
+            },
+            getSessionState: () => plugin.sessionState,
+            saveSessionState: (s: SessionState) => {
+                const previous = plugin.sessionState;
+                const version = ++plugin.sessionMutationVersion;
+                const next = normalizeSessionState(s, todayDate());
+                plugin.sessionState = next;
+                void plugin.persist.save(SESSION_STATE_DATA, next).then(() => {
+                    plugin.persistedSessionStateSnapshot = cloneStore(next);
+                }).catch(() => {
+                    if (version === plugin.sessionMutationVersion) {
+                        plugin.sessionState = cloneStore(plugin.persistedSessionStateSnapshot ?? previous);
+                    }
+                    showMessage(plugin.i18n.storageWriteFail, 4000, "error");
+                });
+            },
+            clearSessionState: () => {
+                const previous = plugin.sessionState;
+                const version = ++plugin.sessionMutationVersion;
+                plugin.sessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
+                const next = plugin.sessionState;
+                void plugin.persist.save(SESSION_STATE_DATA, next).then(() => {
+                    plugin.persistedSessionStateSnapshot = cloneStore(next);
+                }).catch(() => {
+                    if (version === plugin.sessionMutationVersion) {
+                        plugin.sessionState = cloneStore(plugin.persistedSessionStateSnapshot ?? previous);
+                    }
+                    showMessage(plugin.i18n.storageWriteFail, 4000, "error");
+                });
+            },
+            emitSessionFinished: (summary: { new: number; review: number; forget: number; skip: number }) => {
+                try {
+                    (plugin.eventBus as any).emit(LV_EVENTS.sessionFinished, sessionFinishedEvent(summary));
+                } catch {}
+                plugin.refreshDueBadge();
+            },
+            onSettingsChanged: (cb: () => void) => {
+                const handler = () => cb();
+                (plugin.eventBus as any).on(LV_EVENTS.settingsChanged, handler);
+                return () => (plugin.eventBus as any).off(LV_EVENTS.settingsChanged, handler);
+            },
+            getReturnCheckFacts: async () => {
+                const today = todayDate();
+                const active = plugin.learningGoals.goals.filter((g: any) => isGoalActive(g, today));
+                const deadlines = active
+                    .map((g: any) => daysUntilDeadline(g, today))
+                    .filter((n: any): n is number => n !== null);
+                const stats = lifecycleStats(plugin.contentLifecycles.lifecycles);
+                let dueCount = 0;
+                try {
+                    dueCount = (await dueCache.get("")).cards?.length ?? 0;
+                } catch {}
+                const lastTs = plugin.revlog.entries.reduce((m: number, e: any) => Math.max(m, e.ts ?? 0), 0);
+                return {
+                    activeGoals: active.length,
+                    nearestDeadlineDays: deadlines.length ? Math.min(...deadlines) : null,
+                    staleCount: stats.stale ?? 0,
+                    needsRevisionCount: stats.needsRevision ?? 0,
+                    dueCount,
+                    daysSinceLastStudy: lastTs > 0 ? Math.floor((Date.now() - lastTs) / 86400000) : null,
+                    clockSkewSuspect: lastTs > Date.now(),
+                    crossDeviceRestore: false,
+                };
+            },
+            getContextBlocks: async (blockID: string) => {
+                const safe = blockID.replace(/'/g, "''");
+                const root = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${safe}' LIMIT 1`);
+                if (!root.length) { return []; }
+                const rootId = String(root[0].root_id ?? "").replace(/'/g, "''");
+                const sibs = await sqlQuery(`SELECT id FROM blocks WHERE root_id='${rootId}' AND type IN ('p','t','h','c','ta','tb') ORDER BY sort, id`);
+                const idx = sibs.findIndex((b: any) => String(b.id) === blockID);
+                if (idx < 0) { return []; }
+                const window = sibs.slice(Math.max(0, idx - 2), idx + 3).filter((b: any) => String(b.id) !== blockID);
+                const out: { id: string; html: string }[] = [];
+                for (const b of window) {
+                    try {
+                        const dom = await getBlockDOM(String(b.id));
+                        if (dom) {
+                            out.push({ id: String(b.id), html: dom });
+                        }
+                    } catch {}
+                }
+                return out;
+            },
+        },
+    };
+}
+
 export function registerReviewTab(plugin: any, deps: TabDeps): void {
     plugin.addTab({
         type: TAB_REVIEW,
@@ -570,172 +763,7 @@ export function registerReviewTab(plugin: any, deps: TabDeps): void {
                 if (isDisposed || !div.isConnected) {
                     return;
                 }
-                reviewHandle = mnt(div, {
-                    initialScope: (this.data?.scope as string) ?? plugin.settings.lastReviewScope,
-                    initialCram: this.data?.cram === true,
-                    initialEntry: ((): { entryKind: EntryKind; sourceID: string; scopeKey: string; returnPoint: string; createdAt: number } | null => {
-                        const direct = this.data?.entry as { entryKind: EntryKind; sourceID: string; returnPoint: string } | undefined;
-                        if (direct?.sourceID) {
-                            return { ...direct, scopeKey: String((this.data?.scope as string) ?? ""), createdAt: Date.now() };
-                        }
-                        const scope = (this.data?.scope as string) ?? plugin.settings.lastReviewScope ?? "";
-                        const fresh = plugin.entryContexts.contexts
-                            .filter((c: any) => c.scopeKey === scope && isContextFresh(c, Date.now()));
-                        return fresh.length ? { ...fresh[fresh.length - 1] } : null;
-                    })(),
-                    ctx: {
-                        i18n: plugin.i18n,
-                        app: plugin.app,
-                        preferredBudgetMin: () => plugin.settings.sessionBudgetMin,
-                        settings: () => ({
-                            ratingStyle: plugin.settings.ratingStyle,
-                            timeoutMode: plugin.settings.timeoutMode,
-                            timeoutSeconds: plugin.settings.timeoutSeconds,
-                            randomOrder: plugin.settings.randomOrder,
-                            cardMaxWidth: plugin.settings.cardMaxWidth,
-                            choiceEnabled: plugin.settings.choiceEnabled,
-                            mixedRotation: plugin.settings.mixedRotation,
-                            ttsEnabled: plugin.settings.ttsEnabled,
-                            ttsRate: plugin.settings.ttsRate,
-                            ttsVoice: plugin.settings.ttsVoice,
-                            dictationEnabled: plugin.settings.dictationEnabled,
-                            requeueAgain: plugin.settings.requeueAgain,
-                            dailyReviewTarget: plugin.settings.dailyReviewTarget,
-                            cardFontScale: plugin.settings.cardFontScale,
-                            ratingDensity: plugin.settings.ratingDensity,
-                            hideMetaUntilAnswer: plugin.settings.hideMetaUntilAnswer,
-                            reverseOrder: plugin.settings.reverseOrder,
-                            dailyTipEnabled: plugin.settings.dailyTipEnabled,
-                            sfxEnabled: plugin.settings.sfxEnabled,
-                            sfxStyle: plugin.settings.sfxStyle,
-                            batchLimit: plugin.settings.batchLimit,
-                            typingEnabled: plugin.settings.typingEnabled,
-                            typingStrict: plugin.settings.typingStrict,
-                            answerTimeCapSec: plugin.settings.answerTimeCapSec,
-                            burySiblings: plugin.settings.burySiblings,
-                            customCardCss: plugin.settings.customCardCss,
-                            checkinItemId: plugin.settings.checkinItemId,
-                            leechThreshold: plugin.settings.leechThreshold,
-                        }),
-                        getStarredCardIDs: () => plugin.settings.starredCards,
-                        toggleStarCard: async (id: string) => plugin.toggleStarCard(id),
-                        appendRevlog: (e: any) => plugin.appendRevlog(e),
-                        rollbackRevlog: (cardID?: string) => plugin.rollbackRevlog(cardID),
-                        tagErrorReason: (cardID: string, reason: string, blockID?: string) => {
-                            plugin.tagErrorReason(cardID, reason as ErrorReason, blockID);
-                        },
-                        getKOBySource: (blockID: string) => {
-                            const obj = findBySource(plugin.knowledgeObjects, blockID);
-                            if (!obj) return null;
-                            const cap = obj.instances.find((i: any) => !i.disabled && i.capability)?.capability ?? null;
-                            return { fact: obj.fact, capability: cap };
-                        },
-                        getRevlog: () => plugin.revlog,
-                        isSuspendedToday: (cardID: string) => isSuspended(plugin.suspendToday, cardID),
-                        suspendToday: (cardID: string) => {
-                            void plugin.suspendTodayMutations.suspend([cardID]).catch(() => {});
-                        },
-                        removeFromDeck: (blockID: string) => plugin.removeCardsFromDeck([blockID]),
-                        openDashboard: (tab?: string) => plugin.openTabOf(TAB_DASHBOARD, tab ? { tab } : undefined),
-                        returnToEntry: (returnPoint: string) => plugin.returnToEntryPoint(returnPoint),
-                        dismissEntry: (entryKind: EntryKind, sourceID: string) => {
-                            if (removeContext(plugin.entryContexts, entryKind, sourceID)) {
-                                plugin.saveEntryContexts();
-                            }
-                        },
-                        onScopePersist: (key: string) => {
-                            const previous = normalizeSettings(cloneStore(plugin.settings));
-                            plugin.settings.lastReviewScope = key;
-                            void plugin.saveSettingsNow().catch(() => {
-                                plugin.settings = previous;
-                                plugin.setupBadgeTimer();
-                            });
-                        },
-                        getSessionState: () => plugin.sessionState,
-                        saveSessionState: (s: SessionState) => {
-                            const previous = plugin.sessionState;
-                            const version = ++plugin.sessionMutationVersion;
-                            const next = normalizeSessionState(s, todayDate());
-                            plugin.sessionState = next;
-                            void plugin.persist.save(SESSION_STATE_DATA, next).then(() => {
-                                plugin.persistedSessionStateSnapshot = cloneStore(next);
-                            }).catch(() => {
-                                if (version === plugin.sessionMutationVersion) {
-                                    plugin.sessionState = cloneStore(plugin.persistedSessionStateSnapshot ?? previous);
-                                }
-                                showMessage(plugin.i18n.storageWriteFail, 4000, "error");
-                            });
-                        },
-                        clearSessionState: () => {
-                            const previous = plugin.sessionState;
-                            const version = ++plugin.sessionMutationVersion;
-                            plugin.sessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
-                            const next = plugin.sessionState;
-                            void plugin.persist.save(SESSION_STATE_DATA, next).then(() => {
-                                plugin.persistedSessionStateSnapshot = cloneStore(next);
-                            }).catch(() => {
-                                if (version === plugin.sessionMutationVersion) {
-                                    plugin.sessionState = cloneStore(plugin.persistedSessionStateSnapshot ?? previous);
-                                }
-                                showMessage(plugin.i18n.storageWriteFail, 4000, "error");
-                            });
-                        },
-                        emitSessionFinished: (summary: { new: number; review: number; forget: number; skip: number }) => {
-                            try {
-                                (plugin.eventBus as any).emit(LV_EVENTS.sessionFinished, sessionFinishedEvent(summary));
-                            } catch {}
-                            plugin.refreshDueBadge();
-                        },
-                        onSettingsChanged: (cb: () => void) => {
-                            const handler = () => cb();
-                            (plugin.eventBus as any).on(LV_EVENTS.settingsChanged, handler);
-                            return () => (plugin.eventBus as any).off(LV_EVENTS.settingsChanged, handler);
-                        },
-                        getReturnCheckFacts: async () => {
-                            const today = todayDate();
-                            const active = plugin.learningGoals.goals.filter((g: any) => isGoalActive(g, today));
-                            const deadlines = active
-                                .map((g: any) => daysUntilDeadline(g, today))
-                                .filter((n: any): n is number => n !== null);
-                            const stats = lifecycleStats(plugin.contentLifecycles.lifecycles);
-                            let dueCount = 0;
-                            try {
-                                dueCount = (await dueCache.get("")).cards?.length ?? 0;
-                            } catch {}
-                            const lastTs = plugin.revlog.entries.reduce((m: number, e: any) => Math.max(m, e.ts ?? 0), 0);
-                            return {
-                                activeGoals: active.length,
-                                nearestDeadlineDays: deadlines.length ? Math.min(...deadlines) : null,
-                                staleCount: stats.stale ?? 0,
-                                needsRevisionCount: stats.needsRevision ?? 0,
-                                dueCount,
-                                daysSinceLastStudy: lastTs > 0 ? Math.floor((Date.now() - lastTs) / 86400000) : null,
-                                clockSkewSuspect: lastTs > Date.now(),
-                                crossDeviceRestore: false,
-                            };
-                        },
-                        getContextBlocks: async (blockID: string) => {
-                            const safe = blockID.replace(/'/g, "''");
-                            const root = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${safe}' LIMIT 1`);
-                            if (!root.length) { return []; }
-                            const rootId = String(root[0].root_id ?? "").replace(/'/g, "''");
-                            const sibs = await sqlQuery(`SELECT id FROM blocks WHERE root_id='${rootId}' AND type IN ('p','t','h','c','ta','tb') ORDER BY sort, id`);
-                            const idx = sibs.findIndex((b: any) => String(b.id) === blockID);
-                            if (idx < 0) { return []; }
-                            const window = sibs.slice(Math.max(0, idx - 2), idx + 3).filter((b: any) => String(b.id) !== blockID);
-                            const out: { id: string; html: string }[] = [];
-                            for (const b of window) {
-                                try {
-                                    const dom = await getBlockDOM(String(b.id));
-                                    if (dom) {
-                                        out.push({ id: String(b.id), html: dom });
-                                    }
-                                } catch {}
-                            }
-                            return out;
-                        },
-                    },
-                });
+                reviewHandle = mnt(div, buildReviewMountProps(plugin, this.data));
             }).catch((e: unknown) => {
                 if (!isDisposed && div.isConnected) deps.mountChunkFallback(div, plugin.i18n, e);
             });

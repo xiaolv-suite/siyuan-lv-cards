@@ -251,12 +251,21 @@
     }
     .lv-tags {
         display: flex;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
         gap: var(--lv-sp-1);
+
+        :global(.lv-chip2) {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
     }
     .lv-cram-golden-chip {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        flex-shrink: 0;
+        white-space: nowrap;
+        gap: var(--lv-sp-1);
         background: color-mix(in srgb, #f59e0b 16%, var(--lv-color-surface, #ffffff));
         border: 1px solid color-mix(in srgb, #f59e0b 60%, transparent);
         color: #d97706;
@@ -269,9 +278,55 @@
             color: #f59e0b;
         }
     }
-    :global([data-theme-mode="dark"]) .lv-cram-golden-chip {
+        :global([data-theme-mode="dark"]) .lv-cram-golden-chip {
         background: color-mix(in srgb, #f59e0b 22%, #1e1e24);
         border-color: color-mix(in srgb, #f59e0b 70%, transparent);
         color: #fbbf24;
+    }
+    @media (max-width: 560px) {
+        .lv-head-row {
+            min-height: 30px;
+            gap: var(--lv-sp-1);
+        }
+        .lv-progress {
+            flex-shrink: 0;
+            position: sticky;
+            right: 0;
+            padding: calc(var(--lv-space-unit) * 1) var(--lv-sp-2);
+            font-size: var(--lv-type-meta-size);
+        }
+        .lv-timeout {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: calc(var(--lv-space-unit) * 1) var(--lv-sp-2);
+            font-size: var(--lv-type-meta-size);
+        }
+        .lv-progress-bar {
+            height: 4px;
+            margin: var(--lv-sp-1) 0 var(--lv-sp-2);
+        }
+    }
+    @container (max-width: 560px) {
+        .lv-head-row {
+            min-height: 30px;
+            gap: var(--lv-sp-1);
+        }
+        .lv-progress {
+            flex-shrink: 0;
+            position: sticky;
+            right: 0;
+            padding: calc(var(--lv-space-unit) * 1) var(--lv-sp-2);
+            font-size: var(--lv-type-meta-size);
+        }
+        .lv-timeout {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: calc(var(--lv-space-unit) * 1) var(--lv-sp-2);
+            font-size: var(--lv-type-meta-size);
+        }
+        .lv-progress-bar {
+            height: 4px;
+            margin: var(--lv-sp-1) 0 var(--lv-sp-2);
+        }
     }
 </style>

@@ -367,27 +367,62 @@
             }
         }
 
-        /* Mobile Spec v1：评级按钮固定底部拇指区（≥52px、间距充分、安全区避让、不透明底防透字） */
+        /* Mobile Spec v2：窄屏评级栏改为紧凑单行布局（高度从 ~180px 降至 ~56px），软键盘弹起时避免把 .lv-card 挤没 */
         @media (max-width: 740px) {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--lv-sp-3);
-            margin-top: var(--lv-sp-2);
-            padding-top: var(--lv-sp-3);
-            padding-bottom: max(var(--lv-sp-3), env(safe-area-inset-bottom));
+            display: flex;
+            flex-wrap: nowrap;
+            gap: var(--lv-sp-2);
+            margin-top: var(--lv-sp-1);
+            padding-top: var(--lv-sp-2);
+            padding-bottom: max(var(--lv-sp-2), env(safe-area-inset-bottom));
             background: linear-gradient(
                 to bottom,
-                color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 62%, transparent),
-                var(--lv-bg-page, var(--b3-theme-background)) 32%
+                color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 68%, transparent),
+                var(--lv-bg-page, var(--b3-theme-background)) 28%
             );
             border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             .lv-btn-rate {
+                flex: 1 1 0;
+                min-width: 0;
                 max-width: none;
-                min-height: 52px;
+                min-height: 48px;
+                padding: var(--lv-sp-2) var(--lv-sp-2);
+                align-items: center;
+                text-align: center;
+                gap: calc(var(--lv-space-unit) * 1);
+
+                .lv-rate-top {
+                    justify-content: center;
+                    gap: var(--lv-sp-1);
+                    font-size: var(--lv-type-control-size);
+                }
+                :global(.lv-kbd2) {
+                    display: none;
+                }
             }
             .lv-btn-wide {
-                grid-column: 1 / -1;
-                min-height: 52px;
+                flex: 1 1 100%;
+                min-height: 46px;
+                .lv-btn-wide-kbd {
+                    display: none;
+                }
+            }
+        }
+
+        :global(.lv-keyboard-open) & {
+            position: static;
+            margin-top: 0;
+            padding-top: var(--lv-sp-1);
+            padding-bottom: var(--lv-sp-1);
+            border-top: 0;
+            background: transparent;
+
+            .lv-btn-rate {
+                min-height: 40px;
+                padding: var(--lv-sp-1) var(--lv-sp-2);
+            }
+            .lv-btn-wide {
+                min-height: 40px;
             }
         }
 

@@ -135,6 +135,7 @@
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <div class="lv-head-row lv-head-tools">
+    <div class="lv-head-tools-scroll">
     <!-- 左侧安静的范围/目的胶囊：点击直接展开统一的“本场偏好”切换范围或目的，避免顶栏常驻两个下拉框 -->
     <button
         type="button"
@@ -216,10 +217,11 @@
         <LvIcon name="edit" size={13} />
         <span class="lv-tool-btn-label">{hasSvgCanvas && onOpenCanvasInEditor ? (t.review?.tbEditCanvas ?? "画布") : (t.review?.tbEdit ?? "编辑")}</span>
     </button>
+    </div>
 
     <button
         type="button"
-        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
+        class="b3-button b3-button--small lv-btn-ghost lv-tool-btn lv-tool-btn--pinned"
         class:lv-btn-starred={isStarred}
         title="星标重点卡片 (*)"
         aria-label="星标重点卡片"
@@ -419,7 +421,24 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 2);
         min-width: 0;
+        width: 100%;
         flex-wrap: nowrap;
+
+        .lv-head-tools-scroll {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--lv-space-unit) * 2);
+            flex: 1 1 0;
+            min-width: 0;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+
+            &::-webkit-scrollbar {
+                display: none;
+            }
+        }
 
         .b3-button,
         .lv-tool-btn,
@@ -541,6 +560,9 @@
             right: 0;
             z-index: calc(var(--lv-z-popover) + 1);
             min-width: 200px;
+            max-width: min(260px, calc(100vw - 24px));
+            max-height: min(68vh, 420px);
+            overflow-y: auto;
             padding: var(--lv-sp-2);
             border: 1px solid var(--lv-border);
             border-radius: var(--lv-r-m);
@@ -621,14 +643,34 @@
 
     @media (max-width: 640px) {
         .lv-head-tools {
+            gap: var(--lv-sp-1);
+            .lv-head-tools-scroll { gap: var(--lv-sp-1); }
+            .lv-scope-summary {
+                max-width: 112px;
+                padding: 0 var(--lv-sp-2);
+            }
             .lv-tool-btn-label { display: none; }
-            .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
+            .lv-tool-btn {
+                min-width: 30px;
+                padding: 0 calc(var(--lv-space-unit) * 2);
+                justify-content: center;
+            }
         }
     }
     @container (max-width: 640px) {
         .lv-head-tools {
+            gap: var(--lv-sp-1);
+            .lv-head-tools-scroll { gap: var(--lv-sp-1); }
+            .lv-scope-summary {
+                max-width: 112px;
+                padding: 0 var(--lv-sp-2);
+            }
             .lv-tool-btn-label { display: none; }
-            .lv-tool-btn { padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); }
+            .lv-tool-btn {
+                min-width: 30px;
+                padding: 0 calc(var(--lv-space-unit) * 2);
+                justify-content: center;
+            }
         }
     }
 </style>

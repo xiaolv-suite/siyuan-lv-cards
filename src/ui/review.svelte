@@ -142,6 +142,8 @@
         isSuspendedToday: (cardID: string) => boolean;
         suspendToday: (cardID: string) => void;
         openDashboard: (tab?: string) => void;
+        /** Mobile Spec v2：手机端全屏 Dialog 宿主关闭回调（带 44x44px 关闭入口） */
+        onClose?: () => void;
         onScopePersist: (scopeKey: string) => void;
         getSessionState: () => { date: string; reviewedIDs: string[]; skippedIDs: string[]; counters: { new: number; review: number; forget: number; skip: number }; endReason?: EndReason | null; completed?: boolean } | null;
         saveSessionState: (s: { date: string; reviewedIDs: string[]; skippedIDs: string[]; counters: { new: number; review: number; forget: number; skip: number }; endReason?: EndReason | null; completed?: boolean }) => void;
@@ -2445,13 +2447,24 @@
     ontouchend={onTouchEnd}
     tabindex="-1"
 >
-    <!-- R57 复习顶栏：独立复习页签缺少 Hub 外壳时的固定返回路径（完成屏也可见） -->
+    <!-- R57 复习顶栏：独立复习页签缺少 Hub 外壳时的固定返回路径（完成屏也可见；手机端整合 44x44px 关闭钮） -->
         <div class="lv-review-topbar">
             <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => { disarmReviewHistory(); ctx.openDashboard(); }} title={t.review?.returnHome ?? "返回闪卡主页"}>
                 <LvIcon name="chevron-left" size={13} />
                 <span>{t.review?.backToHub ?? "返回闪卡中心"}</span>
             </button>
             <span class="lv-review-topbar-crumb">{t.review?.panelTitle ?? "复习"}</span>
+            {#if ctx.onClose}
+                <button
+                    type="button"
+                    class="lv-review-close-btn"
+                    onclick={() => { disarmReviewHistory(); ctx.onClose?.(); }}
+                    aria-label={t.common?.close ?? "关闭"}
+                    title={t.common?.close ?? "关闭"}
+                >
+                    <LvIcon name="close" size={18} />
+                </button>
+            {/if}
         </div>
     {#if zenMode}
         <ReviewZenIsland
@@ -2883,13 +2896,24 @@
         margin: 0 auto;
         width: 100%;
 
-        &.lv-keyboard-open {
-            padding-bottom: calc(var(--lv-sp-2) + env(safe-area-inset-bottom, 0));
+        @media (max-width: 560px) {
+            padding: calc(var(--lv-sp-2) + env(safe-area-inset-top, 0)) calc(var(--lv-sp-3) + env(safe-area-inset-right, 0))
+                calc(var(--lv-sp-2) + env(safe-area-inset-bottom, 0)) calc(var(--lv-sp-3) + env(safe-area-inset-left, 0));
             gap: var(--lv-sp-2);
+        }
 
+        &.lv-keyboard-open {
+            padding-top: calc(var(--lv-sp-1) + env(safe-area-inset-top, 0));
+            padding-bottom: calc(var(--lv-sp-1) + env(safe-area-inset-bottom, 0));
+            gap: var(--lv-sp-1);
+
+            .lv-review-topbar {
+                min-height: 34px;
+            }
             .lv-card {
-                min-height: 180px;
-                padding: calc(var(--lv-space-unit) * 12) calc(var(--lv-space-unit) * 11);
+                flex: 1 1 auto;
+                min-height: 104px;
+                padding: var(--lv-sp-3) var(--lv-sp-3);
             }
         }
 
@@ -2902,6 +2926,7 @@
             align-items: center;
             gap: var(--lv-sp-2);
             flex: none;
+            min-height: 40px;
             max-width: 760px;
             width: 100%;
             margin: 0 auto;
@@ -2909,6 +2934,42 @@
         .lv-review-topbar-crumb {
             color: var(--lv-color-text-muted);
             font-size: var(--lv-type-control-size);
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .lv-review-close-btn {
+            margin-left: auto;
+            flex: none;
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 0;
+            border: 0;
+            border-radius: var(--lv-r-circle);
+            background: transparent;
+            color: var(--lv-color-text-muted);
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
+
+            &:hover {
+                background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
+                color: var(--lv-color-text);
+            }
+            &:active {
+                transform: scale(0.94);
+            }
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
         }
 
         .lv-head {

@@ -129,6 +129,42 @@ export const confirmDialogBool = (args: Omit<IConfirmDialogArgs, "confirm" | "ca
     });
 
 
+/**
+ * Mobile Spec v2：绑定 visualViewport 高度同步与软键盘弹起态标记。
+ * 软键盘弹起时实时更新 `--lv-vv-h` 并切换 `.lv-vv-keyboard-open`，销毁时完整解绑。
+ */
+export function bindMobileVisualViewport(targetEl: HTMLElement | null | undefined): () => void {
+    if (!targetEl || typeof window === "undefined") {
+        return () => {};
+    }
+    const vv = window.visualViewport;
+    let baselineHeight = Math.max(window.innerHeight || 0, Math.round(vv?.height ?? 0));
+
+    const sync = () => {
+        const currentInner = window.innerHeight || 0;
+        const rawVvH = vv ? vv.height : currentInner;
+        const vvH = Math.max(180, Math.round(rawVvH || currentInner));
+        if (vvH > baselineHeight) {
+            baselineHeight = vvH;
+        }
+        targetEl.style.setProperty("--lv-vv-h", `${vvH}px`);
+        const referenceHeight = Math.max(baselineHeight, currentInner);
+        const kbOpen = referenceHeight > 0 && referenceHeight - vvH > 110;
+        targetEl.classList.toggle("lv-vv-keyboard-open", kbOpen);
+    };
+
+    sync();
+    vv?.addEventListener("resize", sync);
+    vv?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+
+    return () => {
+        vv?.removeEventListener("resize", sync);
+        vv?.removeEventListener("scroll", sync);
+        window.removeEventListener("resize", sync);
+    };
+}
+
 export const simpleDialog = (args: {
     title: string, ele: HTMLElement | DocumentFragment,
     width?: string, height?: string,
@@ -136,15 +172,17 @@ export const simpleDialog = (args: {
 }) => {
     let closed = false;
     const surfaceId = `dialog_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const dismissOnce = () => {
+        if (closed) return false;
+        closed = true;
+        popSurface();
+        dialog.destroy();
+        return true;
+    };
     const popSurface = lvSurfaceStack.push({
         id: surfaceId,
         type: "dialog",
-        dismiss: () => {
-            if (closed) return false;
-            closed = true;
-            dialog.destroy();
-            return true;
-        },
+        dismiss: dismissOnce,
     });
 
     const dialog = new Dialog({
@@ -165,24 +203,33 @@ export const simpleDialog = (args: {
         contentEl.appendChild(args.ele);
     }
     dialog.element.classList.add("lv-dialog");
+
+    // 移动端宿主 Dialog 默认无右上角关闭钮且无 Esc 键：注入 44x44px 触控关闭入口（桌面已有原生关闭钮时通过样式隐藏）
+    const headerEl = dialog.element.querySelector(".b3-dialog__header");
+    if (headerEl && !dialog.element.querySelector(".b3-dialog__close") && !headerEl.querySelector(".lv-mobile-dialog-close")) {
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "b3-dialog__close lv-mobile-dialog-close";
+        closeBtn.setAttribute("aria-label", window.siyuan?.languages?.close ?? "关闭");
+        closeBtn.title = window.siyuan?.languages?.close ?? "关闭";
+        closeBtn.textContent = "✕";
+        closeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dismissOnce();
+        });
+        headerEl.appendChild(closeBtn);
+    }
+
     // 点击遮罩背景快速关闭
     dialog.element.addEventListener("click", (e) => {
         if (e.target === dialog.element || (e.target as HTMLElement).classList?.contains("b3-dialog__scrim")) {
-            if (!closed) {
-                closed = true;
-                popSurface();
-                dialog.destroy();
-            }
+            dismissOnce();
         }
     });
     return {
         dialog,
         close: () => {
-            if (!closed) {
-                closed = true;
-                popSurface();
-                dialog.destroy();
-            }
+            dismissOnce();
         }
     };
 }
