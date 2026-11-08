@@ -1053,6 +1053,7 @@ export default class LvCardsPlugin extends Plugin {
                 "水蛭卡预警",
                 "管理牌组与卡包",
             ],
+            topBarElement: this.topbar?.getElement?.() || (this.topbar as any)?.topBarElement,
             onClick: () => this.openReviewTab(),
             onAction: (action) => this.handleQuickAction(action),
         });
@@ -1521,8 +1522,8 @@ export default class LvCardsPlugin extends Plugin {
 
         // 注册小驴罗盘极速弹射坞入口与二级行动（Epoch 7 Phase 5 Protocol v1.4.0）
         this.registerLaunchpadEntry();
-        // Mobile Spec v1：手机端罗盘统一入口（顶栏按钮+悬浮球，桌面端 no-op），onunload 干净注销
-        this.mobileEntryCleaner = lvLaunchpad.ensureMobileEntry();
+        // Protocol v1.7.5：罗盘全端统一入口挂载（顶栏+悬浮球收敛）
+        this.mobileEntryCleaner = lvLaunchpad.ensureUnifiedEntry();
 
         // 注册全生态穿透搜索切面（Epoch 7 Phase 7 Protocol v1.6.0）
         this.omnisearchCleaner = lvOmnisearch.registerProvider("siyuan-lv-cards", (keyword) => {
