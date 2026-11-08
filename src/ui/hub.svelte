@@ -538,9 +538,12 @@
                             </div>
                         </div>
                         <div class="lv-r54-health-grid">
-                            <section class="lv-card2"><span class="lv-r54-health-dot lv-r54-health-dot-good"></span><strong>{i18n.hubSettingsLocalTitle ?? "本地闪卡"}</strong><span class="lv-r54-health-state">{i18n.hubSettingsLocalStatus ?? "本地可用"}</span><p>{i18n.hubSettingsLocalDesc ?? "卡片、来源和复习记录继续保存在当前插件数据中。"}</p></section>
-                            <section class="lv-card2"><span class:lv-r54-health-dot-good={settingsHealth.aiConfigured} class:lv-r54-health-dot-warn={!settingsHealth.aiConfigured} class="lv-r54-health-dot"></span><strong>{i18n.hubSettingsAITitle ?? "AI 辅助"}</strong><span class="lv-r54-health-state">{settingsHealth.aiConfigured ? (i18n.hubSettingsAIConfigured ?? "已配置") : (i18n.hubSettingsAINotConfigured ?? "尚未配置")}</span><p>{i18n.hubSettingsAIDesc ?? "模型、端点、预算和外发确认在完整设置中管理。"}</p></section>
-                            <section class="lv-card2"><span class="lv-r54-health-dot lv-r54-health-dot-neutral"></span><strong>{i18n.hubSettingsDataTitle ?? "数据与备份"}</strong><span class="lv-r54-health-state">{i18n.hubSettingsDataStatus ?? "可在完整设置中管理"}</span><p>{i18n.hubSettingsDataDesc ?? "导入、导出、恢复和诊断按任务展开。"}</p></section>
+                            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                            <div class="lv-card2" role="button" tabindex="0" onclick={openFullSettings} onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFullSettings(); } }} title={i18n.hubSettingsOpen ?? "打开完整设置"}><span class="lv-r54-health-dot lv-r54-health-dot-good"></span><strong>{i18n.hubSettingsLocalTitle ?? "本地闪卡"}</strong><span class="lv-r54-health-state">{i18n.hubSettingsLocalStatus ?? "本地可用"}</span><p>{i18n.hubSettingsLocalDesc ?? "卡片、来源和复习记录继续保存在当前插件数据中。"}</p></div>
+                            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                            <div class="lv-card2" role="button" tabindex="0" onclick={openFullSettings} onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFullSettings(); } }} title={i18n.hubSettingsOpen ?? "打开完整设置"}><span class:lv-r54-health-dot-good={settingsHealth.aiConfigured} class:lv-r54-health-dot-warn={!settingsHealth.aiConfigured} class="lv-r54-health-dot"></span><strong>{i18n.hubSettingsAITitle ?? "AI 辅助"}</strong><span class="lv-r54-health-state">{settingsHealth.aiConfigured ? (i18n.hubSettingsAIConfigured ?? "已配置") : (i18n.hubSettingsAINotConfigured ?? "尚未配置")}</span><p>{i18n.hubSettingsAIDesc ?? "模型、端点、预算和外发确认在完整设置中管理。"}</p></div>
+                            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                            <div class="lv-card2" role="button" tabindex="0" onclick={openFullSettings} onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFullSettings(); } }} title={i18n.hubSettingsOpen ?? "打开完整设置"}><span class="lv-r54-health-dot lv-r54-health-dot-neutral"></span><strong>{i18n.hubSettingsDataTitle ?? "数据与备份"}</strong><span class="lv-r54-health-state">{i18n.hubSettingsDataStatus ?? "可在完整设置中管理"}</span><p>{i18n.hubSettingsDataDesc ?? "导入、导出、恢复和诊断按任务展开。"}</p></div>
                         </div>
                         <section class="lv-card2 lv-r54-settings-action">
                             <div><h3>{i18n.hubSettingsOpenTitle ?? "需要修改配置？"}</h3><p>{i18n.hubSettingsOpenDesc ?? "打开完整设置，保存后会回到当前工作台。"}</p></div>
@@ -1014,7 +1017,22 @@
     }
 
     .lv-r54-health-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-    .lv-r54-health-grid .lv-card2 { padding: calc(var(--lv-space-unit) * 9 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 10); }
+    .lv-r54-health-grid .lv-card2 {
+        padding: calc(var(--lv-space-unit) * 9 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 10);
+        cursor: pointer;
+        transition: transform var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:hover {
+            transform: translateY(-2px);
+            border-color: var(--lv-color-brand);
+            box-shadow: var(--lv-shadow-2);
+        }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: var(--lv-focus-ring);
+        }
+    }
     .lv-r54-health-grid strong { display: block; margin-top: 10px; font-size: var(--lv-type-body-sm-size); }
     .lv-r54-health-state { display: block; margin-top: 4px; color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-r54-health-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }

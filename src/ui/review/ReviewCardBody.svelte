@@ -96,7 +96,7 @@
                 void renderMathIn(contentEl).finally(() => {
                     if (contentEl) contentEl.style.minHeight = "";
                 });
-            }, 30);
+            }, 0);
             return () => {
                 clearTimeout(timer);
                 if (contentEl) contentEl.style.minHeight = "";
