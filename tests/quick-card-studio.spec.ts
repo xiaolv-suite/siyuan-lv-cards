@@ -544,4 +544,40 @@ describe("R58 卡组选择与制卡页强化", () => {
         const updatedKeyBtns = screen.getAllByTitle(/标记为正确答案/);
         expect(updatedKeyBtns[1].getAttribute("aria-pressed")).toBe("true");
     });
+
+    it("公式表达模板对 $$ 块级数学符号自动规范化为行内数学空位 (==$...$==)", async () => {
+        const onCreate = vi.fn(async () => undefined);
+        render(QuickCard, { i18n, onCreate, onClose: vi.fn(), embedded: true });
+
+        await fireEvent.click(await screen.findByRole("button", { name: /公式推导/ }));
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "勾股定理公式" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "$$a^2 + b^2 = c^2$$" } });
+
+        await fireEvent.click(screen.getByRole("button", { name: /制卡/ }));
+        await waitFor(() => expect(onCreate).toHaveBeenCalledWith(
+            "勾股定理公式\n==$a^2 + b^2 = c^2$==",
+            "deck-1",
+            "默认卡组",
+            "勾股定理公式",
+            "$$a^2 + b^2 = c^2$$"
+        ));
+    });
+
+    it("挖空表达模板若题干已包含 ==答案== 且提供附加解析，规范化保留助记便签", async () => {
+        const onCreate = vi.fn(async () => undefined);
+        render(QuickCard, { i18n, onCreate, onClose: vi.fn(), embedded: true });
+
+        await fireEvent.click(await screen.findByRole("button", { name: /挖空表达/ }));
+        await fireEvent.input(screen.getByRole("textbox", { name: "问题" }), { target: { value: "中国的首都是==北京==" } });
+        await fireEvent.input(screen.getByRole("textbox", { name: "答案" }), { target: { value: "政治经济文化中心" } });
+
+        await fireEvent.click(screen.getByRole("button", { name: /制卡/ }));
+        await waitFor(() => expect(onCreate).toHaveBeenCalledWith(
+            "中国的首都是==北京==\n> 💡 政治经济文化中心",
+            "deck-1",
+            "默认卡组",
+            "中国的首都是==北京==",
+            "政治经济文化中心"
+        ));
+    });
 });

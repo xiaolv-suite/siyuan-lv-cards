@@ -363,22 +363,40 @@
 
     const isAllMandatorySatisfied = $derived(deckReady && stemReady && answerCheck.ready);
 
-    // 选择/判断题不走问答草稿校验（答案行由表单自动生成，校验在 answerCheck）
-    const draftIssues = $derived(template === "choice" ? [] : validateQaDraft(q, a));
+    // 选择题、挖空题、超级块与公式题不走纯文本问答校验（校验由 answerCheck 承担，允许合法 == 或多段语法）
+    const draftIssues = $derived(template !== "qa" ? [] : validateQaDraft(q, a));
     const overloadNotice = $derived(inspectCardLearnability({ question: q, answer: a, template: template === "choice" || template === "formula" ? "qa" : template }));
     let showSplitPreview = $state(false);
     const canSubmit = $derived(
-        !busy && isAllMandatorySatisfied && (template === "choice" || draftIssues.length === 0)
+        !busy && isAllMandatorySatisfied && (template !== "qa" || draftIssues.length === 0)
     );
+
+    function cleanFormulaCloze(ans: string): string {
+        let clean = ans.trim();
+        if (clean.startsWith("$$") && clean.endsWith("$$") && clean.length > 4) {
+            clean = "$" + clean.slice(2, -2).trim() + "$";
+        } else if (!clean.startsWith("$")) {
+            clean = `$${clean}$`;
+        }
+        return clean;
+    }
 
     function serializeDraftByTemplate(draft: CardSplitDraft): string {
         const question = draft.q.trim();
         const answer = draft.a.trim();
-        if (template === "cloze" && question.includes("____")) {
-            return question.split("____").join(`==${answer}==`);
+        if (template === "cloze") {
+            if (question.includes("____")) {
+                return question.split("____").join(`==${answer}==`);
+            }
+            if (question.includes("==")) {
+                return answer && !question.includes(answer) ? `${question}\n> 💡 ${answer}` : question;
+            }
         }
         if (template === "superblock") {
             return `{{{col\n${question}\n\n${answer}\n}}}`;
+        }
+        if (template === "formula") {
+            return `${question}\n==${cleanFormulaCloze(answer)}==`;
         }
         return serializeQaCard(question, answer);
     }
@@ -654,11 +672,13 @@
                 }
             } else {
                 const markdown = template === "cloze"
-                    ? question.split("____").join(`==${answer}==`)
+                    ? (question.includes("____")
+                        ? question.split("____").join(`==${answer}==`)
+                        : (question.includes("==") && answer && !question.includes(answer) ? `${question}\n> 💡 ${answer}` : question))
                     : template === "superblock"
                     ? `{{{col\n${question}\n\n${answer}\n}}}`
                     : template === "formula"
-                    ? `${question}\n==${answer.startsWith("$") ? answer : `$${answer}$`}==`
+                    ? `${question}\n==${cleanFormulaCloze(answer)}==`
                     : serializeQaCard(question, answer);
                 const callArgs: any[] = [markdown, deckID, deckName, question, answer];
                 if (targetDocID || docOpts) {
