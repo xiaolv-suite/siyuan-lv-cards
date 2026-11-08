@@ -33,7 +33,6 @@ export class TopbarController {
     private host: TopbarHost;
     private topBarElement: HTMLElement | null = null;
     private topBarContextMenuHandler: ((evt: MouseEvent) => void) | null = null;
-    private badgeTimer: ReturnType<typeof setInterval> | null = null;
     private badgeTimerUnsub: (() => void) | null = null;
     private badgeSeq = 0;
     private lastDue = 0;
@@ -52,14 +51,11 @@ export class TopbarController {
         return this.topBarElement;
     }
 
-    public startBadgeTimer(_intervalMs = 60000) {
+    /** 挂载每分钟到期徽标刷新（lvTicker onMinute 订阅，destroy 时随 badgeTimerUnsub 一并释放） */
+    public startBadgeTimer() {
         if (this.badgeTimerUnsub) {
             this.badgeTimerUnsub();
             this.badgeTimerUnsub = null;
-        }
-        if (this.badgeTimer) {
-            clearInterval(this.badgeTimer);
-            this.badgeTimer = null;
         }
         this.badgeTimerUnsub = lvTicker.onMinute("siyuan-lv-cards", () => {
             this.refreshDueBadge();
@@ -70,10 +66,6 @@ export class TopbarController {
         if (this.badgeTimerUnsub) {
             this.badgeTimerUnsub();
             this.badgeTimerUnsub = null;
-        }
-        if (this.badgeTimer) {
-            clearInterval(this.badgeTimer);
-            this.badgeTimer = null;
         }
         if (this.topBarElement) {
             if (this.topBarContextMenuHandler) {

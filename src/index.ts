@@ -562,7 +562,7 @@ export default class LvCardsPlugin extends Plugin {
         } catch { /* i18n 未就绪时仅留日志 */ }
     }
     private showStorageFail() {
-        this.showStorageFail();
+        showMessage(this.i18n.storageWriteFail, 6000, "error");
     }
     private toastStorageFail(): never {
         this.showStorageFail();
