@@ -1053,7 +1053,7 @@ export default class LvCardsPlugin extends Plugin {
                 "水蛭卡预警",
                 "管理牌组与卡包",
             ],
-            topBarElement: this.topbar?.getElement?.() || (this.topbar as any)?.topBarElement,
+            topBarElement: this.ensureTopBarElement() || undefined,
             onClick: () => this.openReviewTab(),
             onAction: (action) => this.handleQuickAction(action),
         });
