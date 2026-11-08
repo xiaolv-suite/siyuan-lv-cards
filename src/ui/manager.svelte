@@ -781,9 +781,8 @@
     }
 
     function openDoc(block: SearchBlock) {
-        const rootId = (block.rootID as string) || block.id;
         try {
-            openTab({ app: ctx.app, doc: { id: rootId } });
+            openTab({ app: ctx.app, doc: { id: block.id, zoomIn: false } });
         } catch (e: unknown) {
             showMessage(friendlyError(e, t), 2500, "error");
         }

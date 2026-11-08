@@ -428,10 +428,10 @@ export function buildHubMountProps(plugin: any, deps: TabDeps, data?: Record<str
                         titles: (ids: string[]) => getDocTitles(ids),
                         openSource: async (blockID: string) => {
                             try {
+                                openTab({ app: plugin.app, doc: { id: blockID, zoomIn: false } });
+                            } catch {
                                 const rows = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${blockID.replace(/'/g, "''")}'`);
                                 openTab({ app: plugin.app, doc: { id: rows[0]?.root_id ? String(rows[0].root_id) : blockID } });
-                            } catch {
-                                openTab({ app: plugin.app, doc: { id: blockID } });
                             }
                         },
                     } : null,
@@ -527,10 +527,10 @@ export function buildHubMountProps(plugin: any, deps: TabDeps, data?: Record<str
                         isSuspendedToday: (blockID: string) => isSuspended(plugin.suspendToday, blockID),
                         openSource: async (blockID: string) => {
                             try {
+                                openTab({ app: plugin.app, doc: { id: blockID, zoomIn: false } });
+                            } catch {
                                 const rows = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${blockID.replace(/'/g, "''")}'`);
                                 openTab({ app: plugin.app, doc: { id: rows[0]?.root_id ? String(rows[0].root_id) : blockID } });
-                            } catch {
-                                openTab({ app: plugin.app, doc: { id: blockID } });
                             }
                         },
                         openCard: (blockID: string) => plugin.openTabOf(TAB_DASHBOARD, { tab: "manage", focusBlockID: blockID }),
