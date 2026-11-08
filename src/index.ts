@@ -3698,13 +3698,19 @@ export default class LvCardsPlugin extends Plugin {
 
     private async openSettingsDialog(onSaved?: () => void, initialSection?: "imports") {
         try {
+            const mobile = this.isMobileHost();
             const SettingsPanel = await loadSettingsPanel();
+            let unbindVv: (() => void) | null = null;
             const { close, dialog } = svelteDialog({
                 title: this.i18n.settingsTitle,
                 component: SettingsPanel,
-                width: "min(620px, 94vw)",
+                width: mobile ? "100vw" : "min(620px, 94vw)",
                 // 完整设置内容远超一屏；明确限制弹窗高度后，设置面板才能建立可滚动边界。
-                height: "min(860px, calc(100vh - 48px))",
+                height: mobile ? "100dvh" : "min(860px, calc(100vh - 48px))",
+                callback: () => {
+                    unbindVv?.();
+                    unbindVv = null;
+                },
                 props: {
                     initialSection,
                     ctx: {
@@ -3887,6 +3893,10 @@ export default class LvCardsPlugin extends Plugin {
                 },
             });
             dialog.element.classList.add("lv-dialog--settings");
+            if (mobile) {
+                dialog.element.classList.add("lv-mobile-sheet-dialog");
+                unbindVv = bindMobileVisualViewport(dialog.element);
+            }
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.settingsTitle, e);
         }

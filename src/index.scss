@@ -2695,6 +2695,9 @@ pre,
 // 100vw / var(--lv-vv-h, 100dvh) + safe-area；消除双顶栏冗余并响应软键盘
 // =============================================================
 .lv-dialog.lv-hub-mobile-dialog {
+    .b3-dialog {
+        padding: 0 !important;
+    }
     .b3-dialog__container {
         display: flex;
         flex-direction: column;
@@ -2704,8 +2707,9 @@ pre,
         max-width: 100vw !important;
         max-height: var(--lv-vv-h, 100dvh) !important;
         margin: 0 !important;
-        border-radius: 0;
-        box-shadow: none;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
         animation: none;
         overflow: hidden;
     }
@@ -2732,6 +2736,9 @@ pre,
 }
 
 .lv-dialog.lv-mobile-sheet-dialog {
+    .b3-dialog {
+        padding: 0 !important;
+    }
     .b3-dialog__container {
         display: flex !important;
         flex-direction: column !important;
@@ -2844,8 +2851,8 @@ pre,
 }
 
 /* ══════════ 小驴闪卡主权弹窗外壳防护 (Sovereign Modal Shell Defense) ══════════ */
-.b3-dialog:has(.lv-cards-dialog-content, [class*="lv-cards"], [id*="lv-cards"], .lv-dialog-title-wrap):not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog),
-.b3-dialog.lv-dialog:not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog) {
+.b3-dialog:has(.lv-cards-dialog-content, [class*="lv-cards"], [id*="lv-cards"], .lv-dialog-title-wrap):not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog),
+.b3-dialog.lv-dialog:not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog) {
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);

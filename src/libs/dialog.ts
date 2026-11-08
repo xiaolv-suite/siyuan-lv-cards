@@ -204,9 +204,9 @@ export const simpleDialog = (args: {
     }
     dialog.element.classList.add("lv-dialog");
 
-    // 移动端宿主 Dialog 默认无右上角关闭钮且无 Esc 键：注入 44x44px 触控关闭入口（桌面已有原生关闭钮时通过样式隐藏）
+    // 移动端宿主 Dialog 默认无右上角关闭钮（或外层 .b3-dialog__close 被全屏容器遮蔽）且无 Esc 键：在 header 内注入 44x44px 触控关闭入口（桌面 >=769px 自动隐藏）
     const headerEl = dialog.element.querySelector(".b3-dialog__header");
-    if (headerEl && !dialog.element.querySelector(".b3-dialog__close") && !headerEl.querySelector(".lv-mobile-dialog-close")) {
+    if (headerEl && !headerEl.querySelector(".b3-dialog__close") && !headerEl.querySelector(".lv-mobile-dialog-close")) {
         const closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.className = "b3-dialog__close lv-mobile-dialog-close";
