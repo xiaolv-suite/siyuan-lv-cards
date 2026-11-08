@@ -1,6 +1,6 @@
 import "./index.scss";
 
-import { Plugin, getAllEditor, openTab, getAllTabs } from "siyuan";
+import { Plugin, getAllEditor, openTab, getAllTabs, type subMenu } from "siyuan";
 import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad, lvOmnisearch, lvAutomation, type LvSearchResultItem } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
@@ -74,7 +74,7 @@ import {
     shouldReloadExamPlans,
 } from "./core/exam-plan-sync";
 import { registerPluginCommands } from "./bootstrap/commands";
-import { showPluginTopbarMenu } from "./bootstrap/topbar-menu";
+import { appendPluginTopbarMenuItems } from "./bootstrap/topbar-menu";
 import { createPresentationPrivacyController } from "./core/presentation-privacy";
 import { createFullSampleWorkspace, createOnboardingSampleCards } from "./core/workspace-samples";
 import {
@@ -1323,7 +1323,7 @@ export default class LvCardsPlugin extends Plugin {
             addTopBar: (opts) => this.addTopBar(opts),
             removeTopBar: (id) => (this as any).removeTopBar(id),
             openTabOf: (tab) => this.openTabOf(tab),
-            showTopbarMenu: (evt) => this.showTopbarMenu(evt),
+            showTopbarMenu: (menu) => this.showTopbarMenu(menu),
             showMessage: (msg, timeout, type) => showMessage(msg, timeout, type),
         }, ICON_LV_CARDS_SVG);
         this.addIcons(ICON_LV_CARDS_SVG);
@@ -3555,8 +3555,9 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
-    private showTopbarMenu(evt: MouseEvent) {
-        showPluginTopbarMenu({
+    /** 顶栏右键菜单（官方 addTopBar contextMenu 通道）：条目追加进思源原生 subMenu，不拦截原生菜单 */
+    private showTopbarMenu(menu: subMenu) {
+        appendPluginTopbarMenuItems({
             v2State: this.flashcardV2 ? this.flashcardV2.state : null,
             modules: this.settings.modules,
             presentationPrivacy: {
@@ -3574,7 +3575,7 @@ export default class LvCardsPlugin extends Plugin {
                 openSettingsDialog: () => this.openSettingsDialog(),
                 togglePresentationPrivacy: () => this.togglePresentationPrivacy(),
             },
-        }, evt);
+        }, menu);
 
         const stat = this.revlog.days[todayDate()];
         if (stat && this.settings.dailyReviewTarget > 0 && stat.review >= this.settings.dailyReviewTarget) {

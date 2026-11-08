@@ -130,13 +130,13 @@ export function computeTopbarMenuItems(config: TopbarMenuConfig): TopbarMenuItem
 }
 
 /**
- * 组装并打开顶栏菜单
+ * 组装顶栏菜单条目并追加到官方传入的 subMenu（addTopBar contextMenu 通道），
+ * 不再自建 Menu + preventDefault 拦截思源原生顶栏条目菜单（3.8.x 固定/隐藏管理保留）
  */
-export function showPluginTopbarMenu(
+export function appendPluginTopbarMenuItems(
     config: TopbarMenuConfig,
-    evt: { clientX?: number; clientY?: number },
-): Menu {
-    const menu = new Menu("lvCardsMenu");
+    menu: { addItem: (item: unknown) => void; addSeparator: () => void },
+): void {
     const items = computeTopbarMenuItems(config);
 
     for (const item of items) {
@@ -158,6 +158,18 @@ export function showPluginTopbarMenu(
             });
         }
     }
+}
+
+/**
+ * 组装并独立打开顶栏菜单（Evt 定位路径；顶栏右键已迁移至官方 contextMenu 通道，
+ * 此函数保留供独立弹出的调用方与单测使用）
+ */
+export function showPluginTopbarMenu(
+    config: TopbarMenuConfig,
+    evt: { clientX?: number; clientY?: number },
+): Menu {
+    const menu = new Menu("lvCardsMenu");
+    appendPluginTopbarMenuItems(config, menu);
 
     const x = evt.clientX || (typeof window !== "undefined" ? window.innerWidth - 60 : 100);
     const y = evt.clientY || 48;

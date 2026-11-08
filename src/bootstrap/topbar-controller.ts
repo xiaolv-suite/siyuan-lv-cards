@@ -3,6 +3,7 @@ import { cachedDueCount } from "@/api/due-shared";
 import { lvLog } from "@/libs/log";
 import { lvTicker } from "@/libs/lv-notice-kit";
 import { todayKey, type ExamPlan } from "@/core/exam";
+import type { subMenu } from "siyuan";
 
 export interface TopbarHost {
     i18n: Record<string, any>;
@@ -20,10 +21,12 @@ export interface TopbarHost {
         title: string;
         position: "right" | "left";
         callback: () => void;
+        contextMenu?: (menu: subMenu) => void;
     }) => HTMLElement;
     removeTopBar: (id: string) => void;
     openTabOf: (tab: string) => void;
-    showTopbarMenu: (evt: MouseEvent) => void;
+    /** 官方 addTopBar contextMenu 通道：把顶栏右键菜单条目追加进思源原生 subMenu */
+    showTopbarMenu: (menu: subMenu) => void;
     showMessage?: (msg: string, timeout?: number, type?: "info" | "error") => void;
 }
 
@@ -107,14 +110,11 @@ export class TopbarController {
                         this.host.openTabOf("lv-cards-dashboard");
                     }
                 },
+                // 官方 contextMenu 通道：右键菜单并入思源原生顶栏条目菜单，不再 preventDefault 拦截
+                contextMenu: (menu) => this.host.showTopbarMenu(menu),
             });
             if (this.topBarElement) {
                 this.topBarElement.style.position = "relative";
-                this.topBarContextMenuHandler = (evt: MouseEvent) => {
-                    evt.preventDefault();
-                    this.host.showTopbarMenu(evt);
-                };
-                this.topBarElement.addEventListener("contextmenu", this.topBarContextMenuHandler);
             }
         } catch (e) {
             lvLog("warn", "ensureTopBarElement failed: " + (e instanceof Error ? e.message : String(e)));
