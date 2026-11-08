@@ -506,5 +506,148 @@
                 font-size: var(--lv-type-control-size);
             }
         }
+
+        @media (max-width: 680px) {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+
+            .lv-ready-hub {
+                padding: 12px !important;
+                gap: 10px !important;
+                border-radius: var(--lv-r-m);
+            }
+
+            .lv-ready-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                padding-bottom: 8px;
+
+                .lv-ready-title-group {
+                    min-width: 0 !important;
+                    width: 100%;
+
+                    .lv-ready-eyebrow {
+                        display: none;
+                    }
+
+                    .lv-ready-title {
+                        font-size: 16px;
+                        margin-bottom: 4px;
+                    }
+
+                    .lv-ready-desc {
+                        font-size: 12px;
+                        line-height: 1.45;
+                    }
+                }
+
+                .lv-ready-scope-pill {
+                    width: 100%;
+                    box-sizing: border-box;
+                    justify-content: space-between;
+                    padding: 6px 12px;
+
+                    .lv-ready-scope-select {
+                        flex: 1 1 auto;
+                        min-width: 0;
+                        max-width: 65%;
+                        text-overflow: ellipsis;
+                    }
+                }
+            }
+
+            .lv-ready-alert {
+                padding: 10px 12px;
+                gap: 8px;
+
+                .lv-ready-alert-main {
+                    min-width: 0 !important;
+                }
+
+                .lv-ready-alert-actions {
+                    width: 100%;
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 8px;
+
+                    .b3-button {
+                        width: 100%;
+                        justify-content: center;
+                        min-height: 36px;
+                    }
+                }
+            }
+
+            .lv-ready-grid {
+                grid-template-columns: 1fr !important;
+                gap: 8px;
+
+                .lv-ready-card {
+                    padding: 10px 12px !important;
+
+                    .lv-ready-card-head {
+                        gap: 10px;
+                        margin-bottom: 4px;
+
+                        .lv-ready-icon-bubble {
+                            width: 28px;
+                            height: 28px;
+                        }
+
+                        > div {
+                            flex: 1 1 auto;
+                            min-width: 0;
+                        }
+
+                        .lv-ready-card-title {
+                            font-size: 13.5px;
+                        }
+
+                        .lv-ready-card-subtitle {
+                            font-size: 11.5px;
+                        }
+                    }
+
+                    .lv-ready-card-desc {
+                        font-size: 12px;
+                        line-height: 1.42;
+                        margin-bottom: 8px;
+                    }
+
+                    .lv-ready-card-footer {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 8px;
+
+                        .b3-button {
+                            width: 100%;
+                            min-width: 0;
+                            min-height: 36px;
+                            padding: 0 8px;
+                            justify-content: center;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        }
+                    }
+                }
+            }
+
+            .lv-ready-bottom-bar {
+                display: grid;
+                grid-template-columns: 1fr 1.35fr;
+                gap: 8px;
+                padding-top: 8px;
+
+                .b3-button {
+                    width: 100%;
+                    min-height: 40px;
+                    padding: 0 10px;
+                    justify-content: center;
+                }
+            }
+        }
     }
 </style>

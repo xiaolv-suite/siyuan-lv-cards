@@ -2896,10 +2896,15 @@
         margin: 0 auto;
         width: 100%;
 
-        @media (max-width: 560px) {
-            padding: calc(var(--lv-sp-2) + env(safe-area-inset-top, 0)) calc(var(--lv-sp-3) + env(safe-area-inset-right, 0))
-                calc(var(--lv-sp-2) + env(safe-area-inset-bottom, 0)) calc(var(--lv-sp-3) + env(safe-area-inset-left, 0));
-            gap: var(--lv-sp-2);
+        @media (max-width: 680px) {
+            padding: calc(6px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px))
+                calc(10px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
+            gap: 8px;
+
+            :global(.lv-center.lv-ready-wrap),
+            :global(.lv-center.lv-done) {
+                margin: 0 !important;
+            }
         }
 
         &.lv-keyboard-open,
