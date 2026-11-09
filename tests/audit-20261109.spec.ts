@@ -88,4 +88,23 @@ describe("durable external card intake", () => {
         expect(await createExternalCardIntake(bad.deps)(input, "extract")).toMatchObject({ ok: false, code: "write-unknown" });
         expect(bad.stats().creates).toBe(1);
     });
+    it("first installation missing-file empty-string sentinel is treated as uninitialized journal without failing intake", async () => {
+        let journal: unknown = "";
+        const docs = new Map<string, string>();
+        let creates = 0;
+        const deps = {
+            load: async () => journal,
+            save: async (value: unknown) => { journal = structuredClone(value); },
+            targetNotebook: async () => "nb",
+            find: async (_nb: string, path: string) => docs.get(path) ?? null,
+            create: async (_nb: string, path: string) => { creates++; const id = `doc-${creates}`; docs.set(path, id); return id; },
+            attrs: async () => {}, firstBlock: async (doc: string) => `${doc}-card`,
+            ensureDeck: async () => "deck", enroll: async () => {}, inbox: async () => {},
+        };
+        const intake = createExternalCardIntake(deps);
+        const res = await intake({ content: "first extract", sourceBlockId: "source" }, "extract");
+        expect(res.ok).toBe(true);
+        expect(creates).toBe(1);
+        expect((journal as any).entries).toHaveLength(1);
+    });
 });

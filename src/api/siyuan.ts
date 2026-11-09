@@ -171,22 +171,9 @@ export const getBlockMarkdown = async (id: string): Promise<string> => {
 
 /** 在指定父块下追加块（快速制卡问答对） */
 export const appendBlock = async (dataType: "markdown", data: string, parentID: string): Promise<string[]> => {
-    // 内核 3.8.x 事务响应双形态兼容：旧 {operations:[{id}]} / 新 [{doOperations:[{id, action}]}]
-    // 挂载对内核暂态 metadata not ready 的自愈重试
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt > 0) {
-            await new Promise(r => setTimeout(r, 150 * attempt));
-        }
-        try {
-            let body: any;
-            try {
-                // 优先使用官方标准的 /api/block/appendBlock 追加接口
-                body = await kernelPost("/api/block/appendBlock", { dataType, data, parentID });
-            } catch (err: any) {
-                // 若 appendBlock 失败或不存在，回退使用 insertBlock
-                body = await kernelPost("/api/block/insertBlock", { dataType, data, parentID });
-            }
+    // Both supported transaction response shapes are decoded, but writes are never replayed.
+    // A transport failure can follow a committed append; switching endpoints would duplicate it.
+            const body: any = await kernelPost("/api/block/appendBlock", { dataType, data, parentID });
             const ids: string[] = [];
             const collect = (ops: { id?: string; action?: string }[] | undefined) => {
                 for (const op of ops ?? []) {
@@ -202,15 +189,6 @@ export const appendBlock = async (dataType: "markdown", data: string, parentID: 
                 }
             }
             return ids;
-        } catch (e: any) {
-            lastError = e;
-            if (!isMetadataNotReadyError(e)) {
-                throw e;
-            }
-        }
-    }
-    if (lastError) throw lastError;
-    return [];
 };
 
 /** 读块自定义属性（遮挡数据存于 lv-occlusion 属性） */

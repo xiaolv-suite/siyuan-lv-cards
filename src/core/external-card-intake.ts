@@ -10,7 +10,16 @@ export const INTAKE_JOURNAL = EXTERNAL_CARD_INTAKE_DATA;
 
 export function assertSafeIntakeRestore(currentRaw: unknown, nextRaw: unknown): void {
     const parse = (value: unknown): IntakeJournal => {
-        if (value == null) return { v: 1, entries: [] };
+        if (value == null || value === "") return { v: 1, entries: [] };
+        if (typeof value === "string") {
+            try {
+                const parsed = JSON.parse(value);
+                if (parsed == null || parsed === "") return { v: 1, entries: [] };
+                value = parsed;
+            } catch {
+                throw new Error("Invalid intake journal");
+            }
+        }
         const journal = value as IntakeJournal;
         if (journal.v !== 1 || !Array.isArray(journal.entries)) throw new Error("Invalid intake journal");
         const keys = new Set<string>();
@@ -59,7 +68,11 @@ export function createExternalCardIntake(deps: IntakeDependencies) {
             try {
                 const identity = intakeIdentity(input, kind);
                 const key = input.requestId?.trim() || identity;
-                const raw = await deps.load() as IntakeJournal | null;
+                let raw = await deps.load() as IntakeJournal | string | null;
+                if (raw === "") raw = null;
+                if (typeof raw === "string") {
+                    try { raw = JSON.parse(raw); } catch { throw new Error("Invalid intake journal"); }
+                }
                 assertSafeIntakeRestore(null, raw);
                 if (raw && (raw.v !== 1 || !Array.isArray(raw.entries))) throw new Error("Invalid intake journal");
                 const journal: IntakeJournal = raw ? structuredClone(raw) : { v: 1, entries: [] };

@@ -230,6 +230,9 @@
             align-items: center;
             justify-content: center;
             opacity: 0.6;
+            min-width: 28px;
+            min-height: 28px;
+            box-sizing: border-box;
             padding: calc(var(--lv-space-unit) * 1);
             border-radius: var(--lv-r-circle);
             color: inherit;
@@ -247,5 +250,14 @@
                 opacity: 1;
             }
         }
+    }
+    @media (max-width: 680px), (pointer: coarse) {
+        .lv-card-source-breadcrumb :is(.lv-breadcrumb-btn, .lv-breadcrumb-toggle, .lv-breadcrumb-locate-btn) {
+            min-width: 36px; min-height: 36px;
+        }
+    }
+    :global(.lv-mobile) .lv-card-source-breadcrumb :is(.lv-breadcrumb-toggle, .lv-breadcrumb-locate-btn),
+    :global([data-mobile="true"]) .lv-card-source-breadcrumb :is(.lv-breadcrumb-toggle, .lv-breadcrumb-locate-btn) {
+        min-width: 36px; min-height: 36px;
     }
 </style>

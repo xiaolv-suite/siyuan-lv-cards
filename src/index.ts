@@ -31,6 +31,7 @@ import { getRiffCardsByBlockIDs } from "./api/riff";
 // AT-4：addRiffCards 取经 due-shared 的包装版（建卡成功即失效共享 due 缓存），badge/提醒走共享缓存
 import { addRiffCards, cachedDueCount, dueCache, formatRiffCardEntryError, invalidateDueCache } from "./api/due-shared";
 import { withExternalIntakeLock } from "./libs/external-intake-lock";
+import { readPluginJsonFile, writePluginJsonFile } from "./api/plugin-json-file";
 import { createExternalCardIntake, INTAKE_JOURNAL, assertSafeIntakeRestore, type IntakeInput } from "./core/external-card-intake";
 import { mountCardsBridge, dispatchCardReviewedEvent } from "./api/external-bridge";
 import { registerRaikiriModuleSafely } from "./libs/ecosystem-bridge-kit";
@@ -950,7 +951,7 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private async readAllStores(): Promise<Record<string, unknown>> {
-        return readAllPluginStores((key) => this.loadData(key), LvCardsPlugin.STORE_KEYS);
+        return readAllPluginStores((key) => key === INTAKE_JOURNAL ? readPluginJsonFile(this.name, key) : this.loadData(key), LvCardsPlugin.STORE_KEYS);
     }
 
     private async applyLoadedStores(loaded: Record<string, unknown>) {
@@ -997,21 +998,24 @@ export default class LvCardsPlugin extends Plugin {
 
     private async restoreDataLocked(data: Record<string, unknown>): Promise<boolean> {
         if (!data || typeof data !== "object") return false;
-        const restoreFiles = (data.stores && typeof data.stores === "object" ? data.stores : data) as Record<string, unknown>;
+        const restoreFiles = { ...(data.stores && typeof data.stores === "object" ? data.stores : data) } as Record<string, unknown>;
         try {
             const currentFiles = await this.readAllStores();
-            if (Object.prototype.hasOwnProperty.call(restoreFiles, INTAKE_JOURNAL)) assertSafeIntakeRestore(currentFiles[INTAKE_JOURNAL], restoreFiles[INTAKE_JOURNAL]);
+            if (Object.prototype.hasOwnProperty.call(restoreFiles, INTAKE_JOURNAL)) {
+                assertSafeIntakeRestore(currentFiles[INTAKE_JOURNAL], restoreFiles[INTAKE_JOURNAL]);
+                restoreFiles[INTAKE_JOURNAL] ??= { v: 1, entries: [] };
+            }
             await applyRestoreTransaction({
                 restoreFiles,
                 currentFiles,
-                saveFile: (key, val) => this.saveData(key, val),
+                saveFile: (key, val) => key === INTAKE_JOURNAL ? writePluginJsonFile(this.name, key, val ?? { v: 1, entries: [] }) : this.saveData(key, val),
                 rollbackFailedKey: true,
                 logError: (msg) => lvLog("error", msg),
             });
             if (Object.prototype.hasOwnProperty.call(restoreFiles, INTAKE_JOURNAL)) {
-                const readback = await this.loadData(INTAKE_JOURNAL);
+                const readback = await readPluginJsonFile(this.name, INTAKE_JOURNAL);
                 if (JSON.stringify(readback) !== JSON.stringify(restoreFiles[INTAKE_JOURNAL])) {
-                    await this.saveData(INTAKE_JOURNAL, currentFiles[INTAKE_JOURNAL]);
+                    await writePluginJsonFile(this.name, INTAKE_JOURNAL, currentFiles[INTAKE_JOURNAL] ?? { v: 1, entries: [] });
                     throw new Error("Restored intake journal readback failed");
                 }
             }
@@ -1224,11 +1228,9 @@ export default class LvCardsPlugin extends Plugin {
 
     private intake() {
         if (!this.externalIntake) this.externalIntake = createExternalCardIntake({
-            load: () => this.loadData(INTAKE_JOURNAL),
+            load: () => readPluginJsonFile(this.name, INTAKE_JOURNAL),
             save: async data => {
-                await this.persist.save(INTAKE_JOURNAL, data);
-                const readback = await this.loadData(INTAKE_JOURNAL);
-                if (JSON.stringify(readback) !== JSON.stringify(data)) throw new Error("Intake journal readback failed");
+                await writePluginJsonFile(this.name, INTAKE_JOURNAL, data);
             },
             targetNotebook: async () => {
                 const nbs = await getNotebooks();
@@ -1262,10 +1264,12 @@ export default class LvCardsPlugin extends Plugin {
             enroll: async (deck, block) => { await addRiffCards(deck, [block]); },
             inbox: async docID => {
                 // Another frontend may have accepted an extract since this instance last rendered.
-                const next = normalizeInbox(await this.loadData(INBOX_DATA));
+                const current = await readPluginJsonFile(this.name, INBOX_DATA) as { version?: number; items?: unknown } | null;
+                if (current && (current.version !== 1 || !Array.isArray(current.items))) throw new Error("Invalid material inbox; no replacement written");
+                const next = normalizeInbox(current);
                 addInboxItem(next, docID);
-                await this.persist.save(INBOX_DATA, next);
-                const raw = await this.loadData(INBOX_DATA);
+                await writePluginJsonFile(this.name, INBOX_DATA, next);
+                const raw = await readPluginJsonFile(this.name, INBOX_DATA);
                 if (!normalizeInbox(raw).items.some(item => item.blockID === docID)) throw new Error("Extract inbox readback failed");
                 this.inbox = next;
                 this.persistedInboxSnapshot = cloneStore(next);

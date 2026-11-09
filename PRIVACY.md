@@ -20,3 +20,5 @@ When AI is enabled, only the text required for generation is sent to the endpoin
 
 ## 外部制卡与摘录交接（2026-11-09，未发布）
 external-card-intake-v1.json 保存请求/内容指纹、目标笔记本与路径、确切文档/卡块/牌组ID和阶段，不保存正文、来源标题或密钥。摘录正文与来源属性保存在思源“渐进摘录”文档，材料筛选状态复用 inbox.json；它们不进入 FSRS。原子卡经公开 createCard 显式写入并入组。结果未知时只核对原目标，不自动重放创建；删除侧车会失去跨重启的请求去重凭据，应随工作区备份。
+
+二轮整改：交接日志与材料收件箱使用内核文件API独立读回。只有明确文件不存在响应才视为空；权限、损坏与传输异常不回退插件缓存。写入确认检查HTTP与code=0，并通过no-store getFile核对同一工作区的内容；这不代表跨客户端分布式事务或存储介质断电持久性保证。
