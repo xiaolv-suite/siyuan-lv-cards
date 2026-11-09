@@ -2718,7 +2718,8 @@ pre,
         backdrop-filter: none;
     }
     // 消除双顶栏冗余：Hub 与 Review 内层自带紧凑单行顶栏及 44x44px 关闭钮
-    .b3-dialog__header {
+    .b3-dialog__header,
+    .b3-dialog__container > .b3-dialog__close {
         display: none !important;
     }
     .b3-dialog__body,
@@ -2757,6 +2758,9 @@ pre,
     .b3-dialog__scrim {
         background: var(--b3-theme-background, var(--lv-color-canvas));
         backdrop-filter: none;
+    }
+    .b3-dialog__container > .b3-dialog__close {
+        display: none !important;
     }
     .b3-dialog__header {
         flex: none;
@@ -2829,18 +2833,15 @@ pre,
     color: var(--lv-color-text-muted);
     font-size: var(--lv-type-title-size);
     line-height: var(--lv-lh-tight);
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 28px;
+    min-height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: var(--lv-r-circle);
     cursor: pointer;
     touch-action: manipulation;
-
-    @media (min-width: 769px) {
-        display: none;
-    }
+    margin-left: auto;
 }
 
 .lv-hub-mobile-host {
@@ -2851,7 +2852,7 @@ pre,
 }
 
 /* ══════════ 小驴闪卡主权弹窗外壳防护 (Sovereign Modal Shell Defense) ══════════ */
-.b3-dialog:has(.lv-cards-dialog-content, [class*="lv-cards"], [id*="lv-cards"], .lv-dialog-title-wrap):not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog),
+.b3-dialog:has(.lv-cards-dialog-content, [class*="lv-cards"], [id*="lv-cards"]):not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog),
 .b3-dialog.lv-dialog:not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog) {
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
@@ -2866,6 +2867,10 @@ pre,
     }
 
     .b3-dialog__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--lv-sp-2);
         background: transparent !important;
         border-bottom: 1px solid var(--b3-border-color, var(--lv-border)) !important;
 
@@ -2873,7 +2878,13 @@ pre,
             cursor: pointer;
             width: 28px;
             height: 28px;
-            padding: 6px;
+            min-width: 28px;
+            min-height: 28px;
+            margin-left: auto;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 6px;
             color: var(--b3-theme-on-surface);
             opacity: 0.7;

@@ -187,7 +187,7 @@ export const simpleDialog = (args: {
 
     const dialog = new Dialog({
         title: `<div class="lv-dialog-title-wrap">${args.title}</div>`,
-        content: `<div class="lv-cards-dialog-content dialog-content" style="display: flex; height: 100%;"></div>`,
+        content: `<div class="lv-cards-dialog-content dialog-content" style="display: flex; flex-direction: column; align-items: stretch; width: 100%; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box;"></div>`,
         width: args.width,
         height: args.height,
         destroyCallback: () => {
@@ -203,8 +203,14 @@ export const simpleDialog = (args: {
         contentEl.appendChild(args.ele);
     }
     dialog.element.classList.add("lv-dialog");
+    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog");
 
-    // 移动端宿主 Dialog 默认无右上角关闭钮（或外层 .b3-dialog__close 被全屏容器遮蔽）且无 Esc 键：在 header 内注入 44x44px 触控关闭入口（桌面 >=769px 自动隐藏）
+    const outerClose = dialog.element.querySelector<HTMLElement | SVGElement>(".b3-dialog__container > .b3-dialog__close");
+    if (outerClose && outerClose.style) {
+        outerClose.style.setProperty("display", "none", "important");
+    }
+
+    // 在 header 内注入关闭入口（桌面端 28x28px，移动端 44x44px 触控关闭入口）
     const headerEl = dialog.element.querySelector(".b3-dialog__header");
     if (headerEl && !headerEl.querySelector(".b3-dialog__close") && !headerEl.querySelector(".lv-mobile-dialog-close")) {
         const closeBtn = document.createElement("button");
@@ -348,8 +354,10 @@ export const svelteDialog = (args: {
     dialogHandle = dialog;
     // 样式作用域（R52）：插件对话框挂 lv-dialog，供 index.scss 做按钮语义中性化与滚动条
     dialog.element.classList.add("lv-dialog");
+    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog");
     if (args.panel) {
         dialog.element.classList.add("lv-dialog--panel");
+        dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog--panel");
     }
     // AS-1：焦点捕获（Esc→closeOnce 一次性；归还走既有 restoreFocus）
     focusTrap = trapFocus(dialog.element, { onEscape: closeOnce, restoreOnRelease: false });

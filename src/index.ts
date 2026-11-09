@@ -2252,7 +2252,7 @@ export default class LvCardsPlugin extends Plugin {
                 title: this.i18n.quickCardTitle,
                 component: view.Component,
                 width: mobile ? "100vw" : "min(620px, 94vw)",
-                height: mobile ? "100dvh" : undefined,
+                height: mobile ? "100dvh" : "min(820px, calc(100vh - 48px))",
                 props: view.props,
                 callback: () => {
                     unbindVv?.();
@@ -2261,6 +2261,7 @@ export default class LvCardsPlugin extends Plugin {
             });
             if (mobile) {
                 dialog.element.classList.add("lv-mobile-sheet-dialog");
+                dialog.element.querySelector(".b3-dialog")?.classList.add("lv-mobile-sheet-dialog");
                 unbindVv = bindMobileVisualViewport(dialog.element);
             }
         } catch (e) {
@@ -2278,7 +2279,7 @@ export default class LvCardsPlugin extends Plugin {
                 title: this.i18n.quickCardTitle,
                 component: view.Component,
                 width: mobile ? "100vw" : "min(620px, 94vw)",
-                height: mobile ? "100dvh" : undefined,
+                height: mobile ? "100dvh" : "min(820px, calc(100vh - 48px))",
                 props: {
                     ...view.props,
                     activeDoc: await this.loadCurrentDoc().then(d => d ? { name: d.name, docId: d.docId ?? "" } : null).catch(() => null),
@@ -2296,6 +2297,7 @@ export default class LvCardsPlugin extends Plugin {
             });
             if (mobile) {
                 dialog.element.classList.add("lv-mobile-sheet-dialog");
+                dialog.element.querySelector(".b3-dialog")?.classList.add("lv-mobile-sheet-dialog");
                 unbindVv = bindMobileVisualViewport(dialog.element);
             }
         } catch (e) {
@@ -2937,6 +2939,7 @@ export default class LvCardsPlugin extends Plugin {
             });
             if (mobile) {
                 dialog.element.classList.add("lv-mobile-sheet-dialog");
+                dialog.element.querySelector(".b3-dialog")?.classList.add("lv-mobile-sheet-dialog");
                 unbindVv = bindMobileVisualViewport(dialog.element);
             }
         } catch (e) {
@@ -3553,6 +3556,7 @@ export default class LvCardsPlugin extends Plugin {
                 },
             });
             dialog.element.classList.add("lv-hub-mobile-dialog");
+            dialog.element.querySelector(".b3-dialog")?.classList.add("lv-hub-mobile-dialog");
             unbindVv = bindMobileVisualViewport(dialog.element);
             this.mobileHubDialog = { close, element: dialog.element };
         } catch (e) {
@@ -3601,6 +3605,7 @@ export default class LvCardsPlugin extends Plugin {
                 },
             });
             dialog.element.classList.add("lv-hub-mobile-dialog", "lv-review-mobile-dialog");
+            dialog.element.querySelector(".b3-dialog")?.classList.add("lv-hub-mobile-dialog", "lv-review-mobile-dialog");
             unbindVv = bindMobileVisualViewport(dialog.element);
             this.mobileReviewDialog = { close, element: dialog.element };
         } catch (e) {
@@ -3895,6 +3900,7 @@ export default class LvCardsPlugin extends Plugin {
             dialog.element.classList.add("lv-dialog--settings");
             if (mobile) {
                 dialog.element.classList.add("lv-mobile-sheet-dialog");
+                dialog.element.querySelector(".b3-dialog")?.classList.add("lv-mobile-sheet-dialog");
                 unbindVv = bindMobileVisualViewport(dialog.element);
             }
         } catch (e) {

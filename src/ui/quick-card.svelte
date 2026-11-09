@@ -736,7 +736,7 @@
         <span class="lv-qc-step" role="listitem"><b>2</b>{t.quickCardStep2 ?? "写问题与答案"}</span>
         <LvIcon name="chevron-right" size={12} />
         <span class="lv-qc-step" role="listitem"><b>3</b>{t.quickCardStep3 ?? "Ctrl+Enter 一键制卡"}</span>
-        {#if onClose}
+        {#if onClose && embedded}
             <button
                 type="button"
                 class="b3-button b3-button--small b3-button--text lv-qc-close-icon"
@@ -1323,6 +1323,12 @@
 
 <style>
     .lv-quickcard {
+        width: 100%;
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
         padding: var(--lv-sp-4);
         container: lv-quickcard / inline-size;
         box-sizing: border-box;
