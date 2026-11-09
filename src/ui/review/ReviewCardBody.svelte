@@ -282,7 +282,9 @@
         }
 
         :global(table) {
-            width: 100%;
+            display: block;
+            overflow-x: auto;
+            max-width: 100%;
             border-collapse: collapse;
             margin: var(--lv-sp-3) 0;
             :global(th),
@@ -297,6 +299,14 @@
                 background: var(--lv-color-canvas);
                 font-weight: var(--lv-fw-semibold);
             }
+        }
+
+        :global(img),
+        :global(video),
+        :global(svg) {
+            max-width: 100% !important;
+            height: auto !important;
+            border-radius: var(--lv-r-m);
         }
     }
 
