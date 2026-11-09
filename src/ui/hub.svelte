@@ -142,8 +142,14 @@
         { id: "learning", label: i18n.hubPrimaryLearning ?? "学习", icon: "learn" },
         { id: "settings", label: i18n.hubPrimarySettings ?? "设置", icon: "settings" },
     ] satisfies { id: string; label: string; icon: LvIconName; badge?: string | number; badgeLabel?: string }[]));
-    // Mobile Spec v1：手机端底部主导航收敛 ≤5 项——设置折叠为浮动齿轮入口（桌面专属设置面不占拇指导航）
-    const mobileTabs = $derived(primaryTabs.filter(tab => tab.id !== "settings"));
+    // Mobile Spec v1：手机端底部主导航收敛 ≤5 项——按手机用户心智排序：今日刷卡 → 卡库 → 学习复盘 → 集市 → 制卡（制卡靠右降级）
+    const mobileTabs = $derived([
+        primaryTabs.find(t => t.id === "today"),
+        primaryTabs.find(t => t.id === "library"),
+        primaryTabs.find(t => t.id === "learning"),
+        primaryTabs.find(t => t.id === "marketplace"),
+        primaryTabs.find(t => t.id === "studio"),
+    ].filter((t): t is NonNullable<typeof t> => Boolean(t)));
     // 外部入口仍使用这些旧 id。它们是上下文页面，不再全部挤在一级导航。
     // svelte-ignore state_referenced_locally -- legacy routes are fixed for the Hub mount.
     const legacyTabs = [
@@ -1171,6 +1177,9 @@
     @container lv-hub (max-width: 780px) {
         .lv-hub-bar { padding: var(--lv-sp-2) var(--lv-sp-3) var(--lv-sp-1); }
         .lv-hub-subnav { margin: 0 0 var(--lv-sp-1); }
+        .lv-hub-panel :global(.lv-pagehead) {
+            display: none;
+        }
         .lv-hub-mobile-nav {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));

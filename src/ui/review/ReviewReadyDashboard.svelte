@@ -124,15 +124,15 @@
             </div>
         {/if}
 
-        <!-- 便当盒功能矩阵：引导用户下一步干什么 -->
+        <!-- 便当盒功能矩阵：手机端优先突出刷卡与提前冲刺，制卡与整理降级收敛 -->
         <div class="lv-ready-grid">
-            <!-- 便当 1：进阶练习与突击 -->
-            <div class="lv-ready-card">
+            <!-- 便当 1：进阶练习与突击（手机首屏主焦点） -->
+            <div class="lv-ready-card lv-ready-card--primary">
                 <div class="lv-ready-card-head">
                     <span class="lv-ready-icon-bubble lv-bubble--brand"><LvIcon name="zap" size={17} /></span>
                     <div>
-                        <div class="lv-ready-card-title">{t.review?.readyCramTitle ?? "自主提前巩固"}</div>
-                        <div class="lv-ready-card-subtitle">{t.review?.readyCramSubtitle ?? "无需等待到期，自主提前练习未来卡片"}</div>
+                        <div class="lv-ready-card-title">{t.review?.readyCramTitle ?? "自主提前巩固 · 随时刷卡"}</div>
+                        <div class="lv-ready-card-subtitle">{t.review?.readyCramSubtitle ?? "无需等待到期，不干扰算法排期"}</div>
                     </div>
                 </div>
                 <p class="lv-ready-card-desc">{t.review?.readyCramDesc ?? "按遗忘次数智能排序，优先复习最易遗忘的薄弱知识点，让长效记忆更牢固。"}</p>
@@ -146,19 +146,19 @@
                 </div>
             </div>
 
-            <!-- 便当 2：扩充与积累知识 -->
-            <div class="lv-ready-card">
+            <!-- 便当 2：扩充与积累知识（偏电脑端创作，手机端精简呈现） -->
+            <div class="lv-ready-card lv-ready-card--secondary">
                 <div class="lv-ready-card-head">
                     <span class="lv-ready-icon-bubble lv-bubble--good"><LvIcon name="edit" size={17} /></span>
                     <div>
                         <div class="lv-ready-card-title">{t.review?.readyCreateTitle ?? "制作与积累新卡"}</div>
-                        <div class="lv-ready-card-subtitle">{t.review?.readyCreateSubtitle ?? "将当前正在研读的笔记转化为闪卡"}</div>
+                        <div class="lv-ready-card-subtitle">{t.review?.readyCreateSubtitle ?? "建议在电脑端批量制卡与整理"}</div>
                     </div>
                 </div>
                 <p class="lv-ready-card-desc">{t.review?.readyCreateDesc ?? "支持自由回忆、问答、选区挖空（==答案==）及图片遮挡等多样化制卡形态。"}</p>
                 <div class="lv-ready-card-footer">
                     <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenAuthoring}>
-                        + {t.review?.createCards ?? "去制作新卡"}
+                        + {t.review?.createCards ?? "快速制卡"}
                     </button>
                     <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenInbox}>
                         <LvIcon name="inbox" size={14} /> {t.dashboard?.inbox ?? "材料收件箱"}
@@ -166,8 +166,8 @@
                 </div>
             </div>
 
-            <!-- 便当 3：卡库浏览与管理 -->
-            <div class="lv-ready-card">
+            <!-- 便当 3：卡库浏览与管理（偏电脑端管理，手机端精简呈现） -->
+            <div class="lv-ready-card lv-ready-card--secondary">
                 <div class="lv-ready-card-head">
                     <span class="lv-ready-icon-bubble lv-bubble--warn"><LvIcon name="cards" size={17} /></span>
                     <div>
@@ -584,8 +584,29 @@
                 grid-template-columns: 1fr !important;
                 gap: 8px;
 
+                .lv-ready-card--primary {
+                    border-color: var(--lv-primary-border) !important;
+                    background: linear-gradient(155deg, color-mix(in srgb, var(--lv-color-brand) 7%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 100%) !important;
+                    box-shadow: 0 6px 18px -4px color-mix(in srgb, var(--lv-color-brand) 16%, transparent) !important;
+                    padding: 14px !important;
+                }
+
+                .lv-ready-card--secondary {
+                    padding: 9px 12px !important;
+                    opacity: 0.92;
+
+                    .lv-ready-card-desc,
+                    .lv-ready-card-subtitle {
+                        display: none !important;
+                    }
+
+                    .lv-ready-card-head {
+                        margin-bottom: 6px !important;
+                    }
+                }
+
                 .lv-ready-card {
-                    padding: 10px 12px !important;
+                    padding: 10px 12px;
 
                     .lv-ready-card-head {
                         gap: 10px;

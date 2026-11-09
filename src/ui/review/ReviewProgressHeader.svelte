@@ -167,6 +167,14 @@
         scrollbar-width: none;
         &::-webkit-scrollbar { display: none; }
 
+        @media (max-width: 680px) {
+            min-height: 28px;
+            .lv-eyebrow,
+            .lv-review-return-home {
+                display: none !important;
+            }
+        }
+
         .b3-button {
             touch-action: manipulation;
             user-select: none;

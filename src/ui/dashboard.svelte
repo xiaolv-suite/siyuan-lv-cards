@@ -1043,13 +1043,13 @@
                     >
                         <LvIcon name="cards" size={13} /> {(deck.size ?? 0) === 0 ? "暂无卡片" : (t.dashboard.openReview ?? "复习")}
                     </button>
-                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={`${t.dashboard.renameDeck ?? "重命名卡组"} ${deck.name}`} onclick={() => renameDeckPrompt(deck.id, deck.name)}>
+                        <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-deck-mgmt-btn" title={t.dashboard.renameDeck ?? "重命名卡组"} aria-label={`${t.dashboard.renameDeck ?? "重命名卡组"} ${deck.name}`} onclick={() => renameDeckPrompt(deck.id, deck.name)}>
                         <LvIcon name="edit" size={13} />
                     </button>
-                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={`${t.dashboard.ddShareBtn} ${deck.name}`} onclick={() => exportDeckShare(deck.id, deck.name)}>
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-deck-mgmt-btn" disabled={ddExportBusy} title={t.dashboard.ddShareBtn} aria-label={`${t.dashboard.ddShareBtn} ${deck.name}`} onclick={() => exportDeckShare(deck.id, deck.name)}>
                         <LvIcon name="eye" size={13} />
                     </button>
-                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={`${t.dashboard.deleteDeck ?? "删除卡组"} ${deck.name}`} onclick={() => removeDeckConfirm(deck.id, deck.name)}>
+                    <button type="button" class="b3-button b3-button--small lv-btn-ghost lv-menu-danger lv-btn-tool lv-deck-mgmt-btn" title={t.dashboard.deleteDeck ?? "删除卡组"} aria-label={`${t.dashboard.deleteDeck ?? "删除卡组"} ${deck.name}`} onclick={() => removeDeckConfirm(deck.id, deck.name)}>
                         <LvIcon name="trash" size={13} />
                     </button>
                 </div>
@@ -1699,6 +1699,12 @@
             color: var(--lv-color-text-muted);
         }
         .lv-forecast-bars-hidden-mobile {
+            display: none !important;
+        }
+        .lv-hero-week {
+            display: none;
+        }
+        .lv-deck-mgmt-btn {
             display: none !important;
         }
     }
