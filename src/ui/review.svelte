@@ -2150,9 +2150,19 @@
         void loadQueue();
     }
 
-    function startCramAll() {
+    async function startCramAll() {
         resetCramSessionState();
-        void loadQueue();
+        await loadQueue();
+        if (emptyQueue && scopeKey !== "all" && decks.some(d => (Number(d.size) || 0) > 0)) {
+            scopeKey = "all";
+            ctx.onScopePersist("all");
+            await loadQueue();
+        }
+        if (emptyQueue) {
+            cramActive = false;
+            isCramMode = false;
+            showMessage("当前暂无可刷闪卡，可前往「卡组集市」导入精选卡组", 2800, "info");
+        }
     }
 
     function startCramForgotten() {
@@ -2298,8 +2308,19 @@
         }
         loadQueue();
         loadReturnCheck(); // BI-10：长期返场检查（只读，触发=长间隔或大积压）
-        // 范围选择器数据源（失败静默：仅影响下拉项，不影响默认全部复习）
-        getRiffDecks().then(d => (decks = d)).catch(() => { /* 旁路 */ });
+        // 范围选择器数据源（失败静默：仅影响下拉项，不影响默认全部复习；若记忆卡组已空且存在其它有卡卡组则自愈切回全局）
+        getRiffDecks().then(d => {
+            decks = d;
+            if (scopeKey.startsWith("deck:")) {
+                const targetId = scopeKey.slice(5);
+                const curDeck = d.find(x => x.id === targetId);
+                if ((!curDeck || (Number(curDeck.size) || 0) === 0) && d.some(x => (Number(x.size) || 0) > 0)) {
+                    scopeKey = "all";
+                    ctx.onScopePersist("all");
+                    void loadQueue();
+                }
+            }
+        }).catch(() => { /* 旁路 */ });
         getNotebooks().then(n => (notebooks = n)).catch(() => { /* 旁路 */ });
         if (typeof window !== "undefined" && window.visualViewport) {
             window.visualViewport.addEventListener("resize", onViewportChange);
@@ -2546,6 +2567,7 @@
             onOpenAuthoring={() => ctx.openDashboard("authoring")}
             onOpenInbox={() => ctx.openDashboard("inbox")}
             onOpenManager={() => ctx.openDashboard("manage")}
+            onOpenMarketplace={() => ctx.openDashboard("marketplace")}
             onRefreshQueue={loadQueue}
             onReturnHome={() => ctx.openDashboard()}
         />

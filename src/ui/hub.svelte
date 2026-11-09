@@ -1178,7 +1178,7 @@
         .lv-hub-bar { padding: var(--lv-sp-2) var(--lv-sp-3) var(--lv-sp-1); }
         .lv-hub-subnav { margin: 0 0 var(--lv-sp-1); }
         .lv-hub-panel :global(.lv-pagehead) {
-            display: none;
+            display: none !important;
         }
         .lv-hub-mobile-nav {
             display: grid;

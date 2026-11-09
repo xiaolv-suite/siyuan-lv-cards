@@ -17,6 +17,7 @@
         onOpenAuthoring,
         onOpenInbox,
         onOpenManager,
+        onOpenMarketplace,
         onRefreshQueue,
         onReturnHome,
     }: {
@@ -34,9 +35,21 @@
         onOpenAuthoring: () => void;
         onOpenInbox: () => void;
         onOpenManager: () => void;
+        onOpenMarketplace?: () => void;
         onRefreshQueue: () => void;
         onReturnHome: () => void;
     } = $props();
+
+    const hasNonEmptyDeck = $derived(decks.some((d) => (Number(d.size) || 0) > 0));
+    const visibleDecks = $derived(
+        decks.filter((d) => {
+            if ((Number(d.size) || 0) > 0) return true;
+            if (scopeKey === `deck:${d.id}`) return true;
+            return !hasNonEmptyDeck && !/^(lv-exam-preflight-|lv-dbg|e2e-)/i.test(d.name || "");
+        }),
+    );
+    const totalDeckCards = $derived(decks.reduce((acc, d) => acc + (Number(d.size) || 0), 0));
+    const isTrulyEmpty = $derived(decks.length > 0 && totalDeckCards === 0 && qualityExcludedCardIDs.length === 0);
 
     function onWindowKeydown(e: KeyboardEvent) {
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
@@ -64,16 +77,21 @@
                 <h2 class="lv-ready-title">
                     {qualityExcludedCardIDs.length > 0
                         ? (t.review?.readyHasIssuesTitle ?? "当前队列暂无可学闪卡")
-                        : (t.review?.readyEmptyTitle ?? "今日复习任务已轻松搞定")}
+                        : isTrulyEmpty
+                            ? "当前还没有可刷的闪卡"
+                            : (t.review?.readyEmptyTitle ?? "今日复习任务已轻松搞定")}
                 </h2>
                 <p class="lv-ready-desc">
                     {qualityExcludedCardIDs.length > 0
                         ? (t.review?.readyHasIssuesDesc ?? "检测到当前范围内部分卡片存在异常并已被安全隔离保护，其它卡片均已完成。")
-                        : (t.review?.readyEmptyDesc ?? "当前选择的范围内没有到期的卡片，已有的复习进度与掌握度统计均已完好保存。")}
+                        : isTrulyEmpty
+                            ? "可从「卡组集市」一键导入精选卡组立即刷卡，或在电脑端从笔记批量制卡同步。"
+                            : (t.review?.readyEmptyDesc ?? "当前选择的范围内没有到期的卡片，已有的复习进度与掌握度统计均已完好保存。")}
                 </p>
             </div>
 
             <!-- 快捷范围切换胶囊 -->
+            {#if !isTrulyEmpty}
             <div class="lv-ready-scope-pill">
                 <span class="lv-ready-scope-label"><LvIcon name="book" size={14} /> {t.review?.scopeTitle ?? "范围"}</span>
                 <select
@@ -85,9 +103,9 @@
                     <option value="all">{t.review?.scopeAll ?? "全部卡片"}</option>
                     <option value="new">{t.review?.scopeNew ?? "仅新卡"}</option>
                     <option value="old">{t.review?.scopeOld ?? "仅旧卡"}</option>
-                    {#if decks.length > 0}
+                    {#if visibleDecks.length > 0}
                         <optgroup label={t.dashboard?.decks ?? "卡组"}>
-                            {#each decks as d (d.id)}
+                            {#each visibleDecks as d (d.id)}
                                 <option value={`deck:${d.id}`}>{d.name}</option>
                             {/each}
                         </optgroup>
@@ -101,6 +119,7 @@
                     {/if}
                 </select>
             </div>
+            {/if}
         </div>
 
         <!-- 若存在被隔离的卡片：内聚为看板专属警告卡，不漂浮在视口顶部 -->
@@ -126,6 +145,26 @@
 
         <!-- 便当盒功能矩阵：手机端优先突出刷卡与提前冲刺，制卡与整理降级收敛 -->
         <div class="lv-ready-grid">
+            {#if isTrulyEmpty}
+                <div class="lv-ready-card lv-ready-card--primary">
+                    <div class="lv-ready-card-head">
+                        <span class="lv-ready-icon-bubble lv-bubble--brand"><LvIcon name="cards" size={17} /></span>
+                        <div>
+                            <div class="lv-ready-card-title">一键导入精选卡组 · 立即开刷</div>
+                            <div class="lv-ready-card-subtitle">内置丰富学科与通识记忆卡包，零制作成本</div>
+                        </div>
+                    </div>
+                    <p class="lv-ready-card-desc">无需手动录入，直接从「卡组集市」安装现成卡组即可在手机上随时随地刷卡记忆。</p>
+                    <div class="lv-ready-card-footer">
+                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => (onOpenMarketplace ? onOpenMarketplace() : onReturnHome())}>
+                            <LvIcon name="star" size={14} /> 前往卡组集市
+                        </button>
+                        <button type="button" class="b3-button b3-button--small b3-button--outline" onclick={onOpenAuthoring}>
+                            + 快速新建闪卡
+                        </button>
+                    </div>
+                </div>
+            {:else}
             <!-- 便当 1：进阶练习与突击（手机首屏主焦点） -->
             <div class="lv-ready-card lv-ready-card--primary">
                 <div class="lv-ready-card-head">
@@ -145,9 +184,10 @@
                     </button>
                 </div>
             </div>
+            {/if}
 
-            <!-- 便当 2：扩充与积累知识（偏电脑端创作，手机端精简呈现） -->
-            <div class="lv-ready-card lv-ready-card--secondary">
+            <!-- 便当 2：扩充与积累知识（偏电脑端创作，手机端隐藏收敛） -->
+            <div class="lv-ready-card lv-ready-card--secondary lv-ready-card--authoring">
                 <div class="lv-ready-card-head">
                     <span class="lv-ready-icon-bubble lv-bubble--good"><LvIcon name="edit" size={17} /></span>
                     <div>
@@ -589,6 +629,10 @@
                     background: linear-gradient(155deg, color-mix(in srgb, var(--lv-color-brand) 7%, var(--lv-color-surface)) 0%, var(--lv-color-surface) 100%) !important;
                     box-shadow: 0 6px 18px -4px color-mix(in srgb, var(--lv-color-brand) 16%, transparent) !important;
                     padding: 14px !important;
+                }
+
+                .lv-ready-card--authoring {
+                    display: none !important;
                 }
 
                 .lv-ready-card--secondary {

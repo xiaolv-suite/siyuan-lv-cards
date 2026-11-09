@@ -629,8 +629,11 @@
             if (seq !== refreshSeq) {
                 return; // 旧响应：不改统计与到期数
             }
-            decks = deckList;
             totalCards = deckList.reduce((acc, d) => acc + (d.size ?? 0), 0);
+            decks = deckList.filter(d => {
+                if ((d.size ?? 0) > 0) return true;
+                return totalCards === 0 && !/^(lv-exam-preflight-|lv-dbg|e2e-)/i.test(d.name || "");
+            });
             const revlog = ctx.getRevlog();
             streak = calcStreak(revlog);
             heat = lastNDays(revlog, Math.max(4, ctx.getHeatmapWeeks()) * 7);
@@ -817,7 +820,7 @@
         <section class="lv-first-use" aria-labelledby="lv-first-use-title">
             <div class="lv-eyebrow">{t.hubPrimaryToday ?? "今日"}</div>
             <h2 id="lv-first-use-title">{t.dashboard.emptyStateTitle ?? "让第一张卡，简单一点"}</h2>
-            <p>{t.dashboard.emptyStateDesc ?? t.dashboard.onboardingHint}</p>
+            <p class="lv-first-use-lead">{t.dashboard.emptyStateDesc ?? t.dashboard.onboardingHint}</p>
             <div class="lv-empty-note-card">
                 <div class="lv-empty-note-icon"><LvIcon name="lightbulb" size={20} /></div>
                 <div class="lv-empty-note-content">
@@ -826,10 +829,15 @@
                 </div>
             </div>
             <div class="lv-first-use-actions">
-                {#if ctx.openQuickCard}
-                <button class="b3-button lv-btn-primary" disabled={!ctx.openQuickCard} aria-describedby={!ctx.openQuickCard ? "lv-first-use-title" : undefined} onclick={() => ctx.openQuickCard?.()}>{t.dashboard.emptyStateCreate ?? t.cmdQuickCard ?? "新建闪卡"}</button>
+                {#if ctx.openHubTab}
+                <button class="b3-button lv-btn-primary" onclick={() => ctx.openHubTab?.("marketplace")}>
+                    <LvIcon name="star" size={14} /> 前往卡组集市一键导入刷卡
+                </button>
                 {/if}
-                <button class="b3-button b3-button--outline" onclick={ctx.openOnboarding}>{t.dashboard.emptyGuideTour ?? t.dashboard.emptyStateTry ?? t.dashboard.onboardingStart}</button>
+                {#if ctx.openQuickCard}
+                <button class="b3-button {ctx.openHubTab ? 'b3-button--outline' : 'lv-btn-primary'}" disabled={!ctx.openQuickCard} aria-describedby={!ctx.openQuickCard ? "lv-first-use-title" : undefined} onclick={() => ctx.openQuickCard?.()}>{t.dashboard.emptyStateCreate ?? t.cmdQuickCard ?? "新建闪卡"}</button>
+                {/if}
+                <button class="b3-button b3-button--outline lv-first-use-tour-btn" onclick={ctx.openOnboarding}>{t.dashboard.emptyGuideTour ?? t.dashboard.emptyStateTry ?? t.dashboard.onboardingStart}</button>
             </div>
             <div class="lv-first-use-steps">
                 <div><span>1</span><p>{t.dashboard.emptyStepSource ?? "选一段值得记住的内容"}</p></div>
@@ -2342,6 +2350,27 @@
         .lv-today-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .lv-today-stats .lv-stat-cell:nth-child(2n) { border-right: none; }
         .lv-today-stats .lv-stat-cell:nth-child(-n+2) { border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); }
+    }
+    @media (max-width: 680px) {
+        .lv-first-use {
+            padding: var(--lv-sp-4) var(--lv-sp-3) !important;
+            margin-top: var(--lv-sp-2) !important;
+        }
+        .lv-first-use > .lv-eyebrow,
+        .lv-first-use .lv-empty-note-card,
+        .lv-first-use .lv-first-use-steps,
+        .lv-first-use .lv-first-use-tour-btn {
+            display: none !important;
+        }
+        .lv-first-use-actions {
+            margin: var(--lv-sp-3) 0 0 !important;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .lv-first-use-actions button {
+            width: 100%;
+            justify-content: center;
+        }
     }
     @media (max-width: 560px) {
         .lv-first-use-steps { grid-template-columns: 1fr; }
