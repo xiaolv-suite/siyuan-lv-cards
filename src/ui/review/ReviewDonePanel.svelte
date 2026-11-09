@@ -519,6 +519,8 @@
     @media (max-width: 560px) {
         .lv-done-panel {
             padding: var(--lv-sp-3);
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
         .lv-done-summary-pill {
             border-radius: var(--lv-r-l);
@@ -535,7 +537,8 @@
             gap: var(--lv-sp-2);
         }
         .lv-done-stat .lv-hero-num {
-            font-size: clamp(22px, 6.5vw, 34px);
+            font-size: clamp(18px, 5.5vw, 24px);
+            font-variant-numeric: tabular-nums;
         }
     }
     @keyframes lv-done-fade {
