@@ -1501,6 +1501,9 @@ pre,
         min-height: 38px !important;
         min-width: 38px !important;
     }
+    :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, .b3-text-field, .b3-select) {
+        font-size: 16px !important;
+    }
 }
 
 // 深度统计渐进展开开关（T01：首屏只留行动与今日统计）
