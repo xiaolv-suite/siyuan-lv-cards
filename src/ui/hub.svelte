@@ -1177,8 +1177,18 @@
     @container lv-hub (max-width: 780px) {
         .lv-hub-bar { padding: var(--lv-sp-2) var(--lv-sp-3) var(--lv-sp-1); }
         .lv-hub-subnav { margin: 0 0 var(--lv-sp-1); }
-        .lv-hub-panel :global(.lv-pagehead) {
+        .lv-hub-panel :global(.lv-pagehead-titles),
+        .lv-hub-panel :global(.lv-studio-heading),
+        .lv-hub-panel :global(.lv-pagehead:not(:has(.lv-pagehead-actions))) {
             display: none !important;
+        }
+        .lv-hub-panel :global(.lv-pagehead:has(.lv-pagehead-actions)) {
+            margin-bottom: var(--lv-sp-2) !important;
+            padding: 4px 0 !important;
+            border-bottom: 0 !important;
+        }
+        .lv-hub-panel :global(.lv-studio) {
+            padding: 10px 12px !important;
         }
         .lv-hub-mobile-nav {
             display: grid;

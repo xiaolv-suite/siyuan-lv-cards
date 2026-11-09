@@ -1469,18 +1469,24 @@ pre,
     @media (max-width: 740px) {
         flex-direction: column;
         align-items: stretch;
-        padding: calc(var(--lv-space-unit) * 11);
-        gap: var(--lv-sp-4);
+        padding: 12px 14px;
+        gap: var(--lv-sp-2);
         .lv-hero-text { max-width: 100%; }
         .lv-hero-art {
-            width: 155px;
-            height: 155px;
-            right: -8px;
-            bottom: -6px;
-            opacity: 0.45;
+            display: none !important;
         }
-        .lv-hero-title { font-size: var(--lv-type-page-size); }
+        .lv-hero-title { font-size: 16px; }
         .lv-hero-ring { align-self: flex-start; }
+    }
+}
+
+@media (max-width: 680px) {
+    :root,
+    .lv-cards-root,
+    .lv-hub {
+        --lv-type-display-size: 18px;
+        --lv-type-display-hero: 22px;
+        --lv-type-metric-size: 18px;
     }
 }
 

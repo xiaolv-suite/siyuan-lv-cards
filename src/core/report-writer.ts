@@ -13,7 +13,7 @@ export interface TargetNotebookCandidate {
 }
 
 /**
- * 确定落盘目标笔记本（优先使用配置指定的笔记本，缺省回退首个可用笔记本）
+ * 确定落盘目标笔记本（优先使用配置指定的笔记本，其次优先统一「🐴 小驴空间」，最后回退首个可用笔记本）
  */
 export function resolveTargetNotebook(
     notebooks: TargetNotebookCandidate[],
@@ -22,7 +22,17 @@ export function resolveTargetNotebook(
     if (!notebooks || notebooks.length === 0) {
         return null;
     }
-    return notebooks.find(n => n.id === targetNotebookId) ?? notebooks[0] ?? null;
+    if (targetNotebookId) {
+        const matched = notebooks.find(n => n.id === targetNotebookId);
+        if (matched) return matched;
+    }
+    const hub = notebooks.find(
+        n =>
+            n.name?.includes("小驴空间") ||
+            n.name?.includes("小驴笔记本") ||
+            n.name?.includes("小驴生态统一测试空间"),
+    );
+    return hub ?? notebooks[0] ?? null;
 }
 
 /**

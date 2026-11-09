@@ -125,6 +125,18 @@ async function createDocUnder(notebook: string, hpath: string, markdown: string,
 export const createDocWithMd = async (notebook: string, path: string, markdown: string): Promise<string | null> => {
     const parts = path.split("/").filter(Boolean);
     if (parts.length === 0) return null;
+    if (parts[0] === "小驴闪卡") {
+        const legacyRoot = await findDocIDByHPath(notebook, "/小驴闪卡");
+        if (!legacyRoot) {
+            for (const hubAlias of ["05-小驴闪卡", "05-小驴闪卡 · 记忆与复习", "06-小驴闪卡 (siyuan-lv-cards)"]) {
+                const hubRoot = await findDocIDByHPath(notebook, `/${hubAlias}`);
+                if (hubRoot) {
+                    parts[0] = hubAlias;
+                    break;
+                }
+            }
+        }
+    }
     let parentID: string | undefined;
     let currentPath = "";
     for (const part of parts.slice(0, -1)) {
