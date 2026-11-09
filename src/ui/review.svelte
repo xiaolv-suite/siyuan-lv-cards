@@ -74,6 +74,7 @@
     import ReviewCardBody from "./review/ReviewCardBody.svelte";
     import ReviewCramModal from "./review/ReviewCramModal.svelte";
     import { type CramScope } from "@/core/cram-mode";
+    import { createOnboardingSampleCards } from "@/core/workspace-samples";
     import LvIcon from "./kit/LvIcon.svelte";
 
     export interface ReviewSettings {
@@ -2150,6 +2151,45 @@
         void loadQueue();
     }
 
+    let creatingSamples = $state(false);
+
+    async function seedSampleCardsAndReload(switchToSampleDeck = false): Promise<boolean> {
+        if (creatingSamples) return false;
+        creatingSamples = true;
+        try {
+            const nbs = notebooks.length > 0 ? notebooks : await getNotebooks();
+            notebooks = nbs;
+            const targetNb = nbs.find(n => /小驴生态统一测试空间|小驴闪卡|小驴管家/.test(n.name || "")) ?? nbs[0];
+            if (!targetNb) {
+                showMessage(t.onboardingNoNotebook ?? "请先在思源中打开一个笔记本", 2800, "error");
+                return false;
+            }
+            await createOnboardingSampleCards(targetNb.id, t);
+            invalidateDueCache();
+            const refreshedDecks = await getRiffDecks();
+            decks = refreshedDecks;
+            const sampleDeck = refreshedDecks.find(d => d.name === (t.onboardingDeckName ?? "示例卡组") && (Number(d.size) || 0) > 0);
+            if (switchToSampleDeck && sampleDeck) {
+                scopeKey = `deck:${sampleDeck.id}`;
+                ctx.onScopePersist(scopeKey);
+            } else if (scopeKey.startsWith("deck:")) {
+                const cur = refreshedDecks.find(d => d.id === scopeKey.slice(5));
+                if (!cur || (Number(cur.size) || 0) === 0) {
+                    scopeKey = sampleDeck ? `deck:${sampleDeck.id}` : "all";
+                    ctx.onScopePersist(scopeKey);
+                }
+            }
+            await loadQueue();
+            showMessage("已为您生成 13 张全类型内置示例闪卡 ✓", 2600, "info");
+            return true;
+        } catch (e: any) {
+            showMessage(friendlyError(e, t), 3200, "error");
+            return false;
+        } finally {
+            creatingSamples = false;
+        }
+    }
+
     async function startCramAll() {
         resetCramSessionState();
         await loadQueue();
@@ -2157,6 +2197,13 @@
             scopeKey = "all";
             ctx.onScopePersist("all");
             await loadQueue();
+        }
+        if (emptyQueue) {
+            const seeded = await seedSampleCardsAndReload(true);
+            if (seeded && emptyQueue) {
+                resetCramSessionState();
+                await loadQueue();
+            }
         }
         if (emptyQueue) {
             cramActive = false;
@@ -2308,12 +2355,16 @@
         }
         loadQueue();
         loadReturnCheck(); // BI-10：长期返场检查（只读，触发=长间隔或大积压）
-        // 范围选择器数据源（失败静默：仅影响下拉项，不影响默认全部复习；若记忆卡组已空且存在其它有卡卡组则自愈切回全局）
+        // 范围选择器数据源（失败静默：仅影响下拉项，不影响默认全部复习；若记忆卡组已空且存在其它有卡卡组则自愈切回全局，全库无卡或示例卡组为空时自动补齐内置示例卡）
         getRiffDecks().then(d => {
             decks = d;
+            const totalSize = d.reduce((acc, x) => acc + (Number(x.size) || 0), 0);
+            const curDeck = scopeKey.startsWith("deck:") ? d.find(x => x.id === scopeKey.slice(5)) : null;
+            if (totalSize === 0 || (curDeck && curDeck.name === (t.onboardingDeckName ?? "示例卡组") && (Number(curDeck.size) || 0) === 0)) {
+                void seedSampleCardsAndReload(Boolean(curDeck));
+                return;
+            }
             if (scopeKey.startsWith("deck:")) {
-                const targetId = scopeKey.slice(5);
-                const curDeck = d.find(x => x.id === targetId);
                 if ((!curDeck || (Number(curDeck.size) || 0) === 0) && d.some(x => (Number(x.size) || 0) > 0)) {
                     scopeKey = "all";
                     ctx.onScopePersist("all");
@@ -2568,6 +2619,8 @@
             onOpenInbox={() => ctx.openDashboard("inbox")}
             onOpenManager={() => ctx.openDashboard("manage")}
             onOpenMarketplace={() => ctx.openDashboard("marketplace")}
+            onCreateSampleCards={() => void seedSampleCardsAndReload(true)}
+            {creatingSamples}
             onRefreshQueue={loadQueue}
             onReturnHome={() => ctx.openDashboard()}
         />

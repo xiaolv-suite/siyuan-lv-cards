@@ -18,6 +18,8 @@
         onOpenInbox,
         onOpenManager,
         onOpenMarketplace,
+        onCreateSampleCards,
+        creatingSamples = false,
         onRefreshQueue,
         onReturnHome,
     }: {
@@ -36,6 +38,8 @@
         onOpenInbox: () => void;
         onOpenManager: () => void;
         onOpenMarketplace?: () => void;
+        onCreateSampleCards?: () => void;
+        creatingSamples?: boolean;
         onRefreshQueue: () => void;
         onReturnHome: () => void;
     } = $props();
@@ -49,7 +53,7 @@
         }),
     );
     const totalDeckCards = $derived(decks.reduce((acc, d) => acc + (Number(d.size) || 0), 0));
-    const isTrulyEmpty = $derived(decks.length > 0 && totalDeckCards === 0 && qualityExcludedCardIDs.length === 0);
+    const isTrulyEmpty = $derived(totalDeckCards === 0 && qualityExcludedCardIDs.length === 0);
 
     function onWindowKeydown(e: KeyboardEvent) {
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
@@ -156,7 +160,12 @@
                     </div>
                     <p class="lv-ready-card-desc">无需手动录入，直接从「卡组集市」安装现成卡组即可在手机上随时随地刷卡记忆。</p>
                     <div class="lv-ready-card-footer">
-                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => (onOpenMarketplace ? onOpenMarketplace() : onReturnHome())}>
+                        {#if onCreateSampleCards}
+                            <button type="button" class="b3-button b3-button--small lv-btn-primary" disabled={creatingSamples} onclick={onCreateSampleCards}>
+                                <LvIcon name="sparkles" size={14} /> {creatingSamples ? "正在生成示例闪卡…" : "一键生成内置示例闪卡（13 张）"}
+                            </button>
+                        {/if}
+                        <button type="button" class="b3-button b3-button--small {onCreateSampleCards ? 'b3-button--outline' : 'lv-btn-primary'}" onclick={() => (onOpenMarketplace ? onOpenMarketplace() : onReturnHome())}>
                             <LvIcon name="star" size={14} /> 前往卡组集市
                         </button>
                         <button type="button" class="b3-button b3-button--small b3-button--outline" onclick={onOpenAuthoring}>
@@ -176,12 +185,17 @@
                 </div>
                 <p class="lv-ready-card-desc">{t.review?.readyCramDesc ?? "按遗忘次数智能排序，优先复习最易遗忘的薄弱知识点，让长效记忆更牢固。"}</p>
                 <div class="lv-ready-card-footer">
-                    <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={onStartCram}>
+                    <button type="button" class="b3-button b3-button--small lv-btn-primary" disabled={creatingSamples} onclick={onStartCram}>
                         <LvIcon name="flame" size={14} /> {t.review?.startCram ?? "开启 Cram 提前冲刺"}
                     </button>
                     <button type="button" class="b3-button b3-button--small b3-button--outline" onclick={onScopeNew}>
                         <LvIcon name="star" size={14} /> {t.review?.scopeNew ?? "仅学新卡"}
                     </button>
+                    {#if onCreateSampleCards}
+                        <button type="button" class="b3-button b3-button--small b3-button--outline" disabled={creatingSamples} onclick={onCreateSampleCards}>
+                            <LvIcon name="sparkles" size={14} /> {creatingSamples ? "生成中…" : "补充示例卡"}
+                        </button>
+                    {/if}
                 </div>
             </div>
             {/if}
