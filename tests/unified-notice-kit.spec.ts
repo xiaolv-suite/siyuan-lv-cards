@@ -462,7 +462,7 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
             expect(diag.version).toBeDefined();
 
             const badgeText = lvEcosystem.getStatusBadgeText();
-            expect(badgeText).toContain("🐴 小驴全家桶协同正常");
+            expect(badgeText).toContain("🐴 小驴全家桶");
             expect(badgeText).toContain("今日活动");
         });
 

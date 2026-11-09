@@ -30,6 +30,8 @@ import { detectFlashcardV2, type MigrationStatus } from "./api/flashcardV2";
 import { getRiffCardsByBlockIDs } from "./api/riff";
 // AT-4：addRiffCards 取经 due-shared 的包装版（建卡成功即失效共享 due 缓存），badge/提醒走共享缓存
 import { addRiffCards, cachedDueCount, dueCache, formatRiffCardEntryError, invalidateDueCache } from "./api/due-shared";
+import { withExternalIntakeLock } from "./libs/external-intake-lock";
+import { createExternalCardIntake, INTAKE_JOURNAL, assertSafeIntakeRestore, type IntakeInput } from "./core/external-card-intake";
 import { mountCardsBridge, dispatchCardReviewedEvent } from "./api/external-bridge";
 import { registerRaikiriModuleSafely } from "./libs/ecosystem-bridge-kit";
 import { createPerf } from "./libs/perf";
@@ -395,7 +397,7 @@ export default class LvCardsPlugin extends Plugin {
     private cachedReviewedBlockIDs: Set<string> | null = null;
     private cachedLapsesMap: Record<string, number> | null = null;
     /** 渐进摘录制卡 3 秒幂等去重防重复入库缓存 */
-    private recentExtractMap = new Map<string, number>();
+    private externalIntake: ReturnType<typeof createExternalCardIntake> | null = null;
 
     getRevlogBlockIndex(): { reviewedSet: Set<string>; lapsesMap: Record<string, number> } {
         if (this.cachedRevlogVersion === this.revlogMutationVersion && this.cachedReviewedBlockIDs && this.cachedLapsesMap) {
@@ -961,7 +963,11 @@ export default class LvCardsPlugin extends Plugin {
      * 全生态联合灾备切面（lvBackup 导出）
      * 导出闪卡牌组、复习日志与记忆曲线排期等全部 22 槽持久化数据
      */
-    public async dumpData(): Promise<Record<string, unknown>> {
+    public dumpData(): Promise<Record<string, unknown>> {
+        return withExternalIntakeLock(() => this.dumpDataLocked());
+    }
+
+    private async dumpDataLocked(): Promise<Record<string, unknown>> {
         if (this.saveRevlogTimer) {
             this.flushRevlogSave();
         }
@@ -985,11 +991,16 @@ export default class LvCardsPlugin extends Plugin {
      * 全生态联合灾备切面（lvBackup 导入恢复）
      * 将全生态灾备包中的闪卡数据恢复到私有存储并重载刷新
      */
-    public async restoreData(data: Record<string, unknown>): Promise<boolean> {
+    public restoreData(data: Record<string, unknown>): Promise<boolean> {
+        return withExternalIntakeLock(() => this.restoreDataLocked(data));
+    }
+
+    private async restoreDataLocked(data: Record<string, unknown>): Promise<boolean> {
         if (!data || typeof data !== "object") return false;
         const restoreFiles = (data.stores && typeof data.stores === "object" ? data.stores : data) as Record<string, unknown>;
         try {
             const currentFiles = await this.readAllStores();
+            if (Object.prototype.hasOwnProperty.call(restoreFiles, INTAKE_JOURNAL)) assertSafeIntakeRestore(currentFiles[INTAKE_JOURNAL], restoreFiles[INTAKE_JOURNAL]);
             await applyRestoreTransaction({
                 restoreFiles,
                 currentFiles,
@@ -997,6 +1008,13 @@ export default class LvCardsPlugin extends Plugin {
                 rollbackFailedKey: true,
                 logError: (msg) => lvLog("error", msg),
             });
+            if (Object.prototype.hasOwnProperty.call(restoreFiles, INTAKE_JOURNAL)) {
+                const readback = await this.loadData(INTAKE_JOURNAL);
+                if (JSON.stringify(readback) !== JSON.stringify(restoreFiles[INTAKE_JOURNAL])) {
+                    await this.saveData(INTAKE_JOURNAL, currentFiles[INTAKE_JOURNAL]);
+                    throw new Error("Restored intake journal readback failed");
+                }
+            }
             await this.reloadLocalStoresBounded(Object.keys(restoreFiles));
             return true;
         } catch (e) {
@@ -1204,121 +1222,75 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
-    /** 响应跨插件自动化规则 (lvAutomation) 与渐进摘录 (incremental-extract)：从小驴拾遗高亮摘录自动生成闪卡 */
-    public async createCardFromGlean(payload: any): Promise<boolean> {
-        if (!payload) return false;
-        try {
-            const front = String(payload.front || payload.text || payload.content || "").trim();
-            const back = String(payload.back || "").trim();
-            const tags = payload.tags;
-            const sourceBlockId = payload.sourceBlockId || payload.sourceBlockID || payload.blockId ? String(payload.sourceBlockId || payload.sourceBlockID || payload.blockId) : undefined;
-            if (sourceBlockId) {
-                const now = Date.now();
-                const last = this.recentExtractMap.get(sourceBlockId);
-                if (last && now - last < 3000) {
-                    return true;
+    private intake() {
+        if (!this.externalIntake) this.externalIntake = createExternalCardIntake({
+            load: () => this.loadData(INTAKE_JOURNAL),
+            save: async data => {
+                await this.persist.save(INTAKE_JOURNAL, data);
+                const readback = await this.loadData(INTAKE_JOURNAL);
+                if (JSON.stringify(readback) !== JSON.stringify(data)) throw new Error("Intake journal readback failed");
+            },
+            targetNotebook: async () => {
+                const nbs = await getNotebooks();
+                return (nbs.find(n => n.id === this.settings?.targetNotebookId)
+                    ?? nbs.find(n => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n.name)) ?? nbs[0])?.id ?? "";
+            },
+            find: async (nb, path) => {
+                const { findDocIDByHPath } = await import("./api/siyuan");
+                const direct = await findDocIDByHPath(nb, path);
+                if (direct || !path.startsWith("/小驴闪卡/")) return direct;
+                for (const alias of ["05-小驴闪卡", "05-小驴闪卡 · 记忆与复习", "06-小驴闪卡 (siyuan-lv-cards)"]) {
+                    const found = await findDocIDByHPath(nb, path.replace("/小驴闪卡/", `/${alias}/`));
+                    if (found) return found;
                 }
-                this.recentExtractMap.set(sourceBlockId, now);
-                if (this.recentExtractMap.size > 200) {
-                    for (const [k, t] of this.recentExtractMap) {
-                        if (now - t > 10000) this.recentExtractMap.delete(k);
-                    }
-                }
-            }
-            const sourceDocId = payload.sourceDocId || payload.sourceDocID || payload.docId ? String(payload.sourceDocId || payload.sourceDocID || payload.docId) : undefined;
-            const sourceTitle = String(payload.sourceTitle || payload.docTitle || "小驴拾遗").trim();
-
-            if (!front) return false;
-
-            // 解析落牌卡组：优先第一个现有卡组，空库时兜底创建专用拾遗卡包
-            const riff = await import("./api/riff");
-            const decks = await riff.getRiffDecks().catch(() => []);
-            let deckID = decks[0]?.id ?? "";
-            if (!deckID) {
-                try {
-                    const created = await riff.createRiffDeck("小驴拾遗卡包");
-                    deckID = created.id;
-                } catch {
-                    deckID = "default";
-                }
-            }
-
-            // 格式化为单块标准问答/挖空卡
-            let cardMd = "";
-            if (back) {
-                const cleanF = front.replace(/==/g, "").replace(/\s*\n+\s*/g, " ").trim();
-                const cleanB = back.replace(/==/g, "").replace(/\s*\n+\s*/g, " ").trim();
-                cardMd = `${cleanF} ==${cleanB}==`;
-            } else if (front.includes("==")) {
-                cardMd = front.trim();
-            } else {
-                cardMd = `${front.trim()} ==详见原文==`;
-            }
-
-            const nbs = await getNotebooks();
-            const nbList = Array.isArray(nbs) ? nbs : ((nbs as any)?.notebooks ?? []);
-            const preferredNb = nbList.find((n: any) => n?.id === this.settings?.targetNotebookId)
-                ?? nbList.find((n: any) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n?.name || ""))
-                ?? nbList[0];
-            const defaultNb = preferredNb?.id;
-            if (!defaultNb) return false;
-
-            const created = await executeQuickCardCreation({
-                nbId: defaultNb,
-                deckID,
-                markdown: cardMd,
-                sourceBlockID: sourceBlockId,
-                sourceDocID: sourceDocId,
-                sourceTitle,
-            });
-
-            // 标签处理与渐进摘录血缘属性写入
-            if (created.blockID) {
-                try {
-                    const attrs: Record<string, string> = {
-                        "custom-lv-card-type": "extract",
-                        "custom-lv-dismissed": "false",
-                    };
-                    if (sourceBlockId) attrs["custom-lv-source-block"] = sourceBlockId;
-                    if (sourceDocId) attrs["custom-lv-source-doc"] = sourceDocId;
-                    if (tags) {
-                        const tagStr = Array.isArray(tags) ? tags.join(" ") : String(tags);
-                        if (tagStr.trim()) attrs["custom-riff-tags"] = tagStr.trim();
-                    }
-                    await setBlockAttrs(created.blockID, attrs);
-                } catch { /* 旁路 */ }
-            }
-
-            notifyBatchCardCreation(`已自动将拾遗高亮转化为闪卡入库`);
-            return true;
-        } catch (err) {
-            const detail = err instanceof Error ? err.message : String(err);
-            lvLog("warn", `[lvAutomation] createCardFromGlean failed: ${detail}`);
-            try {
-                lvNotify.silent({
-                    source: "小驴闪卡",
-                    category: "glean-card-sync-fail",
-                    message: `[拾遗联动] 自动制卡失败: ${detail}`,
-                    level: "warn",
-                });
-            } catch { /* 旁路 */ }
-            return false;
-        }
+                return null;
+            },
+            create: createDocWithMd,
+            attrs: setBlockAttrs,
+            firstBlock: async docID => {
+                const { getChildBlocks } = await import("./api/siyuan");
+                const blocks = await getChildBlocks(docID);
+                const first = blocks.find(block => block.type === "p" || block.type === "l");
+                if (!first?.id) throw new Error("Atomic card block not confirmed");
+                return first.id;
+            },
+            ensureDeck: async () => {
+                const riff = await import("./api/riff");
+                const decks = await riff.getRiffDecks();
+                return decks[0]?.id || (await riff.createRiffDeck("外部原子卡")).id;
+            },
+            enroll: async (deck, block) => { await addRiffCards(deck, [block]); },
+            inbox: async docID => {
+                // Another frontend may have accepted an extract since this instance last rendered.
+                const next = normalizeInbox(await this.loadData(INBOX_DATA));
+                addInboxItem(next, docID);
+                await this.persist.save(INBOX_DATA, next);
+                const raw = await this.loadData(INBOX_DATA);
+                if (!normalizeInbox(raw).items.some(item => item.blockID === docID)) throw new Error("Extract inbox readback failed");
+                this.inbox = next;
+                this.persistedInboxSnapshot = cloneStore(next);
+                this.notifyInboxChanged();
+            },
+        });
+        return this.externalIntake;
     }
 
-    /** 对外桥接口实现：接收外部（如小驴拾遗）推送的渐进摘录包 */
-    public async receiveExtract(envelope: ExtractEnvelope): Promise<{ blockID?: string; enrolled?: boolean; ok?: boolean }> {
-        if (!envelope) return { enrolled: false, ok: false };
-        const front = String(envelope.content || "").trim();
-        if (!front) return { enrolled: false, ok: false };
-        const success = await this.createCardFromGlean({
-            front,
-            tags: envelope.tags,
-            sourceBlockId: envelope.sourceBlockId,
-            sourceDocId: envelope.sourceDocId,
-            sourceTitle: envelope.sourceTitle,
-        });
-        return { blockID: envelope.sourceBlockId, enrolled: success, ok: success };
+    public async createCardFromGlean(payload: any): Promise<boolean> {
+        const result = await this.receiveExtract({ content: String(payload?.text || payload?.content || payload?.front || ""),
+            sourceBlockId: String(payload?.sourceBlockId || ""), sourceDocId: payload?.sourceDocId || payload?.docId,
+            sourceTitle: payload?.sourceTitle || payload?.docTitle, tags: payload?.tags, requestId: payload?.requestId });
+        return result.ok;
+    }
+
+    public receiveExtract(envelope: ExtractEnvelope) {
+        return this.intake()(envelope, "extract");
+    }
+
+    public createExternalAtomicCard(input: IntakeInput) {
+        const content = input.content.replace(/\s*\n+\s*/g, " ").trim();
+        const decision = validateCardEntry({ blockID: "external-draft", markdown: content });
+        if (!decision.ok) return Promise.resolve({ ok: false as const, code: "invalid-card", message: "Atomic card requires an independently recallable question and answer" });
+        return this.intake()({ ...input, content }, "atomic");
     }
 
     async onload() {
@@ -1424,6 +1396,7 @@ export default class LvCardsPlugin extends Plugin {
             openHub: tab => this.openTabOf(TAB_DASHBOARD, tab ? { tab } : undefined),
             openReview: opts => this.openTabOf(TAB_REVIEW, opts as Record<string, unknown>),
             receiveExtract: async (envelope: ExtractEnvelope) => this.receiveExtract(envelope),
+            createCard: async (input: IntakeInput) => this.createExternalAtomicCard(input),
         });
 
         // 向小驴雷切工作台安全注册待复习闪卡组件（Ecosystem Federation Epoch 6 / Bento 3.0）
@@ -1567,7 +1540,8 @@ export default class LvCardsPlugin extends Plugin {
             actionPlugin: "siyuan-lv-cards",
             actionName: "create-card",
             execute: async (payload: any) => {
-                return await this.createCardFromGlean(payload);
+                const content = String(payload?.front || "").trim() + (payload?.back ? ` ==${String(payload.back).replace(/\s*\n+\s*/g, " ").trim()}==` : "");
+                return (await this.createExternalAtomicCard({ content, sourceBlockId: payload?.sourceBlockId, sourceDocId: payload?.sourceDocId, sourceTitle: payload?.sourceTitle, tags: payload?.tags, requestId: payload?.requestId })).ok;
             }
         });
 
@@ -3382,11 +3356,15 @@ export default class LvCardsPlugin extends Plugin {
     async loadInboxSources(blockIDs: string[]) {
         if (blockIDs.length === 0) return [];
         const ids = blockIDs.map(id => `'${id.replace(/'/g, "''")}'`).join(",");
-        const rows = await sqlQuery(`SELECT id, content, root_id FROM blocks WHERE id IN (${ids})`);
+        const rows = await sqlQuery(`SELECT id, type, content, root_id FROM blocks WHERE id IN (${ids})`);
         const byID = new Map(rows.map(r => [String(r.id), {
+            type: String(r.type ?? ""),
             content: String(r.content ?? "").trim(),
             rootID: String(r.root_id ?? ""),
         }]));
+        for (const [id, item] of byID) {
+            if (item.type === "d") item.content = (await exportMdContent(id)).content;
+        }
         return blockIDs.flatMap(id => {
             const item = byID.get(id);
             if (!item?.content) return [];

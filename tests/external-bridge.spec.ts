@@ -179,7 +179,7 @@ describe("小驴闪卡对外窗口桥与事件总线（Epoch 6）", () => {
     });
 
     it("receiveExtract：支持接收小驴拾遗等外部推送的渐进摘录", async () => {
-        const receiveExtractSpy = vi.fn().mockResolvedValue({ blockID: "b-123", enrolled: true });
+        const receiveExtractSpy = vi.fn().mockResolvedValue({ ok: true, data: { createdBlockID: "b-123", blockID: "b-123", kind: "extract", enrolled: false } });
         const host = makeHost({
             receiveExtract: receiveExtractSpy,
         });
@@ -192,7 +192,7 @@ describe("小驴闪卡对外窗口桥与事件总线（Epoch 6）", () => {
 
         expect(res.ok).toBe(true);
         if (res.ok) {
-            expect(res.data.enrolled).toBe(true);
+            expect(res.data.enrolled).toBe(false);
             expect(res.data.blockID).toBe("b-123");
         }
         expect(receiveExtractSpy).toHaveBeenCalledWith({

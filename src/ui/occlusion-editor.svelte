@@ -454,4 +454,11 @@
         cursor: crosshair;
         touch-action: none;
     }
+    @media (max-width: 560px) {
+        .lv-occed .lv-ob-head { flex-wrap: wrap; gap: 8px; }
+        .lv-occed .lv-ob-step { flex: 1 0 100%; }
+        .lv-occed .lv-ob-head > .ft__smaller { flex: 1 0 100%; }
+        .lv-occed .lv-ob-head > .fn__flex-1 { display: none; }
+        .lv-occed .lv-ob-head :global(button) { min-height: 44px; flex: 1 1 auto; white-space: nowrap; }
+    }
 </style>

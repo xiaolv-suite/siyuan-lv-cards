@@ -166,7 +166,7 @@
                     <div class="lv-ready-card-footer">
                         {#if onCreateSampleCards}
                             <button type="button" class="b3-button b3-button--small lv-btn-primary" disabled={creatingSamples} onclick={onCreateSampleCards}>
-                                <LvIcon name="sparkles" size={14} /> {creatingSamples ? "正在生成示例闪卡…" : "一键生成内置示例闪卡（13 张）"}
+                                <LvIcon name="lightbulb" size={14} /> {creatingSamples ? "正在生成示例闪卡…" : "一键生成内置示例闪卡（13 张）"}
                             </button>
                         {/if}
                         <button type="button" class="b3-button b3-button--small {onCreateSampleCards ? 'b3-button--outline' : 'lv-btn-primary'}" onclick={() => (onOpenMarketplace ? onOpenMarketplace() : onReturnHome())}>
@@ -197,7 +197,7 @@
                     </button>
                     {#if onCreateSampleCards}
                         <button type="button" class="b3-button b3-button--small b3-button--outline" disabled={creatingSamples} onclick={onCreateSampleCards}>
-                            <LvIcon name="sparkles" size={14} /> {creatingSamples ? "生成中…" : "补充示例卡"}
+                            <LvIcon name="lightbulb" size={14} /> {creatingSamples ? "生成中…" : "补充示例卡"}
                         </button>
                     {/if}
                 </div>

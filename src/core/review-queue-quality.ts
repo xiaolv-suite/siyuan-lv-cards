@@ -1,7 +1,7 @@
 import { validateCardEntry, type CardEntryIssue } from "./card-entry-gate";
 import { mapChunksOrdered } from "./query-chunks";
 import { hasQuestionMediaContent, validateFlashcardMarkdown } from "./flashcard-quality";
-import { ATTR_LV_DISMISSED, filterDismissedFromQueue, isDismissedCard } from "./incremental-learning";
+import { ATTR_LV_DISMISSED, ATTR_LV_CARD_TYPE, filterDismissedFromQueue, isDismissedCard } from "./incremental-learning";
 
 export interface ReviewQualityCard {
     blockID: string;
@@ -43,7 +43,7 @@ export function partitionReviewCardsByQuality<T extends ReviewQualityCard>(
 ): ReviewQualityResult<T> {
     const dismissedSet = new Set<string>();
     for (const row of rows) {
-        if (isRowDismissed(row)) {
+        if (isRowDismissed(row) || row.attrs?.[ATTR_LV_CARD_TYPE] === "extract" || new RegExp(`${ATTR_LV_CARD_TYPE}=["']extract["']`).test(row.ial ?? "")) {
             dismissedSet.add(String(row.id));
         }
     }

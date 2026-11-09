@@ -51,7 +51,7 @@
     import { resolveCardBreadcrumbsFromRows, buildHPathQuerySql, buildRecursiveAncestorSql, createBreadcrumbCache, type ReviewBreadcrumbChain } from "@/core/review-breadcrumbs";
     import { parseInteractiveQuiz, evaluateChoiceQuiz, evaluateJudgeQuiz, evaluateFillQuiz, resolveQuizKeyboardAction, toggleChoiceSelection, updateQuizScoreCounters, createInitialEphemeralQuizState, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { logCheckinEventSafely, findMatchingCheckinItemId } from "@/libs/ecosystem-bridge-kit";
-    import { ATTR_LV_DISMISSED, buildDismissAttrs } from "@/core/incremental-learning";
+    import { ATTR_LV_DISMISSED, buildDismissAttrs, shouldBypassFsrs } from "@/core/incremental-learning";
     import ReviewZenIsland from "./review/ReviewZenIsland.svelte";
     import ReviewDonePanel from "./review/ReviewDonePanel.svelte";
     import ReviewActionModals from "./review/ReviewActionModals.svelte";
@@ -1507,6 +1507,12 @@
         pushHistory({ revlogAppended: false });
         let writeSucceeded = false;
         try {
+            // A restored old session may still contain an extract. Recheck before any rating write.
+            if (shouldBypassFsrs(await getBlockAttrs(current.blockID))) {
+                writeSucceeded = true;
+                await next();
+                return;
+            }
             if (current.cardID) {
                 sessionCardMap.set(current.cardID, current);
             }

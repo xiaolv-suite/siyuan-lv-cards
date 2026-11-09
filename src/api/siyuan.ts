@@ -218,6 +218,10 @@ export const getBlockAttrs = async (id: string): Promise<Record<string, string>>
     return await kernelRead<Record<string, string>>("/api/attr/getBlockAttrs", { id }) ?? {};
 };
 
+/** Exact direct-child lookup; avoids relying on SQL index visibility after document creation. */
+export const getChildBlocks = (id: string): Promise<Array<{ id: string; type: string }>> =>
+    kernelRead<Array<{ id: string; type: string }>>("/api/block/getChildBlocks", { id });
+
 /** BX-2 W2（v0.162.0）：更新块内容（markdown）。非 0 抛错，成功返回 true */
 export const updateBlock = async (dataType: "markdown", data: string, id: string): Promise<boolean> => {
     await kernelPost<unknown>("/api/block/updateBlock", { dataType, data, id });

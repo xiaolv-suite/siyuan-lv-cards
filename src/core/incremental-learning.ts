@@ -23,6 +23,7 @@ export const ATTR_LV_DISMISSED = "custom-lv-dismissed";
 export type LvCardType = "atomic" | "extract";
 
 export interface ExtractEnvelope {
+    requestId?: string;
     content: string;
     sourceBlockId: string;
     sourceDocId?: string;

@@ -8,6 +8,7 @@
  * - 生态事件总线：通过 window.dispatchEvent 派发 lv-cards:reviewed 自定义事件（带幂等键），供快门、打卡等消费
  */
 
+import type { IntakeReceipt, IntakeInput } from "@/core/external-card-intake";
 import type { ExtractEnvelope } from "@/core/incremental-learning";
 
 export const CARDS_BRIDGE_PROTOCOL = 1;
@@ -81,14 +82,16 @@ export interface CardsBridgeApi {
     getDueSummary(): Promise<ActionResult<FlashcardDueSummary>>;
     openHub(tab?: string): Promise<ActionResult<boolean>>;
     openReview(options?: ReviewOpenOptions): Promise<ActionResult<boolean>>;
-    receiveExtract(envelope: ExtractEnvelope): Promise<ActionResult<{ blockID?: string; enrolled?: boolean }>>;
+    receiveExtract(envelope: ExtractEnvelope): Promise<ActionResult<IntakeReceipt>>;
     createCard?(options: {
         front: string;
         back?: string;
         tags?: string[];
         deckName?: string;
         sourceDocId?: string;
-    }): Promise<ActionResult<{ blockID?: string; ok?: boolean }>>;
+        sourceBlockId?: string;
+        requestId?: string;
+    }): Promise<ActionResult<IntakeReceipt>>;
     generateDailyTaskMarkdown(options?: { customPrefix?: string }): Promise<ActionResult<{ markdown: string; dueCount: number }>>;
     getTodaySummaryText(options?: { customPrefix?: string }): Promise<ActionResult<{ text: string; dueCount: number }>>;
 }
@@ -98,7 +101,8 @@ export interface CardsBridgeHost {
     getDueSummary(): Promise<FlashcardDueSummary>;
     openHub(tab?: string): void;
     openReview(options?: ReviewOpenOptions): void;
-    receiveExtract?(envelope: ExtractEnvelope): Promise<{ blockID?: string; enrolled?: boolean }>;
+    receiveExtract?(envelope: ExtractEnvelope): Promise<ActionResult<IntakeReceipt>>;
+    createCard?(input: IntakeInput): Promise<ActionResult<IntakeReceipt>>;
 }
 
 export interface CardReviewedEventDetail {
@@ -166,35 +170,24 @@ export function buildCardsBridge(host: CardsBridgeHost): CardsBridgeApi {
         getDueSummary: () => wrap("due-error", () => host.getDueSummary()),
         openHub: (tab?: string) => wrap("open-hub-failed", () => (host.openHub(tab), true)),
         openReview: (opts?: ReviewOpenOptions) => wrap("open-review-failed", () => (host.openReview(opts), true)),
-        receiveExtract: (envelope: ExtractEnvelope) => {
-            if (typeof host.receiveExtract === "function") {
-                return wrap("extract-failed", () => host.receiveExtract!(envelope));
-            }
-            return Promise.resolve({ ok: false, code: "not-supported", message: "receiveExtract is not supported by current host" });
+        receiveExtract: async (envelope: ExtractEnvelope) => {
+            if (!host.receiveExtract) return { ok: false, code: "not-supported", message: "receiveExtract is not supported" };
+            try {
+                const receipt = await host.receiveExtract(envelope);
+                if (!receipt?.ok) return receipt?.ok === false ? receipt : { ok: false, code: "extract-failed", message: "Extract was not accepted" };
+                if (!receipt.data.createdBlockID || receipt.data.kind !== "extract" || receipt.data.enrolled !== false) return { ok: false, code: "write-unknown", message: "Extract receipt is not verifiable", details: receipt.data };
+                return receipt;
+            } catch (error) { return { ok: false, code: "write-unknown", message: String(error) }; }
         },
-        createCard: (options: {
-            front: string;
-            back?: string;
-            tags?: string[];
-            deckName?: string;
-            sourceDocId?: string;
-        }) => {
-            const content = options.back?.trim()
-                ? `${options.front.trim()} ==${options.back.trim()}==`
-                : options.front.trim();
-            return wrap("create-card-failed", async () => {
-                if (typeof host.receiveExtract === "function") {
-                    const res = await host.receiveExtract({
-                        content,
-                        sourceBlockId: options.sourceDocId || "",
-                        sourceDocId: options.sourceDocId,
-                        sourceTitle: options.deckName || "外部同步",
-                        tags: options.tags,
-                    });
-                    return { ok: Boolean(res?.enrolled ?? true), blockID: res?.blockID };
-                }
-                return { ok: false };
-            });
+        createCard: async (options) => {
+            if (!host.createCard) return { ok: false, code: "not-supported", message: "Atomic card creation is not supported" };
+            try {
+                const content = options.back?.trim() ? `${options.front.trim()} ==${options.back.trim()}==` : options.front.trim();
+                const receipt = await host.createCard({ content, sourceDocId: options.sourceDocId, sourceBlockId: options.sourceBlockId, sourceTitle: options.deckName, tags: options.tags, requestId: options.requestId });
+                if (!receipt?.ok) return receipt?.ok === false ? receipt : { ok: false, code: "create-card-failed", message: "Atomic card was not created" };
+                if (!receipt.data.createdBlockID || receipt.data.kind !== "atomic" || !receipt.data.enrolled) return { ok: false, code: "write-unknown", message: "Atomic card receipt is not verifiable", details: receipt.data };
+                return receipt;
+            } catch (error) { return { ok: false, code: "write-unknown", message: String(error) }; }
         },
         generateDailyTaskMarkdown: (opts?: { customPrefix?: string }) => {
             return wrap("daily-task-failed", async () => {

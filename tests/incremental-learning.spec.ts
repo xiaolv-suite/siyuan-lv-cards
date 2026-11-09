@@ -185,7 +185,7 @@ describe("渐进学习与两级调度解耦 (Incremental Learning - Issue #19)",
                 openReview: () => {},
                 receiveExtract: async (env) => {
                     received.push(env);
-                    return { blockID: "new-block-id", enrolled: true };
+                    return { ok: true, data: { createdBlockID: "new-block-id", blockID: "new-block-id", kind: "extract", enrolled: false } };
                 },
             });
 

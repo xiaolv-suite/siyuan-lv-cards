@@ -30,6 +30,7 @@ export const AI_COST_LEDGER_DATA = "ai-cost-ledger.json";
 export const OB_LEDGER_DATA = "ob-import-ledger.json";
 /** 批量修复持久化事务日志（成功写入后落盘，供重启后审计与撤销） */
 export const MAINTENANCE_REPAIR_JOURNAL_DATA = "maintenance-repair-journal.json";
+export const EXTERNAL_CARD_INTAKE_DATA = "external-card-intake-v1.json";
 
 export const ALL_STORE_KEYS = [
     SETTINGS_DATA,
@@ -54,4 +55,5 @@ export const ALL_STORE_KEYS = [
     AI_COST_LEDGER_DATA,
     OB_LEDGER_DATA,
     MAINTENANCE_REPAIR_JOURNAL_DATA,
+    EXTERNAL_CARD_INTAKE_DATA,
 ] as const;
