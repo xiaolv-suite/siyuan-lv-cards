@@ -53,7 +53,11 @@
         }),
     );
     const totalDeckCards = $derived(decks.reduce((acc, d) => acc + (Number(d.size) || 0), 0));
-    const isTrulyEmpty = $derived(totalDeckCards === 0 && qualityExcludedCardIDs.length === 0);
+    const isTrulyEmpty = $derived(
+        Boolean(onOpenMarketplace || onCreateSampleCards)
+            && totalDeckCards === 0
+            && qualityExcludedCardIDs.length === 0,
+    );
 
     function onWindowKeydown(e: KeyboardEvent) {
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;

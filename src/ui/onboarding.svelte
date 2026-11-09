@@ -40,7 +40,8 @@
         try {
             notebooks = await getNotebooks();
             if (notebooks.length > 0) {
-                nbId = notebooks[0].id;
+                const preferred = notebooks.find((n) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n.name || "")) ?? notebooks[0];
+                nbId = preferred.id;
             } else {
                 nbId = "";
                 notebookError = t.onboardingNoNotebook;

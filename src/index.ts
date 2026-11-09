@@ -1163,7 +1163,11 @@ export default class LvCardsPlugin extends Plugin {
             const cardMd = `${cleanQ} ==${cleanA}==`;
 
             const nbs = await getNotebooks();
-            const defaultNb = Array.isArray(nbs) ? nbs[0]?.id : (nbs as any)?.notebooks?.[0]?.id;
+            const nbList = Array.isArray(nbs) ? nbs : ((nbs as any)?.notebooks ?? []);
+            const preferredNb = nbList.find((n: any) => n?.id === this.settings?.targetNotebookId)
+                ?? nbList.find((n: any) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n?.name || ""))
+                ?? nbList[0];
+            const defaultNb = preferredNb?.id;
             if (!defaultNb) return false;
 
             const created = await executeQuickCardCreation({
@@ -1252,7 +1256,11 @@ export default class LvCardsPlugin extends Plugin {
             }
 
             const nbs = await getNotebooks();
-            const defaultNb = Array.isArray(nbs) ? nbs[0]?.id : (nbs as any)?.notebooks?.[0]?.id;
+            const nbList = Array.isArray(nbs) ? nbs : ((nbs as any)?.notebooks ?? []);
+            const preferredNb = nbList.find((n: any) => n?.id === this.settings?.targetNotebookId)
+                ?? nbList.find((n: any) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n?.name || ""))
+                ?? nbList[0];
+            const defaultNb = preferredNb?.id;
             if (!defaultNb) return false;
 
             const created = await executeQuickCardCreation({

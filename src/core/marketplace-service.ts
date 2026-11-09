@@ -171,12 +171,12 @@ export async function installMarketplaceItemToDeck(
       return { success: false, count: 0, error: "无法初始化闪卡目标卡包" };
     }
 
-    // 3. 定位用于存放闪卡块的笔记本
+    // 3. 定位用于存放闪卡块的笔记本（优先小驴统一空间笔记本）
     const notebooks = await _getNotebooks();
     if (!notebooks || notebooks.length === 0) {
       return { success: false, count: 0, error: "思源中未检测到已打开的可用笔记本，请先在思源中打开或新建笔记本" };
     }
-    const targetNb = notebooks[0];
+    const targetNb = notebooks.find((n) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n.name || "")) ?? notebooks[0];
 
     // 4. 创建专属于该卡包的存储文档
     const safeDocTitle = targetDeckName.replace(/[\\/:*?"<>|]/g, "_");

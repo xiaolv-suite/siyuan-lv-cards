@@ -2976,6 +2976,12 @@
                 calc(10px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
             gap: 8px;
 
+            :global(.lv-hub) &,
+            :global(.b3-dialog__container) & {
+                padding-top: 6px !important;
+                padding-bottom: 10px !important;
+            }
+
             :global(.lv-center.lv-ready-wrap),
             :global(.lv-center.lv-done) {
                 margin: 0 !important;
