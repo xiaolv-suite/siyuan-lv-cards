@@ -1,6 +1,6 @@
 import "./index.scss";
 
-import { Plugin, getAllEditor, openTab, getAllTabs, type subMenu } from "siyuan";
+import { Plugin, getAllEditor, openTab, openMobileFileById, getAllTabs, type subMenu } from "siyuan";
 import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad, lvOmnisearch, lvAutomation, type LvSearchResultItem } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
@@ -2513,10 +2513,22 @@ export default class LvCardsPlugin extends Plugin {
         this.openTabOf(TAB_REVIEW, { scope, cram, entry });
     }
 
+    closeMobileReviewDialog(): void {
+        if (this.mobileReviewDialog) {
+            try { this.mobileReviewDialog.close(); } catch { /* 已销毁 */ }
+            this.mobileReviewDialog = null;
+        }
+    }
+
     /** BI-3：入口返回点导航（doc:<文档ID> / hub:<Hub 页签>） */
     returnToEntryPoint(returnPoint: string) {
         const target = parseReturnPoint(returnPoint);
         if (target.type === "doc") {
+            if (this.isMobile && typeof openMobileFileById === "function") {
+                openMobileFileById(this.app, target.docId);
+                this.closeMobileReviewDialog();
+                return;
+            }
             openTab({ app: this.app, doc: { id: target.docId } });
         } else if (target.type === "hub") {
             this.openTabOf(TAB_DASHBOARD, { tab: target.tab });

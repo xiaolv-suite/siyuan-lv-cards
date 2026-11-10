@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { rafThrottle } from "@/libs/throttle";
-    import { openTab } from "siyuan";
+    import { openTab, openMobileFileById } from "siyuan";
     import { showMessage, notifyInline, lvActivity, lvLaunchpad } from "@/libs/notice";
     import {
         getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
@@ -666,7 +666,12 @@
         suspendStopwatch();
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
         try {
-            openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+            if (ctx.isMobile && typeof openMobileFileById === "function") {
+                openMobileFileById(ctx.app, id);
+                ctx.closeMobileReviewDialog?.();
+            } else {
+                openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+            }
         } catch (e: unknown) {
             resumeStopwatch();
             showMessage(friendlyError(e, t), 2500, "error");
@@ -1721,7 +1726,12 @@
         }
         suspendStopwatch();
         try {
-            openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+            if (ctx.isMobile && typeof openMobileFileById === "function") {
+                openMobileFileById(ctx.app, id);
+                ctx.closeMobileReviewDialog?.();
+            } else {
+                openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+            }
         } catch (e: unknown) {
             resumeStopwatch();
             showMessage(friendlyError(e, t), 2500, "error");
