@@ -62,7 +62,7 @@
     "js-yaml": "5.5.0",
     "livereload": "^0.10.3",
     "minimist": "^1.2.8",
-    "npm-run-all2": "9.0.3",
+    "npm-run-all2": "9.0.4",
     "sass": "^1.105.2",
     "siyuan": "1.2.9",
     "svelte": "^5.57.2",
