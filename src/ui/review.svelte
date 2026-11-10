@@ -133,6 +133,9 @@
         /** 初始 cram 模式（考前：lapses 降序） */
         initialCram?: boolean;
         isCramMode?: boolean;
+        /** BI-3：移动端退场（打开原笔记前判定 + 收起复习模态） */
+        isMobile?: boolean;
+        closeMobileReviewDialog?: () => void;
         appendRevlog: (entry: { cardID: string; deckID: string; blockID: string; rating: number; source: "plugin" }) => void;
         rollbackRevlog?: (cardID?: string) => void;
         /** BJ-4：遗忘卡错误原因标注（旁路增强，支持块属性同步） */

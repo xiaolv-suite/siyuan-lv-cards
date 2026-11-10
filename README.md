@@ -1,9 +1,8 @@
 # 小驴闪卡 · Lv Cards
 
-> 当前源码与验收边界：[唯一当前状态入口](docs/CURRENT-STATUS.md)。本轮修改未发布；以下版本历史不能代表当前安装或全部能力已验收。
 ### 思源笔记全生命周期本地优先记忆引擎与学习工作台
 
-**当前源码：v0.233.1（本地整改，未发布）** ｜ [更新日志](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**当前版本：v0.233.1** ｜ [更新日志](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **让思源笔记成为记得住、用得上、找得到、改得动、负担得起、带得走的长期知识资产。**
 
@@ -25,7 +24,10 @@
 
 ## 🆕 版本更新日志
 
-### v0.233.0（最新）
+### v0.233.1（最新）
+* **外部摘录与原子制卡分路（Protocol v1.7.8 制卡契约强化）**：外部摘录确切新对象回执、稳定请求身份与持久恢复账本，粗摘录不再写入 FSRS 复习队列；修复手机端遮挡编辑器头部排版。
+
+### v0.233.0
 * **Epoch 7 全生态协同基础设施终局落地（Protocol v1.6.0）**：
   - **小驴罗盘家族极速弹射坞 (`lvLaunchpad`)**：顶栏收敛与极速直达，支持 4 项深度业务行动（开始今日复习会话、从选区抽取制卡、重新计算排期、管理核心卡包），动态同步角标状态；
   - **全生态万物穿透搜索 (`lvOmnisearch`)**：注册 `siyuan-lv-cards` 检索切面，输入关键词毫秒级穿透牌组名称与闪卡块内容（`content` 与 `markdown` 双字段），直达卡包管理与单卡/范围复习；
@@ -166,7 +168,7 @@
 3. 点击“安装”并启用插件即可。
 
 ### 方式二：手动导入安装包
-1. 访问本仓库 [Releases](https://github.com/ai68298100/siyuan-lv-cards/releases/latest) 下载最新发布的 `package.zip`；
+1. 访问本仓库 [Releases](https://github.com/xiaolv-suite/siyuan-lv-cards/releases/latest) 下载最新发布的 `package.zip`；
 2. 打开思源笔记：**设置 → 集市 → 下载 → 导入安装包**；
 3. 选择下载的 `package.zip` 完成安装，并在已安装插件中启用。
 
@@ -316,7 +318,11 @@
 * `inbox.json`：材料收件箱待加工笔记块队列；
 * `source-health.json`：卡片来源块有效性与指纹历史；
 * `ai-deny-list.json`：用户显式配置的来源级禁止外发白名单/黑名单；
-* `ai-killswitch.json`：紧急熔断状态机与防护事件日志。
+* `ai-killswitch.json`：紧急熔断状态机与防护事件日志；
+* `session-state.json`：界面会话状态（面板焦点与滚动位置记忆）；
+* `suspend-today.json`：当日挂起卡片队列；
+* `ai-batches.json` / `ai-jobs.json`：AI 制卡批次与任务本地台账（不含笔记正文外发记录）；
+* `relations.json` / `knowledge-objects.json` / `error-tags.json` / `entry-contexts.json` / `content-lifecycles.json`：卡组关联、知识对象、错因标签、入口上下文与内容生命周期元数据。
 
 ---
 

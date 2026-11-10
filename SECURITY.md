@@ -8,8 +8,8 @@ Only the latest GitHub Release receives security fixes. / 仅为最新 Release �
 
 **Please do NOT open a public issue for security vulnerabilities.** / 请勿以公开 Issue 报告安全漏洞。
 
-- Use GitHub [Private Vulnerability Reporting](https://github.com/ai68298100/siyuan-lv-cards/security/advisories/new) (Security → Report a vulnerability), or
-- 私信联系作者（思源社区 / ld246 站内信，用户名 ai68298100）。
+- Use GitHub [Private Vulnerability Reporting](https://github.com/xiaolv-suite/siyuan-lv-cards/security/advisories/new) (Security → Report a vulnerability), or
+- 私信联系作者（思源社区 / ld246 站内信，用户名 xiaolv-suite）。
 
 You will get a response within 7 days. / 预期 7 天内响应。
 

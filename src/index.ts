@@ -2524,7 +2524,7 @@ export default class LvCardsPlugin extends Plugin {
     returnToEntryPoint(returnPoint: string) {
         const target = parseReturnPoint(returnPoint);
         if (target.type === "doc") {
-            if (this.isMobile && typeof openMobileFileById === "function") {
+            if (this.isMobileHost() && typeof openMobileFileById === "function") {
                 openMobileFileById(this.app, target.docId);
                 this.closeMobileReviewDialog();
                 return;

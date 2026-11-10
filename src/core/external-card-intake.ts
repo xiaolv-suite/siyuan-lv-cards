@@ -71,7 +71,9 @@ export function createExternalCardIntake(deps: IntakeDependencies) {
                 let raw = await deps.load() as IntakeJournal | string | null;
                 if (raw === "") raw = null;
                 if (typeof raw === "string") {
-                    try { raw = JSON.parse(raw); } catch { throw new Error("Invalid intake journal"); }
+                    let parsed: unknown = null;
+                    try { parsed = JSON.parse(raw); } catch { throw new Error("Invalid intake journal"); }
+                    raw = parsed as IntakeJournal;
                 }
                 assertSafeIntakeRestore(null, raw);
                 if (raw && (raw.v !== 1 || !Array.isArray(raw.entries))) throw new Error("Invalid intake journal");

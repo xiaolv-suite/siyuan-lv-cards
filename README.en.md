@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.233.0** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.233.1** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -13,7 +13,7 @@ Built on SiYuan's native FSRS algorithm · Block-level bi-directional context tr
 
 Knowledge workers and students often struggle with three universal learning pains: **"notes are forgotten once written, cards are made but abandoned, and backlog reviews accumulate like an insurmountable debt."**
 
-Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间隔重复 (Free Spaced Repetition Scheduler)** as the single source of truth. It establishes a complete, closed-loop learning journey: from ambient reading material capture and atomic authoring, to multi-sensory active recall testing, leech card quarantine, and loss-free cross-platform export.
+Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Free Spaced Repetition Scheduler)** as the single source of truth. It establishes a complete, closed-loop learning journey: from ambient reading material capture and atomic authoring, to multi-sensory active recall testing, leech card quarantine, and loss-free cross-platform export.
 
 ### ✨ Three Things Native SiYuan Flashcards Do Not Have
 
@@ -156,7 +156,7 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS间�
 3. Click "Install" and enable the plugin.
 
 ### Method 2: Manual Package Import
-1. Download the latest `package.zip` from [GitHub Releases](https://github.com/ai68298100/siyuan-lv-cards/releases/latest);
+1. Download the latest `package.zip` from [GitHub Releases](https://github.com/xiaolv-suite/siyuan-lv-cards/releases/latest);
 2. In SiYuan, open: **Settings → Bazaar → Downloaded → Import Package**;
 3. Select the downloaded `package.zip` and enable the plugin.
 
