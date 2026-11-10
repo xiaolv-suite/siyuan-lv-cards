@@ -23,7 +23,7 @@ jobs:
       - name: Install pnpm
         # 版本单一事实源 = package.json packageManager（v0.149.1 同类教训：此处硬编码会漂移）
         # v6.1.0; supports pnpm 12 and keeps packageManager authoritative.
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
         with:
           run_install: false
 
