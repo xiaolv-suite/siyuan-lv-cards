@@ -1,0 +1,23 @@
+.idea
+.vscode
+.DS_Store
+package-lock.json
+*.tsbuildinfo
+.svelte-check/
+package*.zip
+node_modules
+dev
+dist
+build
+tmp
+.mimosa
+
+# e2e 内联构建产物（真机验收专用，不入库）
+dist-inline/
+.tmp/
+.tmp-*
+
+# 本地视觉核对台与临时产物（design/preview.html、icon 候选、内核日志等）
+design/
+.jeikcode/codegraph/
+.zcode/
