@@ -154,7 +154,7 @@
                     autocomplete="off"
                     oninput={(e) => onTypingInput?.((e.target as HTMLInputElement).value)}
                     placeholder="在此输入你的填空答案，按 Enter 智能判定..."
-                    onkeydown={(e) => { if (e.key === "Enter") onFillCheck(); }}
+                    onkeydown={(e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === "Enter") onFillCheck(); }}
                 />
                 <button type="button" class="b3-button lv-btn-primary lv-btn-tool lv-fill-submit-btn" aria-keyshortcuts="Enter" onclick={onFillCheck}>
                     <LvIcon name="check" size={13} /> <span>判定 Enter</span>

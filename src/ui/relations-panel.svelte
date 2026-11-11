@@ -130,7 +130,7 @@
                 aria-label={t.relations.targetPlaceholder}
                 bind:value={newTarget}
                 disabled={busy}
-                onkeydown={(e) => { if (e.key === "Enter") { submit(); } }}
+                onkeydown={(e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === "Enter") { submit(); } }}
             />
             <select
                 class="b3-select"

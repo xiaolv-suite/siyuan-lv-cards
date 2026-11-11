@@ -1192,6 +1192,7 @@
                     bind:value={newDeckNameInput}
                     disabled={deckActionBusy}
                     onkeydown={(e) => {
+                        if (e.isComposing || e.keyCode === 229) return;
                         if (e.key === "Enter" && !deckActionBusy && newDeckNameInput.trim()) {
                             e.preventDefault();
                             submitBatchDeckAction();

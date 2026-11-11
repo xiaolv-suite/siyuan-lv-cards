@@ -463,7 +463,7 @@
                 bind:value={newDeckName}
                 placeholder="输入新卡包名称，例如「考研英语核心词」"
                 aria-label="新卡包名称"
-                onkeydown={(e) => { if (e.key === "Enter") handleCreateDeck(); }}
+                onkeydown={(e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === "Enter") handleCreateDeck(); }}
             />
             <button
                 type="button"
@@ -568,10 +568,11 @@
 	                                            class="b3-text-field"
 	                                            bind:value={editingDeckName}
 	                                            aria-label="修改卡包名称"
-	                                            onkeydown={(e) => {
-	                                                if (e.key === "Enter") handleRenameDeck(deck.id);
-	                                                else if (e.key === "Escape") editingDeckId = "";
-	                                            }}
+                                            onkeydown={(e) => {
+                                                if (e.isComposing || e.keyCode === 229) return;
+                                                if (e.key === "Enter") handleRenameDeck(deck.id);
+                                                else if (e.key === "Escape") editingDeckId = "";
+                                            }}
 	                                        />
 	                                        <button class="b3-button b3-button--small lv-btn-primary" onclick={() => handleRenameDeck(deck.id)}>保存</button>
 	                                        <button class="b3-button b3-button--small b3-button--cancel" onclick={() => (editingDeckId = "")}>取消</button>

@@ -198,6 +198,7 @@
 
     function onWindowKeydown(e: KeyboardEvent) {
         if (editing) {
+            if (e.isComposing || e.keyCode === 229) return;
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !saving && !actionBusy) {
                 e.preventDefault();
                 void save();

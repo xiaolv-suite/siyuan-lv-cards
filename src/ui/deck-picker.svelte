@@ -93,6 +93,8 @@
 
     function onKeydown(e: KeyboardEvent) {
         if (busy) return;
+        /* IME 合成期让路：Enter 属确认选字，误触会以未确认的名称建卡包。 */
+        if (e.isComposing || e.keyCode === 229) return;
         if (e.key === "Escape") {
             e.preventDefault();
             onClose();

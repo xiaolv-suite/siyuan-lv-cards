@@ -55,6 +55,8 @@
     }: Props = $props();
 
     function handleTypingKeyDown(e: KeyboardEvent) {
+        /* IME 合成期让路：Enter 属确认选字，误触会以拼音半成品判定答案。 */
+        if (e.isComposing || e.keyCode === 229) return;
         if (e.key === "Enter") {
             e.preventDefault();
             e.stopPropagation();
