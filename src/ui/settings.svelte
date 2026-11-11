@@ -2039,8 +2039,18 @@
             .lv-searchbar-clear {
                 position: absolute;
                 right: 8px;
-                padding: 4px;
+                width: 28px;
+                height: 28px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                border-radius: var(--lv-r-pill);
                 color: var(--lv-color-text-muted);
+
+                &:active {
+                    transform: scale(0.92);
+                }
             }
         }
         .lv-search-summary {
@@ -2114,9 +2124,10 @@
                 flex-wrap: nowrap;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
+                touch-action: pan-x;
                 scrollbar-width: none;
                 margin: calc(var(--lv-sp-3) * -1) calc(var(--lv-sp-3) * -1) var(--lv-sp-3);
-                padding: var(--lv-sp-2) var(--lv-sp-3);
+                padding: var(--lv-sp-2) calc(var(--lv-sp-3) + env(safe-area-inset-right, 0px)) var(--lv-sp-2) calc(var(--lv-sp-3) + env(safe-area-inset-left, 0px));
                 &::-webkit-scrollbar {
                     display: none;
                 }
@@ -2125,6 +2136,10 @@
                 flex: 0 0 auto;
                 white-space: nowrap;
                 height: 32px;
+
+                &:active {
+                    transform: scale(0.96);
+                }
             }
             .lv-settings-sticky-footer {
                 margin: var(--lv-sp-3) calc(var(--lv-sp-3) * -1) calc(var(--lv-sp-3) * -1);
