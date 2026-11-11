@@ -1928,6 +1928,8 @@
             box-shadow: var(--lv-shadow-2);
             margin: var(--lv-sp-4) calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1);
             padding: var(--lv-sp-3) var(--lv-sp-4);
+            /* iOS 底部安全区：与键盘弹起时的 static 分支保持同等避让 */
+            padding-bottom: max(var(--lv-sp-3), env(safe-area-inset-bottom, 0px));
             border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             display: flex;
             align-items: center;
