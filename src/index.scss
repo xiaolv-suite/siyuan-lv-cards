@@ -3095,3 +3095,27 @@ pre,
         overflow-wrap: anywhere;
     }
 }
+
+/* ══════════ 手机端专项：滚动边界防抖 / 粘滞 hover 抑制 ══════════ */
+.lv-dialog .b3-dialog__body,
+.lv-page,
+.lv-hub {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    :is(.lv-page, .lv-hub, .lv-dialog, .lv-settings) {
+        .lv-tab:hover:not(.is-active):not([aria-selected="true"]),
+        .lv-facet:hover:not(.is-active) {
+            background: transparent;
+        }
+    }
+}
+
+/* ══════════ 手机端专项：卡组卡片按压反馈 ══════════ */
+@media (hover: none) and (pointer: coarse) {
+    :is(.lv-page, .lv-hub) .lv-deck-card:active {
+        filter: brightness(0.96);
+    }
+}
