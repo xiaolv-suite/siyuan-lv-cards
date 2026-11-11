@@ -669,7 +669,9 @@ body[data-theme-mode="dark"],
     .b3-text-field,
     .b3-select {
         border: 1px solid var(--lv-border);
-        background: var(--lv-color-surface);
+        /* background-color 长写：保留思源 core 注入的下拉箭头 background-image
+           （background 简写会把箭头一起抹掉，下拉框退化成无指示的文本框） */
+        background-color: var(--lv-color-surface);
         border-radius: var(--lv-r-control);
         color: var(--lv-color-text);
         font-size: var(--lv-type-control-size);
@@ -3068,5 +3070,17 @@ pre,
 
     button, .lv-chipbtn, .lv-tab, .lv-facet, .lv-link-button, .lv-persona {
         -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* ══════════ 下拉菜单专项：选项可读性 / 光标 ══════════ */
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer, .lv-settings) {
+    :is(select, .b3-select) {
+        cursor: pointer;
+    }
+
+    :is(select, .b3-select) :is(option, optgroup) {
+        background-color: var(--lv-color-surface, var(--b3-theme-background));
+        color: var(--lv-color-text, var(--b3-theme-on-background));
     }
 }
