@@ -173,6 +173,9 @@
             .lv-review-return-home {
                 display: none !important;
             }
+            /* 滚动条已隐藏：右缘渐隐提示计时/标签胶囊条可横向滑动（截图反馈：右端被"裁切"实为可滑区） */
+            -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
         }
 
         .b3-button {

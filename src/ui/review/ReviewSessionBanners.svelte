@@ -211,4 +211,32 @@
         color: var(--lv-color-text-muted);
         margin-right: var(--lv-sp-1);
     }
+
+    /* 手机端紧凑横幅：建议/减负卡不与卡片内容争抢首屏（截图反馈：占用过大） */
+    @media (max-width: 680px) {
+        .lv-recover,
+        .lv-return {
+            padding: var(--lv-sp-2) var(--lv-sp-3);
+            gap: var(--lv-sp-1) var(--lv-sp-2);
+            row-gap: var(--lv-sp-1);
+        }
+        .lv-return {
+            border-radius: var(--lv-r-s, 10px);
+            font-size: var(--lv-type-meta-size, 12px);
+        }
+        .lv-return button {
+            min-height: 36px;
+            padding: 3px 12px;
+            font-size: var(--lv-type-meta-size, 12px);
+        }
+        .lv-relief button {
+            padding: 3px 12px;
+        }
+        .lv-return-title,
+        .lv-recover-title {
+            flex: 0 0 100%;
+            margin-right: 0;
+            font-size: var(--lv-type-meta-size, 12px);
+        }
+    }
 </style>

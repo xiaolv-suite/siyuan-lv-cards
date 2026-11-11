@@ -3,6 +3,7 @@ import {
     reviewSwipeAction,
     resolveMobileCardSwitch,
     shouldIgnoreSwipeTarget,
+    isVerticallyScrollableContext,
     resolveTouchSwipe,
     mapSwipeActionToOutcome,
     extractSingleTouchCoords,
@@ -111,6 +112,65 @@ describe("review swipe semantics", () => {
 
             const upEnd = { x: 100, y: 10 };
             expect(resolveTouchSwipe(false, start, upEnd, plainDiv, false)).toBe("reveal");
+        });
+    });
+
+    describe("isVerticallyScrollableContext 垂直滚动让位", () => {
+        it("普通无滚动容器返回 false", () => {
+            const div = document.createElement("div");
+            expect(isVerticallyScrollableContext(div)).toBe(false);
+            expect(isVerticallyScrollableContext(null)).toBe(false);
+        });
+
+        it("祖先容器内容超高且 overflowY 开启时返回 true（页面无法下滑的根因让位）", () => {
+            const scroller = document.createElement("div");
+            const child = document.createElement("span");
+            scroller.appendChild(child);
+
+            Object.defineProperty(scroller, "scrollHeight", { value: 900, configurable: true });
+            Object.defineProperty(scroller, "clientHeight", { value: 400, configurable: true });
+            vi.spyOn(window, "getComputedStyle").mockReturnValue({
+                overflowX: "visible",
+                overflowY: "auto",
+            } as any);
+
+            expect(isVerticallyScrollableContext(child)).toBe(true);
+        });
+
+        it("内容放得下时竖直手势保留翻面/评分语义", () => {
+            const scroller = document.createElement("div");
+            const child = document.createElement("span");
+            scroller.appendChild(child);
+
+            Object.defineProperty(scroller, "scrollHeight", { value: 400, configurable: true });
+            Object.defineProperty(scroller, "clientHeight", { value: 400, configurable: true });
+            vi.spyOn(window, "getComputedStyle").mockReturnValue({
+                overflowX: "visible",
+                overflowY: "auto",
+            } as any);
+
+            expect(isVerticallyScrollableContext(child)).toBe(false);
+        });
+
+        it("resolveTouchSwipe：可滚动页面内竖直滑动返回 null（让位滚动），横滑评分不受影响", () => {
+            const scroller = document.createElement("div");
+            const card = document.createElement("div");
+            scroller.appendChild(card);
+
+            Object.defineProperty(scroller, "scrollHeight", { value: 900, configurable: true });
+            Object.defineProperty(scroller, "clientHeight", { value: 400, configurable: true });
+            vi.spyOn(window, "getComputedStyle").mockReturnValue({
+                overflowX: "visible",
+                overflowY: "auto",
+            } as any);
+
+            const start = { x: 100, y: 100 };
+            // 答案面竖直下滑：原会吞成 hard 评分，现在让位浏览器滚动
+            expect(resolveTouchSwipe(true, start, { x: 100, y: 220 }, card, false)).toBeNull();
+            // 问题面竖直上滑：原会吞成翻面，现在让位滚动（翻面走显示答案按钮/点击热区）
+            expect(resolveTouchSwipe(false, start, { x: 100, y: 10 }, card, false)).toBeNull();
+            // 横滑评分保持既有语义
+            expect(resolveTouchSwipe(true, start, { x: 200, y: 100 }, card, false)).toBe("good");
         });
     });
 

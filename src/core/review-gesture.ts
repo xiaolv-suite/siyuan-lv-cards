@@ -75,6 +75,28 @@ export function shouldIgnoreSwipeTarget(target: EventTarget | null): boolean {
 }
 
 /**
+ * 垂直滚动让位判定：触点位于「内容超高、实际可纵向滚动」的容器内时，
+ * 上下滑动必须交还浏览器滚动——否则下滑会被吞成评分、上滑被吞成翻面，
+ * 表现为页面「无法下滑/卡住」。内容放得下（无需滚动）时竖直手势才恢复
+ * 上滑翻面/上下评分语义。横滑切卡不受影响（复习根容器 overflow-x 为 hidden）。
+ */
+export function isVerticallyScrollableContext(target: EventTarget | null): boolean {
+    if (!target || typeof (target as Element).closest !== "function") return false;
+    if (typeof window === "undefined") return false;
+    let cur: HTMLElement | null = target as HTMLElement;
+    while (cur && cur !== document.body) {
+        if (cur.scrollHeight > cur.clientHeight + 4) {
+            const style = window.getComputedStyle(cur);
+            if (style.overflowY === "auto" || style.overflowY === "scroll") {
+                return true;
+            }
+        }
+        cur = cur.parentElement;
+    }
+    return false;
+}
+
+/**
  * 触控手势动作解析器：综合判断弹窗屏蔽、交互元素防触碰、横向滚动避让与滑动方向距离
  */
 export function resolveTouchSwipe(
@@ -87,6 +109,9 @@ export function resolveTouchSwipe(
     if (isOverlayOrModalOpen || shouldIgnoreSwipeTarget(target)) return null;
     const dx = touchEnd.x - touchStart.x;
     const dy = touchEnd.y - touchStart.y;
+    // 竖直手势让位滚动：页面内容超高可滚动时，上下滑交还浏览器；
+    // 翻面/评分手势仅在整页放得下时生效（横滑切卡与横滑评分不受影响）。
+    if (Math.abs(dy) > Math.abs(dx) && isVerticallyScrollableContext(target)) return null;
     return reviewSwipeAction(showAnswer, dx, dy);
 }
 

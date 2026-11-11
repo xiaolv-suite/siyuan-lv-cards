@@ -321,6 +321,10 @@
         opacity: 0.7;
         pointer-events: none;
     }
+    /* 触屏/窄屏：空格键提示无意义，且绝对定位会与填空输入行重叠（实机截图反馈） */
+    @media (pointer: coarse), (max-width: 680px) {
+        .lv-reveal-hint { display: none; }
+    }
 
     .lv-tts-row {
         display: flex;
