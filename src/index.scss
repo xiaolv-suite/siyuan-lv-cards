@@ -3036,3 +3036,37 @@ pre,
         fill: none;
     }
 }
+
+/* ══════════ 按钮专项：按压反馈 / 忙碌态拦截 / 文字显示 ══════════ */
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer, .lv-settings) {
+    /* 自绘按钮族统一按压回弹（禁用/忙碌态不响应） */
+    :is(.b3-button, .lv-chipbtn, .lv-link-button, .lv-tab, .lv-facet, .lv-tool-btn, .lv-btn-tool, .lv-persona, .lv-settings-nav-chip, .lv-btn-icon, .lv-zen-btn, .lv-zen-tool-btn, .lv-zen-exit-btn):not(:disabled):not([aria-busy="true"]):active {
+        transform: scale(0.96);
+    }
+
+    /* 忙碌态：拦截连点 + 视觉降透明 */
+    button[aria-busy="true"] {
+        pointer-events: none;
+        opacity: 0.72;
+    }
+
+    button {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /* 紧凑工具/胶囊按钮：长文案单行截断防撑爆 */
+    :is(.lv-btn-tool, .lv-tool-btn, .lv-chipbtn, .lv-settings-nav-chip) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+/* ══════════ 触控点击高亮抑制：灰色闪块与自有 :active 回弹冲突，统一透明 ══════════ */
+:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer, .lv-settings) {
+    -webkit-tap-highlight-color: transparent;
+
+    button, .lv-chipbtn, .lv-tab, .lv-facet, .lv-link-button, .lv-persona {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
