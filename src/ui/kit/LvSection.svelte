@@ -26,7 +26,8 @@
 <style>
     .lv-section2 {
         margin-bottom: var(--lv-sp-4);
-        scroll-margin-top: 52px;
+        /* 吸顶导航栏（桌面 44px / 移动端约 52px）+ 呼吸间距，锚点落点不被遮挡 */
+        scroll-margin-top: 64px;
     }
     /* Global .lv-secthead owns typography/spacing; this component only adds
        the section-specific action alignment. Keep the selector scoped so it

@@ -570,6 +570,24 @@ body[data-theme-mode="dark"],
     }
 }
 
+// 设置页长表单：分区标题加品牌色锚点条，滚动时的视觉路标（仅设置域生效）
+.lv-settings .lv-secthead {
+    position: relative;
+    padding-left: 11px;
+
+    &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 3px;
+        height: 15px;
+        border-radius: 2px;
+        background: var(--lv-color-brand);
+        transform: translateY(-50%);
+    }
+}
+
 // 状态点（R52 动效纪律 docs/15 §6：默认静态——呼吸脉冲默认关闭）
 .lv-dot {
     width: 8px;
