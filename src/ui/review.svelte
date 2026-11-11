@@ -677,6 +677,9 @@
             return;
         }
         suspendStopwatch();
+        if (zenMode) {
+            zenMode = false;
+        }
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
         try {
             if (ctx.isMobile && typeof openMobileFileById === "function") {

@@ -1344,7 +1344,12 @@
     <CardDetail
         block={detail}
         t={detailT}
-        onOpenDoc={() => openDoc(detail!)}
+        onOpenDoc={() => {
+            const target = detail;
+            detailRequestSeq += 1;
+            detail = null;
+            if (target) openDoc(target);
+        }}
         onClose={() => { detailRequestSeq += 1; detail = null; }}
         historyEntries={ctx.getBlockHistory?.(detail!.id) ?? []}
         issues={ctx.getBlockIssues?.(detail!.id) ?? []}
