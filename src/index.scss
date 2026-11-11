@@ -3119,3 +3119,13 @@ pre,
         filter: brightness(0.96);
     }
 }
+
+/* R14 桌面 hover 收口（触屏不生效） */
+@media (hover: hover) {
+    .lv-chipbtn:hover,
+    .lv-studio-mode-btn:hover,
+    .lv-dm-segment-btn:hover,
+    .lv-dm-merge-opt:hover {
+        background: color-mix(in srgb, var(--lv-color-brand) 8%, transparent);
+    }
+}
