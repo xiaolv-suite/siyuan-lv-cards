@@ -282,7 +282,7 @@
         text-align: left;
         min-height: 48px;
         touch-action: manipulation;
-        transition: all var(--lv-dur-fast) var(--lv-ease);
+        transition: transform var(--lv-dur-fast) var(--lv-ease), background var(--lv-dur-fast) var(--lv-ease), border-color var(--lv-dur-fast) var(--lv-ease), box-shadow var(--lv-dur-fast) var(--lv-ease), color var(--lv-dur-fast) var(--lv-ease), opacity var(--lv-dur-fast) var(--lv-ease);
 
         &:hover {
             border-color: color-mix(in srgb, var(--lv-color-warning) 50%, var(--lv-border));
@@ -306,7 +306,7 @@
             border-radius: 50%;
             border: 2px solid var(--lv-border);
             position: relative;
-            transition: all var(--lv-dur-fast) var(--lv-ease);
+            transition: transform var(--lv-dur-fast) var(--lv-ease), background var(--lv-dur-fast) var(--lv-ease), border-color var(--lv-dur-fast) var(--lv-ease), box-shadow var(--lv-dur-fast) var(--lv-ease), color var(--lv-dur-fast) var(--lv-ease), opacity var(--lv-dur-fast) var(--lv-ease);
 
             &.lv-checked {
                 border-color: var(--lv-color-warning);

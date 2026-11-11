@@ -205,7 +205,7 @@
         touch-action: manipulation;
         border-radius: var(--lv-r-circle);
         margin-right: 6px;
-        transition: all var(--lv-dur-1) var(--lv-ease);
+        transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
     }
     .lv-palette-close:hover {
         background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);

@@ -2094,7 +2094,7 @@ pre,
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
-    transition: all var(--lv-dur-2) var(--lv-ease);
+    transition: transform var(--lv-dur-2) var(--lv-ease), background var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease), color var(--lv-dur-2) var(--lv-ease), opacity var(--lv-dur-2) var(--lv-ease);
     width: 100%;
     box-sizing: border-box;
 
@@ -2131,7 +2131,7 @@ pre,
         font-size: var(--lv-type-body-size);
         background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         color: var(--lv-color-text);
-        transition: all var(--lv-dur-1) var(--lv-ease);
+        transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
     }
 
     .lv-choice-text-body {
@@ -2152,7 +2152,7 @@ pre,
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
         opacity: 0.6;
-        transition: all var(--lv-dur-1) var(--lv-ease);
+        transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
         margin-left: auto;
     }
     &:hover:not(:disabled) .lv-choice-kbd-badge {
@@ -2255,7 +2255,7 @@ pre,
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
-    transition: all var(--lv-dur-2) var(--lv-ease);
+    transition: transform var(--lv-dur-2) var(--lv-ease), background var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease), color var(--lv-dur-2) var(--lv-ease), opacity var(--lv-dur-2) var(--lv-ease);
     min-width: 0;
 
     @media (max-width: 480px) {
@@ -2325,7 +2325,7 @@ pre,
         border: 1px solid var(--lv-border);
         color: var(--lv-color-text-muted);
         opacity: 0.6;
-        transition: all var(--lv-dur-1) var(--lv-ease);
+        transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
         margin-left: auto;
     }
     &:hover:not(:disabled) .lv-judge-kbd-badge {
@@ -2516,7 +2516,7 @@ pre,
     font-size: 13px !important;
     font-weight: var(--lv-fw-semibold) !important;
     cursor: pointer;
-    transition: all var(--lv-dur-1) var(--lv-ease);
+    transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
 
     &.lv-studio-mode-active {
         background: var(--lv-color-surface) !important;
@@ -2568,7 +2568,7 @@ pre,
     background: var(--lv-color-surface);
     border: 1px solid var(--lv-border);
     color: var(--lv-color-text-muted);
-    transition: all var(--lv-dur-1) var(--lv-ease);
+    transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
 
     &:hover:not(:disabled) {
         border-color: var(--lv-color-brand);
@@ -2904,7 +2904,7 @@ pre,
             border-radius: 6px;
             color: var(--b3-theme-on-surface);
             opacity: 0.7;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1);
             box-sizing: border-box;
 
             &:hover {

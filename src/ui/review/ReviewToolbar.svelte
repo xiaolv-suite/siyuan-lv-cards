@@ -505,7 +505,7 @@
             gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
             font-size: var(--lv-type-meta-size);
             box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
-            transition: all var(--lv-dur-1) var(--lv-ease);
+            transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
 
             &:hover:not(:disabled) {
                 border-color: var(--lv-color-brand);

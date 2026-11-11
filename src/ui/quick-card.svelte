@@ -1500,7 +1500,7 @@
         touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
-        transition: all var(--lv-dur-1) var(--lv-ease);
+        transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
     }
     .lv-qc-template button:hover:not(:disabled) {
         color: var(--lv-color-text);
@@ -1912,7 +1912,7 @@
         border: 1px solid var(--lv-border);
         background: transparent;
         cursor: pointer;
-        transition: all 0.15s ease;
+        transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease;
     }
     .lv-qc-mand-ok {
         border-color: color-mix(in srgb, var(--lv-color-success) 40%, transparent);

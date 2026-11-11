@@ -455,7 +455,7 @@
                 background: color-mix(in srgb, var(--lv-color-canvas) 60%, var(--lv-color-surface));
                 border: 1px solid var(--lv-border);
                 border-radius: var(--lv-r-m);
-                transition: all var(--lv-dur-2) var(--lv-ease);
+                transition: transform var(--lv-dur-2) var(--lv-ease), background var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease), color var(--lv-dur-2) var(--lv-ease), opacity var(--lv-dur-2) var(--lv-ease);
 
                 &:hover {
                     border-color: var(--lv-primary-border);

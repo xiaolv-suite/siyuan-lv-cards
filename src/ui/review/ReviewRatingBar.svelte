@@ -247,7 +247,7 @@
             transform: scale(0.94) !important;
             border-color: var(--lv-color-brand) !important;
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--lv-color-brand) 35%, transparent) !important;
-            transition: all 0.1s var(--lv-ease) !important;
+            transition: transform 0.1s var(--lv-ease), background 0.1s var(--lv-ease), border-color 0.1s var(--lv-ease), box-shadow 0.1s var(--lv-ease), color 0.1s var(--lv-ease), opacity 0.1s var(--lv-ease) !important;
         }
 
         &.lv-actions-compact {

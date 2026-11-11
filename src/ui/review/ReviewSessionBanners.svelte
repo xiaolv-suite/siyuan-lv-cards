@@ -185,7 +185,7 @@
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
-            transition: all var(--lv-dur-1) var(--lv-ease);
+            transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease), opacity var(--lv-dur-1) var(--lv-ease);
             &:hover {
                 border-color: var(--lv-color-brand);
                 color: var(--lv-color-brand);

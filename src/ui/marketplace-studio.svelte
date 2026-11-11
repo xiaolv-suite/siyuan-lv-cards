@@ -1049,7 +1049,7 @@
         border: 1px solid var(--b3-border-color, var(--lv-border));
         cursor: pointer;
         color: var(--b3-theme-on-background);
-        transition: all 0.15s ease;
+        transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease;
     }
 
     .lv-chip.sm {
