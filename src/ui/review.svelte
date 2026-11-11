@@ -454,7 +454,7 @@
         const res = computeKeyboardViewportState(window.innerHeight, window.visualViewport.height);
         keyboardInset = res.keyboardInset;
         if (res.isKeyboardOpen && document.activeElement && rootEl?.contains(document.activeElement)) {
-            (document.activeElement as HTMLElement).scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+            (document.activeElement as HTMLElement).scrollIntoView?.({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
         }
     });
 
