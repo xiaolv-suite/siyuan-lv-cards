@@ -1,6 +1,7 @@
 <script lang="ts">
     import { showMessage } from "@/libs/notice";
-    import { getBlockDOM } from "@/api/siyuan";
+    import { getBlockDOM, sqlQuery } from "@/api/siyuan";
+    import { safeDocTitleFromHPath, showDocTreeNativeMenu } from "@/libs/lv-notice-kit";
     import { diffLines, type DiffRow } from "@/core/line-diff";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
     import { renderMathIn } from "@/libs/math-render";
@@ -159,6 +160,27 @@
             }
         } finally {
             if (seq === loadSeq) previewLoading = false;
+        }
+    }
+
+    async function openNativeDocMenu(e: MouseEvent) {
+        let boxId = typeof block.box === "string" ? block.box : "";
+        let rootId = typeof block.rootID === "string" ? block.rootID : "";
+        if (!boxId || !rootId) {
+            try {
+                const rows = await sqlQuery(`SELECT box, root_id FROM blocks WHERE id = '${block.id.replace(/'/g, "''")}' LIMIT 1`);
+                if (rows && rows[0]) {
+                    boxId = boxId || String(rows[0].box ?? "");
+                    rootId = rootId || String(rows[0].root_id ?? "");
+                }
+            } catch {}
+        }
+        if (boxId) {
+            await showDocTreeNativeMenu({
+                notebookId: boxId,
+                docId: rootId || block.id,
+                position: { x: e.clientX, y: e.clientY },
+            });
         }
     }
 
@@ -461,9 +483,23 @@
     {:else if facet === "source"}
         <div class="lv-detail-meta ft__smaller ft__on-surface">
             <div>{t.manager.detailBlockId}: {block.id}</div>
-            {#if block.hPath}<div>{block.hPath}</div>{/if}
+            {#if block.hPath}<div>{safeDocTitleFromHPath(block, block.hPath)}</div>{/if}
         </div>
-        <button class="b3-button b3-button--outline" style="margin-top: var(--lv-sp-2)" onclick={onOpenDoc}>{t.manager.openDoc}</button>
+        <div style="display: flex; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2); flex-wrap: wrap;">
+            <button
+                class="b3-button b3-button--outline"
+                type="button"
+                title={`${t.manager.openDoc}（右键呼出原生菜单）`}
+                onclick={onOpenDoc}
+                oncontextmenu={async (e) => { e.preventDefault(); await openNativeDocMenu(e); }}
+            >{t.manager.openDoc}</button>
+            <button
+                class="b3-button b3-button--outline"
+                type="button"
+                title={t.manager?.docTreeMenu ?? "原生文档树菜单"}
+                onclick={openNativeDocMenu}
+            >{t.manager?.docTreeMenu ?? "文档菜单"}</button>
+        </div>
     {:else if facet === "history"}
         {#if historyEntries.length === 0}
             <div class="lv-hint">{t.detail.histEmpty}</div>

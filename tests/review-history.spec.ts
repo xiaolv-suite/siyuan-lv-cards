@@ -71,4 +71,20 @@ describe("review-history 复习历史栈管理", () => {
         // 栈顶应为最新的 snap-54
         expect(stack[stack.length - 1].cardHtml).toBe(`snap-${MAX_REVIEW_HISTORY_DEPTH + 4}`);
     });
+
+    it("保存并恢复 dismissedBlockID 与 suspendedCardID 以支持撤销", () => {
+        const dismissedSnap = createReviewHistorySnapshot({
+            ...mockSnapshotInput,
+            dismissedBlockID: "b-1",
+        });
+        expect(dismissedSnap.dismissedBlockID).toBe("b-1");
+        expect(dismissedSnap.suspendedCardID).toBeUndefined();
+
+        const suspendedSnap = createReviewHistorySnapshot({
+            ...mockSnapshotInput,
+            suspendedCardID: "card-1",
+        });
+        expect(suspendedSnap.suspendedCardID).toBe("card-1");
+        expect(suspendedSnap.dismissedBlockID).toBeUndefined();
+    });
 });

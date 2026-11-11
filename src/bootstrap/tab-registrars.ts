@@ -634,9 +634,8 @@ export function buildReviewMountProps(
             },
             getRevlog: () => plugin.revlog,
             isSuspendedToday: (cardID: string) => isSuspended(plugin.suspendToday, cardID),
-            suspendToday: (cardID: string) => {
-                void plugin.suspendTodayMutations.suspend([cardID]).catch(() => {});
-            },
+            suspendToday: (cardID: string) => plugin.suspendTodayMutations.suspend([cardID]),
+            unsuspendToday: (cardID: string) => plugin.suspendTodayMutations.unsuspend([cardID]),
             removeFromDeck: (blockID: string) => plugin.removeCardsFromDeck([blockID]),
             openDashboard: (tab?: string) => {
                 if (hooks?.onOpenDashboard) {

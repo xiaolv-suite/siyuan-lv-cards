@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
     import { openTab } from "siyuan";
+    import { sqlQuery } from "@/api/siyuan";
+    import { safeDocTitleFromHPath, showDocTreeNativeMenu } from "@/libs/lv-notice-kit";
     import { showMessage } from "@/libs/notice";
     import { getRiffCards, getRiffCardsByBlockIDs, getRiffDecks, createRiffDeck, removeRiffCards, resetRiffCards, type SearchBlock, type RiffDeck } from "@/api/riff";
     import { addRiffCards, invalidateDueCache } from "@/api/due-shared";
@@ -798,6 +800,27 @@
         }
     }
 
+    async function openNativeDocMenu(block: SearchBlock, e: MouseEvent) {
+        let boxId = typeof block.box === "string" ? block.box : "";
+        let rootId = typeof block.rootID === "string" ? block.rootID : "";
+        if (!boxId || !rootId) {
+            try {
+                const rows = await sqlQuery(`SELECT box, root_id FROM blocks WHERE id = '${block.id.replace(/'/g, "''")}' LIMIT 1`);
+                if (rows && rows[0]) {
+                    boxId = boxId || String(rows[0].box ?? "");
+                    rootId = rootId || String(rows[0].root_id ?? "");
+                }
+            } catch {}
+        }
+        if (boxId) {
+            await showDocTreeNativeMenu({
+                notebookId: boxId,
+                docId: rootId || block.id,
+                position: { x: e.clientX, y: e.clientY },
+            });
+        }
+    }
+
     onMount(() => {
         savedList = ctx.savedFilters();
         // BI-17：返回卡库时恢复筛选、排序、页码、滚动位置和最后焦点。
@@ -1232,6 +1255,7 @@
                         aria-keyshortcuts="ArrowUp ArrowDown Delete Enter"
                         disabled={batchBusy !== null}
                         onclick={() => openDetail(b)}
+                        oncontextmenu={async (e) => { e.preventDefault(); await openNativeDocMenu(b, e); }}
                         onkeydown={(event) => onRowKeydown(event, b, rowIndex)}
                     >
                         <span class="lv-content">
@@ -1251,7 +1275,7 @@
                                 {#if (lapsesMap[b.id] ?? 0) >= 4}
                                     <span class="lv-chip2 lv-chip2--warn" title={`已遗忘 ${lapsesMap[b.id]} 次`}><LvIcon name="warning" size={14} /> {lapsesMap[b.id]}</span>
                                 {/if}
-                                <span>{b.hPath ?? ""} {b.name ? "· " + b.name : ""}</span>
+                                <span>{safeDocTitleFromHPath(b, b.hPath ?? "")} {b.name ? "· " + b.name : ""}</span>
                             </span>
                         </span>
                         <span class="lv-arrow" aria-hidden="true"><LvIcon name="chevron-right" size={12} /></span>

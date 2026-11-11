@@ -2,13 +2,14 @@
     import { onDestroy, onMount } from "svelte";
     import { rafThrottle } from "@/libs/throttle";
     import { openTab, openMobileFileById } from "siyuan";
-    import { showMessage, notifyInline, lvActivity, lvLaunchpad } from "@/libs/notice";
+    import { showMessage, notifyInline, lvActivity, lvLaunchpad, lvNotify } from "@/libs/notice";
+    import { isNativeDockVisible, showDocTreeNativeMenu, toggleNativeDock } from "@/libs/lv-notice-kit";
     import {
         getRiffDecks, getRiffDueCardsForScope, reviewRiffCard, skipReviewRiffCard,
         batchSetRiffCardsDueTime, getRiffCards, getNotebookRiffCards, getTreeRiffCards,
         type RiffDueCard, type RiffDeck, type Rating,
     } from "@/api/riff";
-    import { getNotebooks, getBlockAttrs, getBlockDOM, type Notebook } from "@/api/siyuan";
+    import { getNotebooks, getBlockAttrs, getBlockDOM, sqlQuery, type Notebook } from "@/api/siyuan";
     import * as siyuanApi from "@/api/siyuan";
     import { isCardNew, calcStreak, isLeechCard, DEFAULT_LEECH_THRESHOLD, type RevlogData } from "@/core/revlog";
     import type { Rating1to4 } from "@/core/card-types";
@@ -144,7 +145,8 @@
         getKOBySource?: (blockID: string) => { fact: string; capability: string | null } | null;
         getRevlog: () => RevlogData;
         isSuspendedToday: (cardID: string) => boolean;
-        suspendToday: (cardID: string) => void;
+        suspendToday: (cardID: string) => void | Promise<void>;
+        unsuspendToday?: (cardID: string) => void | Promise<void>;
         openDashboard: (tab?: string) => void;
         /** Mobile Spec v2：手机端全屏 Dialog 宿主关闭回调（带 44x44px 关闭入口） */
         onClose?: () => void;
@@ -582,7 +584,7 @@
         dismissBusy = true;
         const blockID = current.blockID;
         const cardID = current.cardID;
-        pushHistory({ revlogAppended: false, dismissedBlockID: blockID });
+        const undoSnap = pushHistory({ revlogAppended: false, dismissedBlockID: blockID });
         let attrWritten = false;
         try {
             if (siyuanApi.setBlockAttrs) {
@@ -591,9 +593,17 @@
             attrWritten = true;
             reviewedIDs = [...reviewedIDs, cardID];
             persistSession();
-            showMessage(t.review?.cardDismissed ?? "已解散归档该卡片 (Ctrl+D)", 1500, "info");
-            announce(t.review?.cardDismissed ?? "已解散归档该卡片", "polite");
+            const hiddenMsg = "已归档隐藏（保留 FSRS 进度，可在「卡库 → 已隐藏」恢复）";
+            announce(hiddenMsg, "polite");
             await next();
+            dismissBusy = false;
+            lvNotify.undo({
+                source: "闪卡",
+                message: hiddenMsg,
+                undoLabel: "撤销",
+                duration: 5000,
+                onUndo: () => triggerUndoForSnapshot(undoSnap),
+            });
         } catch (e: any) {
             if (!attrWritten) popReviewHistory(history);
             showMessage(friendlyError(e, t), 2000, "error");
@@ -694,6 +704,36 @@
     let userJudgeChoice = $state<boolean | null>(null);
     let suggestedRating = $state<number | null>(null);
     let zenMode = $state(false);
+    let prevLeftDock = false;
+    let prevRightDock = false;
+    let prevBottomDock = false;
+
+    async function applyZenMode(enable: boolean) {
+        if (enable) {
+            try {
+                prevLeftDock = isNativeDockVisible("left");
+                prevRightDock = isNativeDockVisible("right");
+                prevBottomDock = isNativeDockVisible("bottom");
+                if (prevLeftDock) await toggleNativeDock("left", false);
+                if (prevRightDock) await toggleNativeDock("right", false);
+                if (prevBottomDock) await toggleNativeDock("bottom", false);
+            } catch {}
+        } else if (prevLeftDock || prevRightDock || prevBottomDock) {
+            try {
+                if (prevLeftDock) await toggleNativeDock("left", true);
+                if (prevRightDock) await toggleNativeDock("right", true);
+                if (prevBottomDock) await toggleNativeDock("bottom", true);
+            } catch {}
+            prevLeftDock = false;
+            prevRightDock = false;
+            prevBottomDock = false;
+        }
+    }
+
+    $effect(() => {
+        void applyZenMode(zenMode);
+    });
+
     let answerRevealedAt = 0;
     let autoSubmitTimer: ReturnType<typeof setTimeout> | null = null;
     function clearAutoSubmitTimer() {
@@ -1263,7 +1303,7 @@
                 await ctx.removeFromDeck(card.blockID);
             }
             if (isDisposed) return;
-            showMessage(t.review.retireCardDone ?? "已将卡片移出卡组", 2500, "info");
+            showMessage("已移出思源卡组并清空 FSRS 排期（原笔记正文不受影响）", 3200, "info");
             queue = removeCardFromQueue(queue, card.cardID);
             if (current?.cardID !== card.cardID) return;
             showRetireModal = false;
@@ -1437,8 +1477,11 @@
 
     // —— 评分 / 跳过 / 屏蔽 ——
 
-    function pushHistory(opts?: { revlogAppended?: boolean; dismissedBlockID?: string }) {
-        if (!current) return;
+    let historySnapshotSeq = 0;
+
+    function pushHistory(opts?: { revlogAppended?: boolean; dismissedBlockID?: string; suspendedCardID?: string }): ReviewHistorySnapshot | null {
+        if (!current) return null;
+        const seq = ++historySnapshotSeq;
         const snap = createReviewHistorySnapshot({
             queue,
             pendingRequeues,
@@ -1453,8 +1496,21 @@
             counters: { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
             revlogAppended: opts?.revlogAppended ?? false,
             dismissedBlockID: opts?.dismissedBlockID,
+            suspendedCardID: opts?.suspendedCardID,
+            snapshotSeq: seq,
         });
         pushReviewHistory(history, snap);
+        return snap;
+    }
+
+    function triggerUndoForSnapshot(snap: ReviewHistorySnapshot | null | undefined) {
+        if (!snap || snap.snapshotSeq === undefined) return;
+        const top = history[history.length - 1];
+        if (top && top.snapshotSeq === snap.snapshotSeq) {
+            undoHistory();
+        } else {
+            showMessage("已有后续作答，请按 P/Q 逐级撤销", 2000, "info");
+        }
     }
 
     function undoHistory() {
@@ -1471,6 +1527,9 @@
         }
         if (snap.dismissedBlockID && siyuanApi.setBlockAttrs) {
             void siyuanApi.setBlockAttrs(snap.dismissedBlockID, { [ATTR_LV_DISMISSED]: "" }).catch(() => {});
+        }
+        if (snap.suspendedCardID) {
+            void Promise.resolve(ctx.unsuspendToday?.(snap.suspendedCardID)).catch(() => {});
         }
         if (snap.current?.cardID && snap.counters.forget < sessionForget) {
             const nextForgotten = new Set(forgottenCardIDs);
@@ -1622,7 +1681,8 @@
         }
         recovery = null; // BI-9：同评分——有动作即隐式续场
         submitting = true;
-        pushHistory();
+        const isCram = cramActive;
+        const undoSnap = pushHistory();
         let writeSucceeded = false;
         try {
             // 重现卡与 Cram 突击快刷不计内核跳过（同评分类：调度不变）
@@ -1640,6 +1700,14 @@
             persistSession();
             announce(t.review.liveSkipped, "polite");
             await next();
+            submitting = false;
+            lvNotify.undo({
+                source: "闪卡",
+                message: isCram ? "仅本场跳过（突击快刷不改动 FSRS 排期）" : "仅本场跳过：今日顺延，不影响 FSRS 排期",
+                undoLabel: "撤销",
+                duration: 4000,
+                onUndo: () => triggerUndoForSnapshot(undoSnap),
+            });
         } catch (e: any) {
             // Skip follows the same pre-write snapshot rule as rating: a
             // failed request must not leave an undo entry for an unchanged
@@ -1654,10 +1722,33 @@
     }
 
     async function suspendToday() {
-        if (!current || submitting || rescheduleBusy) { return; }
-        ctx.suspendToday(current.cardID);
-        showMessage(t.review.suspendedToast, 2000, "info");
-        await next();
+        if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy)) { return; }
+        const cardID = current.cardID;
+        submitting = true;
+        const undoSnap = pushHistory({ revlogAppended: false, suspendedCardID: cardID });
+        let persisted = false;
+        try {
+            await Promise.resolve(ctx.suspendToday(cardID));
+            persisted = true;
+            const suspendedMsg = "今天不学：仅今日暂缓，明日自动恢复（保留 FSRS 进度）";
+            announce(suspendedMsg, "polite");
+            await next();
+            submitting = false;
+            lvNotify.undo({
+                source: "闪卡",
+                message: suspendedMsg,
+                undoLabel: "撤销",
+                duration: 5000,
+                onUndo: () => triggerUndoForSnapshot(undoSnap),
+            });
+        } catch (e: any) {
+            if (!persisted) popReviewHistory(history);
+            const err = friendlyError(e, t);
+            showMessage(err, 3000, "error");
+            announce(err, "assertive");
+        } finally {
+            submitting = false;
+        }
     }
 
     /** BJ-2：推进分级提示（不自动提交评分；纯展示+日志；v0.133.0 内容推导） */
@@ -1739,6 +1830,25 @@
             resumeStopwatch();
             showMessage(friendlyError(e, t), 2500, "error");
         }
+    }
+
+    async function openCurrentDocContextMenu(e: MouseEvent) {
+        const id = resolveEditorNavigationBlockId(undefined, current?.blockID);
+        if (!id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            const rows = await sqlQuery(`SELECT box, root_id FROM blocks WHERE id = '${id.replace(/'/g, "''")}' LIMIT 1`);
+            const box = typeof rows?.[0]?.box === "string" ? (rows[0].box as string) : "";
+            const root = typeof rows?.[0]?.root_id === "string" ? (rows[0].root_id as string) : id;
+            if (box) {
+                await showDocTreeNativeMenu({
+                    notebookId: box,
+                    docId: root || id,
+                    position: { x: e.clientX, y: e.clientY },
+                });
+            }
+        } catch {}
     }
 
     /** 快速改期（M3·FR5，f 键/按钮）：N 天后到期 */
@@ -2498,6 +2608,9 @@
 
     onDestroy(() => {
         isDisposed = true;
+        if (prevLeftDock || prevRightDock || prevBottomDock) {
+            void applyZenMode(false);
+        }
         disarmReviewHistory();
         throttledViewportChange.cancel();
         clearAutoSubmitTimer();
@@ -2742,6 +2855,7 @@
                 onOpenRetireModal={() => (showRetireModal = true)}
                 onOpenHelp={() => (helpOpen = true)}
                 onFocusScope={focusScopeInPrefs}
+                onOpenContextMenu={openCurrentDocContextMenu}
             />
         </div>
         <ReviewSessionPrefs
@@ -2783,6 +2897,7 @@
                 {t}
                 onToggleContext={toggleContext}
                 onOpenInEditor={openInEditor}
+                onContextMenu={openCurrentDocContextMenu}
             />
             {#if stopwatchSuspendedAt > 0}
                 <div class="lv-stopwatch-suspended-badge" data-testid="review-stopwatch-suspended" role="status">

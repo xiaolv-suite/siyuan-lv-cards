@@ -259,6 +259,17 @@
             }
         }
 
+        /* 横屏矮窗（手机 landscape）：压缩评分栏上下留白，
+           保证评分按钮与卡片内容在矮视口内同框可达。 */
+        @media (max-height: 430px) and (orientation: landscape) {
+            margin-top: 0;
+            padding-top: var(--lv-sp-1);
+
+            &.lv-actions-compact .lv-btn-rate {
+                min-height: 44px;
+            }
+        }
+
         .lv-btn-wide {
             flex: 1;
             min-height: 46px;

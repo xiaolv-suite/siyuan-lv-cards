@@ -12,7 +12,7 @@
     --lv-accent-gold: rgb(148, 90, 23); /* 温暖星光金 / 警示暖色 */
     --lv-color-brand: rgb(94, 89, 203);
     --lv-color-brand-strong: rgb(80, 74, 189);
-    --lv-color-on-brand: var(--b3-theme-on-primary, rgb(255, 255, 255));
+    --lv-color-on-brand: rgb(255, 255, 255); /* 固定值：不读取宿主 --b3-theme-on-primary，避免主题污染 */
     --lv-color-text: rgb(39, 38, 53); /* 标题与正文近黑（融入微弱紫相，非死黑，明度18%） */
     --lv-color-text-muted: rgb(108, 106, 123); /* 辅助文字（对比度超 5:1） */
     --lv-color-canvas: rgb(247, 247, 250); /* 极浅同族底色：HSL(243°, 4%, 97.5%)，与卡片明度差2.5% */
@@ -234,7 +234,7 @@ body[data-theme-mode="dark"],
     --lv-accent-gold: rgb(251, 191, 36);
     --lv-color-brand: rgb(181, 175, 255);
     --lv-color-brand-strong: rgb(195, 190, 255);
-    --lv-color-on-brand: var(--b3-theme-on-primary, rgb(24, 24, 32));
+    --lv-color-on-brand: rgb(24, 24, 32); /* 固定值：不读取宿主 --b3-theme-on-primary，避免主题污染 */
     --lv-color-text: rgb(240, 238, 248);
     --lv-color-text-muted: rgb(178, 174, 196);
     --lv-color-canvas: rgb(21, 21, 30);
@@ -625,6 +625,7 @@ body[data-theme-mode="dark"],
     --b3-theme-background-light: var(--lv-color-canvas-subtle);
     --b3-theme-surface: var(--lv-color-surface);
     --b3-theme-surface-light: color-mix(in srgb, var(--lv-color-text) 5%, var(--lv-color-surface));
+    --b3-theme-surface-lighter: color-mix(in srgb, var(--lv-color-text) 8%, var(--lv-color-surface));
     --b3-border-color: var(--lv-border);
     --b3-theme-on-background: var(--lv-color-text);
     --b3-theme-on-surface: var(--lv-color-text-muted);

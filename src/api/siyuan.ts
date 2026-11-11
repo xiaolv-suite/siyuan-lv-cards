@@ -332,8 +332,10 @@ export const getExamPluginConfig = async (): Promise<{ examDate?: string } | nul
         if (typeof res === "string") {
             return JSON.parse(res);
         }
-    } catch {
-        // 静默隔离
+    } catch (error) {
+        // 跨插件私有配置读取失败属预期降级（未安装/未首次保存/格式变化），
+        // 返回值保持 null；仅记录可诊断日志，避免静默吞错。
+        console.warn("[siyuan-lv-cards] 读取小驴考试配置失败，考期联动按未配置处理", error);
     }
     return null;
 };

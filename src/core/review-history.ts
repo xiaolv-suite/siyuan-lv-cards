@@ -31,8 +31,12 @@ export interface ReviewHistorySnapshot<TCard = any> {
     counters: ReviewCounters;
     /** 仅当本次操作实际写入了正式 revlog 时为 true；跳过、重现卡与 Cram 模式均为 false，防止撤销时误删历史记录 */
     revlogAppended?: boolean;
-    /** 若本次操作为 Ctrl+D 解散归档卡片，记录被归档的 blockID 以供撤销时恢复 */
+    /** 若本次操作为 Ctrl+D 归档隐藏卡片，记录被归档的 blockID 以供撤销时恢复 */
     dismissedBlockID?: string;
+    /** 若本次操作为 S 今天不学（仅今日暂缓），记录被暂缓的 cardID 以供撤销时恢复 */
+    suspendedCardID?: string;
+    /** 单调递增快照序号（标量值，避免 Svelte 5 $state Proxy === 比对失配） */
+    snapshotSeq?: number;
 }
 
 export const MAX_REVIEW_HISTORY_DEPTH = 50;
@@ -54,6 +58,8 @@ export function createReviewHistorySnapshot<TCard>(input: {
     counters: ReviewCounters;
     revlogAppended?: boolean;
     dismissedBlockID?: string;
+    suspendedCardID?: string;
+    snapshotSeq?: number;
 }): ReviewHistorySnapshot<TCard> {
     return {
         queue: [...input.queue],
@@ -69,6 +75,8 @@ export function createReviewHistorySnapshot<TCard>(input: {
         counters: { ...input.counters },
         ...(input.revlogAppended !== undefined ? { revlogAppended: input.revlogAppended } : {}),
         ...(input.dismissedBlockID ? { dismissedBlockID: input.dismissedBlockID } : {}),
+        ...(input.suspendedCardID ? { suspendedCardID: input.suspendedCardID } : {}),
+        ...(input.snapshotSeq !== undefined ? { snapshotSeq: input.snapshotSeq } : {}),
     };
 }
 

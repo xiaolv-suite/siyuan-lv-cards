@@ -213,8 +213,12 @@
                 {#if onSuspendToday}
                     <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-border); border-radius: var(--lv-r-s);">
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size);">{t.review?.suspendToday ?? "今天不学"} <span class="ft__smaller ft__on-surface">(S)</span></div>
-                            <div class="ft__smaller ft__on-surface" style="margin-top: 2px;">仅今日暂缓，明日自动回到到期队列，保留全部 FSRS 复习进度。</div>
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size);">
+                                <span>{t.review?.suspendToday ?? "今天不学"}</span>
+                                <span class="lv-scope-badge lv-scope-badge--today">仅今日</span>
+                                <span class="ft__smaller ft__on-surface">(S)</span>
+                            </div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">仅今日暂缓出题，明日自动回到到期队列，保留全部 FSRS 进度（5 秒内可点撤销，或按 P/Q 恢复）。</div>
                         </div>
                         <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy} onclick={() => { onSuspendToday(); onCloseRetireModal(); }}>{t.review?.suspendToday ?? "今天不学"}</button>
                     </div>
@@ -222,16 +226,23 @@
                 {#if onDismissCard}
                     <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid var(--lv-border); border-radius: var(--lv-r-s);">
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size);">归档隐藏 <span class="ft__smaller ft__on-surface">(Ctrl+D)</span></div>
-                            <div class="ft__smaller ft__on-surface" style="margin-top: 2px;">保留内核 FSRS 进度，在本插件日常复习中不再出题（可按 P/Q 撤销或在卡库恢复；思源原生闪卡面板仍可见）。</div>
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size);">
+                                <span>归档隐藏</span>
+                                <span class="lv-scope-badge lv-scope-badge--archive">长期隐藏</span>
+                                <span class="ft__smaller ft__on-surface">(Ctrl+D)</span>
+                            </div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">保留内核 FSRS 进度，在本插件日常复习中不再出题；可按 P/Q 撤销，或在「卡库 → 已隐藏」恢复（思源原生闪卡面板仍可见）。</div>
                         </div>
                         <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy} onclick={() => { onDismissCard(); onCloseRetireModal(); }}>归档隐藏</button>
                     </div>
                 {/if}
                 <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid color-mix(in srgb, var(--lv-color-danger) 30%, var(--lv-border)); border-radius: var(--lv-r-s); background: color-mix(in srgb, var(--lv-color-danger) 4%, transparent);">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size); color: var(--lv-color-danger);">移出卡组（清空排期进度）</div>
-                        <div class="ft__smaller ft__on-surface" style="margin-top: 2px;">{t.review?.retireCardDesc ?? "从思源卡组彻底移除并清空该卡的内核 FSRS 复习进度（再次入组将按新卡从零重学；原笔记正文不受影响）。"}</div>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size); color: var(--lv-color-danger);">
+                            <span>移出卡组（清空排期进度）</span>
+                            <span class="lv-scope-badge lv-scope-badge--danger">不可撤销</span>
+                        </div>
+                        <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">{t.review?.retireCardDesc ?? "从思源卡组彻底移除并清空内核 FSRS 进度（再次入组将从零重学；原笔记正文不受影响）。"}</div>
                     </div>
                     <button type="button" class="b3-button lv-btn-danger b3-button--small" disabled={retireBusy || dismissBusy} onclick={onConfirmRetire}>
                         {retireBusy ? "处理中…" : (t.review?.retireCardConfirm ?? "确认移出")}
@@ -239,7 +250,7 @@
                 </div>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-1)">
-                <button class="b3-button b3-button--text" disabled={retireBusy || dismissBusy} onclick={onCloseRetireModal}>取消</button>
+                <button class="b3-button b3-button--text" disabled={retireBusy || dismissBusy} onclick={onCloseRetireModal}>取消（保留此卡）</button>
             </div>
         </div>
     </div>
@@ -314,6 +325,31 @@
             max-width: 48em;
             text-wrap: pretty;
             line-height: var(--lv-lh-reading, 1.65);
+        }
+
+        .lv-scope-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 1px 7px;
+            border-radius: var(--lv-r-pill, 999px);
+            font-size: 11px;
+            font-weight: var(--lv-fw-semibold);
+            line-height: 1.5;
+
+            &--today {
+                background: color-mix(in srgb, var(--lv-color-brand) 14%, transparent);
+                color: var(--lv-color-brand);
+            }
+
+            &--archive {
+                background: color-mix(in srgb, var(--lv-color-warn, #d97706) 15%, transparent);
+                color: var(--lv-color-warn, #b45309);
+            }
+
+            &--danger {
+                background: color-mix(in srgb, var(--lv-color-danger) 14%, transparent);
+                color: var(--lv-color-danger);
+            }
         }
     }
 

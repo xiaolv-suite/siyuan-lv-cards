@@ -38,6 +38,7 @@
         onOpenRetireModal,
         onOpenHelp,
         onFocusScope,
+        onOpenContextMenu,
     }: {
         scopeKey?: string;
         purpose?: SessionPurpose;
@@ -78,6 +79,7 @@
         onOpenRetireModal: () => void;
         onOpenHelp: () => void;
         onFocusScope?: () => void;
+        onOpenContextMenu?: (e: MouseEvent) => void;
     } = $props();
 
     let showMoreToolbar = $state(false);
@@ -191,7 +193,7 @@
     <button
         type="button"
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={`${t.review?.skip ?? "跳过"} (X)`}
+        title={`${t.review?.skip ?? "跳过"} (X) · 仅本场顺延，不影响 FSRS 记忆排期`}
         aria-label={t.review?.skip ?? "跳过"}
         aria-keyshortcuts="x 0"
         disabled={actionBusy}
@@ -213,6 +215,7 @@
         aria-keyshortcuts="e"
         disabled={!current || actionBusy}
         onclick={handleEditClick}
+        oncontextmenu={(e) => onOpenContextMenu?.(e)}
     >
         <LvIcon name="edit" size={13} />
         <span class="lv-tool-btn-label">{hasSvgCanvas && onOpenCanvasInEditor ? (t.review?.tbEditCanvas ?? "画布") : (t.review?.tbEdit ?? "编辑")}</span>
@@ -286,12 +289,13 @@
                     type="button"
                     class="lv-toolbar-menu-item"
                     disabled={actionBusy}
-                    title={t.review?.pauseTitle ?? "暂停这场复习"}
+                    title={t.review?.pauseTitle ?? "暂停这场复习（保留当前进度与队列返回今日）"}
                     aria-label={t.review?.pauseTitle ?? "暂停这场复习"}
                     onclick={() => { onPause(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="moon" size={16} /></span>
                     <span>{t.review?.tbPause ?? "暂停本场"}</span>
+                    <span class="lv-menu-scope">保留进度</span>
                 </button>
 
                 <!-- 阶段 B · I1：将“今天不学 / 归档隐藏 / 移出卡组”收口为单一“移出复习…”入口 -->
@@ -299,11 +303,12 @@
                     type="button"
                     class="lv-toolbar-menu-item lv-menu-danger"
                     disabled={!current || actionBusy}
-                    title={t.review?.retireCard ?? "移出复习…"}
+                    title="暂缓或移出此卡：今天不学 / 归档隐藏 / 移出卡组"
                     onclick={() => { onOpenRetireModal(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="ban" size={16} /></span>
                     <span>{t.review?.retireCard ?? "移出复习…"}</span>
+                    <span class="lv-menu-scope">今日/隐藏/清组</span>
                 </button>
 
                 <div class="lv-toolbar-menu-divider"></div>
@@ -601,6 +606,14 @@
                 color: var(--lv-color-brand);
                 font-weight: var(--lv-fw-semibold);
                 background: var(--lv-primary-soft);
+            }
+
+            .lv-menu-scope {
+                margin-left: auto;
+                font-size: 10.5px;
+                color: var(--lv-color-text-muted);
+                font-weight: var(--lv-fw-normal, 400);
+                white-space: nowrap;
             }
         }
 

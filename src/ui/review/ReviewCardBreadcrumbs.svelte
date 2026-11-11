@@ -10,6 +10,7 @@
         onToggleContext?: () => void;
         onToggleParentPath?: () => void;
         onOpenInEditor?: () => void;
+        onContextMenu?: (e: MouseEvent) => void;
     }
 
     let {
@@ -20,6 +21,7 @@
         onToggleContext = () => {},
         onToggleParentPath = () => {},
         onOpenInEditor = () => {},
+        onContextMenu,
     }: Props = $props();
 
     function handleToggleParent(e: MouseEvent | KeyboardEvent) {
@@ -68,9 +70,10 @@
         <button
             type="button"
             class="lv-breadcrumb-locate-btn"
-            title={t.review?.locateInSiYuan ?? "在思源中定位原块"}
+            title={(t.review?.locateInSiYuan ?? "在思源中定位原块") + "（右键呼出原生菜单）"}
             aria-label={t.review?.locateInSiYuan ?? "在思源中定位原块"}
             onclick={(e) => { e.stopPropagation(); onOpenInEditor(); }}
+            oncontextmenu={(e) => { e.stopPropagation(); onContextMenu?.(e); }}
             data-testid="review-locate-source-btn"
         >
             <LvIcon name="edit" size={12} />
@@ -99,9 +102,10 @@
         <button
             type="button"
             class="lv-breadcrumb-locate-btn"
-            title={t.review?.locateInSiYuan ?? "在思源中定位原块"}
+            title={(t.review?.locateInSiYuan ?? "在思源中定位原块") + "（右键呼出原生菜单）"}
             aria-label={t.review?.locateInSiYuan ?? "在思源中定位原块"}
             onclick={(e) => { e.stopPropagation(); onOpenInEditor(); }}
+            oncontextmenu={(e) => { e.stopPropagation(); onContextMenu?.(e); }}
             data-testid="review-locate-source-btn"
         >
             <LvIcon name="edit" size={12} />

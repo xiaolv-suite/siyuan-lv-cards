@@ -434,6 +434,14 @@ export default class LvCardsPlugin extends Plugin {
 
     public async refreshExamLinkage(): Promise<{ name: string; days: number; source: string } | null> {
         try {
+            // 优先走公开桥（考试已安装且暴露 getOverview 时），避免直读兄弟插件私有 petal 配置。
+            const { getExamOverviewSafely } = await import("./libs/ecosystem-bridge-kit");
+            const bridged = await getExamOverviewSafely();
+            if (bridged && Number.isFinite(bridged.days)) {
+                this.cachedExamLinkage = { name: "小驴考试 · 备考目标", days: bridged.days, source: "siyuan-exam" };
+                return this.cachedExamLinkage;
+            }
+            // 兼容降级：桥不可用（未安装/未暴露）时保留旧的私有配置读取。
             const { getExamPluginConfig } = await import("./api/siyuan");
             const cfg = await getExamPluginConfig();
             if (cfg?.examDate) {
