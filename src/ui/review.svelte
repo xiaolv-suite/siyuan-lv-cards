@@ -1818,6 +1818,9 @@
             showMessage(t.review?.sourceNotFound ?? "原笔记块不存在或已被删除", 2500, "info");
             return;
         }
+        if (zenMode) {
+            zenMode = false;
+        }
         suspendStopwatch();
         try {
             if (ctx.isMobile && typeof openMobileFileById === "function") {
