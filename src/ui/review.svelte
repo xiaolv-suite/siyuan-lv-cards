@@ -683,6 +683,7 @@
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
         try {
             if (ctx.isMobile && typeof openMobileFileById === "function") {
+                disarmReviewHistory(true);
                 openMobileFileById(ctx.app, id);
                 ctx.closeMobileReviewDialog?.();
             } else {
@@ -1177,7 +1178,11 @@
                 const confirmed = window.confirm(confirmMsg);
                 if (confirmed) {
                     persistSession();
-                    ctx.openDashboard();
+                    if (ctx.onClose) {
+                        ctx.onClose();
+                    } else {
+                        ctx.openDashboard();
+                    }
                 } else {
                     armReviewHistory();
                 }
@@ -1186,7 +1191,7 @@
         } catch { /* 历史不可用环境静默 */ }
     }
 
-    function disarmReviewHistory() {
+    function disarmReviewHistory(replaceOnly = false) {
         if (reviewPopHandler && typeof window !== "undefined") {
             try { window.removeEventListener("popstate", reviewPopHandler); } catch { /* ignore */ }
             reviewPopHandler = undefined;
@@ -1195,8 +1200,12 @@
             reviewHistoryArmed = false;
             try {
                 const hist = (window as unknown as { history?: History & { state?: unknown } }).history;
-                if (hist?.state?.lvCards && typeof hist.back === "function") {
-                    hist.back();
+                if (hist?.state?.lvCards) {
+                    if (replaceOnly && typeof hist.replaceState === "function") {
+                        hist.replaceState({}, "");
+                    } else if (typeof hist.back === "function") {
+                        hist.back();
+                    }
                 }
             } catch { /* ignore */ }
         }
@@ -1314,7 +1323,9 @@
             if (nextHead) {
                 await setCurrent(nextHead);
             } else {
+                stopTimeout();
                 current = null;
+                await loadQueue();
             }
         } catch (e: any) {
             if (isDisposed) return;
@@ -1827,6 +1838,7 @@
         suspendStopwatch();
         try {
             if (ctx.isMobile && typeof openMobileFileById === "function") {
+                disarmReviewHistory(true);
                 openMobileFileById(ctx.app, id);
                 ctx.closeMobileReviewDialog?.();
             } else {
@@ -2617,7 +2629,7 @@
         if (prevLeftDock || prevRightDock || prevBottomDock) {
             void applyZenMode(false);
         }
-        disarmReviewHistory();
+        disarmReviewHistory(true);
         throttledViewportChange.cancel();
         clearAutoSubmitTimer();
         if (targetCelebrationTimer) {
@@ -3116,8 +3128,7 @@
                 calc(10px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
             gap: 8px;
 
-            :global(.lv-hub) &,
-            :global(.b3-dialog__container) & {
+            :global(.lv-hub) & {
                 padding-top: 6px !important;
                 padding-bottom: 10px !important;
             }

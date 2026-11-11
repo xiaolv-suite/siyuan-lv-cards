@@ -75,7 +75,7 @@
 <style>
     .lv-zen-island {
         position: absolute;
-        top: 14px;
+        top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px));
         left: 50%;
         transform: translateX(-50%);
         z-index: var(--lv-z-sticky);
@@ -162,5 +162,12 @@
         background: color-mix(in srgb, var(--lv-color-brand) 12%, var(--lv-surface-hover));
         color: var(--lv-color-brand);
         border-color: var(--lv-primary-border);
+    }
+    @media (pointer: coarse) {
+        .lv-zen-tool-btn,
+        .lv-zen-exit-btn {
+            min-width: 36px;
+            min-height: 36px;
+        }
     }
 </style>

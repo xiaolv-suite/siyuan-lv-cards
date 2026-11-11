@@ -840,6 +840,8 @@ body[data-theme-mode="dark"],
         .b3-switch,
         .lv-btn-icon,
         .lv-zen-btn,
+        .lv-zen-tool-btn,
+        .lv-zen-exit-btn,
         .lv-link-button {
             position: relative;
             &::before {
@@ -1558,7 +1560,7 @@ pre,
 .lv-pause-dialog,
 .lv-dialog-card {
     width: min(520px, 92vw);
-    max-height: 88vh;
+    max-height: calc(var(--lv-vv-h, 100dvh) - 32px);
     overflow-y: auto;
     overscroll-behavior: contain;
     background: var(--lv-color-surface-raised, var(--lv-color-surface));
@@ -1566,6 +1568,7 @@ pre,
     border-radius: var(--lv-r-dialog, var(--lv-r-dialog));
     box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
     padding: var(--lv-sp-5);
+    padding-bottom: max(var(--lv-sp-5), env(safe-area-inset-bottom, 0px));
     text-align: left;
     box-sizing: border-box;
     animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease) both;
@@ -2602,87 +2605,6 @@ pre,
     }
     .lv-card {
         box-shadow: 0 24px 48px -12px color-mix(in srgb, black 16%, transparent), var(--lv-inset-shine);
-    }
-}
-
-.lv-zen-island {
-    position: fixed;
-    top: 14px;
-    right: 20px;
-    z-index: var(--lv-z-sticky);
-    display: inline-flex;
-    align-items: center;
-    gap: calc(var(--lv-space-unit) * 2);
-    padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline)) calc(var(--lv-space-unit) * 3);
-    border-radius: var(--lv-r-pill);
-    background: var(--lv-color-surface);
-    border: 1px solid var(--lv-border);
-    box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
-    opacity: 0.72;
-    transition: opacity var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease);
-
-    @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
-        background: color-mix(in srgb, var(--lv-color-surface) 85%, transparent);
-        backdrop-filter: blur(12px) saturate(1.15);
-        -webkit-backdrop-filter: blur(12px) saturate(1.15);
-    }
-
-    &:hover {
-        opacity: 1;
-        transform: translateY(-1px);
-    }
-
-    .lv-zen-tool-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 26px;
-        height: 26px;
-        padding: 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
-        border-radius: var(--lv-r-pill);
-        background: transparent;
-        border: none;
-        color: var(--lv-color-text-muted);
-        font-size: var(--lv-type-meta-size);
-        font-weight: var(--lv-fw-semibold);
-        cursor: pointer;
-        transition: all var(--lv-dur-1) var(--lv-ease);
-
-        &:hover:not(:disabled) {
-            color: var(--lv-color-brand);
-            background: color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
-        }
-        &.lv-zen-starred {
-            color: var(--lv-color-warning) !important;
-            svg { fill: currentColor; }
-        }
-    }
-
-    .lv-zen-island-sep {
-        width: 1px;
-        height: 14px;
-        background: var(--lv-border);
-        margin: 0 calc(var(--lv-space-unit) * 1);
-    }
-
-    .lv-zen-exit-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: calc(var(--lv-space-unit) * 2);
-        height: 26px;
-        padding: 0 calc(var(--lv-space-unit) * 4);
-        border-radius: var(--lv-r-pill);
-        background: transparent;
-        border: none;
-        color: var(--lv-color-text-muted);
-        font-size: var(--lv-type-meta-size);
-        cursor: pointer;
-        transition: all var(--lv-dur-1) var(--lv-ease);
-
-        &:hover {
-            color: var(--lv-color-brand);
-            background: color-mix(in srgb, var(--lv-color-brand) 10%, transparent);
-        }
     }
 }
 

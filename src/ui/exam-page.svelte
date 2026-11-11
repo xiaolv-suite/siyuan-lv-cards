@@ -606,6 +606,8 @@
         background: color-mix(in srgb, black 38%, transparent);
         display: flex; align-items: flex-start; justify-content: center;
         padding: var(--lv-sp-5);
+        padding-bottom: max(var(--lv-sp-5), env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
 
         @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
             backdrop-filter: blur(8px);
@@ -615,6 +617,8 @@
     .lv-editcard {
         width: 520px;
         max-width: 94vw;
+        max-height: calc(var(--lv-vv-h, 100dvh) - 24px);
+        overflow-y: auto;
         margin-top: 6vh;
         border-radius: var(--lv-r-dialog);
         box-shadow: var(--lv-shadow-3), var(--lv-inset-shine);

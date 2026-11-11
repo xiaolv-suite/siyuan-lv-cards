@@ -1,6 +1,6 @@
 import "./index.scss";
 
-import { Plugin, getAllEditor, openTab, openMobileFileById, getAllTabs, type subMenu } from "siyuan";
+import { Plugin, getAllEditor, openTab, openMobileFileById, getAllTabs, type subMenu, type TProtyleAction } from "siyuan";
 import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad, lvOmnisearch, lvAutomation, type LvSearchResultItem } from "./libs/notice";
 import * as siyuanNamespace from "siyuan";
 
@@ -2038,7 +2038,7 @@ export default class LvCardsPlugin extends Plugin {
         }
         showMessage(this.i18n.examReportWritten, 2000, "info");
         // AR-5：成功打开复盘文档
-        openTab({ app: this.app, doc: { id: docID } });
+        this.openSiYuanTarget(docID);
     }
 
     /** 笔记本归属集合（AR-11）：按 revlog 中出现的 blockID 分批查内核，落在该笔记本的才算命中范围 */
@@ -2096,7 +2096,7 @@ export default class LvCardsPlugin extends Plugin {
                 showMessage(this.i18n.quickCardFail, 2500, "error");
                 return;
             }
-            openTab({ app: this.app, doc: { id: docID } });
+            this.openSiYuanTarget(docID);
         } catch (error) {
             this.reportDialogOpenFailure(this.i18n.openHelp, error);
         }
@@ -2120,7 +2120,7 @@ export default class LvCardsPlugin extends Plugin {
                 ? ((this.i18n as any).sampleExists ?? this.i18n.sampleDone.replace("${n}", "0"))
                 : this.i18n.sampleDone.replace("${n}", res.createdCount);
             showMessage(msg, 2500, "info");
-            openTab({ app: this.app, doc: { id: res.docID } });
+            this.openSiYuanTarget(res.docID);
         } catch (e: any) {
             showMessage(e?.message ?? String(e), 3000, "error");
         } finally {
@@ -2145,7 +2145,7 @@ export default class LvCardsPlugin extends Plugin {
             showMessage(this.i18n.quickCardFail, 2500, "error");
             throw new Error(this.i18n.quickCardFail);
         }
-        openTab({ app: this.app, doc: { id: docID } });
+        this.openSiYuanTarget(docID);
         showMessage((this.i18n as any).dynamicBoardOpened ?? "已打开《闪卡动态看板与错题本》", 2500, "info");
         return docID;
     }
@@ -2412,7 +2412,8 @@ export default class LvCardsPlugin extends Plugin {
     private async openOnboarding() {
         try {
             const Onboarding = await loadOnboarding();
-            svelteDialog({
+            let closeOnboardingDialog = () => {};
+            const { dialog } = svelteDialog({
                 title: this.i18n.onboardingTitle,
                 component: Onboarding,
                 width: "min(560px, 94vw)",
@@ -2430,12 +2431,13 @@ export default class LvCardsPlugin extends Plugin {
                         await this.saveSettingsNow();
                     },
                     createSampleCards: nbId => this.createSampleCards(nbId),
-                    openHelp: () => this.openHelpDoc(),
-                    openSampleDoc: docId => openTab({ app: this.app, doc: { id: docId } }),
-                    openReview: () => this.openTabOf(TAB_REVIEW),
+                    openHelp: () => { closeOnboardingDialog(); void this.openHelpDoc(); },
+                    openSampleDoc: docId => { closeOnboardingDialog(); this.openSiYuanTarget(docId); },
+                    openReview: () => { closeOnboardingDialog(); this.openTabOf(TAB_REVIEW); },
                     onClose: () => this.markOnboarded(),
                 },
             });
+            closeOnboardingDialog = () => dialog.destroy();
         } catch (e) {
             this.reportDialogOpenFailure(this.i18n.onboardingTitle, e);
         }
@@ -2521,6 +2523,13 @@ export default class LvCardsPlugin extends Plugin {
         this.openTabOf(TAB_REVIEW, { scope, cram, entry });
     }
 
+    closeMobileHubDialog(): void {
+        if (this.mobileHubDialog) {
+            try { this.mobileHubDialog.close(); } catch { /* 已销毁 */ }
+            this.mobileHubDialog = null;
+        }
+    }
+
     closeMobileReviewDialog(): void {
         if (this.mobileReviewDialog) {
             try { this.mobileReviewDialog.close(); } catch { /* 已销毁 */ }
@@ -2528,16 +2537,22 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
+    public openSiYuanTarget(docOrBlockId: string, zoomIn = false): void {
+        if (!docOrBlockId) return;
+        this.closeMobileReviewDialog();
+        this.closeMobileHubDialog();
+        if (this.isMobileHost() && typeof openMobileFileById === "function") {
+            openMobileFileById(this.app, docOrBlockId, ["cb-get-focus", "cb-get-hl"] as TProtyleAction[]);
+            return;
+        }
+        openTab({ app: this.app, doc: zoomIn ? { id: docOrBlockId, zoomIn: true } : { id: docOrBlockId } });
+    }
+
     /** BI-3：入口返回点导航（doc:<文档ID> / hub:<Hub 页签>） */
     returnToEntryPoint(returnPoint: string) {
         const target = parseReturnPoint(returnPoint);
         if (target.type === "doc") {
-            if (this.isMobileHost() && typeof openMobileFileById === "function") {
-                openMobileFileById(this.app, target.docId);
-                this.closeMobileReviewDialog();
-                return;
-            }
-            openTab({ app: this.app, doc: { id: target.docId } });
+            this.openSiYuanTarget(target.docId);
         } else if (target.type === "hub") {
             this.openTabOf(TAB_DASHBOARD, { tab: target.tab });
         }
@@ -2664,7 +2679,7 @@ export default class LvCardsPlugin extends Plugin {
                 loadNotebooks: () => getNotebooks(),
                 // T02：来源清单「回源」——按文档 ID 跳回原文档
                 openDocById: (docId: string) => {
-                    openTab({ app: this.app, doc: { id: docId } });
+                    this.openSiYuanTarget(docId);
                 },
                 // AQ-14：signal 随调用传入——向导关闭/换源/重生取消后，晚到响应不写回、不触发 fallback
                 // ADR-7 第 3 步：生成阶段入账作业生命周期（drafting→generating→reviewing / failed/canceled）
@@ -2931,6 +2946,12 @@ export default class LvCardsPlugin extends Plugin {
             const mobile = this.isMobileHost();
             const view = await this.createAIWizardView(initialSource, onCreated);
             let unbindVv: (() => void) | null = null;
+            let closeWizardDialog = () => {};
+            const baseOpenDocById = view.props.openDocById;
+            view.props.openDocById = (docId: string) => {
+                closeWizardDialog();
+                baseOpenDocById?.(docId);
+            };
             const { dialog } = svelteDialog({
                 title: this.i18n.aiWizardTitle,
                 component: view.Component,
@@ -2943,6 +2964,7 @@ export default class LvCardsPlugin extends Plugin {
                     unbindVv = null;
                 },
             });
+            closeWizardDialog = () => dialog.destroy();
             if (mobile) {
                 dialog.element.classList.add("lv-mobile-sheet-dialog");
                 dialog.element.querySelector(".b3-dialog")?.classList.add("lv-mobile-sheet-dialog");
@@ -3530,6 +3552,7 @@ export default class LvCardsPlugin extends Plugin {
 
     /** Mobile Spec v1/v2：手机端闪卡中心宿主——全屏 Dialog，复用页签同源装配属性（buildHubMountProps 防双份漂移） */
     private async openHubMobileDialog(data?: Record<string, unknown>) {
+        this.closeMobileReviewDialog();
         if (this.mobileHubDialog && this.mobileHubDialog.element.isConnected) {
             // 单例去重：仅切换子页（与桌面页签 lv-switch-tab 契约一致）
             if (data?.tab) {
@@ -4039,7 +4062,7 @@ export default class LvCardsPlugin extends Plugin {
         }
         // AR-5：成功回显路径并打开文档（失败由调用方 catch 展示，报告可重试）
         showMessage((this.i18n as any).dashboard?.reportWritten ?? docID, 2500, "info");
-        openTab({ app: this.app, doc: { id: docID } });
+        this.openSiYuanTarget(docID);
     }
 
     /** T-周报（docs/41 P1）：自动把上周复盘写入「小驴闪卡/学习周报」文档——静默写入，不自动打开（区别于手动报告） */

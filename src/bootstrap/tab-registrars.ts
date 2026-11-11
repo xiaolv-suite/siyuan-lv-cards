@@ -6,7 +6,6 @@
  * 将庞大的生命周期装配与主入口解耦，使 src/index.ts 保持高度轻量与高内聚。
  */
 
-import { openTab } from "siyuan";
 import { showMessage } from "@/libs/notice";
 import { getBlockDOM, sqlQuery, probeAssetRefs, getBlockDocMap, getDocTitles, setBlockAttrs } from "@/api/siyuan";
 import { buildLeechAttrs } from "@/core/block-attributes";
@@ -111,6 +110,7 @@ export function buildHubMountProps(
                     dashboardBase: {
                         i18n: plugin.i18n,
                         app: plugin.app,
+                        openDoc: (id: string, zoomIn?: boolean) => plugin.openSiYuanTarget(id, Boolean(zoomIn)),
                         getRevlog: () => plugin.revlog,
                         getV2Status: () => plugin.flashcardV2,
                         getDailyTargets: () => ({
@@ -208,6 +208,7 @@ export function buildHubMountProps(
                     managerCtx: {
                         i18n: plugin.i18n,
                         app: plugin.app,
+                        openDoc: (id: string, zoomIn?: boolean) => plugin.openSiYuanTarget(id, Boolean(zoomIn)),
                         openOnboarding: () => plugin.openOnboarding(),
                         uiMode: plugin.settings.uiMode,
                         onReviewed: (cb: () => void) => {
@@ -434,10 +435,10 @@ export function buildHubMountProps(
                         titles: (ids: string[]) => getDocTitles(ids),
                         openSource: async (blockID: string) => {
                             try {
-                                openTab({ app: plugin.app, doc: { id: blockID, zoomIn: false } });
+                                plugin.openSiYuanTarget(blockID, false);
                             } catch {
                                 const rows = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${blockID.replace(/'/g, "''")}'`);
-                                openTab({ app: plugin.app, doc: { id: rows[0]?.root_id ? String(rows[0].root_id) : blockID } });
+                                plugin.openSiYuanTarget(rows[0]?.root_id ? String(rows[0].root_id) : blockID, false);
                             }
                         },
                     } : null,
@@ -533,10 +534,10 @@ export function buildHubMountProps(
                         isSuspendedToday: (blockID: string) => isSuspended(plugin.suspendToday, blockID),
                         openSource: async (blockID: string) => {
                             try {
-                                openTab({ app: plugin.app, doc: { id: blockID, zoomIn: false } });
+                                plugin.openSiYuanTarget(blockID, false);
                             } catch {
                                 const rows = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${blockID.replace(/'/g, "''")}'`);
-                                openTab({ app: plugin.app, doc: { id: rows[0]?.root_id ? String(rows[0].root_id) : blockID } });
+                                plugin.openSiYuanTarget(rows[0]?.root_id ? String(rows[0].root_id) : blockID, false);
                             }
                         },
                         openCard: (blockID: string) => plugin.openTabOf(TAB_DASHBOARD, { tab: "manage", focusBlockID: blockID }),
@@ -587,6 +588,8 @@ export function buildReviewMountProps(
         ctx: {
             i18n: plugin.i18n,
             app: plugin.app,
+            isMobile: typeof plugin.isMobileHost === "function" ? plugin.isMobileHost() : false,
+            closeMobileReviewDialog: hooks?.onClose ?? (() => plugin.closeMobileReviewDialog?.()),
             onClose: hooks?.onClose,
             preferredBudgetMin: () => plugin.settings.sessionBudgetMin,
             settings: () => ({

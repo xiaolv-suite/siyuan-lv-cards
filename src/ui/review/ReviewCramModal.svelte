@@ -192,12 +192,13 @@
 <style lang="scss">
     .lv-cram-dialog {
         width: min(520px, calc(100vw - 32px));
-        max-height: 90vh;
+        max-height: calc(var(--lv-vv-h, 100dvh) - 32px);
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: var(--lv-sp-3);
         padding: var(--lv-sp-4);
+        padding-bottom: max(var(--lv-sp-4), env(safe-area-inset-bottom, 0px));
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-l);

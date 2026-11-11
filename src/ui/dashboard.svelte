@@ -32,6 +32,7 @@
     export interface DashboardCtx {
         i18n: Record<string, any>;
         app: App;
+        openDoc?: (id: string, zoomIn?: boolean) => void;
         getRevlog: () => RevlogData;
         getV2Status: () => MigrationStatus | null;
         getDailyTargets: () => { new: number; review: number };
@@ -1471,7 +1472,11 @@
                         <button class="b3-button b3-button--small" onclick={() => ctx.rewriteWithAI(l.blockID)}>{t.leech.rewriteAI}</button>
                         <button class="b3-button b3-button--small" onclick={() => {
                             try {
-                                openTab({ app: ctx.app, doc: { id: l.blockID, zoomIn: true } });
+                                if (ctx.openDoc) {
+                                    ctx.openDoc(l.blockID, true);
+                                } else {
+                                    openTab({ app: ctx.app, doc: { id: l.blockID, zoomIn: true } });
+                                }
                             } catch (e: unknown) {
                                 showMessage(friendlyError(e, t), 2500, "error");
                             }
@@ -1762,7 +1767,7 @@
     }
     .lv-forecast-bar-fill {
         width: 100%;
-        background: var(--lv-color-cyan);
+        background: var(--lv-color-data);
         border-radius: var(--lv-r-pill);
         display: flex;
         flex-direction: column;

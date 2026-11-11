@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, tick } from "svelte";
+    import { onMount, tick, untrack } from "svelte";
     import { openTab } from "siyuan";
     import { sqlQuery } from "@/api/siyuan";
     import { safeDocTitleFromHPath, showDocTreeNativeMenu } from "@/libs/lv-notice-kit";
@@ -26,6 +26,7 @@
         /** BI-17：管理器视图状态持久化（可选——旧宿主不传则不恢复筛选） */
         view?: { initial: string | null; save: (v: string) => void };
         app: any;
+        openDoc?: (id: string, zoomIn?: boolean) => void;
         openOnboarding?: () => void;
         savedFilters: () => { name: string; filter: string }[];
         saveFilter: (name: string, filter: string) => void;
@@ -123,6 +124,7 @@
     let filterDirty = $state(false);
     let filterTimer: ReturnType<typeof setTimeout> | null = null;
     let starTogglingSet = $state<Set<string>>(new Set());
+    let starredSet = $state<Set<string>>(untrack(() => new Set(ctx.getStarredCardIDs?.() ?? [])));
     $effect(() => {
         const dirty = filterDirty;
         const nextFilter = filterText;
@@ -186,7 +188,7 @@
 
     let starredIDSet = $derived.by(() => {
         if (!starredOnly) return null;
-        return new Set(ctx.getStarredCardIDs?.() ?? []);
+        return starredSet;
     });
 
     const hasActiveFilters = $derived(
@@ -794,7 +796,11 @@
 
     function openDoc(block: SearchBlock) {
         try {
-            openTab({ app: ctx.app, doc: { id: block.id, zoomIn: false } });
+            if (ctx.openDoc) {
+                ctx.openDoc(block.id, false);
+            } else {
+                openTab({ app: ctx.app, doc: { id: block.id, zoomIn: false } });
+            }
         } catch (e: unknown) {
             showMessage(friendlyError(e, t), 2500, "error");
         }
@@ -844,6 +850,7 @@
         else void load();
         // 同步/其他窗口写入后，当前管理器保持筛选和页签位置但重读卡片快照。
         const offStores = ctx.onStoresChanged?.(() => {
+            starredSet = new Set(ctx.getStarredCardIDs?.() ?? []);
             if (storesChangedTimer) clearTimeout(storesChangedTimer);
             storesChangedTimer = setTimeout(() => {
                 storesChangedTimer = null;
@@ -852,6 +859,7 @@
             }, 180);
         });
         const offReviewed = ctx.onReviewed?.(() => {
+            starredSet = new Set(ctx.getStarredCardIDs?.() ?? []);
             if (storesChangedTimer) clearTimeout(storesChangedTimer);
             storesChangedTimer = setTimeout(() => {
                 storesChangedTimer = null;
@@ -1284,20 +1292,28 @@
                         <button
                             type="button"
                             class="b3-button b3-button--small lv-btn-ghost lv-mgr-star-btn"
-                            class:lv-btn-starred={(ctx.getStarredCardIDs?.() ?? []).includes(b.id)}
-                            title={(ctx.getStarredCardIDs?.() ?? []).includes(b.id) ? "取消星标" : "加入星标重点"}
-                            aria-label={(ctx.getStarredCardIDs?.() ?? []).includes(b.id) ? "取消星标" : "加入星标重点"}
-                            aria-pressed={(ctx.getStarredCardIDs?.() ?? []).includes(b.id)}
+                            class:lv-btn-starred={starredSet.has(b.id)}
+                            title={starredSet.has(b.id) ? "取消星标" : "加入星标重点"}
+                            aria-label={starredSet.has(b.id) ? "取消星标" : "加入星标重点"}
+                            aria-pressed={starredSet.has(b.id)}
                             disabled={starTogglingSet.has(b.id)}
                             onclick={async (e) => {
                                 e.stopPropagation();
                                 if (starTogglingSet.has(b.id)) return;
                                 if (ctx.toggleStarCard) {
-                                    starTogglingSet.add(b.id);
+                                    const nextBusy = new Set(starTogglingSet);
+                                    nextBusy.add(b.id);
+                                    starTogglingSet = nextBusy;
                                     try {
-                                        await ctx.toggleStarCard(b.id);
+                                        const added = await ctx.toggleStarCard(b.id);
+                                        const nextStarred = new Set(starredSet);
+                                        if (added) nextStarred.add(b.id);
+                                        else nextStarred.delete(b.id);
+                                        starredSet = nextStarred;
                                     } finally {
-                                        starTogglingSet.delete(b.id);
+                                        const nextAfter = new Set(starTogglingSet);
+                                        nextAfter.delete(b.id);
+                                        starTogglingSet = nextAfter;
                                     }
                                 }
                             }}
@@ -1324,7 +1340,7 @@
                         <LvIcon name="book" size={12} />
                         <span>{t.manager.copyRef ?? "复制块引"}</span>
                     </button>
-                    <button class="b3-button b3-button--small" onclick={(e: Event) => { e.stopPropagation(); openDoc(b); }}><LvIcon name="target" size={12} /> {t.manager.openDoc}</button>
+                    <button class="b3-button b3-button--small" onclick={(e: Event) => { e.stopPropagation(); openDoc(b); }}><LvIcon name="target" size={12} /> <span class="lv-mgr-opendoc-label">{t.manager.openDoc}</span></button>
                 </div>
             {/each}
         </div>
@@ -2043,7 +2059,8 @@
             gap: var(--lv-sp-2);
             .lv-row-main { flex: 1 1 0; min-width: 0; }
             > .b3-button { flex: none; width: auto; margin-left: 0; padding: 0 var(--lv-sp-2); }
-            > .lv-btn-tool span { display: none; }
+            > .lv-btn-tool span,
+            .lv-mgr-opendoc-label { display: none; }
         }
     }
 
@@ -2054,7 +2071,8 @@
             gap: var(--lv-sp-2);
             .lv-row-main { flex: 1 1 0; min-width: 0; }
             > .b3-button { flex: none; width: auto; margin-left: 0; padding: 0 var(--lv-sp-2); }
-            > .lv-btn-tool span { display: none; }
+            > .lv-btn-tool span,
+            .lv-mgr-opendoc-label { display: none; }
         }
     }
 </style>
