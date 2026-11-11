@@ -917,6 +917,52 @@ body[data-theme-mode="dark"],
     }
 }
 
+// ══ 软键盘弹起时（bindMobileVisualViewport 标记 lv-vv-keyboard-open）：
+//    粘底保存栏转为文档流，不再悬在键盘上方遮挡输入焦点 ══
+.lv-dialog.lv-vv-keyboard-open:has(.lv-settings :is(input:focus, textarea:focus)) .lv-settings-sticky-footer {
+    position: static !important;
+    box-shadow: none !important;
+    padding-bottom: max(var(--lv-sp-3), env(safe-area-inset-bottom, 0px));
+}
+
+// ══ 输入框专项精修：光标 / 占位符 / 自旋钮 / 搜索清除钮 / 禁用态 ══
+:is(.lv-page, .lv-dialog, .lv-hub, .lv-review) {
+    :is(input[type="text"], input[type="search"], input[type="number"], input[type="time"], input[type="date"], input:not([type]), textarea, .b3-text-field) {
+        caret-color: var(--lv-color-brand, var(--b3-theme-primary));
+        min-width: 0;
+    }
+
+    :is(input, textarea, .b3-text-field)::placeholder {
+        color: var(--lv-color-text-muted, var(--b3-theme-on-surface-light));
+        opacity: 1;
+    }
+
+    :is(input, textarea, select, .b3-text-field, .b3-select):disabled,
+    :is(input, textarea):read-only {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type="number"] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+    }
+
+    input[type="search"]::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+    }
+
+    ::selection {
+        background: color-mix(in srgb, var(--lv-color-brand, var(--b3-theme-primary)) 26%, transparent);
+    }
+}
+
 .lv-dialog-title-wrap {
     display: inline-flex;
     align-items: center;
