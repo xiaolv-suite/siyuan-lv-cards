@@ -2657,6 +2657,11 @@ pre,
         box-shadow: none !important;
         animation: none;
         overflow: hidden;
+        padding-top: env(safe-area-inset-top, 0px) !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        padding-left: env(safe-area-inset-left, 0px) !important;
+        padding-right: env(safe-area-inset-right, 0px) !important;
+        box-sizing: border-box !important;
     }
     .b3-dialog__scrim {
         background: var(--b3-theme-background, var(--lv-color-canvas));
