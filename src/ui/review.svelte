@@ -2522,7 +2522,7 @@
         getNotebooks().then(n => (notebooks = n)).catch(() => { /* 旁路 */ });
         if (typeof window !== "undefined" && window.visualViewport) {
             window.visualViewport.addEventListener("resize", onViewportChange);
-            window.visualViewport.addEventListener("scroll", onViewportChange);
+            window.visualViewport.addEventListener("scroll", onViewportChange, { passive: true });
         }
         // AT-10：设置保存后超时参数立即生效；评分风格/顺序等下一卡自然生效
         const offSettings = ctx.onSettingsChanged?.(() => {
@@ -2613,7 +2613,7 @@
         image.addEventListener("load", throttledRemeasure);
         window.addEventListener("resize", throttledRemeasure);
         window.visualViewport?.addEventListener("resize", throttledRemeasure);
-        window.visualViewport?.addEventListener("scroll", throttledRemeasure);
+        window.visualViewport?.addEventListener("scroll", throttledRemeasure, { passive: true });
         return () => {
             throttledRemeasure.cancel();
             observer?.disconnect();

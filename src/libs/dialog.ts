@@ -155,7 +155,7 @@ export function bindMobileVisualViewport(targetEl: HTMLElement | null | undefine
 
     sync();
     vv?.addEventListener("resize", sync);
-    vv?.addEventListener("scroll", sync);
+    vv?.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("resize", sync);
 
     return () => {
