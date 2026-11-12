@@ -2,6 +2,7 @@
  * 通用思源 API（非 riff/V2 域）。
  */
 import { fetchSyncPost } from "siyuan";
+import * as siyuanNs from "siyuan";
 import { dataStr } from "@/libs/kernel-response";
 import { requestKernelData } from "@/libs/kernel-request";
 import type { KernelRequestOptions } from "@/libs/kernel-request";
@@ -339,3 +340,15 @@ export const getExamPluginConfig = async (): Promise<{ examDate?: string } | nul
     }
     return null;
 };
+
+/** 移动端按 docId 打开原笔记（AX-8：经 src/api 收口，兼容 3.8.4–3.8.10+） */
+export function canOpenMobileFile(): boolean {
+    return typeof (siyuanNs as Record<string, unknown>).openMobileFileById === "function";
+}
+
+export function openMobileFile(app: unknown, id: string): void {
+    const fn = (siyuanNs as Record<string, unknown>).openMobileFileById;
+    if (typeof fn === "function") {
+        (fn as (a: unknown, docId: string) => void)(app, id);
+    }
+}

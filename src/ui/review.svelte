@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { rafThrottle } from "@/libs/throttle";
-    import { openTab, openMobileFileById } from "siyuan";
+    import { openTab } from "siyuan";
     import { showMessage, notifyInline, lvActivity, lvLaunchpad, lvNotify } from "@/libs/notice";
     import { isNativeDockVisible, showDocTreeNativeMenu, toggleNativeDock } from "@/libs/lv-notice-kit";
     import {
@@ -9,7 +9,7 @@
         batchSetRiffCardsDueTime, getRiffCards, getNotebookRiffCards, getTreeRiffCards,
         type RiffDueCard, type RiffDeck, type Rating,
     } from "@/api/riff";
-    import { getNotebooks, getBlockAttrs, getBlockDOM, sqlQuery, type Notebook } from "@/api/siyuan";
+    import { getNotebooks, getBlockAttrs, getBlockDOM, sqlQuery, canOpenMobileFile, openMobileFile, type Notebook } from "@/api/siyuan";
     import * as siyuanApi from "@/api/siyuan";
     import { isCardNew, calcStreak, isLeechCard, DEFAULT_LEECH_THRESHOLD, type RevlogData } from "@/core/revlog";
     import type { Rating1to4 } from "@/core/card-types";
@@ -682,9 +682,9 @@
         }
         showMessage(t.review?.canvasEditOpen ?? "已在思源编辑器中打开画布进行编辑，保存后切回闪卡即可自动同步", 3000, "info");
         try {
-            if (ctx.isMobile && typeof openMobileFileById === "function") {
+            if (ctx.isMobile && canOpenMobileFile()) {
                 disarmReviewHistory(true);
-                openMobileFileById(ctx.app, id);
+                openMobileFile(ctx.app, id);
                 ctx.closeMobileReviewDialog?.();
             } else {
                 openTab({ app: ctx.app, doc: { id, zoomIn: true } });
@@ -1837,9 +1837,9 @@
         }
         suspendStopwatch();
         try {
-            if (ctx.isMobile && typeof openMobileFileById === "function") {
+            if (ctx.isMobile && canOpenMobileFile()) {
                 disarmReviewHistory(true);
-                openMobileFileById(ctx.app, id);
+                openMobileFile(ctx.app, id);
                 ctx.closeMobileReviewDialog?.();
             } else {
                 openTab({ app: ctx.app, doc: { id, zoomIn: true } });
