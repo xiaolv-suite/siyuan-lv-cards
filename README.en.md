@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.233.1** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.233.2** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -24,6 +24,17 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 ---
 
 ## 🆕 What's New
+
+- **SiYuan 3.8.10+ Native Adaptations**: Review cards in Zen focus mode automatically fold/restore native docks; review toolbar and source breadcrumbs support native document tree context menus (`showDocTreeNativeMenu`).
+- **Mobile Review Scroll Lock Resolution**: Rebuilt touch swipe gesture rating: vertical swipes yield immediately to page scroll when card content overflows, eliminating stuck scroll on mobile devices while keeping horizontal rating swipes intact; compact session banners on narrow viewports; touchscreens hide keyboard hint pills.
+- **Input Method & Keyboard Defense**: All 8 card creation, deck rename, goals, relations, and fill/typing quiz inputs yield during IME composition to prevent premature submission or rating; settings sticky footer gains iOS safe area inset.
+- **Reliability & Motion**: Desktop hover affordances on chips, modes, and segment buttons; ecosystem-wide clipboard error-handling contracts enforced.
+
+<details>
+<summary>View Historical Release Highlights (v0.233.1 and earlier)</summary>
+
+### v0.233.1
+* External clipping and atomic card authoring separation (Protocol v1.7.8), mobile full-screen exit flow via `openMobileFileById`, and Launchpad topbar startup convergence.
 
 ### v0.233.0 (Latest)
 * **Epoch 7 Full Ecosystem Infrastructure Federation (Protocol v1.6.0)**:

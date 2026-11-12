@@ -8,9 +8,9 @@
 
 让思源笔记成为记得住、用得上、找得到、改得动、负担得起、带得走的长期知识资产
 
-**当前版本：v0.233.1** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
+**当前版本：v0.233.2** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
 
-[![Release](https://img.shields.io/badge/release-v0.233.1-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
+[![Release](https://img.shields.io/badge/release-v0.233.2-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
 [![思源笔记](https://img.shields.io/badge/思源笔记-%3E%3D%203.8.4-brightgreen.svg)](https://b3log.org/siyuan)
 [![算法引擎](https://img.shields.io/badge/算法-内核原生%20FSRS-blueviolet.svg)](https://github.com/open-spaced-repetition/fsrs4anki)
 [![License: MIT](https://img.shields.io/github/license/xiaolv-suite/siyuan-lv-cards)](./LICENSE)
@@ -213,7 +213,15 @@
 
 ## 📝 最近更新动态
 
-### v0.233.1（最新）
+- **思源 3.8.10+ 原生特性适配**：复习卡片进入沉浸专注模式自动协同折叠原生停靠栏，退出时平滑恢复；复习工具栏与卡片面包屑支持右键呼出原生文档树菜单（`showDocTreeNativeMenu`）。
+- **移动端复习页「无法下滑、卡住」根因彻底根治**：重构滑动评分手势判定——当内容纵向溢出可滚动时，纵向占优手势自动让路给页面滚动，横滑评分完全不受影响；复习会话横幅窄屏自动切换紧凑模式，触屏隐藏键盘快捷键提示。
+- **输入法合成期全域守卫**：卡包创建/改名、速选卡包、批量卡组、目标编辑、关系面板、打字题与填空题判定等 8 处输入全面增加 IME 合成期守卫，不再以拼音半成品误建卡包或误判答案。
+- **双端体验打磨与防线**：移动端设置页吸底栏补齐 iOS 安全区边距；芯片/模式/分段按钮增加桌面端 hover 悬停高亮；全生态剪贴板写入失败覆盖契约固化。
+
+<details>
+<summary>展开查看历史版本更新（v0.233.1 及更早版本 · 完整记录见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
+
+### v0.233.1
 * **外部摘录与原子制卡分路（Protocol v1.7.8 制卡契约强化）**：外部摘录确切新对象回执、稳定请求身份与持久恢复账本，粗摘录不再写入 FSRS 复习队列；修复手机端遮挡编辑器头部排版；
 * **移动端全屏退场机制闭环**：在手机端点击卡片关联原笔记自动调用 `openMobileFileById` 并收起复习模态框，底层文档即刻呈现；
 * **顶栏罗盘防抖与自愈守护**：启动微任务防抖聚合，思源重启/同步后顶栏图标由 MutationObserver 单例自动自愈。
