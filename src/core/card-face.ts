@@ -1,0 +1,475 @@
+/**
+ * AS-3 富内容卡面分析（纯逻辑，node 可单测）。
+ * 卡面 HTML 由内核 getBlockDOM 渲染（公式 KaTeX/代码/表格原生可用）；本模块对卡面做
+ * 富内容特征识别，供复习面板显示「渲染提示行」（公式/图片/嵌入/代码/表格/超长链接 +
+ * 窄屏横向滚动提示）——提示只是告知特征，不改变渲染本身。
+ * 降级口径：加载失败由调用方显示占位+重试（UI 态，不入本模块）；问题态遮挡沿用既有
+ * CSS 掩码（lv-masked），并提供问题态 HTML 副本，避免读屏和复制时直接读到答案。
+ */
+
+import { parseDelimitedQa, maskDelimitedQaInHtml } from "./delimited-qa";
+import {
+    isSuperBlockHtml,
+    maskSuperBlockForQuestion,
+    renderSuperBlockAnswerFace,
+    extractSuperBlockTexts,
+} from "./superblock-qa";
+
+export interface FaceRichness {
+    /** 公式（KaTeX/MathJax 渲染产物） */
+    formula: boolean;
+    image: boolean;
+    /** 嵌入块/iframe */
+    embed: boolean;
+    code: boolean;
+    table: boolean;
+    /** 超长链接（≥100 字符，窄屏必横向溢出） */
+    longLink: boolean;
+}
+
+const RICHNESS_RULES: { key: keyof FaceRichness; pattern: RegExp }[] = [
+    { key: "formula", pattern: /class="katex"|class="MathJax"|language-math/i },
+    { key: "image", pattern: /<img\b|<svg\b(?![\s\S]*?(?:iconDot|#icon))/i },
+    { key: "embed", pattern: /NodeBlockQueryEmbed|<iframe\b/i },
+    { key: "code", pattern: /<pre\b|<code\b/i },
+    { key: "table", pattern: /<table\b/i },
+    { key: "longLink", pattern: /https?:\/\/[^\s<>"]{100,}/i },
+];
+
+/** 全 false 基值 */
+export function plainFace(): FaceRichness {
+    return { formula: false, image: false, embed: false, code: false, table: false, longLink: false };
+}
+
+/** 富内容特征识别（空串/纯文本=全 false） */
+export function analyzeFaceRichness(html: string): FaceRichness {
+    const src = html ?? "";
+    const out = plainFace();
+    for (const { key, pattern } of RICHNESS_RULES) {
+        out[key] = pattern.test(src);
+    }
+    return out;
+}
+
+/** 是否含任一富内容特征（提示行显示开关） */
+export function hasRichContent(r: FaceRichness): boolean {
+    return r.formula || r.image || r.embed || r.code || r.table || r.longLink;
+}
+
+/** 提示行条目（有序 i18n 键，aiFace.hint.<key>；稳定顺序便于读屏） */
+export function faceHintKeys(r: FaceRichness): string[] {
+    return RICHNESS_RULES.filter(({ key }) => r[key]).map(({ key }) => `aiFace.hint.${key}`);
+}
+
+/**
+ * 从卡面富内容分析结果推导提示键列表（无富内容或为 null 时返回空数组）
+ */
+export function deriveFaceHints(faceRich: FaceRichness | null | undefined): string[] {
+    return faceRich && hasRichContent(faceRich) ? faceHintKeys(faceRich) : [];
+}
+
+/**
+ * 将提示行 i18n 键（如 "aiFace.hint.formula"）解析为本地化展示文本
+ */
+export function resolveFaceHintLabel(
+    key: string,
+    i18nAiFaceHints: Record<string, string> = {}
+): string {
+    const parts = key.split(".");
+    const name = parts[parts.length - 1];
+    return i18nAiFaceHints[name] ?? key;
+}
+
+/**
+ * 判定卡面 HTML 中是否包含 SVG 画布或 Excalidraw 绘图
+ */
+export function hasSvgOrCanvasDrawing(html: string | undefined): boolean {
+    if (!html) return false;
+    return /<svg\b/i.test(html) || /\.svg\b/i.test(html) || /excalidraw/i.test(html);
+}
+
+/**
+ * 判定卡面是否已就绪（具有 HTML 字符串且未发生加载错误）
+ */
+export function isCardFaceReady(cardHtml: string | undefined | null, faceError: string): boolean {
+    return Boolean(cardHtml) && !faceError;
+}
+
+/** 挖空（高亮）段选择器：内核 getBlockDOM 把 ==text== 渲染为 span[data-type=mark]（3.8.x 实测），
+ * HTML 导出/其他来源可能是 <mark>；两态都要覆盖，否则问题态遮罩失效、答案明文泄露 */
+export const MARK_SELECTOR = "mark, span[data-type='mark']";
+
+/** 提取卡面挖空文本合集（去空白），供打字判分/干扰项采样/配对游戏 */
+export function extractMarkTexts(holder: HTMLElement): string[] {
+    return Array.from(holder.querySelectorAll(MARK_SELECTOR))
+        .map(m => (m.textContent ?? "").trim())
+        .filter(Boolean);
+}
+
+/**
+ * Create a display-only question-side copy: marked answers remain the same
+ * approximate width, while their text/media are absent from selection and the
+ * accessibility tree. Keep the original HTML for answer reveal and scoring.
+ */
+export function maskMarkedAnswersForQuestion(html: string): string {
+    if (typeof document === "undefined") return String(html ?? "");
+
+    // 0. 优先检测是否为思源超级块闪卡（SuperBlock）：首子块为问题，后续所有子块为答案！
+    // 彻底解决在问题态把背面所有答案块当成题面提前剧透曝光的问题
+    if (isSuperBlockHtml(html)) {
+        const sbMasked = maskSuperBlockForQuestion(html);
+        if (sbMasked !== html) return sbMasked;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = String(html ?? "");
+    const marks = Array.from(template.content.querySelectorAll(MARK_SELECTOR));
+    if (marks.length > 0) {
+        let idx = 0;
+        for (const mark of marks) {
+            idx++;
+            const originalText = (mark.textContent ?? "").trim();
+            const length = Math.max(1, Array.from(mark.textContent ?? "").length);
+            mark.textContent = "\u00a0".repeat(length);
+            mark.setAttribute("aria-hidden", "true");
+            mark.setAttribute("data-cloze-idx", String(idx));
+            mark.setAttribute("data-real-answer", originalText);
+            mark.setAttribute("title", marks.length > 1 ? `第 ${idx} 空（点击揭晓）` : "答案遮蔽（点击揭晓）");
+        }
+        return template.innerHTML;
+    }
+
+    // 存量闪卡无损遮罩自适应：若无 == 标记，检查是否存在 :: 概念分隔或 Q/A 问答
+    maskDelimitedQaInHtml(template.content);
+    return template.innerHTML;
+}
+
+export interface RenderedCardFace {
+    /** 问题态 HTML（答案已安全遮蔽，公式/代码/排版正常解析，防读屏泄露） */
+    questionHtml: string;
+    /** 答案态 HTML（答案已高亮揭晓，与题干形成鲜明对照） */
+    answerHtml: string;
+    /** 卡面包含的富文本/公式/代码/图片等特征分析 */
+    richness: FaceRichness;
+    /** 提取出的所有答案文本片段集合 */
+    extractedAnswers: string[];
+    /** 卡片识别类型（供卡面呈现类型认知预备徽章） */
+    cardType: "cloze" | "qa" | "code" | "list";
+    /** 挖空数量（若为挖空卡） */
+    clozeCount: number;
+}
+
+function escapeHtml(text: string): string {
+    return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+/**
+ * 轻量级安全卡面 Markdown 解析器：
+ * 转换公式、代码、粗斜体、图片和段落，与思源内核卡面渲染语义保持一致。
+ */
+export function formatMarkdownToSafeHtml(markdown: string): string {
+    let text = String(markdown ?? "");
+    if (!text.trim()) return "";
+
+    // 一次扫描保护代码、图片和公式；先开始的结构拥有内部文本，避免图片属性二次转义
+    // 或把代码示例里的 Markdown 图片变成真实图片。占位前缀避开原文，保留用户的字面标记。
+    let tokenPrefix = "@@LV_CARD_TOKEN_";
+    while (text.includes(tokenPrefix)) tokenPrefix += "_";
+    const protectedHtml: string[] = [];
+
+    // 1. 保护并安全清洗内联 SVG 矢量画布与 Excalidraw 画布（Issue #14）
+    // 严格排除思源列表点（iconDot）与系统小图标，防止列表圆点被放大为巨大黑球
+    text = text.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, (svgRaw) => {
+        if (/<use\b[^>]*(?:iconDot|#icon)/i.test(svgRaw) || /class=["'][^"']*protyle-action/i.test(svgRaw)) {
+            return svgRaw;
+        }
+        let cleanSvg = svgRaw
+            .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+            .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+            .replace(/javascript:/gi, "");
+        if (!/class\s*=/i.test(cleanSvg)) {
+            cleanSvg = cleanSvg.replace(/<svg\b/i, '<svg class="lv-card-svg"');
+        } else if (!cleanSvg.includes("lv-card-svg")) {
+            cleanSvg = cleanSvg.replace(/class=["']([^"']*)["']/i, (_match, cls) => `class="${cls} lv-card-svg"`);
+        }
+        return `${tokenPrefix}${protectedHtml.push(cleanSvg) - 1}@@`;
+    });
+
+    text = text.replace(/```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`([^`\n]+?)`|!\[([^\]]*)\]\(([^)\s]+)\)|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g,
+        (_m, lang, blockCode, inlineCode, alt, url, blockMath, math) => {
+            let html: string;
+            if (blockCode !== undefined) {
+                const cls = lang ? ` class="language-${escapeHtml(lang)}"` : "";
+                html = `<pre><code${cls}>${escapeHtml(blockCode.trim())}</code></pre>`;
+            } else if (inlineCode !== undefined) {
+                html = `<code>${escapeHtml(inlineCode)}</code>`;
+            } else if (url !== undefined) {
+                html = `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" class="lv-card-img" />`;
+            } else if (blockMath !== undefined) {
+                html = `<div class="language-math katex-display">${escapeHtml(blockMath.trim())}</div>`;
+            } else {
+                html = `<span class="language-math katex-inline">${escapeHtml(math.trim())}</span>`;
+            }
+            return `${tokenPrefix}${protectedHtml.push(html) - 1}@@`;
+        });
+
+    // 3. 转义普通文本中的 HTML 字符
+    text = escapeHtml(text);
+
+    // 5. 粗体与斜体
+    text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+    // 6. 换行与段落
+    text = text.replace(/\n{2,}/g, "</p><p>");
+    text = text.replace(/\n/g, "<br/>");
+    text = `<p>${text}</p>`;
+
+    // 7. 单次还原，保护结构内的字面内容不再参与 Markdown 解析。
+    text = text.replace(new RegExp(`${tokenPrefix}(\\d+)@@`, "g"), (_m, idx) => protectedHtml[Number(idx)] ?? "");
+
+    // 清理可能产生的空段落
+    return text.replace(/<p>\s*<\/p>/g, "");
+}
+
+/**
+ * 统一卡面解析与双态遮蔽管线（Unified Card Face Pipeline）：
+ * 支持从问答题（Q & A）或带 ==答案== 挖空的 Markdown 产出标准问题态与答案态 HTML。
+ * 纯逻辑函数，在 Node/Vitest 和浏览器端均可秒级运行，完全无需依赖思源在线内核。
+ */
+export function renderUnifiedCardFace(input: {
+    markdown?: string;
+    question?: string;
+    answer?: string;
+    memo?: string;
+    template?: "qa" | "cloze";
+    /** 参考答案标题，用于国际化；缺省为 "参考答案" */
+    answerLabel?: string;
+    /** 双向卡逆向回忆模式（A ➔ Q） */
+    reversed?: boolean;
+}): RenderedCardFace {
+    const template = input.template ?? (input.markdown ? "cloze" : "qa");
+    let q = (input.question ?? "").trim();
+    let a = (input.answer ?? "").trim();
+    let md = (input.markdown ?? "").trim();
+
+    // 如果未传 markdown 但传了 q 和 a
+    if (!md && (q || a)) {
+        if (template === "cloze" && q.includes("____")) {
+            md = q.split("____").join(a ? `==${a}==` : "==答案==");
+        } else if (template === "cloze" && a) {
+            md = `${q} ==${a}==`;
+        }
+    }
+
+    const extractedAnswers: string[] = [];
+    // 单个等号属于答案内容（常见于公式/代码），只有连续两个等号才是挖空边界。
+    const clozePattern = /(?<!=)==((?:[^=]|=(?!=))+)==(?!=)/g;
+    const answerMatches = [...md.matchAll(clozePattern)];
+    const hasCloze = answerMatches.length > 0;
+
+    let questionHtml = "";
+    let answerHtml = "";
+
+    if (hasCloze) {
+        // 提取所有被 == 包裹的挖空答案
+        for (const m of answerMatches) {
+            const val = m[1]?.trim();
+            if (val) extractedAnswers.push(val);
+        }
+
+        const isMulti = answerMatches.length > 1;
+
+        // 问题态：将 ==答案== 替换为语义化的遮蔽占位符（多空自动标号）
+        let qIdx = 0;
+        const qMd = md.replace(clozePattern, (_m, _ans) => {
+            qIdx++;
+            return isMulti ? `@@MASKED_SLOT_${qIdx}@@` : `@@MASKED_SLOT@@`;
+        });
+        const formattedQ = formatMarkdownToSafeHtml(qMd);
+        questionHtml = isMulti
+            ? formattedQ.replace(
+                /@@MASKED_SLOT_(\d+)@@/g,
+                (_m, n) => `<mark class="lv-masked" data-type="mark" aria-hidden="true" title="答案遮蔽第 ${n} 空"><span class="lv-mask-slot">［ ${n}: 回忆这里 ］</span></mark>`
+            )
+            : formattedQ.replace(
+                /@@MASKED_SLOT@@/g,
+                `<mark class="lv-masked" data-type="mark" aria-hidden="true" title="答案遮蔽"><span class="lv-mask-slot">［ 回忆这里 ］</span></mark>`
+            );
+
+        // 答案态：将 ==答案== 替换为高亮揭晓标记（多空带微徽标）
+        let aIdx = 0;
+        const aMd = md.replace(clozePattern, (_m, ans) => {
+            aIdx++;
+            return isMulti ? `@@REVEALED_START_${aIdx}@@${ans}@@REVEALED_END@@` : `@@REVEALED_START@@${ans}@@REVEALED_END@@`;
+        });
+        const formattedA = formatMarkdownToSafeHtml(aMd);
+        answerHtml = isMulti
+            ? formattedA
+                .replace(/@@REVEALED_START_(\d+)@@/g, (_m, n) => `<mark class="lv-revealed" data-type="mark"><span class="lv-revealed-idx">${n}</span><span class="lv-revealed-text">`)
+                .replace(/@@REVEALED_END@@/g, `</span></mark>`)
+            : formattedA
+                .replace(/@@REVEALED_START@@/g, `<mark class="lv-revealed" data-type="mark"><span class="lv-revealed-text">`)
+                .replace(/@@REVEALED_END@@/g, `</span></mark>`);
+    } else {
+        // 普通问答模式（支持存量格式 :: 与 Q/A 前缀智能拆分、块备注答案与双向卡模式）
+        let displayQ = q || md;
+        let displayA = a;
+        let label = input.answerLabel ?? "参考答案";
+
+        // 存量卡格式自适应：若未显式传 a 且未带挖空，尝试从 md 中智能解析 :: 或 Q/A
+        if (!displayA && !q && md) {
+            const delimited = parseDelimitedQa(md);
+            if (delimited) {
+                displayQ = delimited.question;
+                displayA = delimited.answer;
+                label = input.answerLabel ?? (delimited.format === "double-colon" ? "概念释义" : "参考答案");
+            } else if (input.memo?.trim()) {
+                // 存量块备注作为答案
+                displayA = input.memo.trim();
+                label = input.answerLabel ?? "思源块备注答案";
+            }
+        } else if (!displayA && input.memo?.trim()) {
+            displayA = input.memo.trim();
+            label = input.answerLabel ?? "思源块备注答案";
+        }
+
+        if (input.reversed && a) {
+            displayQ = a;
+            displayA = q || md;
+            label = input.answerLabel ?? "原问题 / 概念";
+        }
+
+        if (displayA) extractedAnswers.push(displayA);
+
+        questionHtml = `<div class="lv-card-q-section">${formatMarkdownToSafeHtml(displayQ)}</div>`;
+        if (displayA) {
+            answerHtml = [
+                `<div class="lv-card-q-section">${formatMarkdownToSafeHtml(displayQ)}</div>`,
+                `<div class="lv-card-answer-divider"></div>`,
+                `<div class="lv-card-a-section">`,
+                `  <div class="lv-eyebrow lv-card-a-label">${escapeHtml(label)}</div>`,
+                `  <div class="lv-card-a-body">${formatMarkdownToSafeHtml(displayA)}</div>`,
+                `</div>`,
+            ].join("\n");
+        } else {
+            answerHtml = questionHtml;
+        }
+    }
+
+    const richness = analyzeFaceRichness(answerHtml || questionHtml);
+
+    let cardType: "cloze" | "qa" | "code" | "list" = "qa";
+    if (hasCloze) {
+        cardType = "cloze";
+    } else if (richness.code) {
+        cardType = "code";
+    } else if (
+        (q && (q.includes("\n- ") || q.includes("\n1. "))) ||
+        (a && (a.includes("\n- ") || a.includes("\n1. "))) ||
+        md.includes("\n- ") ||
+        md.includes("\n1. ")
+    ) {
+        cardType = "list";
+    }
+
+    return {
+        questionHtml,
+        answerHtml,
+        richness,
+        extractedAnswers,
+        cardType,
+        clozeCount: hasCloze ? extractedAnswers.length : 0,
+    };
+}
+
+export {
+    isSuperBlockHtml,
+    maskSuperBlockForQuestion,
+    renderSuperBlockAnswerFace,
+    extractSuperBlockTexts,
+};
+
+/**
+ * 提取卡片期望参考答案（按挖空标记 > 超级块背面 > 存量问答语法 > 纯文本回退顺序提取）
+ */
+export function extractExpectedCardAnswer(cardHtml: string): string {
+    if (!cardHtml) return "";
+    if (typeof document === "undefined") return "";
+    const holder = document.createElement("div");
+    holder.innerHTML = cardHtml;
+    const marks = extractMarkTexts(holder);
+    if (marks.length > 0) {
+        return marks.join(" / ");
+    }
+    if (isSuperBlockHtml(cardHtml)) {
+        const sbTexts = extractSuperBlockTexts(cardHtml);
+        return sbTexts?.answerText ? sbTexts.answerText : (holder.textContent ?? "").trim();
+    }
+    const rawText = (holder.textContent ?? "").trim();
+    const delimited = parseDelimitedQa(rawText);
+    return delimited?.answer ? delimited.answer : rawText;
+}
+
+export interface CardAttrsMetadata<TOccl = any> {
+    occlusion: TOccl | null;
+    customAnswer: string;
+    memo: string;
+    cardMemo: string;
+    isCustomPluginAnswer: boolean;
+    expectedText: string;
+    customRiffTitle: string;
+}
+
+/**
+ * 从块属性中解析遮挡数据与助记/插件自定义答案（包含闪卡工具箱 custom-riff-title 自定义题面）
+ */
+export function parseCardAttrsMetadata<TOccl = any>(
+    attrs: Record<string, string>,
+    currentExpectedText: string,
+    rawHolderText: string,
+    marksCount: number,
+    parseOcclusionFn: (attrs: Record<string, string>) => TOccl | null
+): CardAttrsMetadata<TOccl> {
+    const occlusion = parseOcclusionFn(attrs);
+    const customAnswer = String(attrs["custom-card-answer"] || attrs["custom-flashcard-answer"] || attrs["custom-exam-answer"] || "").trim();
+    const memo = String(attrs.memo || attrs["custom-card-memo"] || attrs["custom-memo"] || attrs["custom-exam-analysis"] || "").trim();
+    const customRiffTitle = String(attrs["custom-riff-title"] || attrs["custom-card-title"] || "").trim();
+    const isCustomPluginAnswer = Boolean(customAnswer);
+    const cardMemo = customAnswer || memo;
+    let expectedText = currentExpectedText;
+    if (marksCount === 0 && (!expectedText || expectedText === rawHolderText) && cardMemo) {
+        expectedText = cardMemo;
+    }
+    return {
+        occlusion,
+        customAnswer,
+        memo,
+        cardMemo,
+        isCustomPluginAnswer,
+        expectedText,
+        customRiffTitle,
+    };
+}
+
+
+/**
+ * 把用户填写的自定义卡面 CSS 限定在卡面容器内，避免 `.b3-button { display:none }` 之类的规则
+ * 波及设置弹窗和思源界面；同时去掉能闭合 <style> 或引入外部资源的片段。
+ * 用 CSS 原生嵌套包裹：`.lv-card-content {…}` 会变成「作用域内的 .lv-card-content」，
+ * 直接写的声明（如 `font-family: serif;`）作用于作用域容器本身。
+ */
+export function scopeCustomCardCss(rawCss: string | undefined | null, scopeSelector: string): string {
+    const css = String(rawCss ?? "")
+        .replace(/<\/?\s*style[^>]*>/gi, "")
+        .replace(/<\s*\/?\s*script[^>]*>/gi, "")
+        .replace(/@import[^;]*;?/gi, "")
+        .trim();
+    if (!css) return "";
+    return `${scopeSelector} { ${css} }`;
+}
