@@ -193,9 +193,9 @@ describe("全生态去中心化统一通知系统 (Epoch 7 Standard)", () => {
 
         const host = document.getElementById("lv-notice-host");
         const snoozeBtns = host?.querySelectorAll("[data-snooze-idx]");
-        expect(snoozeBtns?.length).toBe(3);
+        expect(snoozeBtns?.length).toBe(5);
 
-        // 点击第 3 个按钮：今日免打扰
+        // 点击第 3 个按钮：今日免打扰 (另含未来3天/未来一周长效免打扰)
         const muteBtn = snoozeBtns?.[2] as HTMLButtonElement;
         expect(muteBtn.textContent).toContain("今日免打扰");
         muteBtn.click();

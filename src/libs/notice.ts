@@ -182,6 +182,8 @@ export function notifyDailyReviewReminder(options: {
                 { label: "稍后提醒 (15分钟)", durationMs: 15 * 60 * 1000 },
                 { label: "稍后提醒 (1小时)", durationMs: 60 * 60 * 1000 },
                 { label: "今日免打扰", muteToday: true },
+                { label: "未来3天不通知", muteDays: 3 },
+                { label: "未来一周不通知", muteDays: 7 },
             ],
         },
     });

@@ -1079,6 +1079,11 @@ export default class LvCardsPlugin extends Plugin {
             digit: 6,
             badge: due > 0 ? `${due} 待复习` : undefined,
             badgeType: "error",
+            /* 罗盘每次打开实时拉取待复习数，复习清零自动隐藏徽章 */
+            badgeProvider: () => {
+                const n = this.getDueCount();
+                return n > 0 ? `${n} 待复习` : undefined;
+            },
             actions: [
                 // Mobile Spec v1：罗盘 actions 重写为 3~5 个手机直办动作（前显=复习/制卡/水蛭预警，后收=卡包管理）
                 "开始今日复习",
@@ -1519,7 +1524,7 @@ export default class LvCardsPlugin extends Plugin {
         // 注册小驴罗盘极速弹射坞入口与二级行动（Epoch 7 Phase 5 Protocol v1.4.0）
         this.registerLaunchpadEntry();
         // Protocol v1.7.5：罗盘全端统一入口挂载（顶栏+悬浮球收敛）
-        this.mobileEntryCleaner = lvLaunchpad.ensureUnifiedEntry();
+        this.mobileEntryCleaner = lvLaunchpad.ensureUnifiedEntry(this);
 
         // 注册全生态穿透搜索切面（Epoch 7 Phase 7 Protocol v1.6.0）
         this.omnisearchCleaner = lvOmnisearch.registerProvider("siyuan-lv-cards", (keyword) => {

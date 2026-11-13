@@ -109,8 +109,9 @@ if (!md.includes(`当前基线：v${pkg.version} `)) {
 // v0.225.0 落地思源笔记文档深度联动（块属性镜像、来源反链构建、动态看板生成、双向制卡流与扩展设置），预算第九次修订 ≤62→≤68KB；⑤ e2e-isolated 已含 chunk 可服务断言。
 // v0.233.0 落地 Epoch 7 全生态协同基础设施（Protocol v1.7.5：桌面 Bento 吸附罗盘、去中心化通知 Coordinator、全端穿透搜索与跨插件自动化），预算第十次修订 ≤68→≤100KB。
 // v0.233.2 落地 Launchpad 5.5 + 3.8.10 原生桥（showDocTreeNativeMenu/openNativeAssetPicker/toggleNativeDock）与全端 IME/安全区加固，主包实测 120.71 KiB，预算第十一次修订 ≤100→≤128KB。
+// v0.233.3 落地罗盘极速工作台（一键记事/LifeLog/日记底部/任务管理器）及手机端双入口自愈与草稿恢复，主包实测 129.2 KiB，预算第十二次修订 ≤128→≤136KB。
 // dist 不存在时跳过——check 阶段先于 build）
-const MAIN_GZIP_BUDGET = 128 * 1024;
+const MAIN_GZIP_BUDGET = 136 * 1024;
 if (existsSync("dist/index.js")) {
     const gz = gzipSync(readFileSync("dist/index.js"));
     if (gz.length > MAIN_GZIP_BUDGET) {
