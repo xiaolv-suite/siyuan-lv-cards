@@ -1,0 +1,423 @@
+/**
+ * 设置持久化与默认值。插件私有数据走 loadData/saveData（data/storage/petal/siyuan-lv-cards/）。
+ */
+import { MODULE_DEFS, MODULE_IDS, LEGACY_MODULE_IDS } from "./modules";
+import type { PersonaId } from "./personas";
+import { DEFAULT_LEECH_THRESHOLD } from "./revlog";
+
+export interface LvCardsSettings {
+    version: number;
+    /** 当前画像（预设应用后用户微调即转 custom） */
+    persona: PersonaId;
+    /** 各功能模块开关（key 见 modules.ts） */
+    modules: Record<string, boolean>;
+    /** 每日目标：新卡/复习卡（本地统计与提醒用） */
+    dailyNewTarget: number;
+    dailyReviewTarget: number;
+    /** 评分按钮风格：four=Anki 式 4 档，three=墨墨式 认识/模糊/不认识 */
+    ratingStyle: "four" | "three";
+    /** 复习评分快捷键方案（CF-18）：number=数字键 1-4，jkl=主键区 J/K/L/;，both=两者兼备 */
+    ratingKeyScheme: "number" | "jkl" | "both";
+    /** 超时模式：关 / 超时自动翻面 / 超时自动评遗忘 */
+    timeoutMode: "off" | "reveal" | "forget";
+    timeoutSeconds: number;
+    /** 随机顺序 */
+    randomOrder: boolean;
+    /** 同源兄弟卡防剧透推迟（Bury Siblings，对标 Anki 核心机制） */
+    burySiblings: boolean;
+    /** 每批拉取数量（0=跟随内核上限） */
+    batchLimit: number;
+    /** 打字模式：所有卡作答输入后判分（M4·FR2 全局练习模式） */
+    typingEnabled: boolean;
+    /** 打字判分宽松：忽略大小写/空白/标点 */
+    typingStrict: boolean;
+    /** 听写模式：自动朗读答案，输入听写（需打字模式+TTS） */
+    dictationEnabled: boolean;
+    /** 选择题练习模式：问题态可将本卡转为四选一（干扰项取自同队列） */
+    choiceEnabled: boolean;
+    /** 混合题型轮换（v0.179.0）：按本场张数在翻面/打字/选择间轮换出题形态（展示层，不动调度） */
+    mixedRotation: boolean;
+    /** 遗忘卡短期循环：评 1 的卡延迟几分钟再出现（会话内强化，不动内核调度） */
+    requeueAgain: boolean;
+    /** XP/等级激励（M8·FR3，默认关）：由本地复习日志推导 */
+    xpEnabled: boolean;
+    /** 标记符制卡（M2·FR4）：`术语:: 定义` 与 以「？」结尾的块可扫描成卡，命令触发 */
+    markerEnabled: boolean;
+    /** Gateway 探测结果落库（320）：最近一次 V2 探测状态（加载时刷新，重探即写+广播） */
+    gatewayState: string;
+    /** 卡面字号缩放（438）：0.85-1.25，1=跟随主题 */
+    cardFontScale: number;
+    /** 自定义卡面样式（仅作用于卡面正文内部） */
+    customCardCss: string;
+    /** 热力图范围（439）：周数 */
+    heatmapWeeks: number;
+    /** T01 深度统计展开态（docs/40）：记忆用户上次的选择 */
+    deepStatsOpen: boolean;
+    /** T01 可用时间偏好（分钟，0=不限）：hero 选择，复习开场默认预算 */
+    sessionBudgetMin: number;
+    /** 角标刷新间隔秒（440）：0=关闭心跳 */
+    badgeRefreshSec: number;
+    /** 评分按钮密度（441）：cozy 舒适 / compact 紧凑 */
+    ratingDensity: "cozy" | "compact";
+    /** 答案揭示前隐藏卡面元信息（442）：新卡章/复习次数/卡组名 */
+    hideMetaUntilAnswer: boolean;
+    /** 队列倒序（431）：内核到期顺序反转（最新到期优先） */
+    reverseOrder: boolean;
+    /** leech 判定阈值（遗忘次数） */
+    leechThreshold: number;
+    /** 答案朗读（TTS，Web Speech） */
+    ttsEnabled: boolean;
+    /** 朗读语速 0.5-2 */
+    ttsRate: number;
+    /** 朗读语音名称（空=系统默认） */
+    ttsVoice: string;
+    /** 免打扰时段起（HH:mm），时段内不弹积压/庆祝提示 */
+    quietStart: string;
+    /** 免打扰时段止（HH:mm，跨午夜支持） */
+    quietEnd: string;
+    /** 每日到期提醒（Notification） */
+    reminderEnabled: boolean;
+    /** 提醒时间 HH:mm */
+    reminderTime: string;
+    /** 每周学习报告（上周结束后自动写入「小驴闪卡/学习周报」文档） */
+    weeklyReportEnabled: boolean;
+    /** 幂等键：最后写入的周报对应的上周一（本地 ISO）；空 = 从未写过 */
+    weeklyReportLast: string;
+    /** 积压预警阈值（天） */
+    backlogDays: number;
+    /** 评分音效（Web Audio 合成，无文件依赖） */
+    sfxEnabled: boolean;
+    /** 音效风格（250）：chime 清音 / wood 木鱼 / bell 铃 */
+    sfxStyle: "chime" | "wood" | "bell";
+    /** 单卡作答耗时封顶秒（AQ-13）：超过按封顶记入 revlog.dur，不改变评分与到期 */
+    answerTimeCapSec: number;
+    /** 考试模式 */
+    examEnabled: boolean;
+    /** 考试日期 YYYY-MM-DD，空为未设置 */
+    examDate: string;
+    /** 星标重点卡片 ID 集合（对标 Anki Flag / Quizlet Starred） */
+    starredCards: string[];
+    /** 联动小驴打卡目标条目 ID（可选，空=不联动） */
+    checkinItemId: string;
+    /** 已存筛选（管理器命名收藏，M6） */
+    savedFilters: { name: string; filter: string }[];
+    /** BI-14：界面模式（简单=隐藏高级入口；切换不删除配置，高级功能仍可经命令面板/设置访问） */
+    uiMode: "simple" | "advanced";
+    /** 顶栏图标点击直接进入复习（若有到期卡；默认 false，打开闪卡主页面） */
+    topbarDirectReview: boolean;
+    /** AI 配置（M2·FR7）：siyuan=思源内置 AI；custom=OpenAI 兼容端点 */
+    aiMode: "siyuan" | "custom";
+    aiEndpoint: string;
+    aiKey: string;
+    aiModel: string;
+    /** AI 备用端点（300 回退链）：主端点失败自动切换（custom 模式） */
+    aiFallbackEndpoint: string;
+    aiFallbackKey: string;
+    aiFallbackModel: string;
+    /** BU-8：自定义敏感词（逗号分隔）——发送前扫描提示脱敏，仅本地 */
+    aiSensitiveTerms: string;
+    /** BU-24：月度 token 预算（enabled + cap>0 生效；超限阻断出卡，手工路径不受限） */
+    aiCostBudgetEnabled: boolean;
+    aiCostMonthlyCap: number;
+    /** Prompt 模板（294）：自定义 system 模板，空=内置默认；支持 ${count}/${language}/${type} 占位符 */
+    aiPromptTemplate: string;
+    /** 快速制卡/标记制卡落盘笔记本（605）：id，空=第一个打开的笔记本 */
+    targetNotebookId: string;
+    /** 每日一语（375）：完成页展示学习科学小贴士 */
+    dailyTipEnabled: boolean;
+    /** AnkiConnect 客户端（M9·FR1）：连本机 Anki Desktop */
+    ankiClientUrl: string;
+    ankiClientKey: string;
+    /** 复习舞台最大宽度 px（AC） */
+    cardMaxWidth: number;
+    /** 记忆：上次所在中心子页 / 上次复习范围 */
+    lastHubTab: string;
+    lastReviewScope: string;
+    /** R58 记忆：快速制卡上次成功使用的卡组（打开时自动预选） */
+    lastQuickCardDeck: string;
+    /** BI-17（v0.181.0）：管理器视图状态 JSON（filter/sort/leechOnly/status——返回时恢复筛选） */
+    lastManagerView: string;
+    /** Onboarding 已完成 */
+    onboarded: boolean;
+}
+
+/** BI-17：管理器视图状态解析（宽容 JSON：非法/缺字段回 null，调用方走默认视图） */
+export interface ManagerViewState {
+    filter: string;
+    sort: string;
+    leechOnly: boolean;
+    starredOnly?: boolean;
+    status: string;
+    page: number;
+    scrollTop: number;
+    focusId: string;
+}
+
+export function parseManagerView(raw: string | undefined): ManagerViewState | null {
+    if (!raw) return null;
+    try {
+        const v = JSON.parse(raw) as Partial<Record<keyof ManagerViewState, unknown>>;
+        if (!v || typeof v !== "object") return null;
+        // Persisted view state is user-controlled JSON; cap text so a damaged
+        // value cannot allocate an oversized filter or push the manager layout.
+        const filter = typeof v.filter === "string" ? v.filter.slice(0, 500) : "";
+        const sort = typeof v.sort === "string" && ["default", "path", "content", "lapses"].includes(v.sort) ? v.sort : "default";
+        const leechOnly = v.leechOnly === true;
+        const starredOnly = v.starredOnly === true;
+        const status = typeof v.status === "string" && ["all", "new", "review", "due"].includes(v.status) ? v.status : "all";
+        const page = typeof v.page === "number" && Number.isInteger(v.page) && v.page > 0 ? Math.min(v.page, 100_000) : 1;
+        const scrollTop = typeof v.scrollTop === "number" && Number.isFinite(v.scrollTop) && v.scrollTop >= 0 ? Math.min(v.scrollTop, 5_000_000) : 0;
+        const focusId = typeof v.focusId === "string" ? v.focusId.slice(0, 256) : "";
+        const res: ManagerViewState = { filter, sort, leechOnly, status, page, scrollTop, focusId };
+        if (starredOnly) res.starredOnly = true;
+        return res;
+    } catch {
+        return null;
+    }
+}
+
+const SETTINGS_VERSION = 1;
+
+export function defaultSettings(): LvCardsSettings {
+    const modules: Record<string, boolean> = {};
+    for (const m of MODULE_DEFS) {
+        modules[m.id] = m.defaultOn;
+    }
+    return {
+        version: SETTINGS_VERSION,
+        persona: "custom",
+        modules,
+        dailyNewTarget: 20,
+        dailyReviewTarget: 200,
+        ratingStyle: "four",
+        ratingKeyScheme: "both",
+        timeoutMode: "off",
+        timeoutSeconds: 60,
+        randomOrder: false,
+        burySiblings: true,
+        batchLimit: 0,
+        typingEnabled: false,
+        typingStrict: true,
+        dictationEnabled: false,
+        choiceEnabled: false,
+        mixedRotation: false,
+        requeueAgain: true,
+        xpEnabled: false,
+        markerEnabled: true,
+        gatewayState: "",
+        cardFontScale: 1,
+        customCardCss: "",
+        heatmapWeeks: 17,
+        deepStatsOpen: true,
+        sessionBudgetMin: 15,
+        badgeRefreshSec: 60,
+        ratingDensity: "cozy",
+        hideMetaUntilAnswer: false,
+        reverseOrder: false,
+        leechThreshold: DEFAULT_LEECH_THRESHOLD,
+        ttsEnabled: true,
+        ttsRate: 1,
+        ttsVoice: "",
+        quietStart: "23:00",
+        quietEnd: "08:00",
+        reminderEnabled: true,
+        reminderTime: "20:00",
+        weeklyReportEnabled: false,
+        weeklyReportLast: "",
+        backlogDays: 3,
+        sfxEnabled: false,
+        sfxStyle: "chime",
+        answerTimeCapSec: 60,
+        examEnabled: false,
+        examDate: "",
+        starredCards: [],
+        checkinItemId: "",
+        savedFilters: [],
+        uiMode: "advanced",
+        aiMode: "siyuan",
+        aiEndpoint: "",
+        aiKey: "",
+        aiModel: "",
+        aiFallbackEndpoint: "",
+        aiFallbackKey: "",
+        aiFallbackModel: "",
+        aiSensitiveTerms: "",
+        aiCostBudgetEnabled: false,
+        aiCostMonthlyCap: 200000,
+        aiPromptTemplate: "",
+        targetNotebookId: "",
+        dailyTipEnabled: true,
+        ankiClientUrl: "http://127.0.0.1:8765",
+        ankiClientKey: "",
+        cardMaxWidth: 880,
+        lastHubTab: "overview",
+        lastReviewScope: "all",
+        lastQuickCardDeck: "",
+        lastManagerView: "",
+        onboarded: false,
+        topbarDirectReview: false,
+    };
+}
+
+/** 数值字段规格（AQ-22）：[默认值, min, max]，写入前 round；浮点字段单独表 */
+const INT_FIELDS: [keyof LvCardsSettings, number, number, number][] = [
+    ["dailyNewTarget", 20, 0, 9999],
+    ["dailyReviewTarget", 200, 0, 9999],
+    ["timeoutSeconds", 60, 5, 3600],
+    ["batchLimit", 0, 0, 500],
+    ["leechThreshold", DEFAULT_LEECH_THRESHOLD, 1, 100],
+    ["backlogDays", 3, 1, 90],
+    ["cardMaxWidth", 880, 320, 1600],
+    ["answerTimeCapSec", 60, 5, 3600],
+    ["sessionBudgetMin", 15, 0, 600],
+    ["aiCostMonthlyCap", 200000, 0, 100000000],
+];
+const FLOAT_FIELDS: [keyof LvCardsSettings, number, number, number][] = [
+    ["cardFontScale", 1, 0.85, 1.25],
+    ["ttsRate", 1, 0.5, 2],
+];
+/** 枚举字段规格：字符串枚举与离散数值共用白名单语义 */
+const ENUM_FIELDS: [keyof LvCardsSettings, readonly string[], string][] = [
+    ["ratingStyle", ["four", "three"], "four"],
+    ["timeoutMode", ["off", "reveal", "forget"], "off"],
+    ["ratingDensity", ["cozy", "compact"], "cozy"],
+    ["sfxStyle", ["chime", "wood", "bell"], "chime"],
+    ["uiMode", ["simple", "advanced"], "advanced"],
+    ["aiMode", ["siyuan", "custom"], "siyuan"],
+];
+const BOOL_FIELDS: (keyof LvCardsSettings)[] = [
+    "deepStatsOpen",
+    "randomOrder", "burySiblings", "typingEnabled", "typingStrict", "dictationEnabled", "choiceEnabled", "mixedRotation", "requeueAgain",
+    "xpEnabled", "markerEnabled", "hideMetaUntilAnswer", "reverseOrder", "ttsEnabled", "reminderEnabled",
+    "sfxEnabled", "examEnabled", "dailyTipEnabled", "onboarded", "aiCostBudgetEnabled", "weeklyReportEnabled",
+];
+const STR_FIELDS: (keyof LvCardsSettings)[] = [
+    "weeklyReportLast", "customCardCss", "checkinItemId",
+    "gatewayState", "ttsVoice", "aiEndpoint", "aiKey", "aiModel", "aiFallbackEndpoint", "aiFallbackKey",
+    "aiFallbackModel", "aiSensitiveTerms", "aiPromptTemplate", "targetNotebookId", "ankiClientKey", "lastHubTab", "lastReviewScope", "lastManagerView", "lastQuickCardDeck",
+];
+
+export function normalizeSettings(raw: unknown): LvCardsSettings {
+    const def = defaultSettings();
+    if (!raw || typeof raw !== "object") {
+        return def;
+    }
+    const obj = raw as Partial<LvCardsSettings> & Record<string, unknown>;
+    // 未知字段经展开保留（ADR-5：前向兼容只增不删）；已知字段逐项校验（AQ-22）
+    const merged: LvCardsSettings = {
+        ...def,
+        ...obj,
+        version: SETTINGS_VERSION,
+        persona: normalizePersona(obj.persona),
+        modules: normalizeModules(obj.modules, def.modules),
+        heatmapWeeks: pick(obj.heatmapWeeks, [17, 26, 52], 17),
+        badgeRefreshSec: toBadgeSec(obj.badgeRefreshSec),
+        quietStart: toHHMM(obj.quietStart, def.quietStart),
+        quietEnd: toHHMM(obj.quietEnd, def.quietEnd),
+        reminderTime: toHHMM(obj.reminderTime, def.reminderTime),
+        examDate: toDateStr(obj.examDate),
+        starredCards: Array.isArray(obj.starredCards) ? obj.starredCards.filter(id => typeof id === "string" && id.length < 64) : [],
+        savedFilters: toFilters(obj.savedFilters),
+        ankiClientUrl: toStr(obj.ankiClientUrl, def.ankiClientUrl),
+    } as LvCardsSettings;
+    for (const [key, d, min, max] of INT_FIELDS) {
+        (merged as unknown as Record<string, unknown>)[key] = toInt(obj[key], d, min, max);
+    }
+    for (const [key, d, min, max] of FLOAT_FIELDS) {
+        (merged as unknown as Record<string, unknown>)[key] = toNum(obj[key], d, min, max);
+    }
+    for (const [key, allowed, d] of ENUM_FIELDS) {
+        (merged as unknown as Record<string, unknown>)[key] = pickStr(obj[key], allowed, d);
+    }
+    for (const key of BOOL_FIELDS) {
+        (merged as unknown as Record<string, unknown>)[key] = toBool(obj[key], def[key] as boolean);
+    }
+    for (const key of STR_FIELDS) {
+        (merged as unknown as Record<string, unknown>)[key] = toStr(obj[key]);
+    }
+    return merged;
+}
+
+function normalizeModules(raw: unknown, defModules: Record<string, boolean>): Record<string, boolean> {
+    const merged = { ...defModules };
+    if (!raw || typeof raw !== "object") {
+        return merged;
+    }
+    for (const [key, value] of Object.entries(raw)) {
+        if (typeof value !== "boolean") {
+            continue;
+        }
+        // 旧 ID 迁移；被合并的旧模块（fsrsPanel）直接丢弃
+        const migrated = LEGACY_MODULE_IDS[key] === undefined ? key : LEGACY_MODULE_IDS[key];
+        if (migrated && MODULE_IDS.includes(migrated)) {
+            merged[migrated] = value;
+        }
+    }
+    return merged;
+}
+
+function normalizePersona(value: unknown): PersonaId {
+    return value === "exam" || value === "notes" || value === "language" || value === "custom" ? value : "custom";
+}
+
+/** 数值修复：数字/纯数字字符串收敛为有限数并钳制范围，其余回默认（AQ-22） */
+function toNum(v: unknown, def: number, min: number, max: number): number {
+    const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+    if (!Number.isFinite(n)) {
+        return def;
+    }
+    return Math.min(max, Math.max(min, n));
+}
+
+function toInt(v: unknown, def: number, min: number, max: number): number {
+    return Math.round(toNum(v, def, min, max));
+}
+
+/** 角标心跳：0=关闭合法；其余 5-3600 秒 */
+function toBadgeSec(v: unknown): number {
+    const n = toInt(v, 60, 0, 3600);
+    return n === 0 ? 0 : Math.max(5, n);
+}
+
+function toBool(v: unknown, def: boolean): boolean {
+    return typeof v === "boolean" ? v : def;
+}
+
+function toStr(v: unknown, def = ""): string {
+    return typeof v === "string" ? v : def;
+}
+
+/** HH:mm 白名单格式（免打扰/提醒时间），非法回默认 */
+function toHHMM(v: unknown, def: string): string {
+    return typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : def;
+}
+
+/** 考试日期：空串或 YYYY-MM-DD，非法清空 */
+function toDateStr(v: unknown): string {
+    if (v === "") return "";
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return "";
+    const [year, month, day] = v.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? v : "";
+}
+
+/** 离散合法值（热力图周数），不在集合回默认 */
+function pick(v: unknown, allowed: number[], def: number): number {
+    return allowed.includes(v as number) ? (v as number) : def;
+}
+
+function pickStr<T extends string>(v: unknown, allowed: readonly T[], def: T): T {
+    return allowed.includes(v as T) ? (v as T) : def;
+}
+
+/** 已存筛选：条目逐个校验 name+filter 均为字符串，上限 50 条 */
+function toFilters(v: unknown): { name: string; filter: string }[] {
+    if (!Array.isArray(v)) {
+        return [];
+    }
+    return v
+        .filter((f): f is { name: string; filter: string } =>
+            !!f && typeof f === "object" && typeof (f as any).name === "string" && typeof (f as any).filter === "string")
+        .slice(0, 50)
+        .map(f => ({ name: f.name.slice(0, 120), filter: f.filter.slice(0, 500) }));
+}

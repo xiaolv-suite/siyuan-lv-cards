@@ -1,0 +1,350 @@
+import { describe, expect, it } from "vitest";
+import {
+    analyzeFaceRichness,
+    hasRichContent,
+    faceHintKeys,
+    plainFace,
+    maskMarkedAnswersForQuestion,
+    formatMarkdownToSafeHtml,
+    renderUnifiedCardFace,
+    extractExpectedCardAnswer,
+    parseCardAttrsMetadata,
+    resolveFaceHintLabel,
+    hasSvgOrCanvasDrawing,
+    deriveFaceHints,
+    isCardFaceReady,
+    scopeCustomCardCss,
+} from "../src/core/card-face";
+
+describe("自定义卡面 CSS 作用域（docs/53 TODO-09）", () => {
+    it("把规则包进卡面作用域，不会命中设置弹窗或思源按钮", () => {
+        expect(scopeCustomCardCss(".b3-button { display: none; }", ".lv-review .lv-card"))
+            .toBe(".lv-review .lv-card { .b3-button { display: none; } }");
+    });
+
+    it("去掉能闭合 <style>、插入脚本或引入外部资源的片段", () => {
+        const scoped = scopeCustomCardCss("p{color:red}</style><script>alert(1)</script>@import url(x.css);", ".s");
+        expect(scoped).not.toMatch(/<\/style|<script|@import/i);
+        expect(scoped.startsWith(".s {")).toBe(true);
+    });
+
+    it("空内容返回空串", () => {
+        expect(scopeCustomCardCss("   ", ".s")).toBe("");
+        expect(scopeCustomCardCss(undefined, ".s")).toBe("");
+    });
+});
+
+// AS-3 富内容卡面分析：六特征识别 + 提示键派生；纯文本全 false
+describe("card-face（AS-3 富内容分析）", () => {
+    it("空串/纯文本卡面全 false（提示行不显示）", () => {
+        expect(analyzeFaceRichness("")).toEqual(plainFace());
+        const plain = analyzeFaceRichness("<div>线粒体是细胞的能量工厂</div>");
+        expect(hasRichContent(plain)).toBe(false);
+        expect(faceHintKeys(plain)).toEqual([]);
+    });
+
+    it("六特征各自识别（内核 DOM 产物口径）", () => {
+        const html = [
+            '<span class="katex">E=mc²</span>',                       // 公式
+            '<img src="assets/fig.png" alt="图"/>',                    // 图片
+            '<div data-type="NodeBlockQueryEmbed">嵌入</div>',         // 嵌入块
+            "<pre><code>const x = 1;</code></pre>",                    // 代码
+            "<table><tr><td>1</td></tr></table>",                      // 表格
+            '<a href="https://example.com/' + "x".repeat(120) + '">长链</a>', // 超长链接
+        ].join("");
+        const r = analyzeFaceRichness(html);
+        expect(r).toEqual({ formula: true, image: true, embed: true, code: true, table: true, longLink: true });
+        expect(hasRichContent(r)).toBe(true);
+
+        // SVG 矢量画布识别为图像特征（Issue #14）
+        const svgRich = analyzeFaceRichness('<svg class="excalidraw-svg" viewBox="0 0 100 100"></svg>');
+        expect(svgRich.image).toBe(true);
+    });
+
+    it("普通短链接不触发 longLink；MathJax/language-math 亦识别为公式", () => {
+        const r = analyzeFaceRichness('<a href="https://example.com/page">短链</a>');
+        expect(r.longLink).toBe(false);
+        expect(analyzeFaceRichness('<span class="MathJax">x</span>').formula).toBe(true);
+        expect(analyzeFaceRichness('<span class="language-math">x</span>').formula).toBe(true);
+    });
+
+    it("提示键有序且与特征一一对应", () => {
+        const r = analyzeFaceRichness("<table></table><img src='x'/>");
+        expect(faceHintKeys(r)).toEqual(["aiFace.hint.image", "aiFace.hint.table"]);
+    });
+});
+
+describe("问题态答案副本", () => {
+    it("清空挖空文本与富内容并从读屏树隐藏，保留近似空白长度", () => {
+        const holder = document.createElement("div");
+        holder.innerHTML = maskMarkedAnswersForQuestion('<p>线粒体的功能是 <span data-type="mark"><b>产生 ATP</b><img alt="答案图" src="x.png" /></span></p>');
+        const mark = holder.querySelector("span[data-type='mark']")!;
+        expect(mark.textContent).toBe("\u00a0".repeat(6));
+        expect(mark.getAttribute("aria-hidden")).toBe("true");
+        expect(mark.querySelector("img")).toBeNull();
+        expect(holder.textContent).not.toContain("产生 ATP");
+    });
+
+    it("为无 == 标记的存量问答卡就地生成无损遮罩（:: 与 Q/A，绝不修改原笔记）", () => {
+        const colonHtml = maskMarkedAnswersForQuestion("<p>光合作用的主要产物 :: 葡萄糖与氧气</p>");
+        expect(colonHtml).toContain("光合作用的主要产物 :: ");
+        expect(colonHtml).toContain("［ 概念释义 ］");
+        expect(colonHtml).not.toContain("葡萄糖与氧气");
+
+        const qaHtml = maskMarkedAnswersForQuestion("<p>Q: 什么是闭包？\nA: 有权访问外部作用域的函数</p>");
+        expect(qaHtml).toContain("Q: 什么是闭包？");
+        expect(qaHtml).toContain("［ 参考答案 ］");
+        expect(qaHtml).not.toContain("有权访问外部作用域的函数");
+    });
+});
+
+describe("统一卡面渲染管线（renderUnifiedCardFace & formatMarkdownToSafeHtml）", () => {
+    it("安全转义 HTML 特殊字符，防止 XSS 注入", () => {
+        const raw = '<script>alert("xss")</script> **加粗**';
+        const html = formatMarkdownToSafeHtml(raw);
+        expect(html).not.toContain("<script>");
+        expect(html).toContain("&lt;script&gt;");
+        expect(html).toContain("<strong>加粗</strong>");
+    });
+
+    it("正确渲染行内代码、代码块与 LaTeX 公式", () => {
+        const md = "计算 $E=mc^2$，代码为 `let x = 1;`\n\n```ts\nconst y = 2;\n```";
+        const html = formatMarkdownToSafeHtml(md);
+        expect(html).toContain('<span class="language-math katex-inline">E=mc^2</span>');
+        expect(html).toContain("<code>let x = 1;</code>");
+        expect(html).toContain('<pre><code class="language-ts">const y = 2;</code></pre>');
+    });
+
+    it("正确保护与渲染内联 SVG 矢量画布并清洗脚本（Issue #14）", () => {
+        const svgMd = '流程图：<svg viewBox="0 0 100 100"><script>alert(1)</script><circle cx="50" cy="50" r="40" /></svg>';
+        const html = formatMarkdownToSafeHtml(svgMd);
+        expect(html).toContain("<svg");
+        expect(html).toContain('class="lv-card-svg"');
+        expect(html).toContain('<circle cx="50" cy="50" r="40" />');
+        expect(html).not.toContain("<script>");
+        expect(html).not.toContain("&lt;svg");
+    });
+
+    it("正确处理多挖空卡片的问题态遮蔽与答案态揭晓", () => {
+        const card = renderUnifiedCardFace({
+            markdown: "HTTP 是 ==无状态== 协议，默认端口是 ==80==。",
+        });
+
+        expect(card.extractedAnswers).toEqual(["无状态", "80"]);
+        expect(card.questionHtml).toContain('class="lv-masked"');
+        expect(card.questionHtml).toContain('data-type="mark"');
+        expect(card.questionHtml).toContain('aria-hidden="true"');
+        expect(card.questionHtml).toContain("［ 1: 回忆这里 ］");
+        expect(card.questionHtml).toContain("［ 2: 回忆这里 ］");
+        expect(card.questionHtml).not.toContain("无状态");
+        expect(card.questionHtml).not.toContain("80");
+
+        expect(card.answerHtml).toContain('class="lv-revealed"');
+        expect(card.answerHtml).toContain('<span class="lv-revealed-idx">1</span>');
+        expect(card.answerHtml).toContain('<span class="lv-revealed-idx">2</span>');
+        expect(card.answerHtml).toContain("无状态");
+        expect(card.answerHtml).toContain("80");
+        expect(card.richness.formula).toBe(false);
+        expect(card.cardType).toBe("cloze");
+        expect(card.clozeCount).toBe(2);
+    });
+
+    it("单挖空卡面保持简洁槽位（无需多余 1: 序号）", () => {
+        const card = renderUnifiedCardFace({
+            markdown: "光合作用发生在 ==叶绿体== 中。",
+        });
+        expect(card.extractedAnswers).toEqual(["叶绿体"]);
+        expect(card.questionHtml).toContain("［ 回忆这里 ］");
+        expect(card.questionHtml).not.toContain("［ 1:");
+        expect(card.cardType).toBe("cloze");
+        expect(card.clozeCount).toBe(1);
+    });
+
+    it("双向卡片支持逆向回忆模式（A ➔ Q 翻转问答）", () => {
+        const card = renderUnifiedCardFace({
+            question: "Mitochondria",
+            answer: "Powerhouse of the cell",
+            template: "qa",
+            reversed: true,
+        });
+        expect(card.questionHtml).toContain("Powerhouse of the cell");
+        expect(card.answerHtml).toContain("Powerhouse of the cell");
+        expect(card.answerHtml).toContain("Mitochondria");
+        expect(card.answerHtml).toContain("原问题 / 概念");
+        expect(card.cardType).toBe("qa");
+    });
+
+    it("存量闪卡支持 :: 双冒号概念分隔与思源块备注作为答案", () => {
+        // :: 概念卡自适应
+        const colonCard = renderUnifiedCardFace({
+            markdown: "HTTP 200 :: 请求已成功被服务器处理",
+        });
+        expect(colonCard.extractedAnswers).toEqual(["请求已成功被服务器处理"]);
+        expect(colonCard.questionHtml).toContain("HTTP 200");
+        expect(colonCard.questionHtml).not.toContain("请求已成功被服务器处理");
+        expect(colonCard.answerHtml).toContain("HTTP 200");
+        expect(colonCard.answerHtml).toContain("请求已成功被服务器处理");
+        expect(colonCard.answerHtml).toContain("概念释义");
+
+        // 块备注 memo 自适应
+        const memoCard = renderUnifiedCardFace({
+            markdown: "什么是闭包？",
+            memo: "有权访问外部作用域变量的函数",
+        });
+        expect(memoCard.extractedAnswers).toEqual(["有权访问外部作用域变量的函数"]);
+        expect(memoCard.questionHtml).toContain("什么是闭包？");
+        expect(memoCard.questionHtml).not.toContain("有权访问外部作用域变量的函数");
+        expect(memoCard.answerHtml).toContain("什么是闭包？");
+        expect(memoCard.answerHtml).toContain("有权访问外部作用域变量的函数");
+        expect(memoCard.answerHtml).toContain("思源块备注答案");
+    });
+
+    it("正确处理普通问答题的题干与参考答案分区", () => {
+        const card = renderUnifiedCardFace({
+            question: "什么是 TCP 三次握手？",
+            answer: "双方交换初始序列号，确认彼此收发能力。",
+            template: "qa",
+        });
+
+        expect(card.extractedAnswers).toEqual(["双方交换初始序列号，确认彼此收发能力。"]);
+        expect(card.questionHtml).toContain("什么是 TCP 三次握手？");
+        expect(card.questionHtml).not.toContain("参考答案");
+
+        expect(card.answerHtml).toContain("什么是 TCP 三次握手？");
+        expect(card.answerHtml).toContain("参考答案");
+        expect(card.answerHtml).toContain("双方交换初始序列号，确认彼此收发能力。");
+
+        // 支持自定义多语言标签
+        const cardEn = renderUnifiedCardFace({
+            question: "What is latency?",
+            answer: "Time taken for data to travel.",
+            template: "qa",
+            answerLabel: "Reference Answer",
+        });
+        expect(cardEn.answerHtml).toContain("Reference Answer");
+        expect(cardEn.answerHtml).not.toContain("参考答案");
+    });
+
+    it("支持下划线挖空输入自动转为标准挖空卡面", () => {
+        const card = renderUnifiedCardFace({
+            question: "机会成本是选择一种方案时，放弃的____的价值。",
+            answer: "最佳替代方案",
+            template: "cloze",
+        });
+
+        expect(card.extractedAnswers).toEqual(["最佳替代方案"]);
+        expect(card.questionHtml).toContain("［ 回忆这里 ］");
+        expect(card.questionHtml).not.toContain("最佳替代方案");
+        expect(card.answerHtml).toContain("最佳替代方案");
+        expect(card.answerHtml).toContain('class="lv-revealed"');
+    });
+
+    it("正确识别图片并绑定特征分析", () => {
+        const card = renderUnifiedCardFace({
+            markdown: "![网络拓扑](https://example.com/net.png) ==环形拓扑==",
+        });
+
+        expect(card.richness.image).toBe(true);
+        expect(card.questionHtml).toContain('<img src="https://example.com/net.png"');
+        expect(card.answerHtml).toContain('<img src="https://example.com/net.png"');
+        expect(card.answerHtml).toContain("环形拓扑");
+    });
+
+    it("preserves image URLs and literal alt text while escaping markup once", () => {
+        const holder = document.createElement("div");
+        holder.innerHTML = formatMarkdownToSafeHtml('![**示意图** & "引用"](assets/diagram.png?width=320&height=180)');
+        const image = holder.querySelector("img")!;
+        expect(image.getAttribute("src")).toBe("assets/diagram.png?width=320&height=180");
+        expect(image.getAttribute("alt")).toBe('**示意图** & "引用"');
+        expect(holder.querySelector("strong")).toBeNull();
+    });
+
+    it("conceals cloze answers containing mathematical equals signs", () => {
+        const card = renderUnifiedCardFace({ markdown: "求解 ==$x=1$==。" });
+        expect(card.extractedAnswers).toEqual(["$x=1$"]);
+        expect(card.questionHtml).not.toContain("x=1");
+        expect(card.questionHtml).toContain("lv-masked");
+        expect(card.answerHtml).toContain("x=1");
+    });
+
+    it("keeps Markdown examples inside code and token-like source text literal", () => {
+        const holder = document.createElement("div");
+        holder.innerHTML = formatMarkdownToSafeHtml('`![example](assets/code.png)` @@CODE_INLINE_0@@ @@LV_CARD_TOKEN_0@@');
+        expect(holder.querySelector("img")).toBeNull();
+        expect(holder.querySelector("code")?.textContent).toBe("![example](assets/code.png)");
+        expect(holder.textContent).toContain("@@CODE_INLINE_0@@ @@LV_CARD_TOKEN_0@@");
+    });
+
+    describe("extractExpectedCardAnswer 与 parseCardAttrsMetadata", () => {
+        it("extractExpectedCardAnswer 依次匹配挖空、问答、纯文本", () => {
+            expect(extractExpectedCardAnswer('<div>记忆点：<span data-type="mark">挖空A</span> / <span data-type="mark">挖空B</span></div>')).toBe("挖空A / 挖空B");
+            expect(extractExpectedCardAnswer("<div>概念术语 :: 概念释义答案</div>")).toBe("概念释义答案");
+            expect(extractExpectedCardAnswer("<div>简单笔记内容</div>")).toBe("简单笔记内容");
+            expect(extractExpectedCardAnswer("")).toBe("");
+        });
+
+        it("parseCardAttrsMetadata 正确解析遮挡、自定义答案与备忘", () => {
+            const attrs = {
+                "custom-card-answer": "插件定制答案",
+                memo: "通用备注",
+            };
+            const mockParseOccl = (a: any) => ({ v: 1, rects: [] });
+            const meta = parseCardAttrsMetadata(attrs, "原始内容", "原始内容", 0, mockParseOccl);
+
+            expect(meta.isCustomPluginAnswer).toBe(true);
+            expect(meta.customAnswer).toBe("插件定制答案");
+            expect(meta.cardMemo).toBe("插件定制答案");
+            expect(meta.expectedText).toBe("插件定制答案");
+            expect(meta.occlusion).toEqual({ v: 1, rects: [] });
+        });
+    });
+
+    describe("resolveFaceHintLabel", () => {
+        it("正确根据键末段提取对应本地化文本", () => {
+            const i18n = { formula: "数学公式", image: "包含图片" };
+            expect(resolveFaceHintLabel("aiFace.hint.formula", i18n)).toBe("数学公式");
+            expect(resolveFaceHintLabel("aiFace.hint.image", i18n)).toBe("包含图片");
+            expect(resolveFaceHintLabel("aiFace.hint.code", i18n)).toBe("aiFace.hint.code");
+        });
+    });
+
+    describe("hasSvgOrCanvasDrawing", () => {
+        it("正确识别 svg 标签、svg 文件链接与 excalidraw 画布", () => {
+            expect(hasSvgOrCanvasDrawing("<svg viewBox='0 0 10 10'></svg>")).toBe(true);
+            expect(hasSvgOrCanvasDrawing("<img src='assets/diagram.svg' />")).toBe(true);
+            expect(hasSvgOrCanvasDrawing("<div class='protyle-wysiwyg--excalidraw'></div>")).toBe(true);
+        });
+
+        it("普通文本或空字符串返回 false", () => {
+            expect(hasSvgOrCanvasDrawing("<p>简单文本内容</p>")).toBe(false);
+            expect(hasSvgOrCanvasDrawing("")).toBe(false);
+            expect(hasSvgOrCanvasDrawing(undefined)).toBe(false);
+        });
+    });
+
+    describe("deriveFaceHints", () => {
+        it("富内容卡面正常推导出提示键列表", () => {
+            const rich = analyzeFaceRichness("<table></table><img src='x'/>");
+            expect(deriveFaceHints(rich)).toEqual(["aiFace.hint.image", "aiFace.hint.table"]);
+        });
+
+        it("纯文本或 null 返回空数组", () => {
+            expect(deriveFaceHints(plainFace())).toEqual([]);
+            expect(deriveFaceHints(null)).toEqual([]);
+            expect(deriveFaceHints(undefined)).toEqual([]);
+        });
+    });
+
+    describe("isCardFaceReady", () => {
+        it("卡面 HTML 存在且无加载错误时返回 true", () => {
+            expect(isCardFaceReady("<p>正常卡面</p>", "")).toBe(true);
+        });
+
+        it("卡面为空串、null、undefined 或存在错误时返回 false", () => {
+            expect(isCardFaceReady("", "")).toBe(false);
+            expect(isCardFaceReady(null, "")).toBe(false);
+            expect(isCardFaceReady(undefined, "")).toBe(false);
+            expect(isCardFaceReady("<p>卡面</p>", "加载失败")).toBe(false);
+        });
+    });
+});

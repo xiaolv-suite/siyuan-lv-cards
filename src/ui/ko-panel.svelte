@@ -1,0 +1,246 @@
+<script lang="ts">
+    /** BK-1 知识对象面板（Kit 级，props 注入可测）：核心事实 + 实例清单（停用/移除/派生）+ 事实修订（改事实→受影响实例清单在上方可见→确认保存）。
+     *  数据与持久化由宿主注入；派生为异步（宿主查 riff 卡 ID），deriving=true 期间禁用按钮。 */
+    import { CARD_CATALOG } from "@/core/card-catalog";
+    import LvIcon from "./kit/LvIcon.svelte";
+    import LvSwitch from "./kit/LvSwitch.svelte";
+
+    let { fact, instances, deriving = false, t, ontoggle, onremove, onderive, onrevise }: {
+        fact: string;
+        instances: { cardID: string; cardType: string; capability: string | null; disabled: boolean }[];
+        deriving?: boolean;
+        t: any;
+        ontoggle: (cardID: string, disabled: boolean) => void | Promise<void>;
+        onremove: (cardID: string) => void | Promise<void>;
+        /** 阶段 A 裁决（docs/54 F2 TODO-05）：未注入 onderive 时隐藏二次派生入口，仅保留查看与既有实例管理 */
+        onderive?: (cardType: string) => void | Promise<void>;
+        /** BK-1 验收：核心事实修订（宿主落盘后刷新快照） */
+        onrevise?: (newFact: string) => void;
+    } = $props();
+
+    let deriveType = $state("qa");
+    let revising = $state(false);
+    let reviseDraft = $state("");
+    let deriveError = $state("");
+    let actionError = $state("");
+    let actionBusy = $state<string | null>(null);
+    let retryAction = $state<(() => Promise<void>) | null>(null);
+
+    function startRevise() {
+        reviseDraft = fact;
+        revising = true;
+    }
+
+    function saveRevise() {
+        const next = reviseDraft.trim();
+        if (next && next !== fact) {
+            onrevise?.(next);
+        }
+        revising = false;
+    }
+
+    async function deriveSelected() {
+        if (deriving || !onderive) return;
+        deriveError = "";
+        try {
+            await onderive(deriveType);
+        } catch (error) {
+            deriveError = error instanceof Error && error.message
+                ? error.message
+                : (t.review.ko.deriveFailed ?? "派生失败，请重试。卡片数据未更改。");
+            // 失败时保留当前实例快照，按钮切回可重试态；宿主负责原子持久化。
+        }
+    }
+
+    async function runAction(key: string, action: () => Promise<void>) {
+        if (actionBusy) return;
+        actionError = "";
+        actionBusy = key;
+        try {
+            await action();
+            retryAction = null;
+        } catch (error) {
+            actionError = error instanceof Error && error.message ? error.message : (t.review.ko.actionFailed ?? "保存失败，请重试。");
+            retryAction = action;
+        } finally {
+            actionBusy = null;
+        }
+    }
+
+    function toggleInstance(cardID: string, disabled: boolean) {
+        void runAction(cardID, () => Promise.resolve(ontoggle(cardID, disabled)));
+    }
+
+    async function removeInstance(cardID: string) {
+        if (actionBusy) return;
+        const message = t.review.ko.removeInstanceConfirm ?? "确定移除此卡片实例？只会移除知识对象关联，不会删除卡片。";
+        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(message)) return;
+        await runAction(cardID, () => Promise.resolve(onremove(cardID)));
+    }
+
+    $effect(() => {
+        // 已有实例的卡型从派生下拉中排除（同一卡型同一对象至多一张实例）
+        const used = new Set(instances.map(i => i.cardType));
+        if (used.has(deriveType)) {
+            const free = CARD_CATALOG.map(c => c.id).find(id => !used.has(id));
+            if (free) deriveType = free;
+        }
+    });
+
+    const typeName = (id: string) => {
+        const cap = CARD_CATALOG.find(c => c.id === id);
+        return t.ko?.[`type_${id.replace(/-/g, "_")}`] ?? cap?.nameKey ?? id;
+    };
+</script>
+
+<div class="lv-ko">
+    <div class="lv-ko-title">{t.review.ko.title}</div>
+    {#if revising}
+        <!-- BK-1 验收：修订模式下实例清单仍可见——受影响实例一目了然 -->
+        <div class="lv-ko-revise">
+            <textarea
+                class="b3-text-field fn__block"
+                rows="3"
+                bind:value={reviseDraft}
+                aria-label={t.review.ko.reviseLabel}
+            ></textarea>
+            <div class="fn__flex" style="gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
+                <button class="b3-button lv-btn-primary" onclick={saveRevise}>{t.review.ko.saveRevise}</button>
+                <button class="b3-button b3-button--text" onclick={() => (revising = false)}>{t.review.ko.cancelRevise}</button>
+            </div>
+        </div>
+    {:else}
+        <div class="lv-ko-fact">
+            {fact}
+            {#if onrevise}
+                <button class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-ko-revise-btn" onclick={startRevise}><LvIcon name="edit" size={12} /> <span>{t.review.ko.revise}</span></button>
+            {/if}
+        </div>
+    {/if}
+
+    <div class="lv-ko-sub">{t.review.ko.instancesTitle}</div>
+    {#if instances.length === 0}
+        <div class="lv-ko-empty">{t.review.ko.emptyInstances}</div>
+    {:else}
+        {#each instances as inst (inst.cardID)}
+            <div class="lv-ko-row" class:lv-ko-row-disabled={inst.disabled}>
+                <LvSwitch
+                    checked={!inst.disabled}
+                    title={t.review.ko.toggleTitle}
+                    ariaLabel={`${t.review.ko.toggleTitle}: ${inst.cardID}`}
+                    disabled={actionBusy !== null}
+                    onchange={() => void toggleInstance(inst.cardID, !inst.disabled)}
+                />
+                <span class="lv-ko-type lv-chip2 lv-chip2--default">{typeName(inst.cardType)}</span>
+                {#if inst.capability}<span class="ft__smaller ft__on-surface">{inst.capability}</span>{/if}
+                <span class="fn__flex-1 lv-ko-id ft__smaller ft__on-surface">{inst.cardID}</span>
+                <button
+                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                    title={t.review.ko.remove}
+                    aria-label={t.review.ko.remove}
+                    disabled={actionBusy !== null}
+                    aria-busy={actionBusy === inst.cardID}
+                    onclick={() => void removeInstance(inst.cardID)}
+                >
+                    {#if actionBusy === inst.cardID}…{:else}<LvIcon name="close" size={12} />{/if}
+                </button>
+            </div>
+        {/each}
+    {/if}
+
+    {#if actionError}
+        <div class="lv-ko-derive-error" role="alert" aria-live="assertive">{actionError}
+            {#if retryAction}<button class="b3-button b3-button--text" disabled={actionBusy !== null} onclick={() => retryAction && void runAction(actionBusy ?? "retry", retryAction)}>{t.review.ko.retryAction ?? "重试"}</button>{/if}
+        </div>
+    {/if}
+    {#if onderive}
+        {#if deriveError}<div class="lv-ko-derive-error" role="alert" aria-live="assertive">{deriveError}</div>{/if}
+        <div class="lv-ko-derive">
+            <select class="b3-select" aria-label={t.review.ko.deriveLabel} bind:value={deriveType}>
+                {#each CARD_CATALOG.filter(c => !instances.some(i => i.cardType === c.id)) as c (c.id)}
+                    <option value={c.id}>{typeName(c.id)}</option>
+                {/each}
+            </select>
+            <button class="b3-button lv-btn-primary lv-btn-tool" disabled={deriving} aria-busy={deriving} onclick={deriveSelected}>
+                {deriving ? t.review.ko.deriving : deriveError ? (t.review.ko.retryDerive ?? "重试派生") : t.review.ko.derive}
+            </button>
+        </div>
+    {/if}
+</div>
+
+<style>
+    .lv-ko {
+        font-size: var(--lv-type-body-size);
+
+        .b3-button {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+            }
+        }
+
+        .b3-select,
+        .b3-text-field {
+            touch-action: manipulation;
+            transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-1) var(--lv-ease);
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: var(--lv-focus-ring);
+                border-color: var(--lv-color-brand);
+            }
+        }
+    }
+    .lv-ko-title { font-weight: var(--lv-fw-medium); margin-bottom: var(--lv-sp-2); text-wrap: balance; }
+    .lv-ko-fact {
+        padding: var(--lv-sp-2) var(--lv-sp-3);
+        border-left: 3px solid var(--lv-color-brand);
+        background: var(--lv-color-surface);
+        border-radius: var(--lv-r-m);
+        margin-bottom: var(--lv-sp-3);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
+    .lv-ko-sub { color: var(--lv-color-text-muted); margin-bottom: var(--lv-sp-1); }
+    .lv-ko-empty { color: var(--lv-color-text-muted); opacity: .7; padding: var(--lv-sp-1) 0; }
+    .lv-ko-row {
+        display: flex;
+        align-items: center;
+        gap: var(--lv-sp-2);
+        padding: var(--lv-sp-2) var(--lv-sp-3);
+        border: 1px solid var(--lv-border);
+        border-radius: var(--lv-r-m);
+        margin-bottom: var(--lv-sp-1);
+        background: var(--lv-color-surface);
+        box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+        transition: transform var(--lv-dur-1) var(--lv-ease),
+            border-color var(--lv-dur-1) var(--lv-ease),
+            box-shadow var(--lv-dur-1) var(--lv-ease);
+
+        &:hover {
+            transform: translateY(-1px);
+            border-color: var(--lv-border-strong);
+            box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
+        }
+    }
+    .lv-ko-row-disabled { opacity: .5; }
+    .lv-ko-id { font-family: var(--b3-font-family-code, monospace); font-size: 12px; word-break: break-all; overflow-wrap: anywhere; }
+    .lv-ko-derive { display: flex; gap: var(--lv-sp-2); margin-top: var(--lv-sp-2); align-items: center; }
+    .lv-ko-derive-error {
+        margin-top: var(--lv-sp-2);
+        color: var(--lv-color-danger);
+        font-size: var(--lv-type-control-size);
+        overflow-wrap: anywhere;
+        max-width: 48em;
+        text-wrap: pretty;
+        line-height: var(--lv-lh-reading, 1.65);
+    }
+    .lv-ko-revise-btn { margin-left: auto; opacity: .8; }
+    .lv-ko-revise textarea { resize: vertical; }
+</style>

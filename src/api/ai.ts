@@ -1,0 +1,212 @@
+/**
+ * AI 调用层（M2·FR7）：双 provider。
+ * - siyuan：思源内置 AI 配置（/api/ai/chatGPT，端点形状 🧪 真机校验，宽容解析）
+ * - custom：OpenAI 兼容 /chat/completions（用户自配 endpoint/key/model）
+ * AQ-14：外部可传入 AbortSignal（向导关闭/换源即取消），请求级 15s 超时。
+ * AQ-15：fallback 仅对可恢复错误（网络/5xx/429）生效；401/配额/4xx/取消/解析错误直接给原因。
+ */
+import { fetchSyncPost } from "siyuan";
+import { AICanceledError, AIHttpError, extractAIErrorCode, isAICanceled, isRecoverableAIError, parseRetryAfter } from "./ai-errors";
+import { classifyAiFailure, nextLadderStep, type LadderStep } from "../core/ai-degradation";
+import { RequestError, requestWithPolicy } from "../libs/request";
+import { lvAi } from "../libs/lv-notice-kit";
+
+// 错误分类从零依赖模块再导出（单测不经 siyuan 包解析；调用方仍从 @/api/ai 引入）
+export { AICanceledError, AIHttpError, extractAIErrorCode, isAICanceled, isRecoverableAIError, parseRetryAfter };
+// BU-28 阶梯分类/决策随调用层暴露（向导/审计可呈现实际降级路径）
+export { classifyAiFailure, nextLadderStep };
+export type { LadderStep };
+
+export interface AIConfig {
+    mode: "siyuan" | "custom";
+    endpoint: string;
+    apiKey: string;
+    model: string;
+    /** 备用端点（300 回退链）：主端点失败时自动切换（仅 custom 模式） */
+    fallbackEndpoint?: string;
+    fallbackApiKey?: string;
+    fallbackModel?: string;
+}
+
+export interface AICallOptions {
+    /** 取消信号：abort 后不触发 fallback、不写回调用方 */
+    signal?: AbortSignal;
+    /** 实际使用的 provider 回调（界面可提示「已切换备用端点」） */
+    onProvider?: (provider: "primary" | "fallback") => void;
+    /** BU-28：阶梯决策回调——转备用发生时携带实际路径/费用提示（界面不静默 fallback 的验收点） */
+    onDegradation?: (step: LadderStep) => void;
+    /** 请求超时毫秒，默认 15000 */
+    timeoutMs?: number;
+}
+
+export function normalizeEndpoint(url: string): string {
+    let clean = (url ?? "").trim().replace(/\/+$/, "");
+    if (clean.toLowerCase().endsWith("/chat/completions")) {
+        clean = clean.slice(0, -"/chat/completions".length).replace(/\/+$/, "");
+    }
+    return clean;
+}
+
+export async function aiChat(cfg: AIConfig, system: string, user: string, opts: AICallOptions = {}): Promise<string> {
+    // AbortSignal 可能在调用前已触发；必须在创建 fetch/回退链前立即短路。
+    // 否则 chatCompletions 只监听未来 abort 事件，会把已取消请求发送出去。
+    if (opts.signal?.aborted) {
+        throw new AICanceledError();
+    }
+    if (cfg.mode === "custom") {
+        if (!cfg.endpoint) {
+            throw new Error("custom endpoint is empty");
+        }
+        try {
+            return await chatCompletions(cfg, system, user, opts);
+        } catch (e) {
+            // BU-28 阶梯决策（主端点不重试，maxPrimaryAttempts=1 维持既有行为）：
+            // 可重试类（网络/5xx/限流）→ 已配置备用则转备用；终止类（401/配额/隐私/解析/取消）直接给原因
+            const fb = cfg.fallbackEndpoint ? normalizeEndpoint(cfg.fallbackEndpoint) : "";
+            const step = nextLadderStep(classifyAiFailure(e), { maxPrimaryAttempts: 1, hasFallback: Boolean(fb) && fb !== normalizeEndpoint(cfg.endpoint) }, 1);
+            if (step.action === "try-fallback") {
+                try {
+                    const text = await chatCompletions(
+                        { ...cfg, endpoint: fb, apiKey: cfg.fallbackApiKey ?? "", model: cfg.fallbackModel || cfg.model },
+                        system, user,
+                        { ...opts, signal: opts.signal, onProvider: undefined },
+                    );
+                    opts.onProvider?.("fallback");
+                    opts.onDegradation?.(step);
+                    return text;
+                } catch (e2) {
+                    // 取消可能发生在主请求失败、备用请求开始或备用请求进行中；
+                    // 保留取消错误，不能把它包装成可恢复的组合失败。
+                    if (opts.signal?.aborted || isAICanceled(e2)) {
+                        throw new AICanceledError();
+                    }
+                    throw new Error(
+                        `AI fail: primary (${describe(e)}) | fallback (${describe(e2)})`,
+                    );
+                }
+            }
+            throw e;
+        }
+    }
+    // siyuan 内置 AI（AbortSignal 无法透传 fetchSyncPost，取消语义由调用方序号守卫兜底）
+    if (opts.signal?.aborted) {
+        throw new AICanceledError();
+    }
+    const timeoutMs = opts.timeoutMs ?? 15000;
+    interface SiyuanAiResp {
+        code?: number;
+        msg?: string;
+        data?: { content?: string; text?: string } | string;
+        [key: string]: unknown;
+    }
+    const resp = await requestWithPolicy<SiyuanAiResp>(
+        () => (fetchSyncPost as (url: string, data: unknown) => Promise<SiyuanAiResp>)("/api/ai/chatGPT", {
+            messages: [
+                { role: "system", content: system },
+                { role: "user", content: user },
+            ],
+        }),
+        { timeoutMs, signal: opts.signal, readOnly: false },
+    );
+    if (opts.signal?.aborted) {
+        throw new AICanceledError();
+    }
+    if (!resp || resp.code !== 0) {
+        // 思源网关返回 envelope 时可能只给数值状态码，不带 HTTP 文本；
+        // 映射 4xx/5xx 后与自定义端点共用认证、配额、限流和服务端错误提示。
+        const status = Number(resp?.code);
+        if (Number.isInteger(status) && status >= 400 && status <= 599) {
+            throw new AIHttpError(status, extractAIErrorCode(resp?.data ?? resp));
+        }
+        throw new Error(resp?.msg || `kernel error (code=${resp?.code ?? "unknown"})`);
+    }
+    const d = resp.data;
+    if (typeof d === "string") return d;
+    return String(d?.content ?? d?.text ?? "");
+}
+
+function describe(e: unknown): string {
+    return (e instanceof Error ? e.message : String(e ?? "")).slice(0, 200);
+}
+
+async function chatCompletions(cfg: AIConfig, system: string, user: string, opts: AICallOptions): Promise<string> {
+    // 回退链可能在主请求失败与切换之间观察到取消；再次检查，避免已取消的
+    // fallback 请求绕过已注册的 abort 监听而实际发出网络请求。
+    if (opts.signal?.aborted) {
+        throw new AICanceledError();
+    }
+    const timeoutMs = opts.timeoutMs ?? 15000;
+    opts.onProvider?.("primary");
+    try {
+        // 全面接入统一 AI 网关 lvAi.chat（自动享受并发限流与 429 指数退避）
+        return await requestWithPolicy(
+            signal => {
+                if (cfg.apiKey) {
+                    lvAi.setConfig({
+                        endpoint: cfg.endpoint,
+                        apiKey: cfg.apiKey,
+                        model: cfg.model || "gpt-4o-mini",
+                    });
+                } else {
+                    const shared = lvAi.getConfig();
+                    if (shared?.apiKey) {
+                        cfg = {
+                            ...cfg,
+                            endpoint: cfg.endpoint || shared.endpoint,
+                            apiKey: shared.apiKey,
+                            model: cfg.model || shared.model,
+                        };
+                    }
+                }
+
+                return lvAi.chat({
+                    source: "闪卡",
+                    messages: [
+                        { role: "system", content: system },
+                        { role: "user", content: user },
+                    ],
+                    endpoint: cfg.endpoint,
+                    apiKey: cfg.apiKey,
+                    model: cfg.model || "gpt-4o-mini",
+                    signal,
+                    priority: "high",
+                }).then(res => res.content, (err: any) => {
+                    if (err instanceof AIHttpError) throw err;
+                    const httpMatch = err?.message?.match(/HTTP (\d+)(?::\s*([\s\S]*))?/i);
+                    if (httpMatch) {
+                        const status = parseInt(httpMatch[1], 10);
+                        let code: string | undefined;
+                        if (httpMatch[2]) {
+                            try {
+                                const parsed = JSON.parse(httpMatch[2].trim());
+                                code = extractAIErrorCode(parsed);
+                            } catch { /* 非 JSON 错误响应忽略 */ }
+                        }
+                        throw new AIHttpError(status, code);
+                    }
+                    throw err;
+                });
+            },
+            { timeoutMs, signal: opts.signal, readOnly: false },
+        );
+    } catch (e) {
+        // 区分「调用方取消」与「超时」：前者不可恢复，后者按网络故障可 fallback/重试
+        if (opts.signal?.aborted || isAICanceled(e)) {
+            throw new AICanceledError();
+        }
+        if (e instanceof RequestError && e.category === "timeout") {
+            throw new Error(`AI timeout after ${timeoutMs}ms`);
+        }
+        if ((e instanceof DOMException && e.name === "AbortError") || (e instanceof Error && e.name === "AbortError")) {
+            // Native fetch may reject with AbortError before the policy wrapper
+            // can classify it; this is a cancellation when it came from the
+            // caller, otherwise a request deadline.
+            if (opts.signal?.aborted) throw new AICanceledError();
+            throw new Error(`AI timeout after ${timeoutMs}ms`);
+        }
+        throw e;
+    }
+}
+
+// 解析/估算纯逻辑从 ai-parse 再导出（零依赖可单测；调用方 import 路径不变）
+export { estimateTokens, parseCards } from "./ai-parse";
