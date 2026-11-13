@@ -2306,7 +2306,7 @@
         try {
             const nbs = notebooks.length > 0 ? notebooks : await getNotebooks();
             notebooks = nbs;
-            const targetNb = nbs.find(n => /小驴生态统一测试空间|小驴闪卡|小驴管家/.test(n.name || "")) ?? nbs[0];
+            const targetNb = nbs.find(n => /(🐴\s*)?小驴(生态|空间|闪卡|管家)/.test(n.name || "")) ?? nbs[0];
             if (!targetNb) {
                 showMessage(t.onboardingNoNotebook ?? "请先在思源中打开一个笔记本", 2800, "error");
                 return false;

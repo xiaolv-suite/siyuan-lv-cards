@@ -30,7 +30,7 @@ export function resolveTargetNotebook(
         n =>
             n.name?.includes("小驴空间") ||
             n.name?.includes("小驴笔记本") ||
-            n.name?.includes("小驴生态统一测试空间"),
+            /^(🐴s*)?小驴(生态|空间|笔记本)/.test(n.name?.trim() || ""),
     );
     return hub ?? notebooks[0] ?? null;
 }

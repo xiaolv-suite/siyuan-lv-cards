@@ -40,7 +40,7 @@
         try {
             notebooks = await getNotebooks();
             if (notebooks.length > 0) {
-                const preferred = notebooks.find((n) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n.name || "")) ?? notebooks[0];
+                const preferred = notebooks.find((n) => /(🐴\s*)?小驴(生态|空间|笔记本|闪卡)/.test(n.name || "")) ?? notebooks[0];
                 nbId = preferred.id;
             } else {
                 nbId = "";

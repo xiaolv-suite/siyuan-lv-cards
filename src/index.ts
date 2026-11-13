@@ -1200,7 +1200,7 @@ export default class LvCardsPlugin extends Plugin {
             const nbs = await getNotebooks();
             const nbList = Array.isArray(nbs) ? nbs : ((nbs as any)?.notebooks ?? []);
             const preferredNb = nbList.find((n: any) => n?.id === this.settings?.targetNotebookId)
-                ?? nbList.find((n: any) => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n?.name || ""))
+                ?? nbList.find((n: any) => /(🐴\s*)?小驴(生态|空间|笔记本|闪卡)/.test(n?.name || ""))
                 ?? nbList[0];
             const defaultNb = preferredNb?.id;
             if (!defaultNb) return false;
@@ -1248,7 +1248,7 @@ export default class LvCardsPlugin extends Plugin {
             targetNotebook: async () => {
                 const nbs = await getNotebooks();
                 return (nbs.find(n => n.id === this.settings?.targetNotebookId)
-                    ?? nbs.find(n => /小驴空间|小驴生态统一测试空间|小驴笔记本|小驴闪卡/.test(n.name)) ?? nbs[0])?.id ?? "";
+                    ?? nbs.find(n => /(🐴\s*)?小驴(生态|空间|笔记本|闪卡)/.test(n.name)) ?? nbs[0])?.id ?? "";
             },
             find: async (nb, path) => {
                 const { findDocIDByHPath } = await import("./api/siyuan");
