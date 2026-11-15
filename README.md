@@ -25,6 +25,42 @@
 
 ---
 
+## 🚀 本次更新要点（v0.233.4）
+
+- **文档内闪卡序号流排版美化**：优化块级闪卡在笔记中的序号徽标设计，层次结构清晰，与思源排版自然融为一体；
+- **移动端全场景稳定性提升**：排查并加固同步与内存生命周期，消除移动端闪退隐患，长列表流畅滑动；
+- **全生态罗盘顶栏常驻与防抖**：消除思源 3.8.x 内置重排对罗盘中枢的拉锯推挤，单插件亦可一键直达罗盘全功能；
+- **复习提醒长效免打扰与通知折叠**：每日复习提醒全面接入统一交互卡片，「未来3天/未来一周不提醒」跨重启严格固化，高频操作提示原位计数折叠（×N）。
+
+<details>
+<summary>展开查看历史版本更新记录（v0.233.3 及更早版本 · 完整记录见 CHANGELOG.md）</summary>
+
+- **v0.233.3**：罗盘启动防抖与顶栏对齐、LifeLog 照片流与原子多块撤销、全生态联合灾备恢复、移动端全面去电脑化。
+- **v0.233.2**：移动端手势让路消除卡顿、输入法合成期全域守卫、设置页底部安全区。
+- **v0.233.1**：外部摘录与原子制卡分路、移动端全屏退场机制闭环。
+</details>
+
+---
+
+## 🐴 小驴思源全家桶生态矩阵与交流
+
+本插件为「小驴思源生态」8 大官方集市插件之一。所有插件共享小驴罗盘（顶栏常驻中枢）、全域穿透搜索与统一备份恢复：
+
+| 插件名称 | 核心用途 | 官方集市 / 仓库 |
+| :--- | :--- | :--- |
+| **小驴打卡** | 本地优先习惯打卡、日程提醒与多维人生热力图工作台 | [`siyuan-checkin`](https://github.com/xiaolv-suite/siyuan-checkin) |
+| **小驴管家** | 家庭成员中心视角档案、证照保单到期预警与 LifeLog 流水协同 | [`siyuan-home`](https://github.com/xiaolv-suite/siyuan-home) |
+| **小驴人脉** | 一人一文档人际管理、圈层力导向关系网络与会前破冰速览 | [`siyuan-contacts`](https://github.com/xiaolv-suite/siyuan-contacts) |
+| **小驴拾遗** | 剪藏文章深度消化、视线同焦伴生导读与 4 大学术著录 | [`siyuan-glean`](https://github.com/xiaolv-suite/siyuan-glean) |
+| **小驴闪卡** | 原生 FSRS 算法调度、文档内质感序号流与全场景极速制卡 | [`siyuan-lv-cards`](https://github.com/xiaolv-suite/siyuan-lv-cards) |
+| **小驴考试** | 全真模拟考场环境、错题靶向归因复训与苏格拉底启发式 AI 导师 | [`siyuan-exam`](https://github.com/xiaolv-suite/siyuan-exam) |
+| **小驴常用** | 代码片段工作室、零卡死安全剪贴板历史与一键记事沙盒 | [`xiaolv-common`](https://github.com/xiaolv-suite/xiaolv-common) |
+| **小驴雷切** | 毫秒级多文档穿透切换、左右双文档实时分栏对照与切片代码画板 | [`siyuan-speed-switch`](https://github.com/xiaolv-suite/siyuan-speed-switch) |
+
+💬 **官方交流与需求反馈 QQ 群**：**871707735**（开发者实时在线，欢迎反馈问题、交流使用体验与提交新功能构想）。
+
+---
+
 ## 🎯 为什么需要小驴闪卡？它解决什么问题？
 
 小驴闪卡（siyuan-lv-cards）旨在彻底解决知识学习者长期面临的**“笔记记了就忘、卡片制了不背、复习积压如山挫败弃坑”**三大核心痛点。插件以思源笔记内核原生的 **FSRS 科学间隔重复算法**为单一事实源，向上贯穿“从阅读材料捕获、原子化制卡、多感官主动回忆自测，到疑难卡熔断治理与跨平台无损迁移”的完整知识内化全闭环：
@@ -189,53 +225,6 @@
   **答：** 完美支持！移动端采用针对触控全面优化的 100vw/100dvh 全屏卡片，触控靶心均 ≥44px，支持底部大拇指单手评分区、滑动手势以及点击原文档后自动退出工作台。
 - **Q4：如何将 Anki 的卡片导入到思源笔记中？**  
   **答：** 在卡片库点击「导入」 -> 选择「Anki (.apkg) 包」，插件将在本地直接解析卡片正面、背面、挖空及标签，自动在您的思源笔记本中创建对应卡组与笔记块，无需任何在线格式转换。
-
----
-
-## 🐴 小驴系列插件家族
-
-小驴系列插件各自独立，可按需安装和组合使用：
-
-| 插件名称 | 一句话简介 | GitHub 仓库 |
-| :--- | :--- | :--- |
-| [小驴雷切](https://github.com/xiaolv-suite/siyuan-speed-switch) | 思源中的统一导航与工作上下文平台，连接页签、工作台、片段和快捷入口。 | [xiaolv-suite/siyuan-speed-switch](https://github.com/xiaolv-suite/siyuan-speed-switch) |
-| [小驴打卡](https://github.com/xiaolv-suite/siyuan-checkin) | 本地优先的习惯、目标打卡与复盘工作台。 | [xiaolv-suite/siyuan-checkin](https://github.com/xiaolv-suite/siyuan-checkin) |
-| [小驴人脉](https://github.com/xiaolv-suite/siyuan-contacts) | 在思源中管理联系人、人际关系、组织归属和重要日期。 | [xiaolv-suite/siyuan-contacts](https://github.com/xiaolv-suite/siyuan-contacts) |
-| [小驴拾遗](https://github.com/xiaolv-suite/siyuan-glean) | 整理思源剪藏和导入文章，支持状态分拣、阅读管理与日后回顾。 | [xiaolv-suite/siyuan-glean](https://github.com/xiaolv-suite/siyuan-glean) |
-| [小驴考试（内测版）](https://github.com/xiaolv-suite/siyuan-exam) | 本地题库备考工作台，支持多格式导入、刷题、模考、错题复盘与 AI 辅助。 | [xiaolv-suite/siyuan-exam](https://github.com/xiaolv-suite/siyuan-exam) |
-| [小驴管家（内测版）](https://github.com/xiaolv-suite/siyuan-home) | 管理家庭与生活资料、成员档案、台账、到期提醒和事务跟进。 | [xiaolv-suite/siyuan-home](https://github.com/xiaolv-suite/siyuan-home) |
-| [小驴闪卡（内测版）](https://github.com/xiaolv-suite/siyuan-lv-cards) | 思源中的知识捕获、制卡、练习与复习平台，使用内核原生 FSRS 排期。 | [xiaolv-suite/siyuan-lv-cards](https://github.com/xiaolv-suite/siyuan-lv-cards) |
-| [小驴常用（内测版）](https://github.com/xiaolv-suite/xiaolv-common) | 基于思源块保存、搜索并快速调用常用语、模板、代码和链接，支持变量填充。 | [xiaolv-suite/xiaolv-common](https://github.com/xiaolv-suite/xiaolv-common) |
-
-交流与反馈 QQ 群：**871707735**（可反馈 Bug、提交需求和交流使用体验）。
-
----
-
-## 📝 最近更新动态
-
-- **思源 3.8.10+ 原生特性适配**：复习卡片进入沉浸专注模式自动协同折叠原生停靠栏，退出时平滑恢复；复习工具栏与卡片面包屑支持右键呼出原生文档树菜单（`showDocTreeNativeMenu`）。
-- **移动端复习页「无法下滑、卡住」根因彻底根治**：重构滑动评分手势判定——当内容纵向溢出可滚动时，纵向占优手势自动让路给页面滚动，横滑评分完全不受影响；复习会话横幅窄屏自动切换紧凑模式，触屏隐藏键盘快捷键提示。
-- **输入法合成期全域守卫**：卡包创建/改名、速选卡包、批量卡组、目标编辑、关系面板、打字题与填空题判定等 8 处输入全面增加 IME 合成期守卫，不再以拼音半成品误建卡包或误判答案。
-- **双端体验打磨与防线**：移动端设置页吸底栏补齐 iOS 安全区边距；芯片/模式/分段按钮增加桌面端 hover 悬停高亮；全生态剪贴板写入失败覆盖契约固化。
-
-<details>
-<summary>展开查看历史版本更新（v0.233.1 及更早版本 · 完整记录见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
-
-### v0.233.1
-* **外部摘录与原子制卡分路（Protocol v1.7.8 制卡契约强化）**：外部摘录确切新对象回执、稳定请求身份与持久恢复账本，粗摘录不再写入 FSRS 复习队列；修复手机端遮挡编辑器头部排版；
-* **移动端全屏退场机制闭环**：在手机端点击卡片关联原笔记自动调用 `openMobileFileById` 并收起复习模态框，底层文档即刻呈现；
-* **顶栏罗盘防抖与自愈守护**：启动微任务防抖聚合，思源重启/同步后顶栏图标由 MutationObserver 单例自动自愈。
-
-<details>
-<summary>展开查看历史版本更新（v0.233.0 及更早版本 · 完整记录见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
-
-### v0.233.0
-* **Epoch 7 全生态协同基础设施终局落地（Protocol v1.6.0）**：小驴罗盘家族极速弹射坞 (`lvLaunchpad`)、万物穿透搜索 (`lvOmnisearch`)、错题自动制卡规则与联合灾备总线。
-
-### v0.232.0
-* **公共集市全量能力深化**：卡包品质画像看板、跨学科闪卡篮挑选（Cart & Stash）、增量差量更新与无损合并、卡包发布脱敏扫描。
-
-</details>
 
 ---
 
