@@ -27,6 +27,9 @@
     } = $props();
 
     function autoFocusInput(node: HTMLElement) {
+        // 移动端不自动弹软键盘，避免遮挡题目上下文与视口震荡（WCAG / Apple HIG 可访问性准则）
+        const isTouchMobile = typeof window !== "undefined" && (window.innerWidth <= 768 || "ontouchstart" in window || (navigator.maxTouchPoints > 0));
+        if (isTouchMobile) return;
         setTimeout(() => {
             try { node.focus(); } catch {}
         }, 50);
@@ -153,11 +156,11 @@
                     spellcheck="false"
                     autocomplete="off"
                     oninput={(e) => onTypingInput?.((e.target as HTMLInputElement).value)}
-                    placeholder="在此输入你的填空答案，按 Enter 智能判定..."
+                    placeholder="在此输入作答..."
                     onkeydown={(e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === "Enter") onFillCheck(); }}
                 />
                 <button type="button" class="b3-button lv-btn-primary lv-btn-tool lv-fill-submit-btn" aria-keyshortcuts="Enter" onclick={onFillCheck}>
-                    <LvIcon name="check" size={13} /> <span>判定 Enter</span>
+                    <LvIcon name="check" size={13} /> <span>判定</span>
                 </button>
             </div>
         </div>

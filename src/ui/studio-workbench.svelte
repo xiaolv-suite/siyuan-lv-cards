@@ -433,6 +433,8 @@
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
+        white-space: nowrap;
+        flex-shrink: 0;
         cursor: pointer;
         touch-action: manipulation;
         user-select: none;
@@ -458,6 +460,8 @@
         min-height: 34px;
         border-radius: var(--lv-r-pill);
         padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6);
+        white-space: nowrap;
+        flex-shrink: 0;
         touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;

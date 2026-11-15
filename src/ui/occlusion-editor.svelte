@@ -115,6 +115,7 @@
         errorMsg = "";
         if (image) image.removeEventListener("load", throttledPositionOverlay);
         window.removeEventListener("resize", throttledPositionOverlay);
+        resizeListening = false;
         image = null;
         if (content) content.innerHTML = "";
         try {
@@ -141,6 +142,7 @@
                         image.height = image.naturalHeight;
                     } else {
                         image.addEventListener("load", () => {
+                            if (disposed || seq !== loadSeq) return;
                             if (image instanceof HTMLImageElement && image.naturalWidth && image.naturalHeight) {
                                 image.width = image.naturalWidth;
                                 image.height = image.naturalHeight;

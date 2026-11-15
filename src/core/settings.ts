@@ -35,6 +35,10 @@ export interface LvCardsSettings {
     dictationEnabled: boolean;
     /** 选择题练习模式：问题态可将本卡转为四选一（干扰项取自同队列） */
     choiceEnabled: boolean;
+    /** 选择题选项乱序：复习时随机打乱 A/B/C/D 顺序，打破位置记忆 */
+    shuffleChoiceOptions: boolean;
+    /** 文档内闪卡块序号角标（#1, #2...）：实时 CSS 计数器轻量呈现，不写脏数据 */
+    docCardBadgeEnabled: boolean;
     /** 混合题型轮换（v0.179.0）：按本场张数在翻面/打字/选择间轮换出题形态（展示层，不动调度） */
     mixedRotation: boolean;
     /** 遗忘卡短期循环：评 1 的卡延迟几分钟再出现（会话内强化，不动内核调度） */
@@ -200,6 +204,8 @@ export function defaultSettings(): LvCardsSettings {
         typingStrict: true,
         dictationEnabled: false,
         choiceEnabled: false,
+        shuffleChoiceOptions: true,
+        docCardBadgeEnabled: true,
         mixedRotation: false,
         requeueAgain: true,
         xpEnabled: false,

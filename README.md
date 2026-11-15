@@ -8,9 +8,9 @@
 
 让思源笔记成为记得住、用得上、找得到、改得动、负担得起、带得走的长期知识资产
 
-**当前版本：v0.233.3** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
+**当前版本：v0.233.4** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
 
-[![Release](https://img.shields.io/badge/release-v0.233.3-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
+[![Release](https://img.shields.io/badge/release-v0.233.4-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
 [![思源笔记](https://img.shields.io/badge/思源笔记-%3E%3D%203.8.4-brightgreen.svg)](https://b3log.org/siyuan)
 [![算法引擎](https://img.shields.io/badge/算法-内核原生%20FSRS-blueviolet.svg)](https://github.com/open-spaced-repetition/fsrs4anki)
 [![License: MIT](https://img.shields.io/github/license/xiaolv-suite/siyuan-lv-cards)](./LICENSE)

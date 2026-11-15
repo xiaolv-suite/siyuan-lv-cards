@@ -3400,5 +3400,6 @@
     "deckManagerDeletePrompt": "确定要删除卡包「${name}」吗？",
     "deckManagerDeleteSafeNote": "仅解除卡包关联，原笔记中的卡片块完整保留在正文中。",
     "deckManagerMergedNotice": "已将 ${n} 张卡片合并至目标卡包",
-    "deckManagerDeleteSourceAfterMerge": "合并后删除源卡包"
+    "deckManagerDeleteSourceAfterMerge": "合并后删除源卡包",
+    "quickCardStep3Mobile": "点「制卡」入库"
 }

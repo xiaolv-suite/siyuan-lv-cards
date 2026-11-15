@@ -342,8 +342,8 @@
             }
 
             &--archive {
-                background: color-mix(in srgb, var(--lv-color-warn, #d97706) 15%, transparent);
-                color: var(--lv-color-warn, #b45309);
+                background: color-mix(in srgb, var(--lv-color-warn, var(--b3-theme-warning, #d97706)) 15%, transparent);
+                color: var(--b3-theme-warning, var(--lv-color-warn, #d97706));
             }
 
             &--danger {
@@ -440,9 +440,15 @@
             place-items: center;
             cursor: pointer;
             border: 1px solid var(--lv-border);
+            touch-action: manipulation;
             &:hover {
                 background: var(--lv-surface-hover);
                 color: var(--lv-color-brand);
+            }
+            @media (max-width: 640px) {
+                width: 44px;
+                height: 44px;
+                font-size: 16px;
             }
         }
     }

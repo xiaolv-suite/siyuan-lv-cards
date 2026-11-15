@@ -327,7 +327,7 @@
 <LvDrawer open title={t.manager.detailTitle} closeLabel={t.manager.close} width="min(560px, 92vw)" onclose={safeClose}>
     {#snippet actions()}
         {#if editorCtx && !editing}
-            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={editorLoadBusy} aria-busy={editorLoadBusy} onclick={startEdit}><LvIcon name="edit" size={12} /> <span>{editorLoadBusy ? "…" : t.editor.edit}</span></button>
+            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={editorLoadBusy} aria-busy={editorLoadBusy} onclick={startEdit} title={t.editor.edit}><LvIcon name="edit" size={12} /> <span class="lv-detail-action-text">{editorLoadBusy ? "…" : t.editor.edit}</span></button>
         {/if}
         <button
             type="button"
@@ -345,9 +345,9 @@
             }}
         >
             <LvIcon name="book" size={12} />
-            <span>{t.manager.copyRef ?? "复制块引"}</span>
+            <span class="lv-detail-action-text">{t.manager.copyRef ?? "复制块引"}</span>
         </button>
-        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenDoc}><LvIcon name="target" size={12} /> <span>{t.manager.openDoc}</span></button>
+        <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={onOpenDoc} title={t.manager.openDoc}><LvIcon name="target" size={12} /> <span class="lv-detail-action-text">{t.manager.openDoc}</span></button>
     {/snippet}
     <!-- T05 分面导航（docs/40）：内容 / 来源 / 学习记录 / 问题 -->
     <div class="lv-facets" role="tablist" aria-orientation="horizontal" tabindex="-1" onkeydown={onFacetKeydown}>
@@ -465,7 +465,7 @@
                 <span class="lv-chip2 lv-chip2--default"><LvIcon name="cards" size={13} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}</span>
             </div>
         {/if}
-        <div class="lv-detail-preview lv-unified-face b3-typography" bind:this={previewEl}>{@html (html && isSuperBlockHtml(html)) ? renderSuperBlockAnswerFace(html) : (html || (block.content ?? ""))}</div>
+        <div class="lv-detail-preview lv-card-content lv-unified-face b3-typography" bind:this={previewEl}>{@html (html && isSuperBlockHtml(html)) ? renderSuperBlockAnswerFace(html) : (html || (block.content ?? ""))}</div>
         {#if editing}
             <CardEditor t={t} original={editorMd} onsave={saveEdit} oncancel={() => (editing = false)} />
         {:else if editorLoadFail}
@@ -617,6 +617,122 @@
             overflow-x: auto;
             scrollbar-width: thin;
         }
+
+        /* 表格卡面防列溃缩与横向滚动（根治短文本列被压成单字竖条的严重布局 Bug） */
+        :global(.table),
+        :global([data-type="NodeTable"]),
+        :global(div:has(> table)) {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: var(--lv-sp-3) 0;
+            border-radius: var(--lv-r-m);
+            scrollbar-width: thin;
+        }
+
+        :global(table) {
+            width: max-content;
+            min-width: 100%;
+            max-width: none;
+            border-collapse: collapse;
+            table-layout: auto;
+            line-height: var(--lv-lh-reading);
+            border: 1px solid var(--lv-border);
+            border-radius: var(--lv-r-m);
+            margin: var(--lv-sp-2) 0;
+        }
+
+        :global(th),
+        :global(td) {
+            padding: calc(var(--lv-space-unit) * 2 + 2px) calc(var(--lv-space-unit) * 3 + 2px);
+            border: 1px solid var(--lv-border);
+            font-size: var(--lv-type-body-size);
+            min-width: 76px;
+            overflow-wrap: break-word !important;
+            word-break: break-word;
+            vertical-align: top;
+        }
+
+        :global(th) {
+            background: color-mix(in srgb, var(--lv-color-text) 5%, var(--lv-color-surface));
+            font-weight: var(--lv-fw-bold);
+            white-space: nowrap;
+            color: var(--lv-color-text);
+        }
+
+        :global(td:first-child),
+        :global(th:first-child) {
+            min-width: 84px;
+            white-space: nowrap;
+        }
+
+        /* 列表项排版自适应（防子列表/引用块横向挤压与竹简竖排） */
+        :global([data-type="NodeListItem"]),
+        :global(.li) {
+            position: relative !important;
+            display: block !important;
+            padding-left: calc(var(--lv-space-unit) * 6) !important;
+            margin: calc(var(--lv-space-unit) * 2) 0 !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+
+            :global(> .protyle-action) {
+                position: absolute !important;
+                left: 0 !important;
+                top: 2px !important;
+                margin: 0 !important;
+                width: 18px !important;
+                height: 18px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            :global(> .p),
+            :global(> [data-type="NodeParagraph"]) {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                margin: 0 0 calc(var(--lv-space-unit) * 1) 0 !important;
+                line-height: var(--lv-lh-reading-loose) !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+            }
+
+            :global(> .list),
+            :global(> [data-type="NodeList"]) {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                margin: calc(var(--lv-space-unit) * 2) 0 !important;
+                padding-left: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            :global(> .bq),
+            :global(> [data-type="NodeBlockquote"]),
+            :global(> blockquote) {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                margin: calc(var(--lv-space-unit) * 2) 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            :global(> .table),
+            :global(> [data-type="NodeTable"]),
+            :global(> div:has(> table)) {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: calc(var(--lv-space-unit) * 2) 0 !important;
+                box-sizing: border-box !important;
+            }
+        }
     }
     .lv-detail-preview-state,
     .lv-detail-preview-error {
@@ -643,15 +759,21 @@
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 7%, transparent);
         margin-bottom: var(--lv-sp-4);
+        min-height: 40px;
+        box-sizing: border-box;
     }
     .lv-facet {
         flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
         border: none;
         background: transparent;
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-control-size);
         font-weight: var(--lv-fw-emphasis);
-        padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 5);
+        padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4);
         border-radius: var(--lv-r-pill);
         cursor: pointer;
         touch-action: manipulation;
@@ -666,7 +788,8 @@
             box-shadow: var(--lv-focus-ring);
         }
 
-        @media (max-width: 400px) {
+        @media (max-width: 500px) {
+            min-height: 40px;
             padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 3);
             font-size: var(--lv-type-meta-size);
         }
@@ -732,4 +855,20 @@
         border-left: 3px solid var(--lv-color-success);
     }
     .lv-diff-same { opacity: 0.65; }
+
+    :global(.lv-drawer-actions .lv-btn-tool) {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    @media (max-width: 540px) {
+        :global(.lv-drawer-actions .lv-detail-action-text) {
+            display: none;
+        }
+        :global(.lv-drawer-actions .lv-btn-tool) {
+            padding: 0 8px !important;
+            min-width: 34px !important;
+            height: 34px !important;
+            justify-content: center;
+        }
+    }
 </style>

@@ -809,13 +809,28 @@
         gap: 2px;
     }
     .lv-dm-segment-btn {
-        padding: 3px 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        padding: 3px 12px;
         border-radius: calc(var(--lv-r-m) - 2px);
         font-size: var(--lv-type-caption-size);
         border: none;
         background: transparent;
         color: var(--lv-color-text-muted);
         cursor: pointer;
+        touch-action: manipulation;
+        transition: background var(--lv-t-fast) ease, color var(--lv-t-fast) ease;
+    }
+    @media (max-width: 640px) {
+        .lv-dm-segment-btn {
+            min-height: 36px;
+            padding: 4px 14px;
+        }
+        .lv-dm-actions .b3-button {
+            min-height: 38px;
+        }
     }
     .lv-dm-segment-btn-active {
         background: var(--lv-primary-soft);
@@ -958,8 +973,9 @@
         color: var(--lv-color-warning) !important;
     }
     .lv-dm-sort-select {
-        height: 26px;
-        line-height: 24px;
+        height: 30px;
+        min-height: 30px;
+        line-height: 28px;
         font-size: 12px;
         padding: 0 6px;
         max-width: 105px;

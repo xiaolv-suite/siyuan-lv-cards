@@ -1031,6 +1031,14 @@
         transform: translateY(-1px);
     }
 
+    @media (max-width: 640px) {
+        .lv-hub-subnav-btn {
+            min-height: 38px;
+            padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 4);
+            font-size: 13px;
+        }
+    }
+
     .lv-r54-settings {
         max-width: 1040px;
         margin: 0 auto;

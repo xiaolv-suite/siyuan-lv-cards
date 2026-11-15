@@ -157,7 +157,7 @@ export function notifyDailyReviewReminder(options: {
     onStartReview: () => void;
     title?: string;
 }): string | null {
-    if (lvNotify.isMutedToday("daily-review-reminder")) {
+    if (lvNotify.isMutedToday("daily-review-reminder") || lvNotify.isCategoryMuted?.("daily-review-reminder") || lvNotify.isCategorySnoozed?.("daily-review-reminder")) {
         return null;
     }
 
@@ -168,6 +168,7 @@ export function notifyDailyReviewReminder(options: {
         message: options.message,
         level: "info",
         duration: 15000,
+        firstRun: true,
         actions: [
             {
                 label: "开始复习",

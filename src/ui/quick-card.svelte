@@ -735,7 +735,7 @@
         <LvIcon name="chevron-right" size={12} />
         <span class="lv-qc-step" role="listitem"><b>2</b>{t.quickCardStep2 ?? "写问题与答案"}</span>
         <LvIcon name="chevron-right" size={12} />
-        <span class="lv-qc-step" role="listitem"><b>3</b>{t.quickCardStep3 ?? "Ctrl+Enter 一键制卡"}</span>
+        <span class="lv-qc-step" role="listitem"><b>3</b>{lvLaunchpad.isMobileFrontend() ? (t.quickCardStep3Mobile ?? "点「制卡」入库") : (t.quickCardStep3 ?? "Ctrl+Enter 一键制卡")}</span>
         {#if onClose && embedded}
             <button
                 type="button"
@@ -982,7 +982,7 @@
                                 onclick={(e) => { e.stopPropagation(); insertCloze(); }}
                             >
                                 <LvIcon name="edit" size={12} />
-                                <span>{t.quickCardClozeInsert ?? "一键挖空 (Ctrl+H)"}</span>
+                                <span>{lvLaunchpad.isMobileFrontend() ? "一键挖空" : (t.quickCardClozeInsert ?? "一键挖空 (Ctrl+H)")}</span>
                             </button>
                         {/if}
                         {#if canFillSample}
@@ -1313,10 +1313,10 @@
             class="b3-button lv-btn-primary"
             disabled={!canSubmit}
             aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
-            title={`${t.quickCardCreate} (${isMac ? "⌘+Enter" : "Ctrl+Enter"})`}
+            title={lvLaunchpad.isMobileFrontend() ? t.quickCardCreate : `${t.quickCardCreate} (${isMac ? "⌘+Enter" : "Ctrl+Enter"})`}
             onclick={confirm}
         >
-            {t.quickCardCreate} <LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />
+            {t.quickCardCreate} {#if !lvLaunchpad.isMobileFrontend()}<LvKbd k={isMac ? "⌘ ↵" : "Ctrl ↵"} />{/if}
         </button>
     </div>
 </div>
@@ -1986,13 +1986,16 @@
         flex-shrink: 0;
     }
     .lv-qc-symbol-tab-btn {
-        padding: 2px 6px;
-        font-size: 11px;
+        min-height: 28px;
+        padding: 4px 8px;
+        font-size: 12px;
         border: none;
         background: transparent;
         color: var(--lv-color-text-muted);
-        border-radius: 4px;
+        border-radius: 6px;
         cursor: pointer;
+        touch-action: manipulation;
+        transition: background 0.15s ease, color 0.15s ease;
     }
     .lv-qc-symbol-tab-active {
         background: var(--lv-primary-soft);
@@ -2001,20 +2004,28 @@
     }
     .lv-qc-symbol-chips {
         display: inline-flex;
-        gap: 4px;
+        gap: 6px;
         align-items: center;
         flex-wrap: nowrap;
         overflow-x: auto;
     }
     .lv-chip-tool {
-        padding: 1px 6px;
-        font-size: 11px;
+        min-height: 28px;
+        padding: 2px 8px;
+        font-size: 12px;
         border: 1px solid var(--lv-border);
         background: var(--lv-color-surface);
         color: var(--lv-color-text);
-        border-radius: 4px;
+        border-radius: 6px;
         cursor: pointer;
+        touch-action: manipulation;
         flex-shrink: 0;
+        transition: border-color 0.15s ease, background 0.15s ease;
+        @media (max-width: 640px) {
+            min-height: 38px;
+            padding: 4px 10px;
+            font-size: 13px;
+        }
         &:hover {
             border-color: var(--lv-color-brand);
             color: var(--lv-color-brand);

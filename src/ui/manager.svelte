@@ -1886,10 +1886,12 @@
             display: inline-flex;
             align-items: center;
             gap: var(--lv-sp-1);
-            min-height: 36px;
+            min-height: 38px !important;
+            height: 38px !important;
             padding: 0 var(--lv-sp-3);
             flex-shrink: 0;
             white-space: nowrap;
+            touch-action: manipulation;
 
             &.lv-mgr-filter-toggle--active {
                 border-color: var(--lv-color-brand);
@@ -1898,14 +1900,23 @@
             }
         }
         .lv-mgr-refresh-btn {
-            min-height: 36px;
-            min-width: 36px;
+            min-height: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
             padding: 0 var(--lv-sp-2);
             flex-shrink: 0;
             justify-content: center;
+            touch-action: manipulation;
             .lv-mgr-refresh-label {
                 display: none;
             }
+        }
+        .lv-select-all-btn,
+        .lv-mgr-star-btn,
+        .lv-btn-tool {
+            min-height: 38px !important;
+            height: 38px !important;
+            touch-action: manipulation;
         }
         .lv-mgr-toolbar {
             margin-bottom: var(--lv-sp-2);
@@ -1979,10 +1990,12 @@
             display: inline-flex;
             align-items: center;
             gap: var(--lv-sp-1);
-            min-height: 36px;
+            min-height: 38px !important;
+            height: 38px !important;
             padding: 0 var(--lv-sp-3);
             flex-shrink: 0;
             white-space: nowrap;
+            touch-action: manipulation;
 
             &.lv-mgr-filter-toggle--active {
                 border-color: var(--lv-color-brand);
@@ -1991,14 +2004,23 @@
             }
         }
         .lv-mgr-refresh-btn {
-            min-height: 36px;
-            min-width: 36px;
+            min-height: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
             padding: 0 var(--lv-sp-2);
             flex-shrink: 0;
             justify-content: center;
+            touch-action: manipulation;
             .lv-mgr-refresh-label {
                 display: none;
             }
+        }
+        .lv-select-all-btn,
+        .lv-mgr-star-btn,
+        .lv-btn-tool {
+            min-height: 38px !important;
+            height: 38px !important;
+            touch-action: manipulation;
         }
         .lv-mgr-toolbar {
             margin-bottom: var(--lv-sp-2);

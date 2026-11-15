@@ -747,9 +747,10 @@
                                 </div>
                                 <button
                                     type="button"
-                                    class="lv-btn sm lv-btn--ghost"
-                                    style="padding: 2px 6px; color: var(--lv-color-danger);"
+                                    class="b3-button b3-button--small b3-button--cancel"
+                                    style="min-width: 28px; min-height: 28px; padding: 0 8px; color: var(--b3-theme-error, var(--lv-color-danger)); touch-action: manipulation; display: inline-flex; align-items: center; justify-content: center;"
                                     onclick={() => (cart = removeFromCart(cart, c.id))}
+                                    aria-label="从闪卡篮移除"
                                 >
                                     ✕
                                 </button>
@@ -1208,7 +1209,7 @@
         height: 8px;
         border-radius: 999px;
         overflow: hidden;
-        background: rgba(0, 0, 0, 0.06);
+        background: var(--b3-theme-surface-lighter, var(--lv-color-canvas, rgba(125, 125, 125, 0.12)));
     }
 
     .lv-metrics-bar-segment {
@@ -1387,7 +1388,8 @@
     .lv-cart-drawer-mask {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.4);
+        background: var(--b3-mask-background, rgba(0, 0, 0, 0.48));
+        backdrop-filter: blur(2px);
         z-index: 998;
     }
 
@@ -1398,10 +1400,78 @@
         bottom: 0;
         width: min(380px, 100vw);
         background: var(--b3-theme-surface);
-        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--b3-dialog-shadow, var(--lv-shadow-float, -4px 0 20px rgba(0, 0, 0, 0.15)));
         z-index: 999;
         display: flex;
         flex-direction: column;
+    }
+
+    /* 模态框通用按钮样式与无障碍保证 */
+    .lv-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 32px;
+        padding: 4px 12px;
+        border-radius: var(--lv-r-control, 6px);
+        border: 1px solid var(--b3-border-color, var(--lv-border));
+        background: var(--b3-theme-surface);
+        color: var(--b3-theme-on-surface);
+        font-size: 13px;
+        cursor: pointer;
+        touch-action: manipulation;
+        transition: all 0.15s ease;
+
+        &:hover {
+            background: var(--b3-theme-surface-lighter);
+        }
+
+        &.sm {
+            min-height: 28px;
+            padding: 2px 10px;
+            font-size: 12px;
+        }
+
+        &.lv-btn--primary {
+            background: var(--b3-theme-primary);
+            border-color: var(--b3-theme-primary);
+            color: var(--b3-theme-on-primary, #ffffff);
+            font-weight: 500;
+            &:hover {
+                filter: brightness(1.08);
+            }
+        }
+
+        &.lv-btn--secondary {
+            background: var(--lv-primary-soft, color-mix(in srgb, var(--b3-theme-primary) 12%, var(--b3-theme-surface)));
+            border-color: var(--lv-primary-border, color-mix(in srgb, var(--b3-theme-primary) 30%, transparent));
+            color: var(--b3-theme-primary);
+            &:hover {
+                background: color-mix(in srgb, var(--b3-theme-primary) 18%, var(--b3-theme-surface));
+            }
+        }
+
+        &.lv-btn--ghost {
+            background: transparent;
+            border-color: transparent;
+            color: var(--b3-theme-on-surface-light, var(--b3-theme-on-surface));
+            &:hover {
+                background: var(--b3-theme-surface-lighter);
+                color: var(--b3-theme-on-surface);
+            }
+        }
+
+        @media (max-width: 640px) {
+            min-height: 40px;
+            padding: 6px 14px;
+            font-size: 13px;
+            &.sm {
+                min-height: 36px;
+                padding: 4px 12px;
+                font-size: 13px;
+            }
+        }
     }
 
     .lv-cart-drawer-header {

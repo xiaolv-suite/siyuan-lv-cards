@@ -3400,5 +3400,6 @@
     "deckManagerDeletePrompt": "Are you sure you want to delete deck \"${name}\"?",
     "deckManagerDeleteSafeNote": "Only removes the deck grouping. Note blocks in the document remain untouched.",
     "deckManagerMergedNotice": "Merged ${n} cards into the target deck",
-    "deckManagerDeleteSourceAfterMerge": "Delete source deck after merge"
+    "deckManagerDeleteSourceAfterMerge": "Delete source deck after merge",
+    "quickCardStep3Mobile": "Tap Create to save"
 }

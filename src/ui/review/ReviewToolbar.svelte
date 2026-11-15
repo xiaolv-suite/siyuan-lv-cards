@@ -461,7 +461,8 @@
         }
 
         .lv-scope-summary {
-            height: 28px;
+            height: 32px;
+            min-height: 32px;
             max-width: 220px;
             box-sizing: border-box;
             padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
@@ -473,8 +474,8 @@
             align-items: center;
             gap: calc(var(--lv-space-unit) * 2);
             font-size: var(--lv-type-meta-size);
-            min-width: 0;
-            flex-shrink: 1;
+            white-space: nowrap;
+            flex-shrink: 0;
 
             .lv-scope-summary-text {
                 overflow: hidden;
@@ -664,8 +665,10 @@
             }
             .lv-tool-btn-label { display: none; }
             .lv-tool-btn {
-                min-width: 30px;
-                padding: 0 calc(var(--lv-space-unit) * 2);
+                min-width: 40px !important;
+                min-height: 36px !important;
+                height: 36px !important;
+                padding: 0 calc(var(--lv-space-unit) * 2.5);
                 justify-content: center;
             }
         }
@@ -680,8 +683,10 @@
             }
             .lv-tool-btn-label { display: none; }
             .lv-tool-btn {
-                min-width: 30px;
-                padding: 0 calc(var(--lv-space-unit) * 2);
+                min-width: 40px !important;
+                min-height: 36px !important;
+                height: 36px !important;
+                padding: 0 calc(var(--lv-space-unit) * 2.5);
                 justify-content: center;
             }
         }

@@ -28,6 +28,7 @@
     import LvError from "./kit/LvError.svelte";
     import LvCalendar from "./kit/LvCalendar.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
 
     export interface DashboardCtx {
         i18n: Record<string, any>;
@@ -71,6 +72,8 @@
         getErrorReasonStats?: () => { reason: string; count: number }[];
         /** T01 今日行动 hero（docs/39 批 2）：当日会话状态（续场判断；可缺省） */
         getSessionState?: () => { date: string; reviewedIDs?: string[]; skippedIDs?: string[]; counters: { new: number; review: number; forget: number; skip: number }; endReason?: EndReason | null; completed?: boolean };
+        /** 清空/重置本场未完成会话进度 */
+        clearSessionState?: () => void;
         /** T01 可用时间（docs/40）：hero 选择落偏好，复习开场默认预算 */
         getSessionBudget?: () => number;
         setSessionBudget?: (min: number) => void;
@@ -350,6 +353,19 @@
     function heroActionLabel(): string {
         if (totalCards === 0 && ctx.openQuickCard) return t.cmdQuickCard ?? "快速制卡";
         return todayDecision.primaryActionLabel;
+    }
+
+    async function discardSessionPrompt() {
+        const ok = await lvConfirm({
+            title: t.dashboard?.resumeBannerResetTitle ?? "重置本场进度",
+            content: t.dashboard?.resumeBannerResetContent ?? "确定放弃今天未完成的本次复习会话进度吗？已提交的复习卡片和遗忘曲线不会丢失，仅重置本场的未完成卡池。",
+        });
+        if (ok) {
+            ctx.clearSessionState?.();
+            sessLive = false;
+            sessReps = 0;
+            showMessage(t.dashboard?.resumeBannerResetDone ?? "已重置复习会话进度", 2000, "info");
+        }
     }
 
     const hasExamBridge = $derived(Boolean(getBridgeSafely("exam")));
@@ -870,6 +886,80 @@
                     .replace("${done}", String(unfinishedAI.done))
                     .replace("${total}", String(unfinishedAI.total))}</span>
             </button>
+        {/if}
+
+        <!-- 对齐小驴考试设计：上次未刷完的闪卡复习现场横幅提示，可随时一键进入继续或重置 -->
+        {#if sessLive && sessReps > 0}
+            <div class="lv-card2 lv-session-resume-banner" style="margin-bottom: var(--lv-sp-4); padding: 14px 18px; background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface)); border-left: 4px solid var(--lv-color-brand); border-radius: var(--lv-r-m); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: var(--lv-shadow-card);">
+                <div style="min-width: 220px; flex: 1;">
+                    <div style="font-size: 14px; font-weight: var(--lv-fw-bold); display: flex; align-items: center; gap: 6px; color: var(--lv-color-text);">
+                        <LvIcon name="timer" size={16} />
+                        <span>{t.dashboard?.resumeBannerTitle ?? "上次复习尚未完成"}</span>
+                        <span class="lv-chip2 lv-chip2--primary" style="font-size: 11px;">{t.dashboard?.resumeBannerBadge ?? "进行中"}</span>
+                    </div>
+                    <div class="lv-muted ft__smaller" style="margin-top: 4px; color: var(--lv-color-text-muted);">
+                        今日已完成 <strong class="num" style="color: var(--lv-color-brand);">{sessReps}</strong> 张卡片{#if dueCount > 0} · 尚有 <strong class="num" style="color: var(--lv-color-warning);">{dueCount}</strong> 张到期待复习{/if} · 学习进度与本场偏好已安全保留
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button
+                        type="button"
+                        class="b3-button lv-btn-primary"
+                        onclick={() => ctx.openReview()}
+                        style="min-height: 32px; display: inline-flex; align-items: center; gap: 6px;"
+                    >
+                        <LvIcon name="learn" size={14} />
+                        <span>{t.dashboard?.resumeBannerContinue ?? "继续复习"}</span>
+                    </button>
+                    {#if ctx.clearSessionState}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--cancel lv-btn-tool"
+                            onclick={discardSessionPrompt}
+                            title="重置本场未完成进度，从头开始新的复习会话"
+                            style="min-height: 32px; color: var(--lv-color-text-muted);"
+                        >
+                            <span>{t.dashboard?.resumeBannerReset ?? "重置本场"}</span>
+                        </button>
+                    {/if}
+                </div>
+            </div>
+        {:else if dueCount > 0 && totalCards > 0}
+            <!-- 当日有待刷闪卡但未进入学习现场时的优雅提醒横幅（对齐小驴考试设计规范） -->
+            <div class="lv-card2 lv-session-due-banner" style="margin-bottom: var(--lv-sp-4); padding: 12px 18px; background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface)); border-left: 4px solid var(--lv-color-warning); border-radius: var(--lv-r-m); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: var(--lv-shadow-card);">
+                <div style="min-width: 220px; flex: 1;">
+                    <div style="font-size: 14px; font-weight: var(--lv-fw-bold); display: flex; align-items: center; gap: 6px; color: var(--lv-color-text);">
+                        <LvIcon name="cards" size={16} />
+                        <span>{t.dashboard?.dueBannerTitle ?? "今日待复习闪卡"}</span>
+                        <span class="lv-chip2 lv-chip2--warn" style="font-size: 11px;">{dueCount} 张待刷</span>
+                    </div>
+                    <div class="lv-muted ft__smaller" style="margin-top: 4px; color: var(--lv-color-text-muted);">
+                        根据 FSRS 记忆曲线算法，今日有 <strong class="num" style="color: var(--lv-color-warning);">{dueCount}</strong> 张卡片到达最佳复习时点{#if newCount > 0}（含 <strong class="num">{newCount}</strong> 张新卡）{/if}，可随时开始
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button
+                        type="button"
+                        class="b3-button lv-btn-primary"
+                        onclick={() => ctx.openReview()}
+                        style="min-height: 32px; display: inline-flex; align-items: center; gap: 6px;"
+                    >
+                        <LvIcon name="learn" size={14} />
+                        <span>{t.dashboard?.dueBannerStart ?? "开始今日复习"}</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="b3-button b3-button--outline lv-btn-tool"
+                        onclick={() => {
+                            const el = document.getElementById("sec-today-decks");
+                            if (el) el.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        style="min-height: 32px;"
+                    >
+                        <span>{t.dashboard?.dueBannerPickDeck ?? "选择卡包"}</span>
+                    </button>
+                </div>
+            </div>
         {/if}
 
         <!-- AR-8 错误态优先级：首次加载失败（无任何成功数据）时只显示错误+重试，
@@ -1904,6 +1994,8 @@
     .lv-btn-action {
         display: inline-flex;
         align-items: center;
+        min-height: 32px;
+        white-space: nowrap;
         gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
         font-size: var(--lv-type-control-size);
         border-radius: var(--lv-r-pill);
@@ -1931,7 +2023,8 @@
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 2);
-        height: 26px;
+        height: 30px;
+        min-height: 30px;
         padding: 0 calc(var(--lv-space-unit) * 4);
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 5%, transparent);

@@ -77,7 +77,7 @@ export function normalizeCardFingerprint(md: string): string {
 }
 
 /** 插件代码层版本常量（与 package.json / plugin.json / README.md 保持四处一致） */
-export const PLUGIN_VERSION = "0.233.3";
+export const PLUGIN_VERSION = "0.233.4";
 
 /**
  * 序列化小驴闪卡分享包为 JSON 字符串

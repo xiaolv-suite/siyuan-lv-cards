@@ -183,8 +183,15 @@
             if (!nbId) { nbId = (await createNotebook(nbName)) ?? ""; }
             const docID = await createDocWithMd(nbId, `Obsidian SR/${base} ${new Date().toISOString().slice(0, 10)}`, composeObsidianImportMarkdown(fresh));
             if (!docID) { throw new Error("createDocWithMd 返回空"); }
-            // 一卡一段落对位：数量不符中止（防错位，诚实失败）
-            const blockRows = await sqlQuery(`SELECT id, markdown FROM blocks WHERE root_id='${docID}' AND type IN ('p','h','u','o') ORDER BY sort`);
+            // 一卡一段落对位：真实内核下 createDocWithMd 后 SQLite 索引存在异步延迟，若首查未齐则短退避重试
+            const obStmt = `SELECT id, markdown FROM blocks WHERE root_id='${docID}' AND type IN ('p','h','u','o') ORDER BY sort`;
+            let blockRows = await sqlQuery(obStmt);
+            if (blockRows.length < fresh.length && Boolean((globalThis as any).window?.siyuan?.ws)) {
+                for (let retry = 0; retry < 5 && blockRows.length < fresh.length; retry++) {
+                    await new Promise(r => setTimeout(r, 250));
+                    blockRows = await sqlQuery(obStmt);
+                }
+            }
             if (blockRows.length !== fresh.length) {
                 throw new Error((t.settings.obImportMismatch || "落块数 ${a} 与卡数 ${b} 不一致，已中止")
                     .replace("${a}", String(blockRows.length)).replace("${b}", String(fresh.length)));
@@ -376,7 +383,14 @@
             retainedDocID = docID;
 
             // One extra row detects a multi-block card instead of silently admitting only a prefix.
-            const blockRows = await sqlQuery(`SELECT id, markdown, root_id, parent_id, type FROM blocks WHERE root_id=${sqlString(docID)} AND parent_id=${sqlString(docID)} AND type != 'd' ORDER BY sort LIMIT ${toImportCards.length + 1}`);
+            const lvStmt = `SELECT id, markdown, root_id, parent_id, type FROM blocks WHERE root_id=${sqlString(docID)} AND parent_id=${sqlString(docID)} AND type != 'd' ORDER BY sort LIMIT ${toImportCards.length + 1}`;
+            let blockRows = await sqlQuery(lvStmt);
+            if (blockRows.length < toImportCards.length && Boolean((globalThis as any).window?.siyuan?.ws)) {
+                for (let retry = 0; retry < 5 && blockRows.length < toImportCards.length; retry++) {
+                    await new Promise(r => setTimeout(r, 250));
+                    blockRows = await sqlQuery(lvStmt);
+                }
+            }
             const blockIDs = pairLvCardsBlocks(toImportCards, blockRows, docID);
 
             if (!deckID) {
@@ -466,7 +480,14 @@
             const base = file.name.replace(/\.(apkg|colpkg)$/i, "");
             const docID = await createDocWithMd(nbId, `Anki/${base} ${new Date().toISOString().slice(0, 10)}`, composeImportMarkdown(fresh));
             if (!docID) throw new Error("createDocWithMd 返回空");
-            const blockRows = await sqlQuery(`SELECT id, content, markdown FROM blocks WHERE root_id='${docID}' AND type='p' ORDER BY sort`);
+            const ankiStmt = `SELECT id, content, markdown FROM blocks WHERE root_id='${docID}' AND type='p' ORDER BY sort`;
+            let blockRows = await sqlQuery(ankiStmt);
+            if (blockRows.length < fresh.length && Boolean((globalThis as any).window?.siyuan?.ws)) {
+                for (let retry = 0; retry < 5 && blockRows.length < fresh.length; retry++) {
+                    await new Promise(r => setTimeout(r, 250));
+                    blockRows = await sqlQuery(ankiStmt);
+                }
+            }
             const { byGuid } = pairImportedBlocks(
                 blockRows.map((r) => ({ id: String(r.id), content: String(r.content ?? "") })),
                 fresh,
@@ -1272,6 +1293,9 @@
         <LvRow label={t.settings.choiceEnabled}>
             <LvSwitch bind:checked={draft.choiceEnabled} />
         </LvRow>
+        <LvRow label="选择题选项乱序" hint="复习单选/多选题闪卡时随机打乱 A/B/C/D 顺序，打破位置记忆">
+            <LvSwitch bind:checked={draft.shuffleChoiceOptions} />
+        </LvRow>
         <LvRow label={t.settings.mixedRotationLabel} hint={t.settings.mixedRotationHint}>
             <LvSwitch bind:checked={draft.mixedRotation} />
         </LvRow>
@@ -1734,6 +1758,9 @@
                 <option value={30}>30s</option>
                 <option value={60}>60s</option>
             </select>
+        </LvRow>
+        <LvRow label="文档闪卡序号角标" hint="在思源文档内的闪卡块左上角显示文档级连续序号（#1, #2...），轻量自愈不写脏数据">
+            <LvSwitch bind:checked={draft.docCardBadgeEnabled} />
         </LvRow>
     </LvSection>
     {/if}

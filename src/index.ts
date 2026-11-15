@@ -325,6 +325,7 @@ import {
     INBOX_DATA,
     LEARNING_GOALS_DATA,
     ENTRY_CONTEXTS_DATA,
+    SESSION_STATE_DATA,
     CONTENT_LIFECYCLES_DATA,
     SOURCE_HEALTH_DATA,
     AI_KILL_SWITCH_DATA,
@@ -509,15 +510,16 @@ export default class LvCardsPlugin extends Plugin {
     /** 统一持久化队列（AQ-4）：同 key 串行 + 有限重试 + 失败可观测 */
     /** AT-6：启动/首交互/评分性能指标 */
     private perf = createPerf();
+    private isUnloading = false;
     private persist: PersistQueue = createPersist(
         (key, data) => this.saveData(key, data),
         {
-            attempts: 2,
-            retryDelayMs: 500,
+            attempts: 3,
+            retryDelayMs: 600,
             onOk: key => this.trackSave(key),
             onFail: (key, error) => {
                 lvLog("error", `persist ${key} failed: ${error.message}`);
-                this.notifyPersistFail();
+                this.notifyPersistFail(error);
             },
         },
     );
@@ -563,8 +565,15 @@ export default class LvCardsPlugin extends Plugin {
         next => { this.contentLifecycles = next; },
     );
     private lastPersistToast = 0;
-    /** 写入最终失败的用户提示（限流 30s 一次，避免刷屏；置位 hadPersistFail 供恢复跟踪） */
-    private notifyPersistFail() {
+    /** 写入最终失败的用户提示（限流 30s 一次，避免刷屏；过滤卸载期 410 正常销毁；置位 hadPersistFail 供恢复跟踪） */
+    private notifyPersistFail(error?: any) {
+        if (this.isUnloading) return;
+        const msg = String(error?.message || error?.msg || "");
+        const code = error?.code;
+        if (code === 410 || msg.includes("lifecycle has ended") || msg.includes("Plugin lifecycle")) {
+            lvLog("info", `persist ignored on unloaded plugin: ${msg || "lifecycle ended"}`);
+            return;
+        }
         this.hadPersistFail = true;
         const now = Date.now();
         if (now - this.lastPersistToast < 30000) {
@@ -599,6 +608,9 @@ export default class LvCardsPlugin extends Plugin {
         // AT-10：设置变更广播——复习面板据此重启超时计时（立即生效），其余项下一卡自然生效
         done.then(() => {
             this.persistedSettingsSnapshot = next;
+            if (typeof document !== "undefined") {
+                document.body.setAttribute("data-lv-card-badge", this.settings.docCardBadgeEnabled !== false ? "on" : "off");
+            }
             try {
                 (this.eventBus as any).emit(LV_EVENTS.settingsChanged, settingsChangedEvent());
             } catch { /* 事件旁路 */ }
@@ -617,6 +629,19 @@ export default class LvCardsPlugin extends Plugin {
         this.saveSettingsNow();
     }
     sessionState: SessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
+    public clearSessionState(): void {
+        const previous = this.sessionState;
+        const version = ++this.sessionMutationVersion;
+        this.sessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
+        const next = this.sessionState;
+        void this.persist.save(SESSION_STATE_DATA, next).then(() => {
+            this.persistedSessionStateSnapshot = cloneStore(next);
+        }).catch(() => {
+            if (version === this.sessionMutationVersion) {
+                this.sessionState = cloneStore(this.persistedSessionStateSnapshot ?? previous);
+            }
+        });
+    }
     /** Anki M3：guid 导入台账（幂等重导） */
     private ankiLedger: LedgerEntry[] = [];
     /** T05：块内容版本快照 */
@@ -874,7 +899,10 @@ export default class LvCardsPlugin extends Plugin {
             const related = list.filter((f): f is string => typeof f === "string" && f.toLowerCase().includes("storage/petal/siyuan-lv-cards/"));
             if (!related.length) return;
             const now = Date.now();
-            if (related.every(f => now - (this.storageLastWrite[f.split(/[\\/]/).pop()!] ?? 0) < 3000)) return;
+            if (related.every(f => {
+                const name = f.split(/[\\/]/).pop();
+                return name ? now - (this.storageLastWrite[name] ?? 0) < 3000 : false;
+            })) return;
             this.scheduleReloadLocalStores(related);
         } catch { /* 协议差异不容阻断宿主 */ }
     }
@@ -894,29 +922,45 @@ export default class LvCardsPlugin extends Plugin {
     };
 
     private onKernelPluginStateChange = () => {
-        const running = isKernelPluginRunning(this.kernel.state.code);
-        const becameReady = running && !this.examKernelWasRunning;
-        this.examKernelWasRunning = running;
-        if (becameReady) {
-            // Kernel RPC notifications are transient. Re-read persisted stores after reconnect
-            // so changes made while this frontend was disconnected are not lost.
-            void this.reloadLocalStoresBounded([EXAM_PLANS_DATA]);
+        try {
+            if (!this.kernel?.state) return;
+            const running = isKernelPluginRunning(this.kernel.state.code);
+            const becameReady = running && !this.examKernelWasRunning;
+            this.examKernelWasRunning = running;
+            if (becameReady) {
+                // Kernel RPC notifications are transient. Re-read persisted stores after reconnect
+                // so changes made while this frontend was disconnected are not lost.
+                void this.reloadLocalStoresBounded([EXAM_PLANS_DATA]);
+            }
+        } catch {
+            /* 保护移动端或内核不可用环境免于崩溃 */
         }
     };
 
     private bindExamPlansSync() {
-        this.kernel.rpc.bind(EXAM_PLANS_CHANGED_EVENT, this.onExamPlansChanged);
-        this.eventBus.on("kernel-plugin-state-change", this.onKernelPluginStateChange);
-        this.examKernelWasRunning = isKernelPluginRunning(this.kernel.state.code);
-        if (this.examKernelWasRunning) {
-            void this.reloadLocalStoresBounded([EXAM_PLANS_DATA]);
+        try {
+            if (!this.kernel?.rpc) return;
+            this.kernel.rpc.bind(EXAM_PLANS_CHANGED_EVENT, this.onExamPlansChanged);
+            this.eventBus.on("kernel-plugin-state-change", this.onKernelPluginStateChange);
+            this.examKernelWasRunning = isKernelPluginRunning(this.kernel.state?.code);
+            if (this.examKernelWasRunning) {
+                void this.reloadLocalStoresBounded([EXAM_PLANS_DATA]);
+            }
+        } catch {
+            /* 移动端无 kernel 实例静默让路 */
         }
     }
 
     private unbindExamPlansSync() {
-        this.kernel.rpc.unbind(EXAM_PLANS_CHANGED_EVENT, this.onExamPlansChanged);
-        this.eventBus.off("kernel-plugin-state-change", this.onKernelPluginStateChange);
-        this.examKernelWasRunning = false;
+        try {
+            if (this.kernel?.rpc) {
+                this.kernel.rpc.unbind(EXAM_PLANS_CHANGED_EVENT, this.onExamPlansChanged);
+            }
+            this.eventBus.off("kernel-plugin-state-change", this.onKernelPluginStateChange);
+            this.examKernelWasRunning = false;
+        } catch {
+            /* ignore */
+        }
     }
 
     private async reloadLocalStoresBounded(files: string[] = []) {
@@ -1092,7 +1136,7 @@ export default class LvCardsPlugin extends Plugin {
                 "管理牌组与卡包",
             ],
             topBarElement: this.ensureTopBarElement() || undefined,
-            onClick: () => this.openReviewTab(),
+            onClick: () => this.openTabOf(TAB_DASHBOARD),
             onAction: (action) => this.handleQuickAction(action),
         });
     }
@@ -1156,6 +1200,44 @@ export default class LvCardsPlugin extends Plugin {
         return results;
     }
 
+    /** 内核瞬时抖动判定：Windows 杀软/索引器短暂锁定 temp 队列文件、网络抖动与内核繁忙等可重试错误 */
+    private isTransientKernelError(detail: string): boolean {
+        return /access is denied|timeout|econn|network|fetch failed|failed to fetch|connection reset|socket|is busy|database.*locked|code=-1/i.test(detail || "");
+    }
+
+    /** 瞬时错误退避重试包装：仅重试可重试错误，门禁类永久失败（如来源块已删除）立即抛出 */
+    private async retryTransientKernel<T>(fn: () => Promise<T>, maxRetries = 2, baseDelayMs = 500): Promise<T> {
+        let lastErr: unknown;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await fn();
+            } catch (err) {
+                lastErr = err;
+                const detail = err instanceof Error ? err.message : String(err);
+                if (attempt >= maxRetries || !this.isTransientKernelError(detail)) throw err;
+                await new Promise<void>((resolve) => setTimeout(resolve, baseDelayMs * (attempt + 1)));
+            }
+        }
+        throw lastErr;
+    }
+
+    /** 门禁拦截原因 → 用户可读中文（错误原文保留在分号后供诊断回溯） */
+    private friendlyCardGateMessage(detail: string): string {
+        const issueMap: Array<[RegExp, string]> = [
+            [/missing-block/i, "来源块不存在或已被删除（题目原文可能已被移动/清理，已尝试新建独立卡片兜底）"],
+            [/empty-card/i, "卡片内容为空"],
+            [/missing-answer/i, "缺少答案，无法成卡"],
+            [/missing-question/i, "缺少题干，无法成卡"],
+            [/invalid-markup/i, "卡片标记格式无法识别"],
+            [/invalid-occlusion/i, "遮挡卡目标缺失"],
+        ];
+        for (const [re, text] of issueMap) {
+            if (re.test(detail)) return `${text}（原文: ${detail}）`;
+        }
+        if (this.isTransientKernelError(detail)) return `内核瞬时抖动，已自动重试仍失败（原文: ${detail}）`;
+        return detail;
+    }
+
     /** 响应跨插件自动化规则 (lvAutomation)：从小驴考试做错题自动生成闪卡 */
     public async createCardFromWrongQuestion(payload: any): Promise<boolean> {
         if (!payload) return false;
@@ -1178,10 +1260,12 @@ export default class LvCardsPlugin extends Plugin {
                 }
             }
 
-            // 1. 如果已有来源块 ID，直接打上闪卡标记入库
+            // 1. 如果已有来源块 ID，直接打上闪卡标记入库。
+            //    Windows 下内核临时队列文件偶发被杀软/索引器短暂锁定（rename: Access is denied），
+            //    属瞬时抖动：对可重试错误做 2 次退避重试，避免把抖动当永久失败上报。
             if (sourceBlockId) {
                 try {
-                    await addRiffCards(deckID, [String(sourceBlockId)]);
+                    await this.retryTransientKernel(() => riff.addRiffCards(deckID, [String(sourceBlockId)]), 2, 500);
                     notifyBatchCardCreation(`已自动同步错题到待复习闪卡`);
                     return true;
                 } catch {
@@ -1205,19 +1289,19 @@ export default class LvCardsPlugin extends Plugin {
             const defaultNb = preferredNb?.id;
             if (!defaultNb) return false;
 
-            const created = await executeQuickCardCreation({
+            const created = await this.retryTransientKernel(() => executeQuickCardCreation({
                 nbId: defaultNb,
                 deckID,
                 markdown: cardMd,
                 sourceBlockID: sourceBlockId ? String(sourceBlockId) : undefined,
                 sourceTitle: payload.examName || payload.paperName || "小驴考试错题",
                 examAttrs: payload.examType ? { "custom-exam-type": String(payload.examType) } : undefined,
-            });
+            }), 2, 500);
 
             // 解析写入思源原生 memo 属性：复习端翻面后自动呈现，不参与调度与门禁
             if (analysis) {
                 try {
-                    await setBlockAttrs(created.blockID, { memo: analysis.replace(/==/g, "").trim() });
+                    await this.retryTransientKernel(() => setBlockAttrs(created.blockID, { memo: analysis.replace(/==/g, "").trim() }));
                 } catch { /* memo 旁路增强，失败不阻塞制卡结果 */ }
             }
 
@@ -1226,12 +1310,13 @@ export default class LvCardsPlugin extends Plugin {
         } catch (err) {
             const detail = err instanceof Error ? err.message : String(err);
             lvLog("warn", `[lvAutomation] createCardFromWrongQuestion failed: ${detail}`);
-            // 静默入库失败审计：零视觉打扰，可在通知历史（getHistory）与诊断中回溯根因
+            // 静默入库失败审计：零视觉打扰，可在通知历史（getHistory）与诊断中回溯根因；
+            // 门禁类错误翻译为用户可读中文，原文保留在括号内供诊断
             try {
                 lvNotify.silent({
                     source: "小驴闪卡",
                     category: "exam-card-sync-fail",
-                    message: `[错题联动] 自动制卡失败: ${detail}`,
+                    message: `[错题联动] 自动制卡失败: ${this.friendlyCardGateMessage(detail)}`,
                     level: "warn",
                 });
             } catch { /* 旁路 */ }
@@ -1333,6 +1418,9 @@ export default class LvCardsPlugin extends Plugin {
         await this.applyLoadedStores(await this.readAllStores());
         this.bindExamPlansSync();
         void this.refreshExamLinkage();
+        if (typeof document !== "undefined") {
+            document.body.setAttribute("data-lv-card-badge", this.settings.docCardBadgeEnabled !== false ? "on" : "off");
+        }
         this.perf.setCold(!this.settings.onboarded); // AT-6：首轮未完成引导=冷启动
         if (rollDateIfNeeded(this.suspendToday)) {
             await this.persist.save(SUSPEND_TODAY_DATA, this.suspendToday);
@@ -1612,8 +1700,24 @@ export default class LvCardsPlugin extends Plugin {
         });
     }
 
-    /** 每日到期提醒：到设定时间且仍有到期卡时通知一次（X 组，基础版） */
-    private reminderShownFor = "";
+    /** 每日到期提醒：到设定时间且仍有到期卡时通知一次（X 组，基础版，持久化防移动端切后台重载漏记） */
+    private _reminderShownFor = "";
+    private get reminderShownFor(): string {
+        try {
+            return (typeof localStorage !== "undefined" ? localStorage.getItem("lv_cards_reminder_shown_date") : null) || this._reminderShownFor;
+        } catch {
+            return this._reminderShownFor;
+        }
+    }
+    private set reminderShownFor(val: string) {
+        this._reminderShownFor = val;
+        try {
+            if (typeof localStorage !== "undefined") {
+                if (val) localStorage.setItem("lv_cards_reminder_shown_date", val);
+                else localStorage.removeItem("lv_cards_reminder_shown_date");
+            }
+        } catch { /* ignore */ }
+    }
     private backlogWarnedFor = "";
     private examNotifiedFor = "";
 
@@ -1694,6 +1798,10 @@ export default class LvCardsPlugin extends Plugin {
 
     onunload() {
         const unloadStart = Date.now();
+        this.isUnloading = true;
+        if (typeof document !== "undefined") {
+            document.body.removeAttribute("data-lv-card-badge");
+        }
         if (this.omnisearchCleaner) {
             this.omnisearchCleaner();
             this.omnisearchCleaner = undefined;
@@ -2482,7 +2590,7 @@ export default class LvCardsPlugin extends Plugin {
         return persistThenNotify(
             () => this.mutateExamPlans(mutate),
             async () => {
-                if (!isKernelPluginRunning(this.kernel.state.code)) return;
+                if (!this.kernel?.rpc || !isKernelPluginRunning(this.kernel?.state?.code)) return;
                 const notice = createExamPlansChangedNotice(this.examPlansSourceID, ++this.examPlansSequence);
                 await this.kernel.rpc.call[EXAM_PLANS_PUBLISH_RPC](notice);
             },
@@ -3059,8 +3167,20 @@ export default class LvCardsPlugin extends Plugin {
                     cardMarkdown += `\n\n> 来源：(( ${sourceMeta.docId} "${cleanLabel}" ))`;
                 }
                 if (!blockID) {
-                    const ids = await appendBlock("markdown", cardMarkdown, docID);
+                    let ids = await appendBlock("markdown", cardMarkdown, docID);
                     blockID = ids[0] ?? "";
+                    // 断链自愈：若复用的 job.targetDocID 已被用户在思源文档树中删除，自动重建目标文档并重试写入
+                    if (!blockID && job?.targetDocID) {
+                        const recreatedDocID = (await createDocWithMd(nb.id, `/小驴闪卡/AI 制卡/${date}`, "")) ?? "";
+                        if (recreatedDocID) {
+                            docID = recreatedDocID;
+                            job = { ...job, targetDocID: docID };
+                            this.upsertAIJob(job);
+                            await new Promise(r => setTimeout(r, 120));
+                            ids = await appendBlock("markdown", cardMarkdown, docID);
+                            blockID = ids[0] ?? "";
+                        }
+                    }
                 }
                 if (!blockID) throw new Error(this.i18n.quickCardFail);
                 blockIDs.push(blockID);
@@ -3312,7 +3432,6 @@ export default class LvCardsPlugin extends Plugin {
             if (version === this.revlogMutationVersion) {
                 this.revlog = cloneStore(this.persistedRevlogSnapshot ?? next);
                 this.refreshDueBadge();
-                this.showStorageFail();
             }
         });
     }
@@ -3653,13 +3772,15 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private openTabOf(type: string, data?: Record<string, unknown>) {
+        const isDashboard = type === TAB_DASHBOARD || type === "dashboard";
+        const isReview = type === TAB_REVIEW || type === "review";
         // Mobile Spec v1/v2：手机端宿主无页签模型——闪卡中心与复习工作台统一改为全屏 Dialog 宿主（100vw/var(--lv-vv-h, 100dvh) + safe-area）
         if (this.isMobileHost()) {
-            if (type === TAB_DASHBOARD) {
+            if (isDashboard) {
                 void this.openHubMobileDialog(data);
                 return;
             }
-            if (type === TAB_REVIEW) {
+            if (isReview) {
                 void this.openReviewMobileDialog(data);
                 return;
             }
@@ -3672,20 +3793,27 @@ export default class LvCardsPlugin extends Plugin {
         // T13 去重（docs/40 UX 待办收敛）：中心/复习为单实例工作面——已存在同型页签时激活复用，
         // 不再新开（连点顶栏/命令面板反复入不再堆重复页签）；带 data 的定点打开（scope/cram/子页）
         // 对中心走 lv-switch-tab 事件切换子页，对复习保持新开（有意进入特定状态）。
-        const existing = getAllTabs(`${this.name}${type}`)[0];
+        const safeGetAllTabs = typeof getAllTabs === "function" ? getAllTabs : (tabId: string) => {
+            try {
+                const opened = (this as any).getOpenedTab?.();
+                if (Array.isArray(opened)) {
+                    return opened.filter((t: any) => t.tab?.id === tabId || t.model?.type === tabId || t.id === tabId);
+                }
+            } catch { /* ignore */ }
+            return [];
+        };
+        const existing = safeGetAllTabs(`${this.name}${type}`)[0];
         if (existing) {
-            existing.headElement.click();
-            if (type === TAB_DASHBOARD) {
+            existing.headElement?.click?.();
+            if (isDashboard) {
                 const targetTab = (typeof data?.tab === "string" && data.tab) ? data.tab : "overview";
                 existing.panelElement
                     ?.querySelector(".lv-hub")
                     ?.dispatchEvent(new CustomEvent("lv-switch-tab", { detail: { tab: targetTab, focusBlockID: data?.focusBlockID } }));
-            } else if (type === TAB_REVIEW) {
+            } else if (isReview) {
                 existing.panelElement
                     ?.querySelector(".lv-review")
-                    ?.dispatchEvent(new CustomEvent("lv-switch-scope", {
-                        detail: { ...(data ?? {}), cram: Boolean(data?.cram) },
-                    }));
+                    ?.dispatchEvent(new CustomEvent("lv-switch-review", { detail: data }));
             }
             return;
         }

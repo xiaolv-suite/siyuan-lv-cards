@@ -118,6 +118,7 @@ export function buildHubMountProps(
                             review: plugin.settings.dailyReviewTarget,
                         }),
                         getSessionState: () => plugin.sessionState,
+                        clearSessionState: () => plugin.clearSessionState(),
                         openQuickCard: () => plugin.openQuickCard(),
                         getSessionBudget: () => plugin.settings.sessionBudgetMin,
                         setSessionBudget: (min: number) => {
@@ -673,22 +674,10 @@ export function buildReviewMountProps(
                     if (version === plugin.sessionMutationVersion) {
                         plugin.sessionState = cloneStore(plugin.persistedSessionStateSnapshot ?? previous);
                     }
-                    showMessage(plugin.i18n.storageWriteFail, 4000, "error");
                 });
             },
             clearSessionState: () => {
-                const previous = plugin.sessionState;
-                const version = ++plugin.sessionMutationVersion;
-                plugin.sessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
-                const next = plugin.sessionState;
-                void plugin.persist.save(SESSION_STATE_DATA, next).then(() => {
-                    plugin.persistedSessionStateSnapshot = cloneStore(next);
-                }).catch(() => {
-                    if (version === plugin.sessionMutationVersion) {
-                        plugin.sessionState = cloneStore(plugin.persistedSessionStateSnapshot ?? previous);
-                    }
-                    showMessage(plugin.i18n.storageWriteFail, 4000, "error");
-                });
+                plugin.clearSessionState();
             },
             emitSessionFinished: (summary: { new: number; review: number; forget: number; skip: number }) => {
                 try {

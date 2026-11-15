@@ -11,6 +11,7 @@ import {
     evaluateJudgeQuiz,
     evaluateFillQuiz,
     createInitialEphemeralQuizState,
+    shuffleInteractiveOptions,
 } from "../src/core/quiz-interactive";
 
 describe("quiz-interactive core parser", () => {
@@ -242,6 +243,36 @@ C. 广州
             expect(state.selectedChoiceKeys).toEqual([]);
             expect(state.userJudgeChoice).toBeNull();
             expect(state.suggestedRating).toBeNull();
+        });
+    });
+
+    describe("shuffleInteractiveOptions (打乱选项乱序渲染)", () => {
+        it("正确打乱选项顺序并重新分配 A/B/C/D 键，保留正确答案标记", () => {
+            const raw = [
+                { key: "A", text: "选项1", isAnswer: false },
+                { key: "B", text: "选项2", isAnswer: true },
+                { key: "C", text: "选项3", isAnswer: false },
+            ];
+            // 逆序打乱
+            const shuffled = shuffleInteractiveOptions(raw, (arr) => [arr[2], arr[1], arr[0]]);
+            expect(shuffled).toHaveLength(3);
+            expect(shuffled[0]).toEqual({ key: "A", text: "选项3", isAnswer: false });
+            expect(shuffled[1]).toEqual({ key: "B", text: "选项2", isAnswer: true });
+            expect(shuffled[2]).toEqual({ key: "C", text: "选项1", isAnswer: false });
+        });
+
+        it("parseInteractiveQuiz 支持 shuffleOptions 参数且题干提取不受打乱影响", () => {
+            const text = "【单选】哪个是对的？\nA. 错1\nB. 对的\nC. 错2";
+            const res = parseInteractiveQuiz({
+                markdown: text,
+                expectedText: "B",
+                shuffleOptions: true,
+            });
+            expect(res.kind).toBe("choice");
+            expect(res.options).toHaveLength(3);
+            const answerOpt = res.options.find((o) => o.isAnswer);
+            expect(answerOpt).toBeDefined();
+            expect(answerOpt?.text).toBe("对的");
         });
     });
 });

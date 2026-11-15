@@ -88,6 +88,10 @@ export function createPersist(impl: (key: string, data: unknown) => Promise<void
                 return;
             } catch (e) {
                 lastError = e instanceof Error ? e : new Error(String(e));
+                if ((e as any)?.code === 410 || lastError.message?.includes("lifecycle has ended") || lastError.message?.includes("Plugin lifecycle")) {
+                    (lastError as any).code = 410;
+                    break;
+                }
             }
         }
         const s = statOf(key);

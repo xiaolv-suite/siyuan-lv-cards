@@ -265,7 +265,7 @@ export function resolveBreadcrumbsFromAncestorRows(
     const ancestorHeadings = headingRows.map(h => ({
         id: String(h.id),
         title: cleanTitleText(String(h.content)),
-    })).filter(h => Boolean(h.title));
+    })).filter((h, idx, arr) => Boolean(h.title) && h.title !== (idx === 0 ? docTitle : arr[idx - 1].title));
 
     // 3. 如果成功提取到祖先标题，组装层级面包屑链
     if (ancestorHeadings.length > 0) {

@@ -88,11 +88,11 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
             throw e;
         }
     }
-    // siyuan 内置 AI（AbortSignal 无法透传 fetchSyncPost，取消语义由调用方序号守卫兜底）
+    // siyuan 内置 AI（优先异步 fetch 免全局全屏遮罩，支持 AbortSignal 超时与取消控制）
     if (opts.signal?.aborted) {
         throw new AICanceledError();
     }
-    const timeoutMs = opts.timeoutMs ?? 15000;
+    const timeoutMs = Math.max(opts.timeoutMs ?? 0, 90000);
     interface SiyuanAiResp {
         code?: number;
         msg?: string;
@@ -100,12 +100,29 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
         [key: string]: unknown;
     }
     const resp = await requestWithPolicy<SiyuanAiResp>(
-        () => (fetchSyncPost as (url: string, data: unknown) => Promise<SiyuanAiResp>)("/api/ai/chatGPT", {
-            messages: [
-                { role: "system", content: system },
-                { role: "user", content: user },
-            ],
-        }),
+        async (signal) => {
+            if (typeof fetch === "function") {
+                const res = await fetch("/api/ai/chatGPT", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: "system", content: system },
+                            { role: "user", content: user },
+                        ],
+                    }),
+                    signal,
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json() as Promise<SiyuanAiResp>;
+            }
+            return (fetchSyncPost as (url: string, data: unknown) => Promise<SiyuanAiResp>)("/api/ai/chatGPT", {
+                messages: [
+                    { role: "system", content: system },
+                    { role: "user", content: user },
+                ],
+            });
+        },
         { timeoutMs, signal: opts.signal, readOnly: false },
     );
     if (opts.signal?.aborted) {
@@ -135,7 +152,7 @@ async function chatCompletions(cfg: AIConfig, system: string, user: string, opts
     if (opts.signal?.aborted) {
         throw new AICanceledError();
     }
-    const timeoutMs = opts.timeoutMs ?? 15000;
+    const timeoutMs = Math.max(opts.timeoutMs ?? 0, 90000);
     opts.onProvider?.("primary");
     try {
         // 全面接入统一 AI 网关 lvAi.chat（自动享受并发限流与 429 指数退避）

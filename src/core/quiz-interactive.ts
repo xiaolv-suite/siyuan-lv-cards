@@ -185,6 +185,28 @@ export function cleanChoiceHtml(html: string, options: InteractiveOption[]): str
 }
 
 /**
+ * 随机打乱选择题选项顺序（Fisher-Yates 算法，保留正确项标记，重新分配 A/B/C/D 展示键）
+ */
+export function shuffleInteractiveOptions(
+    options: readonly InteractiveOption[],
+    shuffleFn: <T>(arr: readonly T[]) => T[] = (arr) => {
+        const out = [...arr];
+        for (let i = out.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [out[i], out[j]] = [out[j], out[i]];
+        }
+        return out;
+    }
+): InteractiveOption[] {
+    if (!options || options.length <= 1) return [...(options || [])];
+    const shuffled = shuffleFn(options);
+    return shuffled.map((opt, idx) => ({
+        ...opt,
+        key: String.fromCharCode(65 + idx),
+    }));
+}
+
+/**
  * 综合分析卡片属性与正文，生成完整的交互式题型模型
  */
 export function parseInteractiveQuiz(params: {
@@ -193,8 +215,9 @@ export function parseInteractiveQuiz(params: {
     attrs?: Record<string, string>;
     cardMemo?: string;
     expectedText?: string;
+    shuffleOptions?: boolean;
 }): InteractiveQuizData {
-    const { markdown = "", domHtml = "", attrs = {}, cardMemo = "", expectedText = "" } = params;
+    const { markdown = "", domHtml = "", attrs = {}, cardMemo = "", expectedText = "", shuffleOptions = false } = params;
     const fullContent = `${markdown}\n${domHtml}\n${cardMemo}`;
 
     // 1. 读取可能存在的插件/生态元数据属性
@@ -208,15 +231,16 @@ export function parseInteractiveQuiz(params: {
 
     if (examType === "single" || examType === "multiple" || extractedOptions.length >= 2) {
         const isMultiple = examType === "multiple" || (/^[A-Za-z\s,\/、]+$/.test(cleanText(knownAnswer)) && cleanText(knownAnswer).replace(/[^A-Za-z]/g, "").length > 1);
+        const options = shuffleOptions ? shuffleInteractiveOptions(extractedOptions) : extractedOptions;
         return {
             kind: "choice",
             stem: extractStemFromChoice(markdown || domHtml, extractedOptions),
-            options: extractedOptions,
+            options,
             isMultiple,
             judgeAnswer: null,
             fillExpected: knownAnswer,
             analysis: examAnalysis,
-            hasInteractiveWidgets: extractedOptions.length >= 2,
+            hasInteractiveWidgets: options.length >= 2,
         };
     }
 

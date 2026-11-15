@@ -608,6 +608,8 @@
         padding: var(--lv-sp-5);
         padding-bottom: max(var(--lv-sp-5), env(safe-area-inset-bottom, 0px));
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
 
         @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
             backdrop-filter: blur(8px);

@@ -800,6 +800,7 @@
                         attrs,
                         cardMemo,
                         expectedText,
+                        shuffleOptions: (eff() as any).shuffleChoiceOptions !== false,
                     });
                 }
             } catch {
@@ -3111,6 +3112,9 @@
         min-width: 0;
         overflow-y: auto;
         overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
@@ -3238,7 +3242,8 @@
             flex: 0 1 auto;
             box-sizing: border-box;
             position: relative;
-            overflow: auto;
+            overflow-x: auto;
+            overflow-y: visible;
             background: var(--lv-color-surface);
             border: 1px solid var(--lv-border);
             border-radius: var(--lv-r-dialog);

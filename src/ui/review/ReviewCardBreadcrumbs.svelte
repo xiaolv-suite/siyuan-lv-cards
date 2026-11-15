@@ -205,6 +205,10 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            min-width: 28px;
+            min-height: 28px;
+            box-sizing: border-box;
             opacity: 0.6;
             padding: calc(var(--lv-space-unit) * 1);
             border-radius: var(--lv-r-circle);
@@ -233,6 +237,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
             opacity: 0.6;
             min-width: 28px;
             min-height: 28px;
@@ -257,11 +262,13 @@
     }
     @media (max-width: 680px), (pointer: coarse) {
         .lv-card-source-breadcrumb :is(.lv-breadcrumb-btn, .lv-breadcrumb-toggle, .lv-breadcrumb-locate-btn) {
-            min-width: 36px; min-height: 36px;
+            min-width: 34px !important;
+            min-height: 34px !important;
         }
     }
     :global(.lv-mobile) .lv-card-source-breadcrumb :is(.lv-breadcrumb-toggle, .lv-breadcrumb-locate-btn),
     :global([data-mobile="true"]) .lv-card-source-breadcrumb :is(.lv-breadcrumb-toggle, .lv-breadcrumb-locate-btn) {
-        min-width: 36px; min-height: 36px;
+        min-width: 34px !important;
+        min-height: 34px !important;
     }
 </style>

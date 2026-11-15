@@ -1656,16 +1656,19 @@ TCP 建立连接需要进行三次握手：
     /* 来源条目动作（回源/禁止外发/移除）：统一 ghost 图形钮，muted→hover 强调 */
     .lv-wb-icon {
         flex: none;
-        width: 22px;
-        height: 22px;
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        min-height: 28px;
+        box-sizing: border-box;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border: none;
         background: transparent;
-        border-radius: var(--lv-r-tag);
+        border-radius: var(--lv-r-m, 6px);
         color: var(--lv-color-text-muted);
-        opacity: 0.7;
+        opacity: 0.8;
         font-size: var(--lv-type-control-size);
         cursor: pointer;
         touch-action: manipulation;
@@ -1676,6 +1679,12 @@ TCP 建立连接需要进行三次握手：
         &:focus-visible {
             outline: none;
             box-shadow: var(--lv-focus-ring);
+        }
+        @media (max-width: 540px) {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
         }
     }
     .lv-wb-srcview {

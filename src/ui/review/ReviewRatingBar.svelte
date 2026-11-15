@@ -1,7 +1,9 @@
 <script lang="ts">
     import LvKbd from "@/ui/kit/LvKbd.svelte";
     import type { Rating } from "@/api/riff";
-    import { notifyInline } from "@/libs/notice";
+    import { notifyInline, lvLaunchpad } from "@/libs/notice";
+
+    const isMobile = $derived(Boolean(lvLaunchpad?.isMobileFrontend?.()));
 
     let {
         showAnswer = false,
@@ -65,7 +67,7 @@
                     }}
                 >
                     {t.review?.clozeRevealNext ?? "揭晓下一空"}
-                    <span class="lv-btn-wide-kbd">Space</span>
+                    {#if !isMobile}<span class="lv-btn-wide-kbd">Space</span>{/if}
                 </button>
                 <button
                     type="button"
@@ -87,7 +89,7 @@
                 onclick={onRevealAnswer}
             >
                 {t.review?.showAnswer ?? "显示答案"}
-                <span class="lv-btn-wide-kbd">Space</span>
+                {#if !isMobile}<span class="lv-btn-wide-kbd">Space</span>{/if}
             </button>
         {/if}
     {:else if ratingStyle === "three"}
@@ -103,7 +105,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.unknown ?? "重来"}</span>
-                <LvKbd k={k1} />
+                {#if !isMobile}<LvKbd k={k1} />{/if}
             </span>
             <small>{dueText("1")}</small>
         </button>
@@ -119,7 +121,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.vague ?? "模糊"}</span>
-                <LvKbd k={k2} />
+                {#if !isMobile}<LvKbd k={k2} />{/if}
             </span>
             <small>{dueText("2")}</small>
         </button>
@@ -135,7 +137,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.know ?? "认识"}</span>
-                <LvKbd k={k3} />
+                {#if !isMobile}<LvKbd k={k3} />{/if}
             </span>
             <small>{dueText("3")}</small>
         </button>
@@ -152,7 +154,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.againBtn ?? "重来"}</span>
-                <LvKbd k={k1} />
+                {#if !isMobile}<LvKbd k={k1} />{/if}
             </span>
             <small>{dueText("1")}</small>
         </button>
@@ -168,7 +170,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.hard ?? "困难"}</span>
-                <LvKbd k={k2} />
+                {#if !isMobile}<LvKbd k={k2} />{/if}
             </span>
             <small>{dueText("2")}</small>
         </button>
@@ -184,7 +186,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.good ?? "良好"}</span>
-                <LvKbd k={k3} />
+                {#if !isMobile}<LvKbd k={k3} />{/if}
             </span>
             <small>{dueText("3")}</small>
         </button>
@@ -200,7 +202,7 @@
         >
             <span class="lv-rate-top">
                 <span class="lv-rate-label">{t.review?.easy ?? "简单"}</span>
-                <LvKbd k={k4} />
+                {#if !isMobile}<LvKbd k={k4} />{/if}
             </span>
             <small>{dueText("4")}</small>
         </button>
@@ -312,6 +314,13 @@
                 font-weight: var(--lv-fw-semibold);
                 font-variant-numeric: tabular-nums;
                 color: var(--lv-color-on-brand);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .lv-btn-wide-kbd,
+            :global(.lv-kbd2) {
+                display: none !important;
             }
         }
 

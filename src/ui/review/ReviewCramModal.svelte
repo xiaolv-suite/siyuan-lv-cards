@@ -300,12 +300,18 @@
         flex-shrink: 0;
 
         .lv-radio-circle {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
             border-radius: 50%;
             border: 2px solid var(--lv-border);
             position: relative;
+            box-sizing: border-box;
+            touch-action: manipulation;
             transition: transform var(--lv-dur-fast) var(--lv-ease), background var(--lv-dur-fast) var(--lv-ease), border-color var(--lv-dur-fast) var(--lv-ease), box-shadow var(--lv-dur-fast) var(--lv-ease), color var(--lv-dur-fast) var(--lv-ease), opacity var(--lv-dur-fast) var(--lv-ease);
 
             &.lv-checked {
@@ -315,8 +321,8 @@
                 &::after {
                     content: "";
                     position: absolute;
-                    width: 6px;
-                    height: 6px;
+                    width: 8px;
+                    height: 8px;
                     border-radius: 50%;
                     background: var(--lv-color-on-warning);
                     top: 50%;

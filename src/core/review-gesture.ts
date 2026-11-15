@@ -44,8 +44,9 @@ export function reviewSwipeAction(showAnswer: boolean, dx: number, dy: number): 
  * 3. 忽略父级存在横向 overflow 滚动区域的元素，避免横滑查表/看长代码时误触卡片切题/评分。
  */
 export function shouldIgnoreSwipeTarget(target: EventTarget | null): boolean {
-    if (!target || typeof (target as Element).closest !== "function") return false;
-    const el = target as HTMLElement;
+    if (!target) return false;
+    const el = (target instanceof Element ? target : (target as any)?.parentElement) as HTMLElement | null;
+    if (!el || typeof el.closest !== "function") return false;
 
     // 交互控件与可输入区域
     if (el.closest("input,textarea,select,button,a,[contenteditable],kbd,[role='button'],[role='tab']")) {
@@ -81,13 +82,14 @@ export function shouldIgnoreSwipeTarget(target: EventTarget | null): boolean {
  * 上滑翻面/上下评分语义。横滑切卡不受影响（复习根容器 overflow-x 为 hidden）。
  */
 export function isVerticallyScrollableContext(target: EventTarget | null): boolean {
-    if (!target || typeof (target as Element).closest !== "function") return false;
+    if (!target) return false;
     if (typeof window === "undefined") return false;
-    let cur: HTMLElement | null = target as HTMLElement;
+    let cur: HTMLElement | null = (target instanceof Element ? target : (target as any)?.parentElement) as HTMLElement | null;
+    if (!cur) return false;
     while (cur && cur !== document.body) {
         if (cur.scrollHeight > cur.clientHeight + 4) {
             const style = window.getComputedStyle(cur);
-            if (style.overflowY === "auto" || style.overflowY === "scroll") {
+            if (style.overflowY === "auto" || style.overflowY === "scroll" || style.overflow === "auto" || style.overflow === "scroll") {
                 return true;
             }
         }

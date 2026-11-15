@@ -271,8 +271,8 @@
         text-wrap: pretty;
         line-height: var(--lv-lh-reading, 1.65);
     }
-    @media (max-width: 320px) {
-        .lv-editor-actions { flex-wrap: wrap; }
-        .lv-editor-hint { text-align: left; }
+    @media (max-width: 640px) {
+        .lv-editor-actions { flex-wrap: wrap; gap: var(--lv-sp-2); }
+        .lv-editor-hint { flex: 1 1 100%; text-align: left; }
     }
 </style>

@@ -169,13 +169,19 @@
 
         @media (max-width: 680px) {
             min-height: 28px;
+            gap: var(--lv-sp-1);
             .lv-eyebrow,
             .lv-review-return-home {
                 display: none !important;
             }
-            /* 滚动条已隐藏：右缘渐隐提示计时/标签胶囊条可横向滑动（截图反馈：右端被"裁切"实为可滑区） */
-            -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
-            mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+            -webkit-mask-image: none;
+            mask-image: none;
+            .lv-tags {
+                flex-shrink: 0;
+            }
+            .lv-progress {
+                padding-inline: calc(var(--lv-space-unit) * 2);
+            }
         }
 
         .b3-button {
