@@ -1,0 +1,116 @@
+/**
+ * 内核闪卡 V2 API（feature/flashcard 分支，3.9.0）封装。
+ * 端点清单见 docs/05-内核闪卡V2重构调研与应对.md；契约仍在变动，这里保持宽容解析、可降级。
+ * 契约纯逻辑（状态白名单/清洗/摘要）在 v2-contract.ts，此处再导出保持调用方 import 路径不变。
+ */
+import { fetchSyncPost } from "siyuan";
+import { normalizeMigrationStatus, summarizeStatistics, type FlashcardV2State, type MigrationStatus } from "./v2-contract";
+import { requestWithPolicy, type RequestOptions } from "../libs/request";
+import { unwrapKernelData } from "../libs/kernel-response";
+
+export { normalizeMigrationStatus, summarizeStatistics };
+export type { FlashcardV2State, MigrationStatus };
+
+/** AT-3：V2 内核请求统一有界等待（本地内核 3s 足够；超时/断核/慢核都转 N/A 或可重试） */
+export const V2_TIMEOUT_MS = 3000;
+
+async function v2<T>(endpoint: string, payload: Record<string, unknown> = {}, options: RequestOptions = {}): Promise<T> {
+    const isRead = endpoint.startsWith("get") || endpoint.startsWith("query") || endpoint.startsWith("list") || endpoint === "getMigrationStatus";
+    const resp: any = await requestWithPolicy(
+        () => (fetchSyncPost as any)(`/api/flashcard/${endpoint}`, payload),
+        {
+            ...options,
+            timeoutMs: options.timeoutMs ?? V2_TIMEOUT_MS,
+            readOnly: options.readOnly ?? isRead,
+            retries: options.retries ?? 1,
+            dedupeKey: options.dedupeKey ?? (isRead ? `v2:${endpoint}:${JSON.stringify(payload)}` : undefined),
+            latestKey: options.latestKey ?? (isRead ? `v2:${endpoint}` : undefined),
+        },
+    );
+    return unwrapKernelData<T>(resp);
+}
+
+/**
+ * 探测内核是否具备 V2 闪卡 API（AT-3：有界等待，慢核/断核在 V2_TIMEOUT_MS 内转 null）。
+ * 返回 null = 当前内核无此端点（< 3.9.0 或不可达/超时），插件走 riff 兼容路径（可经菜单 redetectV2 重试）；
+ * 返回 state="Unknown" = 端点在但状态不可识别（保守降级，UI 显示未验证）。
+ */
+export async function detectFlashcardV2(): Promise<MigrationStatus | null> {
+    try {
+        const data = await v2<unknown>("getMigrationStatus");
+        return normalizeMigrationStatus(data);
+    } catch {
+        return null;
+    }
+}
+
+// ---- V2 核心数据结构（按分支 apicontract 建模，字段宽容） ----
+
+export interface FlashcardReviewState {
+    cardID: string;
+    state: string;
+    due: number;
+    lastReview?: number;
+    /** V2 直出 FSRS 内部量（旧 riff 不暴露） */
+    stability: number;
+    difficulty: number;
+    elapsedDays: number;
+    scheduledDays: number;
+    reps: number;
+    lapses: number;
+    suspended: boolean;
+}
+
+export interface FlashcardCard {
+    id: string;
+    sourceID: string;
+    templateID: string;
+    variantKey?: string;
+    variantData?: unknown;
+    generationStatus?: string;
+    flag?: number;
+    presetOverrideID?: string;
+    priorityOverride?: string;
+    editLater?: { note: string; updatedAt: number };
+    createdAt: number;
+    updatedAt: number;
+}
+
+// ---- 端点封装（复习会话） ----
+
+export const startFlashcardSession = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("startSession", payload);
+
+export const getFlashcardSessionQueue = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("getSessionQueue", payload);
+
+export const reviewFlashcardV2 = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("reviewCard", payload);
+
+export const undoFlashcardReview = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("undoReview", payload);
+
+export const finishFlashcardSession = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("finishSession", payload);
+
+// ---- 端点封装（查询与管理） ----
+
+export const queryFlashcards = (payload: Record<string, unknown>) =>
+    v2<{ cards?: FlashcardCard[]; reviewStates?: FlashcardReviewState[]; total?: number }>("queryCards", payload);
+
+export const manageFlashcards = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("manageCards", payload);
+
+export const listFlashcardEntities = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("listEntities", payload);
+
+// ---- 端点封装（统计） ----
+
+export const getFlashcardStatistics = (payload: Record<string, unknown>) =>
+    v2<Record<string, unknown>>("getStatistics", payload);
+
+// ---- 端点封装（Anki 兼容） ----
+
+/** AnkiConnect 兼容端点：思源扮演 Anki（version/deckNames/addNotes/findNotes/storeMediaFile 等） */
+export const ankiConnect = (payload: { action: string; version?: number; params?: Record<string, unknown>; key?: string }) =>
+    v2<{ result: unknown; error: string }>("ankiConnect", payload as unknown as Record<string, unknown>);

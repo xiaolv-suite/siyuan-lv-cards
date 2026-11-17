@@ -1,0 +1,118 @@
+import { describe, expect, it } from "vitest";
+import { gradeTyping, registerCardType, getCardType, listCardTypes } from "../src/core/card-types";
+
+describe("gradeTyping（M4·FR2）", () => {
+    it("宽松模式忽略大小写与标点", () => {
+        const g = gradeTyping("Hello, World!", "hello world", false);
+        expect(g.suggested).toBe(3);
+        expect(g.ratio).toBeGreaterThanOrEqual(0.9);
+    });
+
+    it("严格模式区分标点", () => {
+        const g = gradeTyping("Hello, World!", "hello world", true);
+        expect(g.ratio).toBeLessThan(1);
+    });
+
+    it("相似度阈值映射 2/1", () => {
+        expect(gradeTyping("普遍存在的", "普遍存在", true).suggested).toBe(2);
+        expect(gradeTyping("普遍存在的", "完全不同", true).suggested).toBe(1);
+    });
+
+    it("逐字符对齐：命中为 ok", () => {
+        const g = gradeTyping("abc", "axc", true);
+        expect(g.chars.map(c => c.ok)).toEqual([true, false, true]);
+    });
+
+    it("空期望不产「完美匹配」误导（E-09）", () => {
+        expect(gradeTyping("", "anything", true).ratio).toBe(0);
+    });
+});
+
+describe("gradeTyping 关键符号保真（E-09，宽松模式）", () => {
+    it("-1 与 1 不再等价", () => {
+        expect(gradeTyping("-1", "1", false).suggested).toBe(1);
+        expect(gradeTyping("-1", "-1", false).suggested).toBe(3);
+    });
+
+    it("1.2 与 12 不再等价（小数点保留）", () => {
+        expect(gradeTyping("1.2", "12", false).suggested).toBe(2);
+        expect(gradeTyping("1.2", "1.2", false).suggested).toBe(3);
+    });
+
+    it("全角输入折叠后可正常判分（不再整段被剥离）", () => {
+        expect(gradeTyping("123", "１２３", false).suggested).toBe(3);
+        expect(gradeTyping("hello", "ｈｅｌｌｏ", false).suggested).toBe(3);
+    });
+
+    it("额外错误命题拉低相似度（分母含作答长度）", () => {
+        const g = gradeTyping("北京是中国的首都", "北京是中国的首都而且上海也很美", false);
+        expect(g.suggested).toBe(1);
+        // 干净作答不受影响
+        expect(gradeTyping("北京是中国的首都", "北京是中国的首都", false).suggested).toBe(3);
+    });
+
+    it("普通宽松行为保持：大小写/普通标点仍忽略", () => {
+        const g = gradeTyping("Hello, World!", "hello world", false);
+        expect(g.suggested).toBe(3);
+    });
+});
+
+describe("card-type registry", () => {
+    it("内置打字题已注册，可注销", () => {
+        expect(getCardType("type")).toBeTruthy();
+        const off = registerCardType({ typeName: "temp", displayNameKey: "x", gradable: false });
+        expect(getCardType("temp")).toBeTruthy();
+        off();
+        expect(getCardType("temp")).toBeUndefined();
+        expect(listCardTypes().length).toBeGreaterThan(0);
+    });
+});
+
+describe("宽松判分欧式小数点归一化（BX-1 离线子集）", () => {
+    it("3,14 与 3.14 匹配（欧式小数逗号）", () => {
+        expect(gradeTyping("3.14", "3,14", false).suggested).toBe(3);
+    });
+
+    it("1,000 与 1.000 匹配（千位分隔逗号不干扰）", () => {
+        expect(gradeTyping("1.000", "1,000", false).suggested).toBe(3);
+    });
+
+    it("非数字间逗号仍剥离（不影响普通文本判分）", () => {
+        expect(gradeTyping("hello, world", "hello world", false).suggested).toBe(3);
+    });
+
+    it("严格模式不归一化（3,14 ≠ 3.14 → Hard 建议）", () => {
+        expect(gradeTyping("3.14", "3,14", true).suggested).toBe(2);
+    });
+});
+
+describe("排版减号折叠（BX-1 兜底巡检 v0.110.1）", () => {
+    it("−1（U+2212）与 -1 匹配（排版减号不再被剥离）", () => {
+        expect(gradeTyping("-1", "−1", false).suggested).toBe(3);
+    });
+
+    it("−1 与 1 仍不等价（符号保真不因折叠失效）", () => {
+        expect(gradeTyping("−1", "1", false).suggested).toBe(1);
+    });
+
+    it("全角减号/加号经 NFKC 折叠后保留", () => {
+        expect(gradeTyping("-5", "－5", false).suggested).toBe(3);
+    });
+
+    it("智能拼写容错（Typo Tolerance）：1 个字符笔误放行判定 3 良好", () => {
+        // "基期值" 用户打成 "基期直"（1 个错别字，长度 3）
+        const g1 = gradeTyping("基期值", "基期直", false);
+        expect(g1.isTypo).toBe(true);
+        expect(g1.suggested).toBe(3);
+
+        // 英文单词少打一个字母：phenomenon vs phenomeno
+        const g2 = gradeTyping("phenomenon", "phenomeno", false);
+        expect(g2.isTypo).toBe(true);
+        expect(g2.suggested).toBe(3);
+
+        // 严格模式下不启用容错
+        const g3 = gradeTyping("基期值", "基期直", true);
+        expect(g3.isTypo).toBe(false);
+        expect(g3.suggested).toBeLessThan(3);
+    });
+});

@@ -1,0 +1,98 @@
+import { describe, expect, it } from "vitest";
+import {
+    avgSecPerCard, budgetLeftSec, BUDGET_PRESETS, clampBudgetMinutes, estimateCompletable, estimateLeftover, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession,
+} from "../src/core/session-budget";
+
+// BI-12 时间预算：预算到≠失败（不自动结束）；估计口径=可完成+未完成=剩余总量
+const MIN = 60000;
+
+describe("session-budget（BI-12）", () => {
+    it("预设为 5/15/25/30/60 分钟（含番茄专注周期）", () => {
+        expect([...BUDGET_PRESETS]).toEqual([5, 15, 25, 30, 60]);
+    });
+
+    it("clampBudgetMinutes：自定义输入夹取（非法回 0=关闭，整数 5-480）", () => {
+        expect(clampBudgetMinutes(20)).toBe(20);
+        expect(clampBudgetMinutes(3)).toBe(5);        // 低于下界抬到 5
+        expect(clampBudgetMinutes(9999)).toBe(480);   // 超上界封顶
+        expect(clampBudgetMinutes(12.7)).toBe(12);    // 向下取整
+        expect(clampBudgetMinutes(0)).toBe(0);
+        expect(clampBudgetMinutes("abc")).toBe(0);
+        expect(clampBudgetMinutes(-4)).toBe(0);
+    });
+
+    it("avgSecPerCard：正样本均值、剔除离群/非法、空样本兜底 10s", () => {
+        expect(avgSecPerCard([8, 12])).toBe(10);
+        expect(avgSecPerCard([4000, 20])).toBe(20); // 4000 超上限被剔除
+        expect(avgSecPerCard([0, -5, NaN])).toBe(10);
+        expect(avgSecPerCard([1.4, 1.6])).toBe(2);
+    });
+
+    it("budgetLeftSec：未启用=Infinity；过期夹 0；否则向上取整秒", () => {
+        expect(budgetLeftSec(0, 5, Date.now())).toBe(Number.POSITIVE_INFINITY);
+        expect(budgetLeftSec(Date.now() - 10 * MIN, 5, Date.now())).toBe(0);
+        expect(budgetLeftSec(1000, 5, 1000 + 90 * 1000)).toBe(210); // 300s 总量 - 90s 已用
+    });
+
+    it("isBudgetExpired：仅预算启用且到点为 true；未启用永远 false", () => {
+        expect(isBudgetExpired(Date.now() - 6 * MIN, 5, Date.now())).toBe(true);
+        expect(isBudgetExpired(0, 5, Date.now())).toBe(false);
+        expect(isBudgetExpired(Date.now() - 6 * MIN, 0, Date.now())).toBe(false);
+    });
+
+    it("estimateCompletable：预算内可完成数（封顶剩余到期）", () => {
+        expect(estimateCompletable(10 * 60, 30, 100)).toBe(20);   // 10 分钟 / 30s = 20
+        expect(estimateCompletable(10 * 60, 30, 5)).toBe(5);      // 不超过剩余量
+        expect(estimateCompletable(Number.POSITIVE_INFINITY, 30, 5)).toBe(0); // 未启用不估计
+        expect(estimateCompletable(600, 0, 5)).toBe(0);           // 非法均值
+    });
+
+    it("estimateLeftover：未完成项；可完成+未完成=剩余总量；预算足够时为 0", () => {
+        expect(estimateLeftover(10 * 60, 30, 100)).toBe(80);
+        expect(estimateLeftover(10 * 60, 30, 5)).toBe(0);
+        expect(estimateLeftover(Number.POSITIVE_INFINITY, 30, 5)).toBe(0);
+        // 口径恒等式
+        const left = 7 * 60, avg = 25, due = 40;
+        expect(estimateCompletable(left, avg, due) + estimateLeftover(left, avg, due)).toBe(due);
+    });
+
+    it("formatBudgetClock：格式化剩余秒数为 m:ss 倒计时时钟文本", () => {
+        expect(formatBudgetClock(65)).toBe("1:05");
+        expect(formatBudgetClock(600)).toBe("10:00");
+        expect(formatBudgetClock(7)).toBe("0:07");
+        expect(formatBudgetClock(0)).toBe("0:00");
+        expect(formatBudgetClock(-5)).toBe("0:00");
+        expect(formatBudgetClock(Number.POSITIVE_INFINITY)).toBe("0:00");
+    });
+
+    describe("resolveBudgetEstimate", () => {
+        it("预算正常有效时返回可完成与未完成卡片预估数", () => {
+            const res = resolveBudgetEstimate(300, false, 15, 30, 20);
+            expect(res).not.toBeNull();
+            expect(res?.done).toBe(10);
+            expect(res?.left).toBe(10);
+        });
+
+        it("未启用预算、预算已过期或剩余时间非有限数值时返回 null", () => {
+            expect(resolveBudgetEstimate(0, true, 15, 30, 20)).toBeNull();
+            expect(resolveBudgetEstimate(300, false, 0, 30, 20)).toBeNull();
+            expect(resolveBudgetEstimate(Number.POSITIVE_INFINITY, false, 15, 30, 20)).toBeNull();
+        });
+    });
+
+    describe("initBudgetSession", () => {
+        it("开启时间预算时初始化时间戳并按历史时长推算平均秒数", () => {
+            const res = initBudgetSession(15, [10, 20, 30], 10000);
+            expect(res.startedAt).toBe(10000);
+            expect(res.now).toBe(10000);
+            expect(res.avgSec).toBe(20);
+        });
+
+        it("关闭时间预算（0）时重置 startedAt 与 now 为 0", () => {
+            const res = initBudgetSession(0, [10, 20], 10000);
+            expect(res.startedAt).toBe(0);
+            expect(res.now).toBe(0);
+            expect(res.avgSec).toBe(10);
+        });
+    });
+});
