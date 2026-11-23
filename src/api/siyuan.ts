@@ -214,9 +214,15 @@ export const getBlockDOM = async (id: string): Promise<string> => {
     return dataStr(await kernelRead<Record<string, unknown>>("/api/block/getBlockDOM", { id }), "dom");
 };
 
-/** 写块自定义属性 */
-export const setBlockAttrs = async (id: string, attrs: Record<string, string>): Promise<void> => {
+/** 写块自定义属性（支持传入 null 彻底移除指定自定义属性键） */
+export const setBlockAttrs = async (id: string, attrs: Record<string, string | null>): Promise<void> => {
     await kernelPost<unknown>("/api/attr/setBlockAttrs", { id, attrs });
+};
+
+/** 物理删除笔记块（高危操作）：非 0 抛错，成功返回 true */
+export const deleteBlock = async (id: string): Promise<boolean> => {
+    await kernelPost<unknown>("/api/block/deleteBlock", { id });
+    return true;
 };
 
 /** 导出文档为 Markdown（AI 向导「当前文档」源） */

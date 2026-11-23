@@ -39,7 +39,7 @@ export function localDateISO(d: Date): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** 解析内核 due（"YYYYMMDDHHmmss" 或 ISO）；失败返回 null */
+/** 解析内核 due（"YYYYMMDDHHmmss"、"YYYYMMDD"、"YYYY-MM-DD" 或 ISO）；失败返回 null */
 export function parseCardDue(due: string): Date | null {
     if (!due) return null;
     // 若含有时区标识（如 Z 或 +08:00 / -05:00），直接按标准 ISO 8601 解析对应时刻
@@ -49,11 +49,21 @@ export function parseCardDue(due: string): Date | null {
     }
     const compact = due.replace(/[-: T]/g, "").slice(0, 14);
     if (/^\d{14}$/.test(compact)) {
-        const d = new Date(
-            Number(compact.slice(0, 4)), Number(compact.slice(4, 6)) - 1, Number(compact.slice(6, 8)),
+        const y = Number(compact.slice(0, 4));
+        const m = Number(compact.slice(4, 6)) - 1;
+        const d = Number(compact.slice(6, 8));
+        const dt = new Date(
+            y, m, d,
             Number(compact.slice(8, 10)), Number(compact.slice(10, 12)), Number(compact.slice(12, 14)),
         );
-        return Number.isNaN(d.getTime()) ? null : d;
+        return Number.isNaN(dt.getTime()) || dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d ? null : dt;
+    }
+    if (/^\d{8}$/.test(compact)) {
+        const y = Number(compact.slice(0, 4));
+        const m = Number(compact.slice(4, 6)) - 1;
+        const d = Number(compact.slice(6, 8));
+        const dt = new Date(y, m, d, 12, 0, 0);
+        return Number.isNaN(dt.getTime()) || dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d ? null : dt;
     }
     const d = new Date(due);
     return Number.isNaN(d.getTime()) ? null : d;

@@ -255,7 +255,11 @@
     });
 
     function onKeydown(e: KeyboardEvent) {
+        // 2026-11-21 走查修复：常驻面板（hub 仅以 hidden 切换）的全局快捷键原先无可见性守卫，
+        // 在 hub 任意页签按 1/2 会在后台静默切模式并吞键。非激活态直接放行。
+        if (!isActive) return;
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (e.target instanceof HTMLSelectElement) return;
         if (e.key === "1" && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
             void startManual();

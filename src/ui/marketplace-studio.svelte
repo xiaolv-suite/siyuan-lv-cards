@@ -28,10 +28,10 @@
     } from "@/core/marketplace-cart";
     import {
         calculateCardsDelta,
-        mergeCardsDelta,
         type CardDeltaReport,
     } from "@/core/marketplace-sync";
     import { serializeLvCardsPackage } from "@/core/lvcards-package";
+    import { localDate } from "@/core/revlog";
     import { showMessage } from "@/libs/notice";
 
     interface Props {
@@ -41,6 +41,13 @@
     }
 
     let { i18n, onDeckCreated, onOpenDeck }: Props = $props();
+
+    // 2026-11-21 i18n 债务收敛：界面文案统一走 studio.* 键（fallback 为原中文）
+    const text = (key: string, fallback: string, vars?: Record<string, string | number>): string => {
+        let value = i18n?.[key] ?? fallback;
+        if (vars) for (const [name, v] of Object.entries(vars)) value = value.split(`{${name}}`).join(String(v));
+        return value;
+    };
 
     let catalog = $state<MarketplaceCatalog>(DEFAULT_MARKETPLACE_CATALOG);
     let searchQuery = $state("");
@@ -72,19 +79,25 @@
         void refreshCatalog(currentSourceUrl);
     });
 
+    let catalogSeq = 0;
     async function refreshCatalog(url: string) {
+        const seq = ++catalogSeq;
         loadingCatalog = true;
         catalogError = null;
         try {
             const res = await fetchMarketplaceCatalog(url);
+            if (seq !== catalogSeq) return;
             catalog = res.catalog;
             if (res.error) {
                 catalogError = res.error;
             }
         } catch (e) {
+            if (seq !== catalogSeq) return;
             catalogError = String(e instanceof Error ? e.message : e);
         } finally {
-            loadingCatalog = false;
+            if (seq === catalogSeq) {
+                loadingCatalog = false;
+            }
         }
     }
 
@@ -104,13 +117,13 @@
             if (res.success && res.deckId) {
                 installedDeckIds[item.id] = { deckId: res.deckId, deckName: res.deckName || item.title };
                 installedDeckIds = { ...installedDeckIds };
-                showMessage(`已成功获取《${item.title}》并入库（共 ${res.count} 张闪卡）✓`, 3200, "info");
+                showMessage(text("studio.installed", "已成功获取《{title}》并入库（共 {n} 张闪卡）✓", {title: item.title, n: res.count}), 3200, "info");
                 onDeckCreated?.(res.deckId, res.deckName || item.title);
             } else {
-                showMessage(`入库失败：${res.error || "未知原因"}`, 3500, "error");
+                showMessage(text("studio.installFail", "入库失败：{reason}", {reason: res.error || "未知原因"}), 3500, "error");
             }
         } catch (e) {
-            showMessage(`入库发生异常：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
+            showMessage(text("studio.installError", "入库发生异常：{reason}", {reason: String(e instanceof Error ? e.message : e)}), 3500, "error");
         } finally {
             installingId = null;
         }
@@ -121,21 +134,21 @@
             const pkg = marketplaceItemToLvCardsPackage(item);
             const jsonStr = serializeLvCardsPackage(pkg.deck, pkg.cards);
             downloadBlobFile(jsonStr, `${item.title}.lvcards`);
-            showMessage(`已导出《${item.title}》闪卡分享包 (.lvcards) ✓`, 2800, "info");
+            showMessage(text("studio.exported", "已导出《{title}》闪卡分享包 (.lvcards) ✓", {title: item.title}), 2800, "info");
         } catch (e) {
-            showMessage(`导出闪卡包失败：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
+            showMessage(text("studio.exportFail", "导出闪卡包失败：{reason}", {reason: String(e instanceof Error ? e.message : e)}), 3500, "error");
         }
     }
 
     function handleExportCart() {
         if (cart.length === 0) return;
         try {
-            const pkg = cartItemsToLvCardsPackage(cart, "小驴公共集市挑选闪卡包");
+            const pkg = cartItemsToLvCardsPackage(cart, text("studio.cartPackageName", "小驴公共集市挑选闪卡包"));
             const jsonStr = serializeLvCardsPackage(pkg.deck, pkg.cards);
-            downloadBlobFile(jsonStr, "小驴公共集市挑选闪卡包.lvcards");
-            showMessage(`已将闪卡篮中 ${cart.length} 张卡片导出为 .lvcards 分享包 ✓`, 3000, "info");
+            downloadBlobFile(jsonStr, "lvcards-export.lvcards");
+            showMessage(text("studio.cartExported", "已将闪卡篮中 {n} 张卡片导出为 .lvcards 分享包 ✓", {n: cart.length}), 3000, "info");
         } catch (e) {
-            showMessage(`导出失败：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
+            showMessage(text("studio.exportFail", "导出闪卡包失败：{reason}", {reason: String(e instanceof Error ? e.message : e)}), 3500, "error");
         }
     }
 
@@ -143,33 +156,33 @@
         if (cart.length === 0 || installingId) return;
         installingId = "cart";
         try {
-            const pkg = cartItemsToLvCardsPackage(cart, "小驴集市精选卡组");
+            const pkg = cartItemsToLvCardsPackage(cart, text("studio.deckName", "小驴集市精选卡组"));
             const item: MarketplaceItem = {
                 id: `cart-deck-${Date.now()}`,
                 title: pkg.deck.name,
-                description: pkg.deck.description || "由集市闪卡篮精选创建",
+                description: pkg.deck.description || text("studio.deckDesc", "由集市闪卡篮精选创建"),
                 kind: "flashcard_deck",
                 category: "general",
-                tags: ["集市精选", "闪卡篮"],
-                author: { name: "小驴闪卡篮" },
+                tags: [text("studio.tagCurated", "集市精选"), text("studio.tagCart", "闪卡篮")],
+                author: { name: text("studio.cartAuthor", "小驴闪卡篮") },
                 version: "1.0.0",
                 itemCount: cart.length,
                 license: "CC0",
                 downloadUrl: "",
-                updatedAt: new Date().toISOString().slice(0, 10),
+                updatedAt: localDate(Date.now()),
                 embeddedCards: pkg.cards,
             };
             const res = await installMarketplaceItemToDeck(item);
             if (res.success && res.deckId) {
-                showMessage(`已将闪卡篮中 ${res.count} 张卡片入库至卡包「${res.deckName}」✓`, 3200, "info");
+                showMessage(text("studio.cartInstalled", "已将闪卡篮中 {n} 张卡片入库至卡包「{deck}」✓", {n: res.count, deck: res.deckName}), 3200, "info");
                 onDeckCreated?.(res.deckId, res.deckName || item.title);
                 cart = clearCart();
                 cartDrawerOpen = false;
             } else {
-                showMessage(`入库失败：${res.error || "未知原因"}`, 3500, "error");
+                showMessage(text("studio.installFail", "入库失败：{reason}", {reason: res.error || "未知原因"}), 3500, "error");
             }
         } catch (e) {
-            showMessage(`入库异常：${String(e instanceof Error ? e.message : e)}`, 3500, "error");
+            showMessage(text("studio.installError", "入库发生异常：{reason}", {reason: String(e instanceof Error ? e.message : e)}), 3500, "error");
         } finally {
             installingId = null;
         }
@@ -198,7 +211,7 @@
     function handleAddDeckToCart(item: MarketplaceItem) {
         const items = extractCartItemsFromMarketplaceItem(item);
         cart = addManyToCart(cart, items);
-        showMessage(`已将《${item.title}》的 ${items.length} 张卡片加入闪卡篮 ✓`, 2000, "info");
+        showMessage(text("studio.addedToCart", "已将《{title}》的 {n} 张卡片加入闪卡篮 ✓", {title: item.title, n: items.length}), 2000, "info");
     }
 
     function handleCheckDelta(item: MarketplaceItem) {
@@ -211,10 +224,9 @@
 
     function handleApplyDeltaSync() {
         if (!deltaReport) return;
-        const { item, report } = deltaReport;
-        const pkg = marketplaceItemToLvCardsPackage(item);
-        const merged = mergeCardsDelta(pkg.cards, report);
-        showMessage(`已针对《${item.title}》完成无损合并：新增 ${report.addedCount} 张，修订 ${report.updatedCount} 张，保留 ${merged.length} 张卡片历史记忆进度 ✓`, 3500, "info");
+        // 2026-11-21 走查修复：本功能当前为演示预览（本地卡片为模拟数据、合并结果不落内核），
+        // 原先弹「无损合并完成 ✓」属假成功回执，误导用户以为已更新。改为如实告知。
+        showMessage(text("studio.deltaPreviewDone", "增量合并预览完成（演示模式）：本次未写入任何数据，真实增量合并将在后续版本接入"), 4000, "info");
         deltaReport = null;
     }
 
@@ -222,7 +234,7 @@
         const name = newSourceName.trim();
         const url = newSourceUrl.trim();
         if (!name || !url) {
-            showMessage("请完整填写订阅源名称与直链 URL", 2500, "error");
+            showMessage(text("studio.sourceIncomplete", "请完整填写订阅源名称与直链 URL"), 2500, "error");
             return;
         }
         const newSrc: CustomMarketplaceSource = {
@@ -230,7 +242,7 @@
             name,
             url,
             enabled: true,
-            addedAt: new Date().toISOString().slice(0, 10),
+            addedAt: localDate(Date.now()),
         };
         customSources = [...customSources, newSrc];
         saveMarketplaceSources(customSources);
@@ -239,18 +251,18 @@
         addSourcePanelOpen = false;
         currentSourceUrl = url;
         void refreshCatalog(url);
-        showMessage(`已添加并切换至第三方订阅源「${name}」✓`, 2800, "info");
+        showMessage(text("studio.sourceAdded", "已添加并切换至第三方订阅源「{name}」✓", {name}), 2800, "info");
     }
 
     const categories: Array<{ id: MarketplaceCategory; label: string }> = [
-        { id: "all", label: "全部领域" },
-        { id: "math", label: "📐 数理公式" },
-        { id: "computer", label: "💻 计算机/408" },
-        { id: "language", label: "🔤 外语词汇" },
-        { id: "qualification", label: "⚖️ 法考/公考" },
-        { id: "humanities", label: "📖 人文经典" },
-        { id: "science", label: "🔬 经典物理" },
-        { id: "general", label: "💡 逻辑/通识" },
+        { id: "all", label: text("studio.catAll", "全部领域") },
+        { id: "math", label: text("studio.catMath", "📐 数理公式") },
+        { id: "computer", label: text("studio.catComputer", "💻 计算机/408") },
+        { id: "language", label: text("studio.catLanguage", "🔤 外语词汇") },
+        { id: "qualification", label: text("studio.catQualification", "⚖️ 法考/公考") },
+        { id: "humanities", label: text("studio.catHumanities", "📖 人文经典") },
+        { id: "science", label: text("studio.catScience", "🔬 经典物理") },
+        { id: "general", label: text("studio.catGeneral", "💡 逻辑/通识") },
     ];
 
     function getCategoryColor(cat: MarketplaceCategory): string {
@@ -275,7 +287,7 @@
                 <span class="lv-market-icon">🏛️</span>
                 <span>{i18n?.marketplaceTitle || "闪卡与知识公共集市"}</span>
             </h1>
-            <span class="lv-market-badge">公版精选 · 零版权争议</span>
+            <span class="lv-market-badge">{text("studio.badgePublic", "公版精选 · 零版权争议")}</span>
             <span class="lv-market-subtitle">
                 {i18n?.marketplaceSubtitle || "去中心化公共知识集市。精选公共领域常识、国家新课标与学术公式，支持第三方直链订阅与 FSRS 一键入库。"}
             </span>
@@ -288,17 +300,17 @@
                     onclick={() => (cartDrawerOpen = true)}
                 >
                     <LvIcon name="cards" size={13} />
-                    <span>🛒 闪卡篮 ({cart.length})</span>
+                    <span>{text("studio.cartHeader", "🛒 闪卡篮 ({n})", {n: cart.length})}</span>
                 </button>
             {/if}
             <button
                 type="button"
                 class="lv-btn sm lv-btn--ghost"
                 onclick={() => (addSourcePanelOpen = !addSourcePanelOpen)}
-                title="添加自定义第三方网络订阅源"
+                title={text("studio.addSourceTitle", "添加自定义第三方网络订阅源")}
             >
                 <LvIcon name="plus" size={13} />
-                <span>{addSourcePanelOpen ? "收起订阅设置" : "➕ 自定义订阅源"}</span>
+                <span>{addSourcePanelOpen ? text("studio.sourceCollapse", "收起订阅设置") : text("studio.sourceAdd", "✚ 自定义订阅源")}</span>
             </button>
         </div>
     </div>
@@ -306,16 +318,16 @@
     <!-- 添加外部订阅源折叠面板 -->
     {#if addSourcePanelOpen}
         <div class="lv-market-source-panel">
-            <div class="lv-market-source-title">🔗 添加第三方网络订阅源 (URL)</div>
+            <div class="lv-market-source-title">{text("studio.sourcePanelTitle", "🔗 添加第三方网络订阅源 (URL)")}</div>
             <p class="lv-market-source-desc">
-                支持输入托管在 GitHub Gist、自建服务器或开放网盘的 <code>catalog.json</code> 订阅直链（模式同开源阅读书源），思源客户端直连拉取，官方零存储、零中转。
+                {text("studio.sourcePanelDesc", "支持输入托管在 GitHub Gist、自建服务器或开放网盘的 catalog.json 订阅直链（模式同开源阅读书源），思源客户端直连拉取，官方零存储、零中转。")}
             </p>
             <div class="lv-market-source-inputs">
                 <input
                     class="lv-input"
                     style="flex: 1; min-width: 160px;"
                     bind:value={newSourceName}
-                    placeholder="订阅源名称（如：考研专业课精选源）"
+                    placeholder={text("studio.sourceNamePlaceholder", "订阅源名称（如：考研专业课精选源）")}
                 />
                 <input
                     class="lv-input"
@@ -324,12 +336,12 @@
                     placeholder="https://example.com/catalog.json"
                 />
                 <button type="button" class="lv-btn sm lv-btn--primary" onclick={handleAddCustomSource}>
-                    添加并载入
+                    {text("studio.sourceAddLoad", "添加并载入")}
                 </button>
             </div>
             {#if customSources.length > 0}
                 <div class="lv-market-source-chips">
-                    <span class="lv-muted" style="font-size: 12px;">已添加订阅源：</span>
+                    <span class="lv-muted" style="font-size: 12px;">{text("studio.sourcesAdded", "已添加订阅源：")}</span>
                     {#each customSources as src (src.id)}
                         <button
                             type="button"
@@ -351,30 +363,30 @@
             <div class="lv-market-stat-item">
                 <span class="lv-stat-emoji">🏛️</span>
                 <div>
-                    <div class="lv-stat-label">公版精选卡包</div>
-                    <div class="lv-stat-value brand">{catalog.items.length} 门核心学科</div>
+                    <div class="lv-stat-label">{text("studio.statPacks", "公版精选卡包")}</div>
+                    <div class="lv-stat-value brand">{text("studio.statPacksValue", "{n} 门核心学科", {n: catalog.items.length})}</div>
                 </div>
             </div>
             <div class="lv-stat-divider"></div>
             <div class="lv-market-stat-item">
                 <span class="lv-stat-emoji">🗂️</span>
                 <div>
-                    <div class="lv-stat-label">卡片覆盖总量</div>
-                    <div class="lv-stat-value success">{totalCardCount}+ 深度记忆卡</div>
+                    <div class="lv-stat-label">{text("studio.statCards", "卡片覆盖总量")}</div>
+                    <div class="lv-stat-value success">{text("studio.statCardsValue", "{n}+ 深度记忆卡", {n: totalCardCount})}</div>
                 </div>
             </div>
             <div class="lv-stat-divider"></div>
             <div class="lv-market-stat-item">
                 <span class="lv-stat-emoji">🛡️</span>
                 <div>
-                    <div class="lv-stat-label">知识版权安全</div>
-                    <div class="lv-stat-value">100% 公有领域 / CC-BY / MIT</div>
+                    <div class="lv-stat-label">{text("studio.statLicense", "知识版权安全")}</div>
+                    <div class="lv-stat-value">{text("studio.statLicenseValue", "100% 公有领域 / CC-BY / MIT")}</div>
                 </div>
             </div>
         </div>
         <div class="lv-market-stats-meta">
-            <span class="lv-chip sm lv-chip--acc">双向生态互通</span>
-            <span>支持开箱一键入库，并可导出 <code>.lvcards</code> 标准包</span>
+            <span class="lv-chip sm lv-chip--acc">{text("studio.chipInterop", "双向生态互通")}</span>
+            <span>{text("studio.interopDesc", "支持开箱一键入库，并可导出 .lvcards 标准包")}</span>
         </div>
     </div>
 
@@ -385,7 +397,7 @@
                 <input
                     class="lv-input lv-market-search-input"
                     bind:value={searchQuery}
-                    placeholder="🔍 搜索题库、卡包或考点关键词（如：TCP、导数、四六级、民法典、逻辑）..."
+                    placeholder={text("studio.searchPlaceholder", "🔍 搜索题库、卡包或考点关键词…")}
                 />
                 {#if searchQuery}
                     <button
@@ -405,7 +417,7 @@
                     class:active={currentSourceUrl === "official"}
                     onclick={() => { currentSourceUrl = "official"; void refreshCatalog("official"); }}
                 >
-                    🌐 官方精选公版源
+                    {text("studio.sourceOfficial", "🌐 官方精选公版源")}
                 </button>
                 {#if customSources.length > 0}
                     <select
@@ -413,7 +425,7 @@
                         bind:value={currentSourceUrl}
                         onchange={(e) => void refreshCatalog((e.target as HTMLSelectElement).value)}
                     >
-                        <option value="official">官方精选公版源</option>
+                        <option value="official">{text("studio.sourceOfficial", "🌐 官方精选公版源")}</option>
                         {#each customSources as cs (cs.id)}
                             <option value={cs.url}>{cs.name}</option>
                         {/each}
@@ -449,13 +461,13 @@
     {#if loadingCatalog}
         <div class="lv-market-loading">
             <LvIcon name="timer" size={32} />
-            <div style="margin-top: 10px; font-size: 14px;">正在拉取知识集市资源列表…</div>
+            <div style="margin-top: 10px; font-size: 14px;">{text("studio.loadingCatalog", "正在拉取知识集市资源列表…")}</div>
         </div>
     {:else if filteredItems.length === 0}
         <div class="lv-market-empty">
             <LvIcon name="cards" size={36} />
-            <div class="lv-empty-title">未找到匹配的闪卡包</div>
-            <p class="lv-empty-desc">尝试清空关键词或切换上方的学科分类。</p>
+            <div class="lv-empty-title">{text("studio.emptyTitle", "未找到匹配的闪卡包")}</div>
+            <p class="lv-empty-desc">{text("studio.emptyDesc", "尝试清空关键词或切换上方的学科分类。")}</p>
         </div>
     {:else}
         <div class="lv-market-grid">
@@ -472,15 +484,15 @@
                     <div class="lv-deck-card-body">
                         <div class="lv-deck-card-header">
                             <span class="lv-chip sm lv-chip--acc">
-                                {item.kind === "both" ? "题卡通用" : item.kind === "flashcard_deck" ? "记忆闪卡" : "题库试卷"}
+                                {item.kind === "both" ? text("studio.kindBoth", "题卡通用") : item.kind === "flashcard_deck" ? text("studio.kindDeck", "记忆闪卡") : text("studio.kindExam", "题库试卷")}
                             </span>
                             <div class="lv-deck-header-meta">
                                 {#if item.verified}
-                                    <span class="lv-chip sm verified-tag" title="零版权争议认证">
-                                        ✓ 公版认证
+                                    <span class="lv-chip sm verified-tag" title={text("studio.verifiedTitle", "零版权争议认证")}>
+                                        {text("studio.verified", "✓ 公版认证")}
                                     </span>
                                 {/if}
-                                <span class="lv-deck-count num">{item.itemCount} 张卡</span>
+                                <span class="lv-deck-count num">{text("studio.cardCount", "{n} 张卡", {n: item.itemCount})}</span>
                             </div>
                         </div>
 
@@ -505,10 +517,10 @@
                                 onclick={() => (qualityOpenId = isQualityOpen ? null : item.id)}
                             >
                                 <LvIcon name="target" size={12} />
-                                <span>{isQualityOpen ? "收起品质画像" : "📊 查看品质画像 (FSRS/卡型)"}</span>
+                                <span>{isQualityOpen ? text("studio.qualityCollapse", "收起品质画像") : text("studio.qualityOpen", "📊 查看品质画像 (FSRS/卡型)")}</span>
                             </button>
                             <span class="lv-muted" style="font-size: 11px;">
-                                💡 便签覆盖率 {metrics.expansionRatio}%
+                                {text("studio.expansionRatio", "💡 便签覆盖率 {n}%", {n: metrics.expansionRatio})}
                             </span>
                         </div>
 
@@ -517,7 +529,7 @@
                             <div class="lv-quality-dashboard">
                                 <!-- 卡型分布 -->
                                 <div class="lv-quality-section">
-                                    <div class="lv-quality-label">题卡类型构成：</div>
+                                    <div class="lv-quality-label">{text("studio.typeComposition", "题卡类型构成：")}</div>
                                     <div class="lv-metrics-bar">
                                         {#each metrics.typeDistribution as td}
                                             <div
@@ -539,7 +551,7 @@
 
                                 <!-- FSRS 难度梯队 -->
                                 <div class="lv-quality-section">
-                                    <div class="lv-quality-label">FSRS 推荐难度阶梯：</div>
+                                    <div class="lv-quality-label">{text("studio.difficultyLadder", "FSRS 推荐难度阶梯：")}</div>
                                     <div class="lv-metrics-bar">
                                         {#each metrics.difficultyDistribution as dd}
                                             <div
@@ -564,7 +576,7 @@
 
                     <div class="lv-deck-card-footer">
                         <div class="lv-deck-meta-info">
-                            <span>作者: {item.author.name}</span>
+                            <span>{text("studio.author", "作者: {name}", {name: item.author.name})}</span>
                             <span class="lv-chip sm num">{item.license} · v{item.version}</span>
                         </div>
 
@@ -579,24 +591,24 @@
                                         onclick={() => (previewItemId = previewItemId === item.id ? null : item.id)}
                                     >
                                         <LvIcon name="eye" size={13} />
-                                        <span>{previewItemId === item.id ? "收起试看卡片" : "👁️ 试看闪卡形态（前 2 张）"}</span>
+                                        <span>{previewItemId === item.id ? text("studio.previewCollapse", "收起试看卡片") : text("studio.previewOpen", "👁️ 试看闪卡形态（前 2 张）")}</span>
                                     </button>
                                     <button
                                         type="button"
                                         class="lv-btn sm lv-btn--ghost"
                                         style="font-size: 11px; padding: 2px 6px;"
                                         onclick={() => handleAddDeckToCart(item)}
-                                        title="将全包卡片加入闪卡篮"
+                                        title={text("studio.addAllToCart", "将全包卡片加入闪卡篮")}
                                     >
-                                        🛒 全包入篮
+                                        {text("studio.addAllToCart", "🛒 全包入篮")}
                                     </button>
                                 </div>
 
                                 {#if previewItemId === item.id}
                                     <div class="lv-deck-preview-box">
                                         <div class="lv-preview-hint">
-                                            <span>🗂️ 闪卡试看形态（点击卡片翻面）</span>
-                                            <span class="lv-muted" style="font-size: 11px;">FSRS 推荐难度</span>
+                                            <span>{text("studio.previewHint", "🗂️ 闪卡试看形态（点击卡片翻面）")}</span>
+                                            <span class="lv-muted" style="font-size: 11px;">{text("studio.fsrsDifficulty", "FSRS 推荐难度")}</span>
                                         </div>
 
                                         {#each item.previewItems.slice(0, 2) as prev, pi}
@@ -614,8 +626,8 @@
                                                     {#if !isFlipped}
                                                         <div class="lv-preview-face front">
                                                             <div class="lv-face-label">
-                                                                <span>第 {pi + 1} 张 · 卡片正面（问题/线索）</span>
-                                                                <span class="lv-flip-tip">点击翻面 ↻</span>
+                                                                <span>{text("studio.previewFront", "第 {n} 张 · 卡片正面（问题/线索）", {n: pi + 1})}</span>
+                                                                <span class="lv-flip-tip">{text("studio.flip", "点击翻面 ↻")}</span>
                                                             </div>
                                                             <div class="lv-face-stem">{prev.stem}</div>
                                                             {#if prev.options?.length}
@@ -625,15 +637,15 @@
                                                     {:else}
                                                         <div class="lv-preview-face back">
                                                             <div class="lv-face-label">
-                                                                <span>第 {pi + 1} 张 · 卡片背面（答案/记忆便签）</span>
-                                                                <span class="lv-flip-tip">点击翻回 ↻</span>
+                                                                <span>{text("studio.previewBack", "第 {n} 张 · 卡片背面（答案/记忆便签）", {n: pi + 1})}</span>
+                                                                <span class="lv-flip-tip">{text("studio.flipBack", "点击翻回 ↻")}</span>
                                                             </div>
                                                             <div class="lv-face-answer">
-                                                                <strong>答案：</strong>{prev.answer}
+                                                                <strong>{text("studio.answerLabel", "答案：")}</strong>{prev.answer}
                                                             </div>
                                                             {#if prev.analysis}
                                                                 <div class="lv-face-memo">
-                                                                    💡 <strong>助记便签：</strong>{prev.analysis}
+                                                                    💡 <strong>{text("studio.mnemonicLabel", "助记便签：")}</strong>{prev.analysis}
                                                                 </div>
                                                             {/if}
                                                         </div>
@@ -648,7 +660,7 @@
                                                             class:active={isInCart(cart, candidate.id)}
                                                             onclick={() => handleToggleCart(candidate)}
                                                         >
-                                                            {isInCart(cart, candidate.id) ? "✓ 已在闪卡篮" : "+ 放入闪卡篮"}
+                                                            {isInCart(cart, candidate.id) ? text("studio.inCart", "✓ 已在闪卡篮") : text("studio.putInCart", "+ 放入闪卡篮")}
                                                         </button>
                                                     </div>
                                                 {/if}
@@ -665,10 +677,10 @@
                                 type="button"
                                 class="lv-btn sm lv-btn--ghost"
                                 onclick={() => handleExportLvCards(item)}
-                                title="导出为 .lvcards 单文件分享包"
+                                title={text("studio.exportSingleTitle", "导出为 .lvcards 单文件分享包")}
                             >
                                 <LvIcon name="cards" size={13} />
-                                <span>导出包</span>
+                                <span>{text("studio.exportPack", "导出包")}</span>
                             </button>
 
                             {#if installed}
@@ -677,10 +689,10 @@
                                         type="button"
                                         class="lv-btn sm lv-btn--ghost"
                                         onclick={() => handleCheckDelta(item)}
-                                        title="比对远端与本地，无损合并更新"
+                                        title={text("studio.deltaPreviewTitle", "演示：基于模拟本地数据的差量预览（暂未写入本地）")}
                                     >
                                         <LvIcon name="refresh" size={13} />
-                                        <span>增量检查</span>
+                                        <span>{text("studio.deltaPreview", "增量预览")}</span>
                                     </button>
                                     <button
                                         type="button"
@@ -688,7 +700,7 @@
                                         onclick={() => onOpenDeck?.(installed.deckId, installed.deckName)}
                                     >
                                         <LvIcon name="check" size={13} />
-                                        <span>已入库</span>
+                                        <span>{text("studio.installed", "已入库")}</span>
                                     </button>
                                 </div>
                             {:else}
@@ -700,10 +712,10 @@
                                 >
                                     {#if isInstalling}
                                         <LvIcon name="timer" size={13} />
-                                        <span>正在入库…</span>
+                                        <span>{text("studio.installing", "正在入库…")}</span>
                                     {:else}
                                         <LvIcon name="plus" size={13} />
-                                        <span>获取入库</span>
+                                        <span>{text("studio.install", "获取入库")}</span>
                                     {/if}
                                 </button>
                             {/if}
@@ -720,8 +732,8 @@
         <div class="lv-cart-drawer">
             <div class="lv-cart-drawer-header">
                 <div style="font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px;">
-                    <span>🛒 跨学科闪卡篮</span>
-                    <span class="lv-chip sm lv-chip--acc">{cart.length} 张卡</span>
+                    <span>{text("studio.cartTitle", "🛒 跨学科闪卡篮")}</span>
+                    <span class="lv-chip sm lv-chip--acc">{text("studio.cardCount", "{n} 张卡", {n: cart.length})}</span>
                 </div>
                 <button
                     type="button"
@@ -735,7 +747,7 @@
             <div class="lv-cart-drawer-content">
                 {#if cart.length === 0}
                     <div style="text-align: center; padding: 40px 10px; color: var(--b3-theme-on-surface); opacity: 0.6;">
-                        闪卡篮为空，可从左侧集市试看卡片时点击「+ 放入闪卡篮」
+                        {text("studio.cartEmpty", "闪卡篮为空，可从左侧集市试看卡片时点击「+ 放入闪卡篮」")}
                     </div>
                 {:else}
                     <div class="lv-cart-list">
@@ -750,7 +762,7 @@
                                     class="b3-button b3-button--small b3-button--cancel"
                                     style="min-width: 28px; min-height: 28px; padding: 0 8px; color: var(--b3-theme-error, var(--lv-color-danger)); touch-action: manipulation; display: inline-flex; align-items: center; justify-content: center;"
                                     onclick={() => (cart = removeFromCart(cart, c.id))}
-                                    aria-label="从闪卡篮移除"
+                                    aria-label={text("studio.removeFromCart", "从闪卡篮移除")}
                                 >
                                     ✕
                                 </button>
@@ -767,7 +779,7 @@
                         class="lv-btn sm lv-btn--ghost"
                         onclick={() => (cart = clearCart())}
                     >
-                        清空
+                        {text("studio.clearCart", "清空")}
                     </button>
                     <div style="display: flex; gap: 6px;">
                         <button
@@ -776,7 +788,7 @@
                             onclick={handleExportCart}
                         >
                             <LvIcon name="cards" size={13} />
-                            <span>导出 .lvcards</span>
+                            <span>{text("studio.exportLvcards", "导出 .lvcards")}</span>
                         </button>
                         <button
                             type="button"
@@ -785,7 +797,7 @@
                             onclick={() => void handleInstallCart()}
                         >
                             <LvIcon name="plus" size={13} />
-                            <span>{installingId === "cart" ? "正在入库…" : "一键入库开练"}</span>
+                            <span>{installingId === "cart" ? text("studio.installing", "正在入库…") : text("studio.installAndStart", "一键入库开练")}</span>
                         </button>
                     </div>
                 </div>
@@ -798,33 +810,33 @@
         <div class="lv-cart-drawer-mask" role="presentation" onclick={() => (deltaReport = null)}></div>
         <div class="lv-delta-modal">
             <h3 style="margin: 0 0 8px; font-size: 15px; font-weight: 700;">
-                🔄 增量差量更新与无损合并：《{deltaReport.item.title}》
+                {text("studio.deltaTitle", "🔄 增量差量更新与无损合并：《{title}》", {title: deltaReport.item.title})}
             </h3>
             <p class="lv-muted" style="font-size: 12px; margin: 0 0 12px; line-height: 1.5;">
-                自动比对本地已安装卡片与集市远端新版。执行无损合并时，<strong>绝对保留您本地历史复习排期、已掌握错题状态与 FSRS 记忆参数</strong>，仅增量补全新卡与正文修订。
+                {text("studio.deltaDemoNote", "🧪 演示预览：当前基于模拟本地数据演示差量算法，确认执行不会写入任何更改。正式版将自动比对本地已安装卡片与集市远端新版，绝对保留本地历史复习排期、错题状态与 FSRS 记忆参数，仅增量补全新卡与正文修订。")}
             </p>
 
             <div class="lv-delta-stat-boxes">
                 <div class="lv-delta-stat-box green">
                     <div class="lv-stat-num">{deltaReport.report.addedCount}</div>
-                    <div class="lv-stat-txt">待追加新卡</div>
+                    <div class="lv-stat-txt">{text("studio.deltaAdded", "待追加新卡")}</div>
                 </div>
                 <div class="lv-delta-stat-box blue">
                     <div class="lv-stat-num">{deltaReport.report.updatedCount}</div>
-                    <div class="lv-stat-txt">待修订卡片</div>
+                    <div class="lv-stat-txt">{text("studio.deltaUpdated", "待修订卡片")}</div>
                 </div>
                 <div class="lv-delta-stat-box gray">
                     <div class="lv-stat-num">{deltaReport.report.unchangedCount}</div>
-                    <div class="lv-stat-txt">完全一致卡片</div>
+                    <div class="lv-stat-txt">{text("studio.deltaUnchanged", "完全一致卡片")}</div>
                 </div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
                 <button type="button" class="lv-btn sm lv-btn--ghost" onclick={() => (deltaReport = null)}>
-                    取消
+                    {text("studio.cancel", "取消")}
                 </button>
                 <button type="button" class="lv-btn sm lv-btn--primary" onclick={handleApplyDeltaSync}>
-                    确认执行无损合并
+                    {text("studio.finishPreview", "完成预览（不写入）")}
                 </button>
             </div>
         </div>

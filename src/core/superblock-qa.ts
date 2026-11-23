@@ -93,8 +93,8 @@ export function maskSuperBlockForQuestion(html: string): string {
 
     // 如果第 1 个子块内部本身包含 ==挖空==（HTML 或字面），对其挖空打上遮罩
     let processedQHtml = split.questionHtml;
-    if (processedQHtml.includes("==")) {
-        processedQHtml = processedQHtml.replace(/==([\s\S]*?)==/g, () => {
+    if (/(?<!=)==(?!=)/.test(processedQHtml)) {
+        processedQHtml = processedQHtml.replace(/(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g, () => {
             return `<mark class="lv-masked" data-type="mark" aria-hidden="true" title="答案遮蔽"><span class="lv-mask-slot">［ 回忆这里 ］</span></mark>`;
         });
     }

@@ -1,6 +1,5 @@
 <script lang="ts">
     import LvIcon from "../kit/LvIcon.svelte";
-    import { hasDelimitedQa } from "@/core/delimited-qa";
 
     interface Props {
         showAnswer?: boolean;
@@ -18,7 +17,7 @@
         cardMemo = "",
         isCustomPluginAnswer = false,
         cardHtml = "",
-        occl = null,
+        occl: _occl = null,
         faceError = "",
         t,
         onEditMemo = () => {},
@@ -54,17 +53,8 @@
                 <LvIcon name="edit" size={13} />
             </button>
         </div>
-    {:else if !occl && !cardHtml?.includes('data-type="mark"') && !hasDelimitedQa(cardHtml)}
-        <!-- 思源原生整块闪卡无损自评引导 -->
-        <div class="lv-native-recall-guidance" data-testid="review-native-recall">
-            <span class="lv-native-recall-icon"><LvIcon name="target" size={16} /></span>
-            <div class="lv-native-recall-body">
-                <strong>{t?.review?.nativeRecallTitle ?? "思源原生自由回忆"}</strong>
-                <p>{t?.review?.nativeRecallDesc ?? "该卡为原生笔记闪卡；原笔记未做任何修改。请对照上方内容，在下方直接自评打分。"}</p>
-            </div>
-        </div>
     {:else if cardHtml && !faceError}
-        <!-- 翻面后轻量静默入口：随时为该卡记录口诀与线索 -->
+        <!-- 翻面后轻量静默入口：随时为该卡记录口诀与线索（精简释放首屏高度） -->
         <div class="lv-memo-prompt" data-testid="review-memo-prompt">
             <button
                 type="button"
@@ -82,46 +72,6 @@
 {/if}
 
 <style lang="scss">
-    .lv-native-recall-guidance {
-        display: flex;
-        align-items: flex-start;
-        gap: calc(var(--lv-space-unit) * 3);
-        padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 8);
-        margin-top: var(--lv-sp-3);
-        border: 1px solid var(--lv-primary-border);
-        border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-brand) 6%, var(--lv-color-surface));
-        font-size: var(--lv-type-control-size);
-        box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-color-brand) 8%, transparent);
-        animation: lv-modal-pop var(--lv-dur-2) var(--lv-ease);
-
-        .lv-native-recall-icon {
-            color: var(--lv-color-brand);
-            flex: none;
-            margin-top: var(--lv-space-hairline);
-        }
-        .lv-native-recall-body {
-            flex: 1;
-            strong {
-                display: block;
-                font-weight: var(--lv-fw-semibold);
-                color: var(--lv-color-brand);
-                font-size: var(--lv-type-meta-size);
-                letter-spacing: 0.04em;
-                margin-bottom: calc(var(--lv-space-unit) * 1);
-                text-wrap: balance;
-            }
-            p {
-                margin: 0;
-                color: var(--lv-color-text-muted);
-                line-height: var(--lv-lh-reading, 1.65);
-                font-size: var(--lv-type-control-size);
-                max-width: 48em;
-                text-wrap: pretty;
-            }
-        }
-    }
-
     .lv-card-memo-callout {
         display: flex;
         align-items: flex-start;

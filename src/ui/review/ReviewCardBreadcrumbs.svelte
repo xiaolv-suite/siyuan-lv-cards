@@ -133,14 +133,15 @@
         align-items: center;
         gap: calc(var(--lv-space-unit) * 1);
         max-width: min(calc(100% - var(--lv-sp-2)), 560px);
+        min-height: 28px;
         box-sizing: border-box;
-        padding: calc(var(--lv-space-unit) * 1) calc(var(--lv-space-unit) * 3);
+        padding: 2px 10px;
         border: 1px solid var(--lv-border);
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-canvas) 85%, transparent);
         color: var(--lv-color-text-muted);
         font-size: var(--lv-type-meta-size);
-        margin-bottom: var(--lv-sp-3);
+        margin-bottom: 4px;
         margin-right: var(--lv-sp-2);
         box-shadow: var(--lv-shadow-1);
         user-select: none;

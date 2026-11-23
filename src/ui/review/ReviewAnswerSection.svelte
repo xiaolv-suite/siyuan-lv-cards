@@ -80,7 +80,7 @@
                 data-testid="review-typing-input"
             />
         </div>
-    {:else if answerVariant === "choice"}
+    {:else if answerVariant === "choice" && !hasInteractiveQuiz}
         {#if choiceFallbackMode === "free-recall"}
             <div class="ft__smaller ft__on-surface lv-choice-fallback" role="status" data-testid="review-choice-fallback">
                 {t?.review?.choiceFallbackFreeRecall ?? "当前卡片暂无选项，转为自由回忆"}
@@ -133,11 +133,11 @@
         </div>
     {/if}
 
-    <!-- AQ-2：显示答案按钮补 onclick——此前覆盖层按钮无处理器且容器点击跳过 button，鼠标点击翻面失效 -->
-    <div class="fn__flex" style="gap: var(--lv-sp-2); justify-content: center; align-items: center;">
+    <!-- 题面底部行动坞：提示推进与翻面按钮（告别全卡绝对定位遮挡，通透微透胶囊） -->
+    <div class="lv-answer-action-dock" data-testid="review-answer-dock">
         <button
             type="button"
-            class="b3-button b3-button--small lv-btn-ghost"
+            class="b3-button b3-button--small lv-btn-ghost lv-dock-hint-btn"
             aria-keyshortcuts="h"
             title="点击推进提示，长按或按住快捷键临时透视"
             onclick={onAdvanceHint}
@@ -147,20 +147,22 @@
             onpointercancel={onPeekEnd}
             data-testid="review-advance-hint-btn"
         >
-            {t?.review?.hintBtn ?? "提示"}
+            <LvIcon name="lightbulb" size={13} />
+            <span>{t?.review?.hintBtn ?? "提示"}</span>
         </button>
         <button
             type="button"
-            class="b3-button b3-button--text lv-reveal"
+            class="b3-button b3-button--small lv-btn-ghost lv-reveal lv-dock-reveal-btn"
             disabled={!faceReady}
             aria-keyshortcuts="Space"
             onclick={onRevealAnswer}
             data-testid="review-reveal-btn"
         >
-            {t?.review?.showAnswer ?? "显示答案"}
+            <span>{t?.review?.showAnswer ?? "显示答案"}</span>
+            <span class="lv-dock-kbd" aria-hidden="true">Space</span>
         </button>
+        <span class="lv-reveal-hint" aria-hidden="true">⎵ {t?.review?.revealHint ?? "空格翻面"} · 默认主动回忆（可在偏好开启打字）</span>
     </div>
-    <span class="lv-reveal-hint" aria-hidden="true">⎵ {t?.review?.revealHint ?? "空格翻面"} · 长按透视</span>
 {/if}
 
 {#if typingGrade}
@@ -289,19 +291,66 @@
         }
     }
 
-    .lv-reveal {
-        position: absolute;
-        inset: 0;
-        z-index: var(--lv-z-base);
-        width: 100%;
-        height: 100%;
-        background: transparent;
-        color: transparent;
-        font-size: var(--lv-type-body-sm-size);
-        transition: background var(--lv-dur-2) var(--lv-ease);
+    .lv-answer-action-dock {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--lv-sp-2);
+        margin-top: clamp(8px, 1.5vh, 16px);
+        padding-top: 4px;
+        position: relative;
+        flex-wrap: wrap;
 
-        &:hover {
-            background: color-mix(in srgb, var(--lv-primary-softer) 55%, transparent);
+        .lv-dock-hint-btn,
+        .lv-dock-reveal-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: var(--lv-r-pill, 999px);
+            border: 1px solid color-mix(in srgb, var(--lv-border) 75%, transparent);
+            background: color-mix(in srgb, var(--lv-color-surface) 90%, transparent);
+            color: var(--lv-color-text-muted);
+            font-size: var(--lv-type-meta-size);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            transition: all var(--lv-dur-1) var(--lv-ease);
+
+            &:hover:not(:disabled) {
+                background: color-mix(in srgb, var(--lv-color-brand) 10%, var(--lv-color-surface));
+                border-color: var(--lv-color-brand);
+                color: var(--lv-color-brand);
+                transform: translateY(-1px);
+            }
+            &:active:not(:disabled) {
+                transform: translateY(0.5px) scale(0.98);
+            }
+        }
+
+        .lv-dock-kbd {
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--lv-color-text) 12%, transparent);
+            color: var(--lv-color-text-muted);
+            font-family: inherit;
+            line-height: 1.2;
+        }
+
+        .lv-reveal-hint {
+            font-size: var(--lv-type-meta-size);
+            color: var(--lv-color-text-muted);
+            opacity: 0.65;
+            pointer-events: none;
+            margin-left: 4px;
+        }
+
+        @media (pointer: coarse), (max-width: 680px) {
+            .lv-dock-kbd,
+            .lv-reveal-hint {
+                display: none;
+            }
         }
     }
 
@@ -314,20 +363,6 @@
         max-width: inherit;
         font-size: var(--lv-type-fluid-size);
         color: var(--lv-color-text-muted);
-    }
-
-    .lv-reveal-hint {
-        position: absolute;
-        right: var(--lv-sp-3);
-        bottom: var(--lv-sp-2);
-        font-size: var(--lv-type-meta-size);
-        color: var(--lv-color-text-muted);
-        opacity: 0.7;
-        pointer-events: none;
-    }
-    /* 触屏/窄屏：空格键提示无意义，且绝对定位会与填空输入行重叠（实机截图反馈） */
-    @media (pointer: coarse), (max-width: 680px) {
-        .lv-reveal-hint { display: none; }
     }
 
     .lv-tts-row {

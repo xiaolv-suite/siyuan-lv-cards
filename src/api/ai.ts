@@ -5,11 +5,11 @@
  * AQ-14：外部可传入 AbortSignal（向导关闭/换源即取消），请求级 15s 超时。
  * AQ-15：fallback 仅对可恢复错误（网络/5xx/429）生效；401/配额/4xx/取消/解析错误直接给原因。
  */
-import { fetchSyncPost } from "siyuan";
 import { AICanceledError, AIHttpError, extractAIErrorCode, isAICanceled, isRecoverableAIError, parseRetryAfter } from "./ai-errors";
 import { classifyAiFailure, nextLadderStep, type LadderStep } from "../core/ai-degradation";
 import { RequestError, requestWithPolicy } from "../libs/request";
 import { lvAi } from "../libs/lv-notice-kit";
+import { getSharedAiRouter } from "../libs/lv-ai-router";
 
 // 错误分类从零依赖模块再导出（单测不经 siyuan 包解析；调用方仍从 @/api/ai 引入）
 export { AICanceledError, AIHttpError, extractAIErrorCode, isAICanceled, isRecoverableAIError, parseRetryAfter };
@@ -88,11 +88,35 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
             throw e;
         }
     }
-    // siyuan 内置 AI（优先异步 fetch 免全局全屏遮罩，支持 AbortSignal 超时与取消控制）
+    // siyuan 内置 AI / 全生态智能降级中枢（纯异步调度，严禁使用 fetchSyncPost 阻塞全屏）
     if (opts.signal?.aborted) {
         throw new AICanceledError();
     }
-    const timeoutMs = opts.timeoutMs !== undefined ? opts.timeoutMs : 90000;
+
+    // 1. 优先调用小驴生态 5 级自适应 AI 路由（思源智能体 -> 用户Key -> 本地Ollama -> 免密公用池 -> 本地规则）
+    try {
+        const router = getSharedAiRouter();
+        const outcome = await router.chat({
+            messages: [
+                { role: "system", content: system },
+                { role: "user", content: user },
+            ],
+            taskType: "question_gen",
+        });
+        if (opts.signal?.aborted) {
+            throw new AICanceledError();
+        }
+        if (outcome.ok && typeof outcome.content === "string" && outcome.content.trim()) {
+            return outcome.content.trim();
+        }
+    } catch (routerErr) {
+        if (opts.signal?.aborted || isAICanceled(routerErr)) {
+            throw new AICanceledError();
+        }
+    }
+
+    // 2. 备用直接请求思源内核官方接口（纯原生 fetch，支持 v3.8+ agent 与标准 chat）
+    const timeoutMs = opts.timeoutMs !== undefined ? opts.timeoutMs : 30000;
     interface SiyuanAiResp {
         code?: number;
         msg?: string;
@@ -102,26 +126,39 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
     const resp = await requestWithPolicy<SiyuanAiResp>(
         async (signal) => {
             if (typeof fetch === "function") {
-                const res = await fetch("/api/ai/chatGPT", {
+                const fullPrompt = system ? `${system}\n\n${user}` : user;
+                let res = await fetch("/api/ai/agent/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
+                        prompt: fullPrompt,
                         messages: [
                             { role: "system", content: system },
                             { role: "user", content: user },
                         ],
                     }),
                     signal,
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                }).catch(() => null);
+
+                if (!res || res.status === 404) {
+                    res = await fetch("/api/ai/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            prompt: fullPrompt,
+                            messages: [
+                                { role: "system", content: system },
+                                { role: "user", content: user },
+                            ],
+                        }),
+                        signal,
+                    }).catch(() => null);
+                }
+
+                if (!res || !res.ok) throw new Error(`HTTP ${res?.status || "error"}`);
                 return res.json() as Promise<SiyuanAiResp>;
             }
-            return (fetchSyncPost as (url: string, data: unknown) => Promise<SiyuanAiResp>)("/api/ai/chatGPT", {
-                messages: [
-                    { role: "system", content: system },
-                    { role: "user", content: user },
-                ],
-            });
+            throw new Error("异步网络请求通道不可用");
         },
         { timeoutMs, signal: opts.signal, readOnly: false },
     );
@@ -129,8 +166,6 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
         throw new AICanceledError();
     }
     if (!resp || resp.code !== 0) {
-        // 思源网关返回 envelope 时可能只给数值状态码，不带 HTTP 文本；
-        // 映射 4xx/5xx 后与自定义端点共用认证、配额、限流和服务端错误提示。
         const status = Number(resp?.code);
         if (Number.isInteger(status) && status >= 400 && status <= 599) {
             throw new AIHttpError(status, extractAIErrorCode(resp?.data ?? resp));

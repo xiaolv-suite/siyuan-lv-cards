@@ -34,6 +34,7 @@ import {
     type LvSearchResultItem,
     type LvSearchProvider,
     type LvAutomationRule,
+    type BlockActionStoreConfig,
 } from "./lv-notice-kit";
 
 export {
@@ -67,6 +68,7 @@ export {
     type LvSearchResultItem,
     type LvSearchProvider,
     type LvAutomationRule,
+    type BlockActionStoreConfig,
 };
 
 const CARD_CREATE_PATTERN = /(卡片|制卡|卡组|卡包|闪卡|收纳至材料收件箱|已创建|生成|入库|抽取|进度)/i;

@@ -21,6 +21,7 @@ export const ATTR_LV_QUESTION = "custom-lv-question";
 export const ATTR_CARD_TITLE = "custom-card-title";
 export const ATTR_RIFF_ANSWER = "custom-riff-answer";
 export const ATTR_LV_ANSWER = "custom-lv-answer";
+export const ATTR_LV_OCCLUSION = "custom-lv-occlusion";
 
 /**
  * 从块属性集合中提取闪卡自定义问题/标题
@@ -42,9 +43,10 @@ export function extractCardAnswerAttr(attrs?: Record<string, string> | null): st
 
 /**
  * 构建免侵入问答闪卡的问题属性补丁（保存至 custom-riff-title，清空时设为空字符串）
+ * 严格清洗换行符为单个空格，杜绝损坏思源 IAL 语法结构导致思源无法更换块模式/块类型
  */
 export function buildCardQuestionAttrs(question: string): Record<string, string> {
-    const q = (question ?? "").trim();
+    const q = (question ?? "").trim().replace(/[\r\n]+/g, " ");
     return {
         [ATTR_RIFF_TITLE]: q,
     };
@@ -52,9 +54,10 @@ export function buildCardQuestionAttrs(question: string): Record<string, string>
 
 /**
  * 构建免侵入问答闪卡的自定义答案属性补丁（保存至 custom-riff-answer，空串表示回退正文）
+ * 严格清洗换行符为单个空格，杜绝损坏思源 IAL 语法结构导致思源无法更换块模式/块类型
  */
 export function buildCardAnswerAttrs(answer: string): Record<string, string> {
-    const a = (answer ?? "").trim();
+    const a = (answer ?? "").trim().replace(/[\r\n]+/g, " ");
     return {
         [ATTR_RIFF_ANSWER]: a,
     };
@@ -67,6 +70,23 @@ export function buildAttrQaAttrs(question: string, answer?: string): Record<stri
     return {
         ...buildCardQuestionAttrs(question),
         ...buildCardAnswerAttrs(answer ?? ""),
+    };
+}
+
+/**
+ * 构建问答属性彻底清除补丁（弹窗"清空"动作专用）：
+ * 思源内核 /api/attr/setBlockAttrs 传 "" 只保留空值键（IAL 死键残留），
+ * 必须传 null 才会把键从块属性与 attributes 索引表真正删除；
+ * 且须同时清除 custom-lv-question / custom-card-title / custom-lv-answer 旧兼容键——
+ * 否则读取侧（extractCardQuestionAttr）会从残留旧键回填，清空后问题"复活"。
+ */
+export function buildAttrQaClearAttrs(): Record<string, null> {
+    return {
+        [ATTR_RIFF_TITLE]: null,
+        [ATTR_RIFF_ANSWER]: null,
+        [ATTR_LV_QUESTION]: null,
+        [ATTR_LV_ANSWER]: null,
+        [ATTR_CARD_TITLE]: null,
     };
 }
 

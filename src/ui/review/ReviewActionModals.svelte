@@ -8,6 +8,7 @@
         showSessionOptionsModal = false,
         showMemoEditor = false,
         showRetireModal = false,
+        showDeleteModal = false,
         zoomedImage = null,
         reviewedCount = 0,
         skippedCount = 0,
@@ -16,6 +17,7 @@
         memoSaving = false,
         retireBusy = false,
         dismissBusy = false,
+        deleteBusy = false,
         onClosePause,
         onConfirmPause,
         onCloseSessionOptions,
@@ -24,8 +26,11 @@
         onSaveMemo,
         onCloseRetireModal,
         onConfirmRetire,
+        onUnmakeCard,
         onSuspendToday,
         onDismissCard,
+        onCloseDeleteModal,
+        onConfirmDeleteBlock,
         onCloseZoomedImage,
     }: {
         t: any;
@@ -33,6 +38,7 @@
         showSessionOptionsModal?: boolean;
         showMemoEditor?: boolean;
         showRetireModal?: boolean;
+        showDeleteModal?: boolean;
         zoomedImage?: { src: string; alt?: string } | null;
         reviewedCount?: number;
         skippedCount?: number;
@@ -41,6 +47,7 @@
         memoSaving?: boolean;
         retireBusy?: boolean;
         dismissBusy?: boolean;
+        deleteBusy?: boolean;
         onClosePause: () => void;
         onConfirmPause: () => void;
         onCloseSessionOptions: () => void;
@@ -49,10 +56,15 @@
         onSaveMemo: (memo: string) => void;
         onCloseRetireModal: () => void;
         onConfirmRetire: () => void;
+        onUnmakeCard?: () => void;
         onSuspendToday?: () => void;
         onDismissCard?: () => void;
+        onCloseDeleteModal?: () => void;
+        onConfirmDeleteBlock?: () => void;
         onCloseZoomedImage: () => void;
     } = $props();
+
+    let confirmingDeleteBlock = $state(false);
 
     // 灯箱缩放与平移状态
     let imgScale = $state(1);
@@ -201,13 +213,13 @@
 
 {#if showRetireModal}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={() => { if (!retireBusy && !dismissBusy) onCloseRetireModal(); }}>
+    <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={() => { if (!retireBusy && !dismissBusy && !deleteBusy) { confirmingDeleteBlock = false; onCloseRetireModal(); } }}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "移出复习"} tabindex="-1" use:trapFocus={{ onEscape: () => { if (!retireBusy && !dismissBusy) onCloseRetireModal(); } }} onclick={(e) => e.stopPropagation()}>
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label={t.review?.retireCardTitle ?? "卡片处置与移出"} tabindex="-1" use:trapFocus={{ onEscape: () => { if (!retireBusy && !dismissBusy && !deleteBusy) { confirmingDeleteBlock = false; onCloseRetireModal(); } } }} onclick={(e) => e.stopPropagation()}>
             <div class="lv-help-head">
-                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="ban" size={17} /> {t.review?.retireCardTitle ?? "将此卡移出复习"}</span>
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size)"><LvIcon name="ban" size={17} /> 卡片处置与移出（删卡/删块）</span>
                 <div class="fn__flex-1"></div>
-                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy || dismissBusy} aria-label={cancelLabel} onclick={onCloseRetireModal}><LvIcon name="close" size={13} /></button>
+                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={retireBusy || dismissBusy || deleteBusy} aria-label={cancelLabel} onclick={() => { confirmingDeleteBlock = false; onCloseRetireModal(); }}><LvIcon name="close" size={13} /></button>
             </div>
             <div style="padding: var(--lv-sp-3) 0; display: flex; flex-direction: column; gap: var(--lv-sp-2)">
                 {#if onSuspendToday}
@@ -218,9 +230,9 @@
                                 <span class="lv-scope-badge lv-scope-badge--today">仅今日</span>
                                 <span class="ft__smaller ft__on-surface">(S)</span>
                             </div>
-                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">仅今日暂缓出题，明日自动回到到期队列，保留全部 FSRS 进度（5 秒内可点撤销，或按 P/Q 恢复）。</div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">仅今日暂缓出题，明日自动回到到期队列，保留全部 FSRS 进度（5 秒内可点撤销，或按 Ctrl+Z / P / Q 恢复）。</div>
                         </div>
-                        <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy} onclick={() => { onSuspendToday(); onCloseRetireModal(); }}>{t.review?.suspendToday ?? "今天不学"}</button>
+                        <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => { onSuspendToday(); onCloseRetireModal(); }}>{t.review?.suspendToday ?? "今天不学"}</button>
                     </div>
                 {/if}
                 {#if onDismissCard}
@@ -231,26 +243,87 @@
                                 <span class="lv-scope-badge lv-scope-badge--archive">长期隐藏</span>
                                 <span class="ft__smaller ft__on-surface">(Ctrl+D)</span>
                             </div>
-                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">保留内核 FSRS 进度，在本插件日常复习中不再出题；可按 P/Q 撤销，或在「卡库 → 已隐藏」恢复（思源原生闪卡面板仍可见）。</div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">保留内核 FSRS 进度，在本插件日常复习中不再出题；可按 Ctrl+Z / P / Q 撤销，或在「卡库 → 已隐藏」恢复（思源原生闪卡面板仍可见）。</div>
                         </div>
-                        <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy} onclick={() => { onDismissCard(); onCloseRetireModal(); }}>归档隐藏</button>
+                        <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => { onDismissCard(); onCloseRetireModal(); }}>归档隐藏</button>
                     </div>
                 {/if}
-                <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid color-mix(in srgb, var(--lv-color-danger) 30%, var(--lv-border)); border-radius: var(--lv-r-s); background: color-mix(in srgb, var(--lv-color-danger) 4%, transparent);">
+                <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid color-mix(in srgb, var(--lv-color-brand) 30%, var(--lv-border)); border-radius: var(--lv-r-s); background: color-mix(in srgb, var(--lv-color-brand) 4%, transparent);">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size); color: var(--lv-color-danger);">
-                            <span>移出卡组（清空排期进度）</span>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size); color: var(--lv-color-brand);">
+                            <span>取消制卡（清空排期进度）</span>
+                            <span class="lv-scope-badge lv-scope-badge--today">解定制卡</span>
                             <span class="lv-scope-badge lv-scope-badge--danger">不可撤销</span>
                         </div>
-                        <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">{t.review?.retireCardDesc ?? "从思源卡组彻底移除并清空内核 FSRS 进度（再次入组将从零重学；原笔记正文不受影响）。"}</div>
+                        <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">从闪卡卡组中彻底移出并解定制卡属性，清空内核排期进度。原笔记正文 100% 完整保留不受任何影响。</div>
                     </div>
-                    <button type="button" class="b3-button lv-btn-danger b3-button--small" disabled={retireBusy || dismissBusy} onclick={onConfirmRetire}>
-                        {retireBusy ? "处理中…" : (t.review?.retireCardConfirm ?? "确认移出")}
+                    <button type="button" class="b3-button lv-btn-primary b3-button--small" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => { (onUnmakeCard || onConfirmRetire)(); }}>
+                        {retireBusy ? "处理中…" : (t.review?.retireCardConfirm ?? "取消制卡")}
                     </button>
                 </div>
+                {#if onConfirmDeleteBlock}
+                    <div class="lv-remove-choice-row" style="display: flex; align-items: center; gap: var(--lv-sp-3); padding: var(--lv-sp-2) var(--lv-sp-3); border: 1px solid color-mix(in srgb, var(--lv-color-danger) 30%, var(--lv-border)); border-radius: var(--lv-r-s); background: color-mix(in srgb, var(--lv-color-danger) 4%, transparent);">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-control-size); color: var(--lv-color-danger);">
+                                <span>删除原笔记块（物理删除）</span>
+                                <span class="lv-scope-badge lv-scope-badge--danger">高危不可逆</span>
+                            </div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">从思源笔记中永久物理删除原笔记块及全部正文（若误删可在思源回收站还原）。</div>
+                        </div>
+                        <button type="button" class="b3-button lv-btn-danger b3-button--small" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => (confirmingDeleteBlock = true)}>
+                            物理删块…
+                        </button>
+                    </div>
+                {/if}
+                {#if confirmingDeleteBlock}
+                    <div class="lv-delete-confirm-box" style="margin-top: var(--lv-sp-2); padding: var(--lv-sp-3); border: 1.5px solid var(--lv-color-danger); border-radius: var(--lv-r-s); background: color-mix(in srgb, var(--lv-color-danger) 8%, var(--lv-color-surface));">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: var(--lv-fw-bold); font-size: 14px; color: var(--lv-color-danger);">
+                            <LvIcon name="close" size={16} />
+                            <span>⚠️ 确定物理删除原笔记块？</span>
+                        </div>
+                        <div class="ft__smaller" style="margin: 8px 0; color: var(--lv-color-text); line-height: 1.6;">
+                            此操作将<strong>永久删除思源笔记中的原笔记块与全部正文</strong>！<br>
+                            删除后该卡片将自动移出复习并切换到下一张。（若误删可在思源回收站中找回）
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: var(--lv-sp-2); margin-top: 10px;">
+                            <button type="button" class="b3-button b3-button--text b3-button--small" disabled={deleteBusy} onclick={() => (confirmingDeleteBlock = false)}>取消</button>
+                            <button type="button" class="b3-button lv-btn-danger b3-button--small" disabled={deleteBusy} onclick={onConfirmDeleteBlock}>
+                                {deleteBusy ? "删除中…" : "确认永久删除原块"}
+                            </button>
+                        </div>
+                    </div>
+                {/if}
             </div>
             <div style="display: flex; justify-content: flex-end; gap: var(--lv-sp-2); margin-top: var(--lv-sp-1)">
-                <button type="button" class="b3-button b3-button--text" disabled={retireBusy || dismissBusy} onclick={onCloseRetireModal}>取消（保留此卡）</button>
+                <button type="button" class="b3-button b3-button--text" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => { confirmingDeleteBlock = false; onCloseRetireModal(); }}>取消（保留此卡）</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if showDeleteModal}
+    <!-- 物理删除原块独立快捷二次确认对话框 -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="lv-modal-backdrop lv-glass" tabindex="-1" onclick={() => { if (!deleteBusy) onCloseDeleteModal?.(); }}>
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div class="lv-pause-dialog lv-card2" role="dialog" aria-modal="true" aria-label="物理删除原笔记块" tabindex="-1" use:trapFocus={{ onEscape: () => { if (!deleteBusy) onCloseDeleteModal?.(); } }} onclick={(e) => e.stopPropagation()}>
+            <div class="lv-help-head">
+                <span style="font-weight: var(--lv-fw-semibold); font-size: var(--lv-type-title-size); color: var(--lv-color-danger);"><LvIcon name="close" size={17} /> ⚠️ 物理删除原笔记块确认</span>
+                <div class="fn__flex-1"></div>
+                <button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={deleteBusy} aria-label={cancelLabel} onclick={onCloseDeleteModal}><LvIcon name="close" size={13} /></button>
+            </div>
+            <div style="padding: var(--lv-sp-3) 0;">
+                <p style="margin: 0 0 var(--lv-sp-3) 0; font-size: 13px; line-height: 1.6; color: var(--lv-color-text);">
+                    您正在对当前卡片执行<strong>物理删除原笔记块</strong>操作。<br>
+                    <span style="color: var(--lv-color-danger); font-weight: var(--lv-fw-semibold);">该笔记块及其正文内容将在思源中被直接删除！</span><br>
+                    删除后该卡片将自动移出复习队列并切换至下一张。（若误删可在思源回收站找回）
+                </p>
+                <div style="display: flex; justify-content: flex-end; gap: var(--lv-sp-2);">
+                    <button type="button" class="b3-button b3-button--text" disabled={deleteBusy} onclick={onCloseDeleteModal}>取消（保留原块）</button>
+                    <button type="button" class="b3-button lv-btn-danger" disabled={deleteBusy} onclick={onConfirmDeleteBlock}>
+                        {deleteBusy ? "正在删除…" : "确认永久删除原块"}
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
     import LvIcon from "@/ui/kit/LvIcon.svelte";
     import type { InteractiveQuizData } from "@/core/quiz-interactive";
+    import { ensureKatex } from "@/libs/math-render";
 
     let {
         interactiveQuiz = null,
@@ -34,6 +35,44 @@
             try { node.focus(); } catch {}
         }, 50);
     }
+
+    // 2026-11-21 走查修复（bug⑩）：QA 选项/解析为纯文本（生成时数学 span 结构已丢失），
+    // 原 {text} 插值使数学卡选项显示原始 TeX（如 y = \pm \frac{b}{c} x）。
+    // 方案：检测 TeX 命令 → KaTeX renderToString（throwOnError:false，输出为转义 HTML 无注入面）→ {@html} 呈现；失败回退纯文本。
+    const TEX_CMD_RE = /\\[a-zA-Z]+/;
+    let renderedOptions = $state<Record<string, string>>({});
+    let renderedAnalysis = $state("");
+
+    $effect(() => {
+        if (!interactiveQuiz) { renderedOptions = {}; renderedAnalysis = ""; return; }
+        const opts = interactiveQuiz.options ?? [];
+        const analysis = interactiveQuiz.analysis ?? "";
+        const needRender = opts.some((o) => TEX_CMD_RE.test(o.text ?? "")) || TEX_CMD_RE.test(analysis);
+        if (!needRender) { renderedOptions = {}; renderedAnalysis = ""; return; }
+        let cancelled = false;
+        void (async () => {
+            const ok = await ensureKatex();
+            if (!ok || cancelled) return;
+            const katex = (window as any).katex;
+            if (!katex || typeof katex.renderToString !== "function") return;
+            const next: Record<string, string> = {};
+            for (const o of opts) {
+                const t = o.text ?? "";
+                if (!TEX_CMD_RE.test(t)) continue;
+                try {
+                    next[o.key] = katex.renderToString(t, { throwOnError: false, output: "html" });
+                } catch { /* 单项失败回退纯文本 */ }
+            }
+            let analysisHtml = "";
+            if (TEX_CMD_RE.test(analysis)) {
+                try { analysisHtml = katex.renderToString(analysis, { throwOnError: false, output: "html" }); } catch { /* ignore */ }
+            }
+            if (cancelled) return;
+            renderedOptions = next;
+            renderedAnalysis = analysisHtml;
+        })();
+        return () => { cancelled = true; };
+    });
 </script>
 
 {#if interactiveQuiz}
@@ -49,6 +88,12 @@
                         选择作答（点击选项<span class="lv-quiz-kbd-hint">或敲键盘 A/B/C/D</span>）
                     {/if}
                 </span>
+                {#if interactiveQuiz.isShuffled}
+                    <span class="lv-choice-shuffled-badge" title="选项顺序已随机打乱，打破位置记忆">
+                        <LvIcon name="refresh" size={12} />
+                        <span>选项已乱序</span>
+                    </span>
+                {/if}
             </div>
             <div class="lv-interactive-choice-grid">
                 {#each interactiveQuiz.options as opt (opt.key)}
@@ -65,13 +110,26 @@
                         onclick={() => onOptionPick(opt.key)}
                     >
                         <span class="lv-choice-key-badge">{opt.key}</span>
-                        <span class="lv-choice-text-body">{opt.text}</span>
+                        {#if renderedOptions[opt.key]}
+                            <span class="lv-choice-text-body">{@html renderedOptions[opt.key]}</span>
+                        {:else}
+                            <span class="lv-choice-text-body">{opt.text}</span>
+                        {/if}
+                        {#if showAnswer && interactiveQuiz.isShuffled && opt.originalKey && opt.originalKey !== opt.key}
+                            <span class="lv-choice-orig-badge" title={`原题中为选项 ${opt.originalKey}`}>原 {opt.originalKey}</span>
+                        {/if}
                         <span class="lv-choice-kbd-badge" aria-hidden="true">{opt.key}</span>
                         {#if showAnswer}
                             {#if opt.isAnswer}
-                                <span class="lv-choice-result-pill lv-result-correct"><LvIcon name="check" size={12} /> <span>正确答案</span></span>
+                                <span class="lv-choice-result-pill lv-result-correct">
+                                    <LvIcon name="check" size={12} />
+                                    <span>正确答案{#if interactiveQuiz.isShuffled && opt.originalKey && opt.originalKey !== opt.key}&nbsp;· 原 {opt.originalKey}{/if}</span>
+                                </span>
                             {:else if selectedChoiceKeys.includes(opt.key)}
-                                <span class="lv-choice-result-pill lv-result-wrong"><LvIcon name="close" size={12} /> <span>你的选择</span></span>
+                                <span class="lv-choice-result-pill lv-result-wrong">
+                                    <LvIcon name="close" size={12} />
+                                    <span>你的选择{#if interactiveQuiz.isShuffled && opt.originalKey && opt.originalKey !== opt.key}&nbsp;· 原 {opt.originalKey}{/if}</span>
+                                </span>
                             {/if}
                         {/if}
                     </button>
@@ -172,14 +230,25 @@
         </div>
     {/if}
 
-    <!-- 翻面后参考解析卡片（若存在解析） -->
-    {#if showAnswer && interactiveQuiz.analysis}
+    <!-- 翻面后参考解析卡片（若存在解析或存在乱序映射提示） -->
+    {#if showAnswer && (interactiveQuiz.analysis || (interactiveQuiz.isShuffled && interactiveQuiz.originalAnswerKeys && interactiveQuiz.originalAnswerKeys.length > 0))}
         <div class="lv-interactive-analysis-card">
             <div class="lv-analysis-head">
                 <span class="lv-analysis-icon"><LvIcon name="lightbulb" size={16} /></span>
                 <strong>参考解析</strong>
+                {#if interactiveQuiz.isShuffled && interactiveQuiz.originalAnswerKeys && interactiveQuiz.originalAnswerKeys.length > 0}
+                    <span class="lv-choice-mapping-pill" title="选项乱序对照关系">
+                        原题 {interactiveQuiz.originalAnswerKeys.join("、")} ➔ 当前 {interactiveQuiz.shuffledAnswerKeys?.join("、") || ""}
+                    </span>
+                {/if}
             </div>
-            <p class="lv-analysis-text">{interactiveQuiz.analysis}</p>
+            {#if interactiveQuiz.analysis}
+                {#if renderedAnalysis}
+                    <p class="lv-analysis-text">{@html renderedAnalysis}</p>
+                {:else}
+                    <p class="lv-analysis-text">{interactiveQuiz.analysis}</p>
+                {/if}
+            {/if}
         </div>
     {/if}
 {/if}

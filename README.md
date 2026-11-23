@@ -8,9 +8,9 @@
 
 让思源笔记成为记得住、用得上、找得到、改得动、负担得起、带得走的长期知识资产
 
-**当前版本：v0.233.5** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
+**当前版本：v0.233.6** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
 
-[![Release](https://img.shields.io/badge/release-v0.233.5-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
+[![Release](https://img.shields.io/badge/release-v0.233.6-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
 [![思源笔记](https://img.shields.io/badge/思源笔记-%3E%3D%203.8.4-brightgreen.svg)](https://b3log.org/siyuan)
 [![算法引擎](https://img.shields.io/badge/算法-内核原生%20FSRS-blueviolet.svg)](https://github.com/open-spaced-repetition/fsrs4anki)
 [![License: MIT](https://img.shields.io/github/license/xiaolv-suite/siyuan-lv-cards)](./LICENSE)
@@ -25,7 +25,7 @@
 
 ---
 
-## 🚀 本次更新要点（v0.233.5 · 累积迭代汇总）
+## 🚀 本次更新要点（v0.233.6 · 累积迭代汇总）
 
 - **零正文污染属性问答增强**：强化块属性（`custom-riff-title`）问答模式在编辑器、悬浮胶囊与复习工作台的端到端联动，彻底杜绝篡改笔记原文；
 - **文档温故与大纲语境穿透**：Obsidian SR 风格文档渐进温故支持层级面包屑溯源与大纲快速跳转；

@@ -32,11 +32,14 @@ export const OB_LEDGER_DATA = "ob-import-ledger.json";
 export const MAINTENANCE_REPAIR_JOURNAL_DATA = "maintenance-repair-journal.json";
 export const EXTERNAL_CARD_INTAKE_DATA = "external-card-intake-v1.json";
 
-export const ALL_STORE_KEYS = [
+export const TIER1_STORE_KEYS = [
     SETTINGS_DATA,
     REVLOG_DATA,
     SUSPEND_TODAY_DATA,
     EXAM_PLANS_DATA,
+] as const;
+
+export const TIER2_STORE_KEYS = [
     AI_BATCHES_DATA,
     SESSION_STATE_DATA,
     AI_JOBS_DATA,
@@ -56,4 +59,9 @@ export const ALL_STORE_KEYS = [
     OB_LEDGER_DATA,
     MAINTENANCE_REPAIR_JOURNAL_DATA,
     EXTERNAL_CARD_INTAKE_DATA,
+] as const;
+
+export const ALL_STORE_KEYS = [
+    ...TIER1_STORE_KEYS,
+    ...TIER2_STORE_KEYS,
 ] as const;

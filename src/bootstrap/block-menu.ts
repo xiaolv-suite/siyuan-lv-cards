@@ -22,7 +22,7 @@ export function extractBlockIDs(elements?: BlockElementLike[]): string[] {
 }
 
 export interface BlockMenuItemDescriptor {
-    id: "add-to-deck" | "add-to-inbox" | "make-cloze" | "make-occlusion" | "remove-from-deck" | "make-from-selection" | "set-card-question" | "add-doc-review" | "remove-doc-review";
+    id: "open-block-action-center" | "add-to-deck" | "add-to-inbox" | "make-cloze" | "make-occlusion" | "remove-from-deck" | "make-from-selection" | "set-card-question" | "add-doc-review" | "remove-doc-review" | "morph-block-type";
     icon: string;
     label: string;
     click: () => void | Promise<void>;
@@ -66,6 +66,10 @@ export interface BlockMenuConfig {
         addDocReview?: (docId: string) => void;
         /** 移出整篇文档间隔温故排期 */
         removeDocReview?: (docId: string) => void;
+        /** 展开块操作中心 */
+        openBlockActionCenter?: (blockIDs: string[]) => void;
+        /** 快捷转换块类型（唤起全生态类型选择器，支持标题/列表/待办/引述/代码/公式等） */
+        morphBlockType?: (blockID: string) => void;
     };
     /** R59 编辑器当前选区文本（菜单弹出会抢焦点，须在构建期捕获） */
     selectionText?: string;
@@ -86,6 +90,24 @@ export function computeBlockMenuItems(config: BlockMenuConfig): BlockMenuItemDes
 
     const items: BlockMenuItemDescriptor[] = [];
     const countSuffix = blockIDs.length > 1 ? ` ×${blockIDs.length}` : "";
+
+    if (actions.openBlockActionCenter) {
+        items.push({
+            id: "open-block-action-center",
+            icon: "iconSparkles",
+            label: (i18n.menuBlockActionCenter ?? "小驴块助手：展开块操作中心") + countSuffix,
+            click: () => actions.openBlockActionCenter!(blockIDs),
+        });
+    }
+
+    if (blockIDs.length === 1 && actions.morphBlockType) {
+        items.push({
+            id: "morph-block-type",
+            icon: "iconRefresh",
+            label: "小驴块助手：快捷转换块类型 (标题/列表/待办/引述...)",
+            click: () => actions.morphBlockType?.(blockIDs[0]),
+        });
+    }
 
     items.push({
         id: "add-to-deck",

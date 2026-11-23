@@ -36,6 +36,7 @@
         onRefreshCard,
         onOpenMemoEditor,
         onOpenRetireModal,
+        onOpenDeleteModal,
         onOpenHelp,
         onFocusScope,
         onOpenContextMenu,
@@ -77,6 +78,7 @@
         onOpenMemoEditor: () => void;
         onDismissCard?: () => void;
         onOpenRetireModal: () => void;
+        onOpenDeleteModal?: () => void;
         onOpenHelp: () => void;
         onFocusScope?: () => void;
         onOpenContextMenu?: (e: MouseEvent) => void;
@@ -180,9 +182,9 @@
     <button
         type="button"
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
-        aria-label={t.review?.undoTitle ?? "撤销上一张评分 (P/Q)"}
-        aria-keyshortcuts="p q"
+        title={t.review?.undoTitle ?? "撤销上一张评分 (Ctrl+Z / P / Q)"}
+        aria-label={t.review?.undoTitle ?? "撤销上一张评分 (Ctrl+Z / P / Q)"}
+        aria-keyshortcuts="ctrl+z p q"
         disabled={actionBusy}
         onclick={onUndo}
     >
@@ -298,18 +300,32 @@
                     <span class="lv-menu-scope">保留进度</span>
                 </button>
 
-                <!-- 阶段 B · I1：将“今天不学 / 归档隐藏 / 移出卡组”收口为单一“移出复习…”入口 -->
+                <!-- 20261117-03：复习界面快捷删卡与删块操作 -->
                 <button
                     type="button"
                     class="lv-toolbar-menu-item lv-menu-danger"
                     disabled={!current || actionBusy}
-                    title="暂缓或移出此卡：今天不学 / 归档隐藏 / 移出卡组"
+                    title="卡片处置与移出：今天不学 / 归档隐藏 / 取消制卡（保留正文） / 物理删除原块"
                     onclick={() => { onOpenRetireModal(); showMoreToolbar = false; }}
                 >
                     <span class="lv-menu-icon"><LvIcon name="ban" size={16} /></span>
-                    <span>{t.review?.retireCard ?? "移出复习…"}</span>
-                    <span class="lv-menu-scope">今日/隐藏/清组</span>
+                    <span>{t.review?.retireCard ?? "卡片处置（删卡/删块）…"}</span>
+                    <span class="lv-menu-scope">取消/删块/隐藏</span>
                 </button>
+
+                {#if onOpenDeleteModal}
+                    <button
+                        type="button"
+                        class="lv-toolbar-menu-item lv-menu-danger"
+                        disabled={!current || actionBusy}
+                        title="从思源笔记中永久物理删除原笔记块及全部正文（二次确认）"
+                        onclick={() => { onOpenDeleteModal(); showMoreToolbar = false; }}
+                    >
+                        <span class="lv-menu-icon"><LvIcon name="close" size={16} /></span>
+                        <span>物理删除原笔记块…</span>
+                        <span class="lv-menu-scope">高危</span>
+                    </button>
+                {/if}
 
                 <div class="lv-toolbar-menu-divider"></div>
 
@@ -461,21 +477,23 @@
         }
 
         .lv-scope-summary {
-            height: 32px;
-            min-height: 32px;
+            height: 28px;
+            min-height: 28px;
             max-width: 220px;
             box-sizing: border-box;
             padding: 0 calc(var(--lv-space-unit) * 3 + var(--lv-space-hairline));
             border-radius: var(--lv-r-pill);
-            background: var(--lv-color-surface);
+            background: color-mix(in srgb, var(--lv-color-surface) 92%, transparent);
             border: 1px solid var(--lv-border);
             color: var(--lv-color-text-muted);
             display: inline-flex;
             align-items: center;
-            gap: calc(var(--lv-space-unit) * 2);
+            gap: calc(var(--lv-space-unit) * 1.5);
             font-size: var(--lv-type-meta-size);
             white-space: nowrap;
             flex-shrink: 0;
+            box-shadow: 0 1px 2px color-mix(in srgb, black 3%, transparent);
+            transition: all var(--lv-dur-1) var(--lv-ease);
 
             .lv-scope-summary-text {
                 overflow: hidden;
@@ -661,6 +679,8 @@
             .lv-head-tools-scroll { gap: var(--lv-sp-1); }
             .lv-scope-summary {
                 max-width: 112px;
+                min-height: 36px !important;
+                height: 36px !important;
                 padding: 0 var(--lv-sp-2);
             }
             .lv-tool-btn-label { display: none; }
@@ -679,6 +699,8 @@
             .lv-head-tools-scroll { gap: var(--lv-sp-1); }
             .lv-scope-summary {
                 max-width: 112px;
+                min-height: 36px !important;
+                height: 36px !important;
                 padding: 0 var(--lv-sp-2);
             }
             .lv-tool-btn-label { display: none; }

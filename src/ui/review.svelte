@@ -20,7 +20,7 @@
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, createResetSessionProgress, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
     import { formatNextDueByRating } from "@/core/due-format";
-    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead, canRateCurrentCard } from "@/core/card-actions";
+    import { clampFontScale, formatFontScalePercent, shouldInvalidateCardDerivedState, toggleCardIssue, removeCardFromQueue, computeAnswerDuration, updateSessionCountersOnRate, evaluateCardTyping, createLastAnsweredSnapshot, sliceQueueAfterCurrent, buildMemoAttributes, isCardActionBusy, createLiveAnnouncement, getNextQueueHead, canRateCurrentCard, executeUnmakeCard, executeDeleteBlock } from "@/core/card-actions";
     import { budgetLeftSec, isBudgetExpired, formatBudgetClock, resolveBudgetEstimate, initBudgetSession } from "@/core/session-budget";
     import { resolveHeadScopeLabel, normalizeScopeKey } from "@/core/scope-preset";
     import { nominateVariant } from "@/core/question-rotation";
@@ -39,12 +39,14 @@
     import { createReviewCountdown, formatCountdown, isCountdownEligible, shouldRestartCountdownOnResume, type ReviewCountdownController } from "@/core/review-countdown";
     import { stepNextCloze, advanceClozeStep } from "@/core/cloze-stepper";
     import { handleCardContentClick, handleCardCanvasDblClick, togglePeekCard, isOverlayTarget, shouldRefreshOnPanelPointer, resolveEditorNavigationBlockId, createZoomedImageState, shouldRevealOnContainerClick, isEventInsideContainer, focusReviewRootOrCard, type ZoomedImageState } from "@/core/card-interactions";
+    import { scheduleEditorCenterScroll } from "@/core/editor-navigation";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
     import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, markAsRequeueCard, isRequeueWaiting, calculateRequeueWaitSeconds, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { advanceCardHint, resolveHintLevelIndicator, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
+    import { renderMathIn, mathTokensPresent } from "@/libs/math-render";
     import LvLive from "./kit/LvLive.svelte";
     import LvError from "./kit/LvError.svelte";
     import { friendlyError } from "@/api/errors";
@@ -92,6 +94,8 @@
         typingEnabled: boolean;
         typingStrict: boolean;
         choiceEnabled: boolean;
+        /** 选择题选项乱序：复习时随机打乱 A/B/C/D 顺序，打破位置记忆 */
+        shuffleChoiceOptions?: boolean;
         /** 混合题型轮换（v0.179.0）：按本场张数在翻面/打字/选择间轮换（展示层，不动调度） */
         mixedRotation: boolean;
         ttsEnabled: boolean;
@@ -517,6 +521,16 @@
         const next = pruneSessionPrefs(ctx.settings() as unknown as Record<string, unknown>, { ...sessionOverride, ...overrides }) as Partial<ReviewSettings>;
         sessionOverride = next;
         if (shouldRestartTimeoutOnOverrides(overrides)) restartTimeout();
+        if ("shuffleChoiceOptions" in overrides && current && cardHtml && !showAnswer) {
+            selectedChoiceKeys = [];
+            interactiveQuiz = parseInteractiveQuiz({
+                domHtml: cardHtml,
+                attrs: currentCardAttrs || {},
+                cardMemo,
+                expectedText,
+                shuffleOptions: (eff() as any).shuffleChoiceOptions !== false,
+            });
+        }
     }
     function setOverride(key: keyof ReviewSettings, value: unknown) {
         applyOverrides({ [key]: value });
@@ -525,7 +539,9 @@
     let rescheduleBusy = $state(false);
     let rescheduleError = $state("");
     let dismissBusy = $state(false);
-    const actionBusy = $derived(isCardActionBusy(submitting, rescheduleBusy, dismissBusy));
+    let retireBusy = $state(false);
+    let deleteBusy = $state(false);
+    const actionBusy = $derived(isCardActionBusy(submitting, rescheduleBusy, dismissBusy, retireBusy, deleteBusy));
     let retryReschedule = $state<RescheduleRequest | null>(null);
 
     // R54 原型高级交互：改期目标时间友好预览
@@ -584,9 +600,9 @@
     let stepRevealedCount = $state(0);
     let pressedKeyFeedback = $state<string | null>(null);
 
-    // 汲取自番茄插件：复习端就地移出卡组
+    // 20261117-03：复习端就地移出卡组与删卡/删块
     let showRetireModal = $state(false);
-    let retireBusy = $state(false);
+    let showDeleteModal = $state(false);
 
     async function dismissCurrentCard() {
         if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy)) return;
@@ -642,7 +658,7 @@
     let sessionModalWasOpen = false;
     let sessionModalTimeoutSeconds: number | undefined;
     $effect(() => {
-        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showReschedule });
+        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showDeleteModal, showReschedule });
         if (open && !sessionModalWasOpen) {
             sessionModalWasOpen = true;
             sessionModalTimeoutSeconds = countdownCtrl?.getRemaining();
@@ -696,7 +712,11 @@
                 openMobileFile(ctx.app, id);
                 ctx.closeMobileReviewDialog?.();
             } else {
-                openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+                // 20261117-01 视口双跳修复：不再 zoomIn 整块聚焦（先渲染顶端再硬跳、
+                // 目标块沉在视口底），改为 cb-get-hl 上下文定位 + 渲染完成后平滑居中，
+                // 全程只有平滑滚动，目标块稳定停在阅读视野中心。
+                openTab({ app: ctx.app, doc: { id, action: ["cb-get-hl"] } });
+                scheduleEditorCenterScroll(id, { getScope: () => document });
             }
         } catch (e: unknown) {
             resumeStopwatch();
@@ -768,104 +788,104 @@
         suggestedRating = s.suggestedRating;
     }
 
+    async function resolveCardBreadcrumbsFast(blockID: string): Promise<{ currentHPath: string; currentBreadcrumbs: ReviewBreadcrumbChain | null }> {
+        if (breadcrumbCache.has(blockID)) {
+            return breadcrumbCache.get(blockID)!;
+        }
+        try {
+            const nodes = await fetchKernelBlockBreadcrumbs(blockID);
+            if (Array.isArray(nodes) && nodes.length > 0) {
+                const pathRes = resolveBreadcrumbsFromHeadingNodes(blockID, nodes);
+                if (pathRes.currentBreadcrumbs) {
+                    breadcrumbCache.set(blockID, pathRes);
+                    return pathRes;
+                }
+            }
+        } catch { /* ignore */ }
+
+        if (siyuanApi.sqlQuery) {
+            let rows: any[] | null = null;
+            try {
+                rows = await siyuanApi.sqlQuery(buildRecursiveAncestorSql(blockID));
+            } catch {
+                try {
+                    rows = await siyuanApi.sqlQuery(buildHPathQuerySql(blockID));
+                } catch { /* ignore */ }
+            }
+            if (Array.isArray(rows) && rows.length > 0) {
+                const pathRes = resolveCardBreadcrumbsFromRows(blockID, rows);
+                breadcrumbCache.set(blockID, pathRes);
+                return pathRes;
+            }
+        }
+        return { currentHPath: "", currentBreadcrumbs: null };
+    }
+
     async function loadBlockDOM(blockID: string) {
         const seq = ++loadSeq;
         try {
-            // AQ-20：统一内核响应校验（非 0/缺字段抛错），失败保留旧卡面
-            const dom = await getBlockDOM(blockID);
+            // 关键优化（彻底根治用户反馈「①处面包屑总是后出现导致页面剧烈闪烁」）：
+            // 将卡片 DOM、属性与面包屑路径由串行阻塞改为全并发 Promise.all 加载，
+            // 并在就绪后原子化同时提交渲染，让卡片内容与顶部面包屑同一帧刷新上屏！
+            const domPromise = getBlockDOM(blockID);
+            const attrsPromise = getBlockAttrs(blockID).catch(() => ({}));
+            const breadcrumbPromise = resolveCardBreadcrumbsFast(blockID);
+
+            const [dom, attrs, breadcrumbRes] = await Promise.all([
+                domPromise,
+                attrsPromise,
+                breadcrumbPromise,
+            ]);
+
             if (seq !== loadSeq) {
                 return; // 已切到新卡，丢弃旧响应
             }
+
             if (shouldInvalidateCardDerivedState(cardHtml, dom)) {
                 // 编辑返回后题面变化：旧选择题、打字判分与请求都失效。
                 choiceRequestSeq++;
                 answerCache.delete(blockID);
                 resetEphemeralQuiz();
             }
-            cardHtml = dom;
+
             faceError = "";
-            expectedText = extractExpectedCardAnswer(cardHtml);
-            answerCache.set(blockID, expectedText);
+            const expected = extractExpectedCardAnswer(dom);
+            expectedText = expected;
+            answerCache.set(blockID, expected);
 
             // 遮挡数据与块备注（宽容解析，无属性即为普通卡）
-            try {
-                const attrs = await getBlockAttrs(blockID);
-                if (seq === loadSeq) {
-                    currentCardAttrs = attrs;
-                    const holder = document.createElement("div");
-                    holder.innerHTML = cardHtml;
-                    const marksCount = extractMarkTexts(holder).length;
-                    const meta = parseCardAttrsMetadata(attrs, expectedText, (holder.textContent ?? "").trim(), marksCount, parseOcclusion);
-                    occl = meta.occlusion;
-                    occlHidden = [];
-                    isCustomPluginAnswer = meta.isCustomPluginAnswer;
-                    cardMemo = meta.cardMemo;
-                    memoDraft = cardMemo;
-                    expectedText = meta.expectedText;
-                    currentRiffTitle = meta.customRiffTitle ?? "";
-                    currentRiffAnswer = meta.customRiffAnswer ?? "";
-                    answerCache.set(blockID, expectedText);
+            let safeAttrs = attrs || {};
+            const holder = document.createElement("div");
+            holder.innerHTML = dom;
+            const marksCount = extractMarkTexts(holder).length;
+            const meta = parseCardAttrsMetadata(safeAttrs, expected, (holder.textContent ?? "").trim(), marksCount, parseOcclusion);
+            occl = meta.occlusion;
+            occlHidden = [];
+            isCustomPluginAnswer = meta.isCustomPluginAnswer;
+            cardMemo = meta.cardMemo;
+            memoDraft = cardMemo;
+            expectedText = meta.expectedText;
+            currentRiffTitle = meta.customRiffTitle ?? "";
+            currentRiffAnswer = meta.customRiffAnswer ?? "";
+            answerCache.set(blockID, expectedText);
 
-                    interactiveQuiz = parseInteractiveQuiz({
-                        domHtml: cardHtml,
-                        attrs,
-                        cardMemo,
-                        expectedText,
-                        shuffleOptions: (eff() as any).shuffleChoiceOptions !== false,
-                    });
-                }
-            } catch {
-                if (seq === loadSeq) {
-                    currentCardAttrs = null;
-                    currentRiffAnswer = "";
-                    occl = null;
-                }
-            }
-            // 汲取自闪卡小助手 ZY 与 RemNote：查询卡片所属文档层级路径与标题面包屑上下文（双通道：内核原生优先 + CTE/HPath 兜底）
-            try {
-                if (breadcrumbCache.has(blockID)) {
-                    const cached = breadcrumbCache.get(blockID)!;
-                    if (seq === loadSeq) {
-                        currentHPath = cached.currentHPath;
-                        currentBreadcrumbs = cached.currentBreadcrumbs;
-                    }
-                } else {
-                    let resolved = false;
-                    try {
-                        const nodes = await fetchKernelBlockBreadcrumbs(blockID);
-                        if (Array.isArray(nodes) && nodes.length > 0) {
-                            const pathRes = resolveBreadcrumbsFromHeadingNodes(blockID, nodes);
-                            if (pathRes.currentBreadcrumbs) {
-                                breadcrumbCache.set(blockID, pathRes);
-                                if (seq === loadSeq) {
-                                    currentHPath = pathRes.currentHPath;
-                                    currentBreadcrumbs = pathRes.currentBreadcrumbs;
-                                }
-                                resolved = true;
-                            }
-                        }
-                    } catch {}
+            interactiveQuiz = parseInteractiveQuiz({
+                domHtml: dom,
+                attrs: safeAttrs,
+                cardMemo,
+                expectedText,
+                shuffleOptions: (eff() as any).shuffleChoiceOptions !== false,
+            });
 
-                    if (!resolved && siyuanApi.sqlQuery) {
-                        let rows: any[] | null = null;
-                        try {
-                            rows = await siyuanApi.sqlQuery(buildRecursiveAncestorSql(blockID));
-                        } catch {
-                            rows = await siyuanApi.sqlQuery(buildHPathQuerySql(blockID));
-                        }
-                        if (seq === loadSeq) {
-                            const pathRes = resolveCardBreadcrumbsFromRows(blockID, rows);
-                            breadcrumbCache.set(blockID, pathRes);
-                            currentHPath = pathRes.currentHPath;
-                            currentBreadcrumbs = pathRes.currentBreadcrumbs;
-                        }
-                    }
-                }
-            } catch {
-                if (seq === loadSeq) {
-                    currentHPath = "";
-                    currentBreadcrumbs = null;
-                }
+            // 🌟 原子化同时赋值：面包屑与卡片 DOM 处于同一个微任务渲染批次，彻底终结闪烁！
+            currentHPath = breadcrumbRes.currentHPath;
+            currentBreadcrumbs = breadcrumbRes.currentBreadcrumbs;
+            currentCardAttrs = safeAttrs;
+            cardHtml = dom;
+
+            // 🌟 提前异步预取队列中下一张卡片的面包屑（0ms 零延迟极速切卡）
+            if (queue.length > 1 && queue[1]?.blockID) {
+                void resolveCardBreadcrumbsFast(queue[1].blockID);
             }
         } catch (e) {
             if (seq !== loadSeq) {
@@ -1244,7 +1264,7 @@
     }
 
     async function setCurrent(card: RiffDueCard) {
-        resetCardState();
+        resetCardState(card.blockID);
         current = card;
         if (!sessionDone && current) armReviewHistory();
         if (card?.cardID) {
@@ -1257,7 +1277,7 @@
         }
         cardShownAt = Date.now(); // AQ-13：题面呈现即作答计时起点（与内核「题面到评分」口径一致）
         await loadBlockDOM(card.blockID);
-        if (card !== current) {
+        if (card.cardID !== current?.cardID) {
             return; // 等待期间已切卡（AQ-19）：不重启旧卡计时器、不朗读旧卡
         }
         restartTimeout();
@@ -1268,7 +1288,7 @@
     }
 
     /** 切卡和撤销共用清理，防止上一张的倒计时、答案与异步响应污染新卡。 */
-    function resetCardState() {
+    function resetCardState(targetBlockID?: string) {
         stopTimeout();
         clearAutoSubmitTimer();
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -1296,14 +1316,23 @@
         rescheduleError = "";
         retryReschedule = null;
         showMoreToolbar = false;
-        currentHPath = "";
-        currentBreadcrumbs = null;
+        // 若新卡面包屑已在内存缓存中，立即直出，消除 DOM 节点从无到有的突变闪烁
+        if (targetBlockID && breadcrumbCache.has(targetBlockID)) {
+            const cached = breadcrumbCache.get(targetBlockID)!;
+            currentHPath = cached.currentHPath;
+            currentBreadcrumbs = cached.currentBreadcrumbs;
+        } else {
+            currentHPath = "";
+            currentBreadcrumbs = null;
+        }
         cardMemo = "";
         showMemoEditor = false;
         memoDraft = "";
         memoSaving = false;
         showRetireModal = false;
+        showDeleteModal = false;
         retireBusy = false;
+        deleteBusy = false;
         zoomedImage = null;
         reversedRecall = false;
         stepRevealedCount = 0;
@@ -1340,20 +1369,23 @@
         }
     }
 
-    /** 汲取自番茄插件：复习端就地移出卡组（安全不修改正文） */
-    async function retireCurrentCard() {
-        if (!current || retireBusy) return;
+    /** 20261117-03：复习端就地取消制卡（解定制卡属性，保留笔记正文） */
+    async function unmakeCurrentCard() {
+        if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy, retireBusy, deleteBusy)) return;
         const card = current;
         retireBusy = true;
         try {
-            if (ctx.removeFromDeck) {
-                await ctx.removeFromDeck(card.blockID);
-            }
+            await executeUnmakeCard(card.blockID, {
+                removeFromDeck: ctx.removeFromDeck,
+                setBlockAttrs: siyuanApi.setBlockAttrs,
+                invalidateCache: invalidateDueCache,
+            });
             if (isDisposed) return;
-            showMessage("已移出思源卡组并清空 FSRS 排期（原笔记正文不受影响）", 3200, "info");
+            showMessage("✓ 已取消制卡，笔记正文完整保留", 3000, "info");
             queue = removeCardFromQueue(queue, card.cardID);
-            if (current?.cardID !== card.cardID) return;
             showRetireModal = false;
+            showDeleteModal = false;
+            if (current?.cardID !== card.cardID) return;
             const nextHead = getNextQueueHead(queue);
             if (nextHead) {
                 await setCurrent(nextHead);
@@ -1370,6 +1402,39 @@
         }
     }
 
+    /** 20261117-03：复习端就地物理删除原笔记块（调用思源 /api/block/deleteBlock，不可逆危险操作） */
+    async function deleteCurrentBlock() {
+        if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy, retireBusy, deleteBusy)) return;
+        const card = current;
+        deleteBusy = true;
+        try {
+            await executeDeleteBlock(card.blockID, {
+                deleteBlock: siyuanApi.deleteBlock,
+                removeFromDeck: ctx.removeFromDeck,
+                invalidateCache: invalidateDueCache,
+            });
+            if (isDisposed) return;
+            showMessage("🗑️ 已物理删除该笔记块及正文", 3000, "info");
+            queue = removeCardFromQueue(queue, card.cardID);
+            showRetireModal = false;
+            showDeleteModal = false;
+            if (current?.cardID !== card.cardID) return;
+            const nextHead = getNextQueueHead(queue);
+            if (nextHead) {
+                await setCurrent(nextHead);
+            } else {
+                stopTimeout();
+                current = null;
+                await loadQueue();
+            }
+        } catch (e: any) {
+            if (isDisposed) return;
+            showMessage(friendlyError(e, t), 4000, "error");
+        } finally {
+            if (!isDisposed) deleteBusy = false;
+        }
+    }
+
     function closeMemoEditor() {
         if (!memoSaving) showMemoEditor = false;
     }
@@ -1379,13 +1444,25 @@
     }
 
     function onCardContentClick(e: MouseEvent) {
-        const act = handleCardContentClick(e.target, showAnswer, cardEl);
+        const allowClozeReveal = !interactiveQuiz || interactiveQuiz.kind === "free-recall";
+        const act = handleCardContentClick(e.target, showAnswer, cardEl, allowClozeReveal);
         if (!act) return;
         e.stopPropagation();
         if (act.type === "zoom-image") {
             openZoomedImage(act.src, act.alt);
         } else if (act.type === "cloze-reveal") {
             stepRevealedCount = advanceClozeStep(stepRevealedCount, act.allRevealed, revealAnswer);
+            if (act.mark && mathTokensPresent(act.mark.textContent || "")) {
+                const mark = act.mark;
+                setTimeout(() => {
+                    try {
+                        if (typeof (window as any).siyuan?.initKaTeX === "function") {
+                            (window as any).siyuan.initKaTeX(mark);
+                        }
+                    } catch { /* ignore */ }
+                    void renderMathIn(mark);
+                }, 0);
+            }
         }
     }
 
@@ -1405,6 +1482,17 @@
         const res = stepNextCloze(cardEl, forceAll);
         if (res.revealed) {
             stepRevealedCount = advanceClozeStep(stepRevealedCount, res.allRevealed, revealAnswer);
+            if (res.nextElement && mathTokensPresent(res.nextElement.textContent || "")) {
+                const el = res.nextElement;
+                setTimeout(() => {
+                    try {
+                        if (typeof (window as any).siyuan?.initKaTeX === "function") {
+                            (window as any).siyuan.initKaTeX(el);
+                        }
+                    } catch { /* ignore */ }
+                    void renderMathIn(el);
+                }, 0);
+            }
             return true;
         }
         return false;
@@ -1543,6 +1631,10 @@
             faceError,
             occlusion: occl,
             counters: { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip },
+            customRiffTitle: currentRiffTitle,
+            customRiffAnswer: currentRiffAnswer,
+            cardMemo,
+            cardAttrs: currentCardAttrs,
             revlogAppended: opts?.revlogAppended ?? false,
             dismissedBlockID: opts?.dismissedBlockID,
             suspendedCardID: opts?.suspendedCardID,
@@ -1599,6 +1691,10 @@
         expectedText = snap.expectedText;
         faceError = snap.faceError;
         occl = snap.occlusion;
+        currentRiffTitle = snap.customRiffTitle ?? "";
+        currentRiffAnswer = snap.customRiffAnswer ?? "";
+        cardMemo = snap.cardMemo ?? "";
+        currentCardAttrs = snap.cardAttrs ?? null;
         if (snap.current?.blockID) {
             void loadBlockDOM(snap.current.blockID);
         }
@@ -1832,7 +1928,7 @@
         showErrTags = false;
         errTagged = false;
         // 记录上一张供回看（AJ2：只存数据，不自动打开浮层）
-        const snapshot = createLastAnsweredSnapshot(current, cardHtml, showAnswer);
+        const snapshot = createLastAnsweredSnapshot(current, cardHtml, showAnswer, currentRiffTitle);
         if (snapshot) {
             lastAnswered = snapshot;
         }
@@ -1877,7 +1973,11 @@
                 openMobileFile(ctx.app, id);
                 ctx.closeMobileReviewDialog?.();
             } else {
-                openTab({ app: ctx.app, doc: { id, zoomIn: true } });
+                // 20261117-01 视口双跳修复：不再 zoomIn 整块聚焦（先渲染顶端再硬跳、
+                // 目标块沉在视口底），改为 cb-get-hl 上下文定位 + 渲染完成后平滑居中，
+                // 全程只有平滑滚动，目标块稳定停在阅读视野中心。
+                openTab({ app: ctx.app, doc: { id, action: ["cb-get-hl"] } });
+                scheduleEditorCenterScroll(id, { getScope: () => document });
             }
         } catch (e: unknown) {
             resumeStopwatch();
@@ -2047,8 +2147,8 @@
             }
             return;
         }
-        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showReschedule });
-        const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy || rescheduleBusy));
+        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showDeleteModal, showReschedule });
+        const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy || rescheduleBusy || deleteBusy));
         if (modalAct) {
             if (e.key === "Escape") e.preventDefault();
             if (modalAct.shouldClose) {
@@ -2056,6 +2156,7 @@
                 showSessionOptionsModal = false;
                 showMemoEditor = false;
                 showRetireModal = false;
+                showDeleteModal = false;
                 showReschedule = false;
                 returnFocus();
             }
@@ -2576,51 +2677,44 @@
             lastTimeoutSeconds = s.timeoutSeconds;
         });
 
+        let lastSwitchTime = 0;
+        let lastSwitchKey = "";
         function onSwitchScopeEvent(e: Event) {
             const ce = e as CustomEvent<{ scope?: string; cram?: boolean }>;
             if (ce.detail) {
-                let changed = false;
-                if (typeof ce.detail.scope === "string") {
-                    const nextScope = normalizeScopeKey(ce.detail.scope);
-                    if (nextScope !== scopeKey) {
-                        scopeKey = nextScope;
-                        changed = true;
-                    }
+                const newScope = typeof ce.detail.scope === "string" ? normalizeScopeKey(ce.detail.scope) : scopeKey;
+                const newCram = typeof ce.detail.cram === "boolean" ? ce.detail.cram : cramActive;
+                const switchSig = `${newScope}:${newCram}`;
+                const now = Date.now();
+                // 50ms 内双事件名兼容派发去重，杜绝重复并发拉取队列
+                if (now - lastSwitchTime < 50 && lastSwitchKey === switchSig) {
+                    return;
                 }
-                if (typeof ce.detail.cram === "boolean" && ce.detail.cram !== cramActive) {
-                    cramActive = ce.detail.cram;
-                    changed = true;
-                    if (cramActive) {
-                        resetCramSessionState();
-                    } else {
-                        purpose = "review";
-                        clearPendingRequeues();
-                        history = [];
-                        const ss = ctx.getSessionState();
-                        const restored = restoreSessionProgress(ss, todayKey());
-                        if (restored) {
-                            reviewedIDs = restored.reviewedIDs;
-                            sessionSkipped = restored.skippedIDs;
-                            sessionNew = restored.counters.new;
-                            sessionReview = restored.counters.review;
-                            sessionForget = restored.counters.forget;
-                            sessionSkip = restored.counters.skip;
-                        } else {
-                            reviewedIDs = [];
-                            sessionSkipped = [];
-                            sessionNew = 0;
-                            sessionReview = 0;
-                            sessionForget = 0;
-                            sessionSkip = 0;
-                        }
-                    }
+                lastSwitchTime = now;
+                lastSwitchKey = switchSig;
+
+                scopeKey = newScope;
+                cramActive = newCram;
+                isDocumentReview = false;
+                sessionDone = false;
+                clearPendingRequeues();
+                history = [];
+                if (cramActive) {
+                    resetCramSessionState();
+                } else {
+                    purpose = "review";
+                    reviewedIDs = [];
+                    sessionSkipped = [];
+                    sessionNew = 0;
+                    sessionReview = 0;
+                    sessionForget = 0;
+                    sessionSkip = 0;
                 }
-                if (changed) {
-                    changeScope();
-                }
+                changeScope();
             }
         }
         rootEl?.addEventListener("lv-switch-scope", onSwitchScopeEvent);
+        rootEl?.addEventListener("lv-switch-review", onSwitchScopeEvent);
 
         function onStartDocReviewEvent(e: Event) {
             const ce = e as CustomEvent<{ docId?: string }>;
@@ -2631,6 +2725,7 @@
         return () => {
             offSettings?.();
             rootEl?.removeEventListener("lv-switch-scope", onSwitchScopeEvent);
+            rootEl?.removeEventListener("lv-switch-review", onSwitchScopeEvent);
             window.removeEventListener("lv-start-doc-review", onStartDocReviewEvent);
             if (typeof window !== "undefined" && window.visualViewport) {
                 window.visualViewport.removeEventListener("resize", onViewportChange);
@@ -2639,10 +2734,13 @@
         };
     });
 
+    let docReviewSeq = 0;
     async function loadDocReviewQueue(targetDocId?: string) {
-        if (!siyuanApi.sqlQuery) return;
+        if (!siyuanApi.sqlQuery || isDisposed) return;
+        const seq = ++docReviewSeq;
         try {
             const rows = await siyuanApi.sqlQuery(buildDocReviewQuerySql());
+            if (isDisposed || seq !== docReviewSeq) return;
             const items = (Array.isArray(rows) ? rows : []).map(r => parseDocReviewItem(r));
             if (targetDocId) {
                 const idx = items.findIndex(it => it.docId === targetDocId);
@@ -2660,6 +2758,7 @@
                 showMessage(t?.docReviewNone ?? "暂无待温故的文档", 2000, "info");
             }
         } catch (e) {
+            if (isDisposed || seq !== docReviewSeq) return;
             showMessage("加载文档温故队列失败：" + (e instanceof Error ? e.message : e), 3000, "error");
         }
     }
@@ -2922,273 +3021,291 @@
             onCramStarred={startCramStarred}
         />
     {:else}
-        <div class="lv-head">
-            <ReviewProgressHeader
-                {headScopeLabel}
-                {entryCtx}
-                cramActive={cramActive || isCramMode}
-                {budgetMin}
-                {budgetExpired}
-                budgetClockText={budgetClockText()}
-                {current}
-                {showAnswer}
-                timeoutMode={eff().timeoutMode}
-                {timeoutLeft}
-                timeoutText={timeoutText()}
-                hideMetaUntilAnswer={eff().hideMetaUntilAnswer}
-                {occl}
-                {cardHtml}
-                {cardMemo}
-                {isCustomPluginAnswer}
-                leechThreshold={eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD}
-                isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
-                currentProgress={reviewedIDs.length + 1}
-                reviewedCount={reviewedIDs.length}
-                totalCount={reviewedIDs.length + queue.length}
-                {sessionForget}
-                {t}
-                onOpenDashboard={() => ctx.openDashboard()}
-                onReturnToEntry={(point) => ctx.returnToEntry?.(point)}
-                onDismissEntry={(kind, sourceID) => { ctx.dismissEntry?.(kind, sourceID); entryCtx = null; }}
-            />
-            <ReviewToolbar
-                bind:this={toolbarRef}
-                bind:scopeKey
-                bind:purpose
-                {decks}
-                {notebooks}
-                {current}
-                {hasSvgCanvas}
-                isStarred={isCardStarred(current)}
-                isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
-                isCramMode={cramActive || isCramMode}
-                {actionBusy}
-                {dismissBusy}
-                {lastAnswered}
-                bind:reversedRecall
-                bind:zenMode
-                {ctxOpen}
-                {prefsOpen}
-                {hasOverrides}
-                {t}
-                onOpenCramModal={openCramModal}
-                onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
-                onAdjustFontScale={adjustFontScale}
-                onOpenSessionOptions={openSessionOptions}
-                onOpenCanvasInEditor={openCanvasInEditor}
-                onToggleStar={toggleStarCurrent}
-                onToggleMarkIssue={toggleMarkIssue}
-                onPause={() => (showPauseModal = true)}
-                onUndo={undoHistory}
-                onSkip={skip}
-                onToggleContext={toggleContext}
-                onTogglePrefs={() => (prefsOpen = !prefsOpen)}
-                onTogglePeek={togglePeek}
-                onOpenInEditor={openInEditor}
-                onRefreshCard={refreshCard}
-                onSuspendToday={suspendToday}
-                onOpenMemoEditor={() => (showMemoEditor = true)}
-                onDismissCard={() => void dismissCurrentCard()}
-                onOpenRetireModal={() => (showRetireModal = true)}
-                onOpenHelp={() => (helpOpen = true)}
-                onFocusScope={focusScopeInPrefs}
-                onOpenContextMenu={openCurrentDocContextMenu}
-            />
-        </div>
-        <ReviewSessionPrefs
-            bind:this={prefsRef}
-            open={prefsOpen}
-            bind:scopeKey
-            bind:purpose
-            {decks}
-            {notebooks}
-            answerVariant={getInitialSessionVariant(eff())}
-            ratingStyle={eff().ratingStyle}
-            reverseOrder={eff().reverseOrder}
-            mixedRotation={eff().mixedRotation === true}
-            timeoutMode={eff().timeoutMode}
-            {budgetMin}
-            {budgetEstimate}
-            {hasOverrides}
-            {t}
-            onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
-            onSetAnswerVariant={(v) => { tempAnswerVariant = v; applySessionOptions(); }}
-            onSetOverride={setOverride}
-            onSetBudget={setBudget}
-            onResetOverrides={() => (sessionOverride = {})}
-            onClose={() => (prefsOpen = false)}
-        />
-        {#if isDocumentReview && currentDocReviewItem}
-            <ReviewDocumentCanvas
-                docItem={currentDocReviewItem}
-                {t}
-                onRate={handleDocRate}
-                onSnooze={handleDocSnooze}
-                onRemove={handleDocRemove}
-                onClose={() => { isDocumentReview = false; }}
-            />
-        {:else}
-        <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%; margin:0 auto;`}>
-            {#if current && isLeechCard(current, eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD)}
-                <div class="lv-leech-warning-banner" role="alert" aria-live="assertive" data-testid="review-leech-warning">
-                    <span class="lv-leech-icon"><LvIcon name="warning" size={15} /></span>
-                    <span class="lv-leech-text">
-                        <strong>{t?.review?.leechTitle ?? "水蛭卡预警"}</strong>：{t?.review?.leechWarning?.replace("${n}", String(current.lapses)) ?? `已遗忘 ${current.lapses} 次，建议精简问题或添加助记提示`}
-                    </span>
+        <div class="lv-review-stage" data-testid="review-three-stage-layout">
+            <!-- 阶段 1：顶部元信息与控制行 (flex: 0 0 auto) -->
+            <header class="lv-review-stage-top">
+                <div class="lv-head">
+                    <ReviewProgressHeader
+                        {headScopeLabel}
+                        {entryCtx}
+                        cramActive={cramActive || isCramMode}
+                        {budgetMin}
+                        {budgetExpired}
+                        budgetClockText={budgetClockText()}
+                        {current}
+                        {showAnswer}
+                        timeoutMode={eff().timeoutMode}
+                        {timeoutLeft}
+                        timeoutText={timeoutText()}
+                        hideMetaUntilAnswer={eff().hideMetaUntilAnswer}
+                        {occl}
+                        {cardHtml}
+                        {cardMemo}
+                        {isCustomPluginAnswer}
+                        customRiffTitle={currentRiffTitle}
+                        cardAttrs={currentCardAttrs}
+                        {interactiveQuiz}
+                        leechThreshold={eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD}
+                        isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
+                        currentProgress={reviewedIDs.length + 1}
+                        reviewedCount={reviewedIDs.length}
+                        totalCount={reviewedIDs.length + queue.length}
+                        {sessionForget}
+                        {t}
+                        onOpenDashboard={() => ctx.openDashboard()}
+                        onReturnToEntry={(point) => ctx.returnToEntry?.(point)}
+                        onDismissEntry={(kind, sourceID) => { ctx.dismissEntry?.(kind, sourceID); entryCtx = null; }}
+                    />
+                    <ReviewToolbar
+                        bind:this={toolbarRef}
+                        bind:scopeKey
+                        bind:purpose
+                        {decks}
+                        {notebooks}
+                        {current}
+                        {hasSvgCanvas}
+                        isStarred={isCardStarred(current)}
+                        isMarkedIssue={markedIssueCardIDs.has(current?.cardID ?? '')}
+                        isCramMode={cramActive || isCramMode}
+                        {actionBusy}
+                        {dismissBusy}
+                        {lastAnswered}
+                        bind:reversedRecall
+                        bind:zenMode
+                        {ctxOpen}
+                        {prefsOpen}
+                        {hasOverrides}
+                        {t}
+                        onOpenCramModal={openCramModal}
+                        onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
+                        onAdjustFontScale={adjustFontScale}
+                        onOpenSessionOptions={openSessionOptions}
+                        onOpenCanvasInEditor={openCanvasInEditor}
+                        onToggleStar={toggleStarCurrent}
+                        onToggleMarkIssue={toggleMarkIssue}
+                        onPause={() => (showPauseModal = true)}
+                        onUndo={undoHistory}
+                        onSkip={skip}
+                        onToggleContext={toggleContext}
+                        onTogglePrefs={() => (prefsOpen = !prefsOpen)}
+                        onTogglePeek={togglePeek}
+                        onOpenInEditor={openInEditor}
+                        onRefreshCard={refreshCard}
+                        onSuspendToday={suspendToday}
+                        onOpenMemoEditor={() => (showMemoEditor = true)}
+                        onDismissCard={() => void dismissCurrentCard()}
+                        onOpenRetireModal={() => (showRetireModal = true)}
+                        onOpenDeleteModal={() => (showDeleteModal = true)}
+                        onOpenHelp={() => (helpOpen = true)}
+                        onFocusScope={focusScopeInPrefs}
+                        onOpenContextMenu={openCurrentDocContextMenu}
+                    />
                 </div>
-            {/if}
-            <ReviewCardBreadcrumbs
-                breadcrumbs={currentBreadcrumbs}
-                hpath={currentHPath}
-                bind:hideParentPath={hideBreadcrumbParentPath}
-                {t}
-                onToggleContext={toggleContext}
-                onOpenInEditor={openInEditor}
-                onLocateHeading={(hId) => openCanvasInEditor(hId)}
-                onContextMenu={openCurrentDocContextMenu}
-            />
-            {#if stopwatchSuspendedAt > 0}
-                <div class="lv-stopwatch-suspended-badge" data-testid="review-stopwatch-suspended" role="status">
-                    <LvIcon name="timer" size={12} />
-                    <span>{t?.review?.stopwatchSuspended ?? "答题计时已挂起 (返回闪卡自动恢复)"}</span>
-                </div>
-            {/if}
-            <ReviewCardBody
-                {cardHtml}
-                {faceError}
-                currentCardID={current?.cardID ?? ""}
-                showAnswer={showAnswer || isPeekingAnswer}
-                maskedCardHtml={isPeekingAnswer ? cardHtml : maskedCardHtml}
-                {interactiveQuiz}
-                {selectedChoiceKeys}
-                {userJudgeChoice}
-                {typingInput}
-                customRiffTitle={currentRiffTitle}
-                customRiffAnswer={currentRiffAnswer}
-                cardAttrs={currentCardAttrs}
-                cardFontScale={eff().cardFontScale}
-                customCardCss={eff().customCardCss}
-                {faceHints}
-                {faceHintText}
-                {t}
-                onRetryFace={retryFace}
-                {onCardContentClick}
-                {onCardContentDblClick}
-                onOptionPick={handleOptionPick}
-                onSubmitChoice={submitChoiceAnswer}
-                onJudgePick={handleJudgePick}
-                onFillCheck={handleFillCheck}
-                onTypingInput={(val) => { typingInput = val; }}
-                onSequenceFullyRevealed={() => { revealAnswer(); }}
-            />
-            {#if isPeekingAnswer && !showAnswer}
-                <div class="lv-peeking-banner" data-testid="review-peeking-badge" role="status">
-                    <LvIcon name="eye" size={13} />
-                    <span>{t?.review?.peekingAnswer ?? "临时透视答案中 (松开恢复)"}</span>
-                </div>
-            {/if}
-            <ReviewMemoCallout
-                {showAnswer}
-                {cardMemo}
-                {isCustomPluginAnswer}
-                {cardHtml}
-                {occl}
-                {faceError}
-                {t}
-                onEditMemo={() => (showMemoEditor = true)}
-            />
-            <ReviewOcclusionOverlay
-                {occl}
-                {occlBox}
-                bind:occlHidden
-                showAnswer={showAnswer || isPeekingAnswer}
-            />
-            {#if !showAnswer}
-                <ReviewRescheduleModal
-                    open={showReschedule}
-                    bind:rescheduleDays
-                    {previewTargetLabel}
-                    {rescheduleBusy}
-                    {rescheduleError}
-                    {retryReschedule}
-                    {actionBusy}
+                <ReviewSessionPrefs
+                    bind:this={prefsRef}
+                    open={prefsOpen}
+                    bind:scopeKey
+                    bind:purpose
+                    {decks}
+                    {notebooks}
+                    answerVariant={getInitialSessionVariant(eff())}
+                    ratingStyle={eff().ratingStyle}
+                    reverseOrder={eff().reverseOrder}
+                    mixedRotation={eff().mixedRotation === true}
+                    shuffleChoiceOptions={eff().shuffleChoiceOptions !== false}
+                    timeoutMode={eff().timeoutMode}
+                    {budgetMin}
+                    {budgetEstimate}
+                    {hasOverrides}
                     {t}
-                    onReschedule={reschedule}
-                    onClose={() => { showReschedule = false; rescheduleError = ""; }}
+                    onScopeChange={() => { ctx.onScopePersist(scopeKey); changeScope(); }}
+                    onSetAnswerVariant={(v) => { tempAnswerVariant = v; applySessionOptions(); }}
+                    onSetOverride={setOverride}
+                    onSetBudget={setBudget}
+                    onResetOverrides={() => (sessionOverride = {})}
+                    onClose={() => (prefsOpen = false)}
                 />
-            {/if}
-            <ReviewAnswerSection
-                {showAnswer}
-                {answerVariant}
-                bind:typingInput
-                {choiceFallbackMode}
-                {choices}
-                {choiceLoading}
-                hasInteractiveQuiz={Boolean(interactiveQuiz?.hasInteractiveWidgets) || isCurrentSequence}
-                {hintText}
-                hintLevelLabel={hintLevelText()}
-                {faceReady}
-                {typingGrade}
-                ttsEnabled={eff().ttsEnabled}
-                {t}
-                onSubmitTyping={submitTyping}
-                onPickChoice={(i) => {
-                    pickChoice(i);
-                }}
-                onStartChoice={startChoice}
-                onAdvanceHint={advanceHint}
-                onPeekStart={() => { if (!showAnswer && current) isPeekingAnswer = true; }}
-                onPeekEnd={() => { isPeekingAnswer = false; }}
-                onRevealAnswer={revealAnswer}
-                onSpeakAnswer={speakAnswer}
-            />
-        </div>
-        <ReviewContextDrawer
-            open={ctxOpen}
-            blocks={ctxBlocks}
-            loading={ctxLoading}
-            currentBlockID={current?.blockID ?? ""}
-            {t}
-            onClose={() => (ctxOpen = false)}
-        />
-        <ReviewCountdownBanner
-            {budgetMin}
-            {budgetExpired}
-            {showAnswer}
-            {timeoutExpired}
-            reviewedCount={reviewedIDs.length}
-            {t}
-            onRest={pauseSessionAndReturn}
-            onContinue={() => (budgetMin = 0)}
-        />
-        <ReviewRatingBar
-            {showAnswer}
-            {stepRevealedCount}
-            {faceReady}
-            {pressedKeyFeedback}
-            ratingStyle={eff().ratingStyle}
-            ratingKeyScheme={eff().ratingKeyScheme}
-            {suggestedRating}
-            actionBusy={actionBusy}
-            compact={eff().ratingDensity === "compact"}
-            {dueText}
-            {t}
-            onRevealAnswer={revealAnswer}
-            onRevealNextCloze={() => { if (!revealNextClozeOrAll(false)) revealAnswer(); }}
-            onRate={rate}
-        />
+            </header>
 
-        <ReviewErrorTagBar
-            open={showErrTags && !errTagged && Boolean(ctx.tagErrorReason)}
-            {t}
-            onTagError={(rid) => {
-                ctx.tagErrorReason?.(errTagCardID, rid, errTagBlockID);
-                errTagged = true;
-                announce(`${t.review.errTagDone}: ${t.review.ko.errReasons[rid] ?? rid}`, "polite");
-            }}
-            onClose={() => (showErrTags = false)}
-        />
-        {/if}
+            <!-- 阶段 2：卡片主体工作区 (flex: 1 1 auto, 居中自适应, 超长自适应滚动) -->
+            <main class="lv-review-stage-center" data-testid="review-card-arena">
+                {#if isDocumentReview && currentDocReviewItem}
+                    <ReviewDocumentCanvas
+                        docItem={currentDocReviewItem}
+                        {t}
+                        onRate={handleDocRate}
+                        onSnooze={handleDocSnooze}
+                        onRemove={handleDocRemove}
+                        onClose={() => { isDocumentReview = false; }}
+                    />
+                {:else}
+                    <div class="lv-card b3-typography" class:lv-anim-glow={showAnswer} bind:this={cardEl} style={`max-width:${eff().cardMaxWidth}px; width:100%;`}>
+                        {#if current && isLeechCard(current, eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD)}
+                            <div class="lv-leech-warning-banner" role="alert" aria-live="assertive" data-testid="review-leech-warning">
+                                <span class="lv-leech-icon"><LvIcon name="warning" size={15} /></span>
+                                <span class="lv-leech-text">
+                                    <strong>{t?.review?.leechTitle ?? "水蛭卡预警"}</strong>：{t?.review?.leechWarning?.replace("${n}", String(current.lapses)) ?? `已遗忘 ${current.lapses} 次，建议精简问题或添加助记提示`}
+                                </span>
+                            </div>
+                        {/if}
+                        <ReviewCardBreadcrumbs
+                            breadcrumbs={currentBreadcrumbs}
+                            hpath={currentHPath}
+                            bind:hideParentPath={hideBreadcrumbParentPath}
+                            {t}
+                            onToggleContext={toggleContext}
+                            onOpenInEditor={openInEditor}
+                            onLocateHeading={(hId) => openCanvasInEditor(hId)}
+                            onContextMenu={openCurrentDocContextMenu}
+                        />
+                        {#if stopwatchSuspendedAt > 0}
+                            <div class="lv-stopwatch-suspended-badge" data-testid="review-stopwatch-suspended" role="status">
+                                <LvIcon name="timer" size={12} />
+                                <span>{t?.review?.stopwatchSuspended ?? "答题计时已挂起 (返回闪卡自动恢复)"}</span>
+                            </div>
+                        {/if}
+                        <ReviewCardBody
+                            {cardHtml}
+                            {faceError}
+                            currentCardID={current?.cardID ?? ""}
+                            showAnswer={showAnswer || isPeekingAnswer}
+                            maskedCardHtml={isPeekingAnswer ? cardHtml : maskedCardHtml}
+                            {interactiveQuiz}
+                            {selectedChoiceKeys}
+                            {userJudgeChoice}
+                            {typingInput}
+                            customRiffTitle={currentRiffTitle}
+                            customRiffAnswer={currentRiffAnswer}
+                            {reversedRecall}
+                            cardAttrs={currentCardAttrs}
+                            cardFontScale={eff().cardFontScale}
+                            customCardCss={eff().customCardCss}
+                            {faceHints}
+                            {faceHintText}
+                            {t}
+                            onRetryFace={retryFace}
+                            {onCardContentClick}
+                            {onCardContentDblClick}
+                            onOptionPick={handleOptionPick}
+                            onSubmitChoice={submitChoiceAnswer}
+                            onJudgePick={handleJudgePick}
+                            onFillCheck={handleFillCheck}
+                            onTypingInput={(val) => { typingInput = val; }}
+                            onSequenceFullyRevealed={() => { revealAnswer(); }}
+                        />
+                        {#if isPeekingAnswer && !showAnswer}
+                            <div class="lv-peeking-banner" data-testid="review-peeking-badge" role="status">
+                                <LvIcon name="eye" size={13} />
+                                <span>{t?.review?.peekingAnswer ?? "临时透视答案中 (松开恢复)"}</span>
+                            </div>
+                        {/if}
+                        <ReviewMemoCallout
+                            {showAnswer}
+                            {cardMemo}
+                            {isCustomPluginAnswer}
+                            {cardHtml}
+                            {occl}
+                            {faceError}
+                            {t}
+                            onEditMemo={() => (showMemoEditor = true)}
+                        />
+                        <ReviewOcclusionOverlay
+                            {occl}
+                            {occlBox}
+                            bind:occlHidden
+                            showAnswer={showAnswer || isPeekingAnswer}
+                        />
+                        {#if !showAnswer}
+                            <ReviewRescheduleModal
+                                open={showReschedule}
+                                bind:rescheduleDays
+                                {previewTargetLabel}
+                                {rescheduleBusy}
+                                {rescheduleError}
+                                {retryReschedule}
+                                {actionBusy}
+                                {t}
+                                onReschedule={reschedule}
+                                onClose={() => { showReschedule = false; rescheduleError = ""; }}
+                            />
+                        {/if}
+                        <ReviewAnswerSection
+                            {showAnswer}
+                            {answerVariant}
+                            bind:typingInput
+                            {choiceFallbackMode}
+                            {choices}
+                            {choiceLoading}
+                            hasInteractiveQuiz={Boolean(interactiveQuiz?.hasInteractiveWidgets) || isCurrentSequence}
+                            {hintText}
+                            hintLevelLabel={hintLevelText()}
+                            {faceReady}
+                            {typingGrade}
+                            ttsEnabled={eff().ttsEnabled}
+                            {t}
+                            onSubmitTyping={submitTyping}
+                            onPickChoice={(i) => {
+                                pickChoice(i);
+                            }}
+                            onStartChoice={startChoice}
+                            onAdvanceHint={advanceHint}
+                            onPeekStart={() => { if (!showAnswer && current) isPeekingAnswer = true; }}
+                            onPeekEnd={() => { isPeekingAnswer = false; }}
+                            onRevealAnswer={revealAnswer}
+                            onSpeakAnswer={speakAnswer}
+                        />
+                    </div>
+                    <ReviewContextDrawer
+                        open={ctxOpen}
+                        blocks={ctxBlocks}
+                        loading={ctxLoading}
+                        currentBlockID={current?.blockID ?? ""}
+                        {t}
+                        onClose={() => (ctxOpen = false)}
+                    />
+                    <ReviewCountdownBanner
+                        {budgetMin}
+                        {budgetExpired}
+                        {showAnswer}
+                        {timeoutExpired}
+                        reviewedCount={reviewedIDs.length}
+                        {t}
+                        onRest={pauseSessionAndReturn}
+                        onContinue={() => (budgetMin = 0)}
+                    />
+                {/if}
+
+                <!-- 阶段 3：行动与评分栏（流式紧随卡片 + 超视口自动吸底，彻底抹平空旷峡谷） -->
+                <footer class="lv-review-stage-bottom" data-testid="review-action-dock">
+                    <ReviewRatingBar
+                        {showAnswer}
+                        {stepRevealedCount}
+                        {faceReady}
+                        {pressedKeyFeedback}
+                        ratingStyle={eff().ratingStyle}
+                        ratingKeyScheme={eff().ratingKeyScheme}
+                        {suggestedRating}
+                        actionBusy={actionBusy}
+                        compact={eff().ratingDensity === "compact"}
+                        {dueText}
+                        {t}
+                        onRevealAnswer={revealAnswer}
+                        onRevealNextCloze={() => { if (!revealNextClozeOrAll(false)) revealAnswer(); }}
+                        onRate={rate}
+                    />
+                    <ReviewErrorTagBar
+                        open={showErrTags && !errTagged && Boolean(ctx.tagErrorReason)}
+                        {t}
+                        onTagError={(rid) => {
+                            ctx.tagErrorReason?.(errTagCardID, rid, errTagBlockID);
+                            errTagged = true;
+                            announce(`${t.review.errTagDone}: ${t.review.ko.errReasons[rid] ?? rid}`, "polite");
+                        }}
+                        onClose={() => (showErrTags = false)}
+                    />
+                </footer>
+            </main>
+        </div>
     {/if}
 
     <ReviewHelpAndPeek
@@ -3205,6 +3322,7 @@
         {showSessionOptionsModal}
         {showMemoEditor}
         {showRetireModal}
+        {showDeleteModal}
         {zoomedImage}
         reviewedCount={reviewedIDs.length}
         skippedCount={sessionSkipped.length}
@@ -3213,6 +3331,7 @@
         {memoSaving}
         {retireBusy}
         {dismissBusy}
+        {deleteBusy}
         onClosePause={() => (showPauseModal = false)}
         onConfirmPause={pauseSessionAndReturn}
         onCloseSessionOptions={() => (showSessionOptionsModal = false)}
@@ -3220,7 +3339,10 @@
         onCloseMemoEditor={closeMemoEditor}
         onSaveMemo={(m) => { memoDraft = m; void saveCardMemo(); }}
         onCloseRetireModal={closeRetireModal}
-        onConfirmRetire={retireCurrentCard}
+        onConfirmRetire={unmakeCurrentCard}
+        onUnmakeCard={unmakeCurrentCard}
+        onCloseDeleteModal={() => (showDeleteModal = false)}
+        onConfirmDeleteBlock={deleteCurrentBlock}
         onSuspendToday={suspendToday}
         onDismissCard={() => void dismissCurrentCard()}
         onCloseZoomedImage={closeZoomedImage}
@@ -3244,7 +3366,7 @@
         height: 100%;
         min-height: 0;
         min-width: 0;
-        overflow-y: auto;
+        overflow-y: hidden;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
@@ -3253,22 +3375,27 @@
         flex-direction: column;
         box-sizing: border-box;
         /* 移动端安全区（306）：刘海屏/手势条不遮挡内容 */
-        padding: calc(var(--lv-sp-4) + env(safe-area-inset-top, 0)) calc(var(--lv-sp-5) + env(safe-area-inset-right, 0))
-            calc(var(--lv-sp-4) + env(safe-area-inset-bottom, 0)) calc(var(--lv-sp-5) + env(safe-area-inset-left, 0));
-        gap: var(--lv-sp-3);
+        padding: calc(4px + env(safe-area-inset-top, 0)) calc(12px + env(safe-area-inset-right, 0))
+            0 calc(12px + env(safe-area-inset-left, 0));
+        gap: 0;
         position: relative;
-        max-width: 880px;
+        max-width: 800px;
         margin: 0 auto;
         width: 100%;
 
         @media (max-width: 680px) {
-            padding: calc(6px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px))
-                calc(10px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
-            gap: 8px;
+            padding: calc(4px + env(safe-area-inset-top, 0px)) calc(8px + env(safe-area-inset-right, 0px))
+                0 calc(8px + env(safe-area-inset-left, 0px));
+
+            .lv-card {
+                margin: clamp(6px, 1.2vh, 12px) auto clamp(8px, 1.5vh, 16px) auto !important;
+                padding: clamp(12px, 1.6vh, 18px) clamp(12px, 2.5vw, 18px) !important;
+                border-radius: var(--lv-r-m, 12px) !important;
+            }
 
             :global(.lv-hub) & {
-                padding-top: 6px !important;
-                padding-bottom: 10px !important;
+                padding-top: 4px !important;
+                padding-bottom: 0 !important;
             }
 
             :global(.lv-center.lv-ready-wrap),
@@ -3320,7 +3447,7 @@
             align-items: center;
             gap: var(--lv-sp-2);
             flex: none;
-            min-height: 40px;
+            min-height: 36px;
             max-width: 760px;
             width: 100%;
             margin: 0 auto;
@@ -3374,9 +3501,72 @@
             }
         }
 
+        /* 100vh 三段式弹性布局规范（对标 Anki/Quizlet/Mochi 标准） */
+        .lv-review-stage {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .lv-review-stage-top {
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-bottom: 2px;
+        }
+
+        .lv-review-stage-center {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 2px 0 6px 0;
+
+            .lv-card {
+                /* 人体工学黄金视线法则：卡片距顶部工具栏保持舒适紧凑的 6~16px 呼吸间距，不再因远距离拉扯视线 */
+                margin: clamp(6px, 1.5vh, 16px) auto 0 auto;
+            }
+
+            .lv-review-stage-bottom {
+                flex: 0 0 auto;
+                width: 100%;
+                max-width: 760px;
+                margin: 8px auto 0 auto;
+                position: sticky;
+                bottom: 0;
+                z-index: 25;
+                background: linear-gradient(
+                    to top,
+                    var(--lv-bg-page, var(--b3-theme-background)) 92%,
+                    color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 82%, transparent) 40%,
+                    color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 0%, transparent) 100%
+                );
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                padding-top: 4px;
+                padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+            }
+        }
+
         .lv-head {
-            /* R52 review 面：三行结构（身份行 / 进度条 / 控制行），行距 8px、条底 1px 分隔 */
-            display: flex; flex-direction: column; gap: var(--lv-sp-2);
+            /* 行距收敛，紧凑精致 */
+            display: flex; flex-direction: column; gap: 2px;
             max-width: 760px; margin: 0 auto; width: 100%;
         }
 
@@ -3387,19 +3577,16 @@
             overflow-x: auto;
             overflow-y: visible;
             background: var(--lv-color-surface);
-            border: 1px solid var(--lv-border);
-            border-radius: var(--lv-r-dialog);
-            box-shadow: var(--lv-shadow-review-card), var(--lv-inset-shine);
-            /* 阶段 B · I3：卡面高度随内容自适应，紧凑内边距让评分栏在窄窗与 150% 缩放下始终留在首屏 */
-            padding: clamp(calc(var(--lv-space-unit) * 6), 2.5vw, calc(var(--lv-space-unit) * 11)) clamp(calc(var(--lv-space-unit) * 7), 3vw, calc(var(--lv-space-unit) * 13));
-            min-height: 148px;
-            @media (max-width: 740px) { padding: calc(var(--lv-space-unit) * 6) calc(var(--lv-space-unit) * 6); }
-            position: relative;
-            background: var(--lv-color-surface);
-            box-shadow: var(--lv-shadow-1), var(--lv-inset-shine);
+            border: 1px solid var(--lv-border-subtle, color-mix(in srgb, var(--lv-color-text) 8%, transparent));
+            border-radius: var(--lv-r-card, 16px);
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03), 0 10px 24px -4px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+            padding: clamp(14px, 1.8vh, 20px) clamp(16px, 2.2vw, 24px);
+            min-height: 100px;
             transition: box-shadow var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease);
 
-            &:hover { box-shadow: var(--lv-shadow-2), var(--lv-inset-shine); }
+            &:hover {
+                box-shadow: 0 4px 8px rgba(15, 23, 42, 0.05), 0 18px 38px -4px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            }
 
             // 超长卡面底部柔和滚动指示羽化（防突兀截断）
             &::after {
@@ -3413,13 +3600,14 @@
                 pointer-events: none;
                 margin-top: -14px;
                 display: block;
-                border-bottom-left-radius: var(--lv-r-dialog);
-                border-bottom-right-radius: var(--lv-r-dialog);
+                border-bottom-left-radius: var(--lv-r-card, 18px);
+                border-bottom-right-radius: var(--lv-r-card, 18px);
                 opacity: 0.6;
             }
 
             &.lv-anim-glow {
-                border-color: var(--lv-primary-border);
+                border-color: color-mix(in srgb, var(--lv-color-brand) 55%, var(--lv-border));
+                box-shadow: 0 0 0 1px color-mix(in srgb, var(--lv-color-brand) 25%, transparent), 0 14px 34px -4px color-mix(in srgb, var(--lv-color-brand) 16%, transparent);
             }
         }
 

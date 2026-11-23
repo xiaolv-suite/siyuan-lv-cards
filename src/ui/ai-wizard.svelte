@@ -47,6 +47,8 @@
         }
     }
 
+    let aiProgressTimer: any = null;
+
     function appendCommonSnippet(snip: CommonSnippet) {
         const title = snip.title || "常用语素材";
         addSource(title, snip.content);
@@ -673,8 +675,12 @@ TCP 建立连接需要进行三次握手：
 
     onDestroy(() => {
         disposed = true;
-        // 外部销毁（宿主关闭对话框/插件卸载）也必须取消在途 AI 请求。
+        // 外部销毁（宿主关闭对话框/插件卸载）也必须取消在途 AI 请求与定时器。
         genSeq += 1;
+        if (aiProgressTimer) {
+            clearInterval(aiProgressTimer);
+            aiProgressTimer = null;
+        }
         genCtrl?.abort();
         genCtrl = null;
     });
@@ -695,9 +701,18 @@ TCP 建立连接需要进行三次握手：
         const myCtrl = genCtrl;
         busy = true;
         aiElapsedSec = 0;
-        let timer: any = setInterval(() => {
+        if (aiProgressTimer) {
+            clearInterval(aiProgressTimer);
+            aiProgressTimer = null;
+        }
+        aiProgressTimer = setInterval(() => {
             if (busy) aiElapsedSec += 1;
-            else clearInterval(timer);
+            else {
+                if (aiProgressTimer) {
+                    clearInterval(aiProgressTimer);
+                    aiProgressTimer = null;
+                }
+            }
         }, 1000);
         errorMsg = "";
         try {
@@ -731,7 +746,10 @@ TCP 建立连接需要进行三次握手：
             }
             errorMsg = aiErrorText(e);
         } finally {
-            clearInterval(timer);
+            if (aiProgressTimer) {
+                clearInterval(aiProgressTimer);
+                aiProgressTimer = null;
+            }
             if (seq === genSeq) {
                 busy = false;
                 genCtrl = null;

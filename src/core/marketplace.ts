@@ -15,6 +15,7 @@ import {
   type LvCardKind,
   PLUGIN_VERSION,
 } from "./lvcards-package";
+import { localDate } from "./revlog";
 
 export type MarketplaceItemKind = "exam_bank" | "flashcard_deck" | "both";
 
@@ -614,7 +615,7 @@ export function validateMarketplaceCatalog(raw: unknown): {
       license: safeLicense,
       downloadUrl: String(item.downloadUrl || "").trim(),
       previewItems: Array.isArray(item.previewItems) ? (item.previewItems as MarketplaceItem["previewItems"]) : undefined,
-      updatedAt: String(item.updatedAt || new Date().toISOString().slice(0, 10)),
+      updatedAt: String(item.updatedAt || localDate(Date.now())),
       sizeKb: item.sizeKb ? Number(item.sizeKb) : undefined,
       verified: Boolean(item.verified),
       embeddedQuestions: Array.isArray(item.embeddedQuestions) ? (item.embeddedQuestions as MarketplaceQuestion[]) : undefined,
@@ -628,7 +629,7 @@ export function validateMarketplaceCatalog(raw: unknown): {
       v: 1,
       name: String(rawObj.name),
       description: String(rawObj.description || ""),
-      updatedAt: String(rawObj.updatedAt || new Date().toISOString().slice(0, 10)),
+      updatedAt: String(rawObj.updatedAt || localDate(Date.now())),
       items: validItems,
     },
     errors,
@@ -675,7 +676,7 @@ function formatOptionsText(options?: readonly string[]): string {
  */
 function inferCardKind(stem: string, type?: string): LvCardKind {
   if (stem.includes("```")) return "code";
-  if (stem.includes("==") || (type === "fill" && stem.includes("____"))) return "cloze";
+  if (/(?<!=)==(?!=)/.test(stem) || (type === "fill" && stem.includes("____"))) return "cloze";
   return "qa";
 }
 
@@ -707,11 +708,15 @@ export function questionToLvPackageCard(q: MarketplaceQuestion): LvPackageCard {
   // 构建便签/思路拓展 (随卡流转的 memo)
   const memo = q.expansion?.trim() || q.analysis?.trim() || undefined;
 
-  // 拼接完整的 Markdown 正文
-  let markdown = `## 题目\n${questionPart}\n\n---\n\n## 答案\n${answerPart}`;
+  // 拼接完整的 Markdown 正文：使用思源原生超级块封装（{{{col ... }}}），
+  // 第 1 子块为题干，其余子块为答案与解析，杜绝裸 Markdown 被思源按段拆分导致仅将 '## 题目' 标题块作为卡片入库的缺陷！
+  // 2026-11-21 走查修复：去掉装饰性「## 题目」标题——超级块问答面渲染 subBlocks[0]，
+  // 原先标题块占据第 1 子块导致集市入库卡的问题面只显示「题目」二字，真实题干被划入答案侧。
+  let answerContent = answerPart;
   if (q.expansion && q.expansion.trim()) {
-    markdown += `\n\n> 💡 **思路拓展与秒杀技巧**：\n> ${q.expansion.trim()}`;
+    answerContent += `\n\n> 💡 **思路拓展与秒杀技巧**：\n> ${q.expansion.trim()}`;
   }
+  const markdown = `{{{col\n${questionPart}\n\n## 答案\n${answerContent}\n}}}`;
 
   // 汇聚标签
   const tagSet = new Set<string>();

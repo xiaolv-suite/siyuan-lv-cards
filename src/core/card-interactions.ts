@@ -7,7 +7,7 @@ import { shouldIgnoreSwipeTarget } from "./review-gesture";
 
 export type CardContentClickResult =
     | { type: "zoom-image"; src: string; alt?: string }
-    | { type: "cloze-reveal"; allRevealed: boolean }
+    | { type: "cloze-reveal"; allRevealed: boolean; mark?: HTMLElement }
     | null;
 
 /**
@@ -16,7 +16,8 @@ export type CardContentClickResult =
 export function handleCardContentClick(
     target: EventTarget | null,
     showAnswer: boolean,
-    cardEl: HTMLElement | null
+    cardEl: HTMLElement | null,
+    allowClozeReveal = true
 ): CardContentClickResult {
     if (!target || !(target instanceof Element) || typeof target.closest !== "function") return null;
 
@@ -25,12 +26,12 @@ export function handleCardContentClick(
         return { type: "zoom-image", src: img.src, alt: img.alt || undefined };
     }
 
-    if (!showAnswer) {
+    if (!showAnswer && allowClozeReveal) {
         const mark = target.closest("span[data-type='mark'], mark.lv-masked, [data-cloze-idx]") as HTMLElement | null;
         if (mark) {
             const res = handleClozeClick(mark, cardEl);
             if (res.revealed) {
-                return { type: "cloze-reveal", allRevealed: res.allRevealed };
+                return { type: "cloze-reveal", allRevealed: res.allRevealed, mark };
             }
         }
     }

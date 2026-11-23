@@ -15,6 +15,7 @@ import { lvLog } from "../libs/log";
 import { callBridgeOutcome, getBridgeSafely, captureQuoteToCommonSafely, type BridgeCallOutcome, type ContactsBridgeApi, type RaikiriBridgeApi } from "../libs/ecosystem-bridge-kit";
 import { getBlockAttrs, getBlockMarkdown, setBlockAttrs, updateBlock } from "../api/siyuan";
 import { inferBlockKindFromElement, recordActionUsage, type BlockActionDescriptor, type BlockSnapshot, type EcosystemPresence } from "./block-actions";
+import { openBlockTypeMorphPicker, morphBlockTypeTo, queryBlockElementById } from "../libs/lv-notice-kit";
 
 /** 执行器需要宿主注入的本仓能力（避免本文件反向依赖 index.ts 造成循环） */
 export interface BlockActionHost {
@@ -34,6 +35,8 @@ export interface BlockActionHost {
     /** 加入/移出文档温故排期 */
     addDocToReview: (docID: string) => void;
     removeDocFromReview: (docID: string) => void;
+    /** 在思源原生编辑器中定位或聚焦放大打开块 */
+    openDoc?: (id: string, zoomIn?: boolean) => void;
 }
 
 /** 考试桥的最小可调用面（只声明我们真正用到的部分） */
@@ -54,7 +57,7 @@ interface HomeBridgeLike {
 interface GleanBridgeLike {
     whenReady?: () => Promise<boolean> | boolean;
     hasCapability?: (name: string) => boolean;
-    ingestClip?: (options: Record<string, unknown>) => Promise<unknown> | unknown;
+    ingestClip?: (options: Record<string, unknown>) => Promise<{ ok: boolean; docId?: string } | any> | any;
 }
 
 /** 打卡桥最小面（支持把块快速设为打卡项） */
@@ -78,6 +81,17 @@ function label(host: BlockActionHost, key: string, fallback: string): string {
     return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+/** 2026-11-21 i18n 债务收敛：executor 反馈文案统一走 execMsg（label + {var} 插值）。 */
+function execMsg(host: BlockActionHost, key: string, fallback: string, vars?: Record<string, string | number>): string {
+    let text = label(host, key, fallback);
+    if (vars) {
+        for (const [name, value] of Object.entries(vars)) {
+            text = text.split(`{${name}}`).join(String(value));
+        }
+    }
+    return text;
+}
+
 /** 统一把桥返回结果转成「是否真的做成」 */
 function isApplied(outcome: BridgeCallOutcome<unknown>): boolean {
     return outcome.state === "applied";
@@ -85,44 +99,73 @@ function isApplied(outcome: BridgeCallOutcome<unknown>): boolean {
 
 /** 桥不可用时的统一友好提示（区分未安装 / 未就绪 / 不支持 / 超时未知） */
 function reportBridgeFailure(
+    host: BlockActionHost,
     pluginName: string,
     outcome: BridgeCallOutcome<unknown>,
 ): void {
     if (outcome.state === "unavailable") {
-        showMessage(`${pluginName}未安装或未启动，该能力暂不可用`, 2600, "info");
+        showMessage(execMsg(host, "executor.bridgeUnavailable", "{plugin}未安装或未启动，该能力暂不可用", {plugin: pluginName}), 2600, "info");
         return;
     }
     if (outcome.state === "not_ready") {
-        showMessage(`${pluginName}正在初始化，请稍后重试`, 2600, "info");
+        showMessage(execMsg(host, "executor.bridgeNotReady", "{plugin}正在初始化，请稍后重试", {plugin: pluginName}), 2600, "info");
         return;
     }
     if (outcome.state === "unsupported") {
-        showMessage(`${pluginName}版本较旧，不支持该操作，请升级插件`, 3000, "info");
+        showMessage(execMsg(host, "executor.bridgeUnsupported", "{plugin}版本较旧，不支持该操作，请升级插件", {plugin: pluginName}), 3000, "info");
         return;
     }
     // unknown = 超时后结果未知，不能断言失败
-    showMessage(`${pluginName}响应超时，操作可能仍在进行，请稍后确认`, 3200, "info");
+    showMessage(execMsg(host, "executor.bridgeTimeout", "{plugin}响应超时，操作可能仍在进行，请稍后确认", {plugin: pluginName}), 3200, "info");
 }
 
-/** 取出块的纯文本（优先 kramdown，去掉 IAL 与标记符号；降级 DOM 时排除属性栏装饰） */
+/** 纯净提取块文本（去除 .protyle-attr、胶囊、IAL 及 Markdown 标记） */
+function getCleanTextFromDom(el: HTMLElement | null): string {
+    if (!el) return "";
+    const edit = el.querySelector<HTMLElement>(':scope > [contenteditable="true"]')
+        || el.querySelector<HTMLElement>('[contenteditable="true"]');
+    if (edit) {
+        const clone = edit.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach(n => n.remove());
+        return (clone.textContent || "").trim();
+    }
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach(n => n.remove());
+    return (clone.textContent || "").trim();
+}
+
+/** 取出块的纯文本（优先 DOM 纯净文本，彻底杜绝 IAL 与属性栏胶囊污染；降级 API 时严格剥离 IAL 与结构前缀） */
 async function readBlockText(blockID: string): Promise<string> {
     try {
-        const md = await getBlockMarkdown(blockID);
-        if (md && md.trim()) return md.trim();
-    } catch { /* 降级到 DOM */ }
-    try {
         const el = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-            || document.querySelector(`[data-node-id="${blockID}"]`);
-        if (!el) return "";
-        const edit = el.querySelector<HTMLElement>(':scope > [contenteditable="true"]')
-            || el.querySelector<HTMLElement>('[contenteditable="true"]');
-        if (edit) return (edit.textContent || "").trim();
-        const clone = el.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll(".protyle-attr, .protyle-action, .lv-card-badge-pill").forEach(n => n.remove());
-        return (clone.textContent || "").trim();
-    } catch {
-        return "";
-    }
+            || queryBlockElementById(blockID); // 2026-11-21 修复：兜底改用排除面包屑冒名者的精确查询
+        if (el) {
+            const cleanText = getCleanTextFromDom(el as HTMLElement);
+            if (cleanText) return cleanText;
+        }
+    } catch { /* 降级到 API */ }
+    try {
+        const md = await getBlockMarkdown(blockID);
+        if (md && md.trim()) {
+            return md
+                .replace(/\{:[^}]*\}\s*$/g, "")
+                // 复选框任务标记整体剥离（- [ ] / * [x] / + [ ]）：只剥 "- " 会把 "[ ]" 残进锚文本/试题/备忘标题
+                .replace(/^(\#{1,6}\s+|\>\s+|[-*+]\s*\[[ xX]\]\s+|[-*+]\s+)/i, "")
+                .trim();
+        }
+    } catch { /* ignore */ }
+    return "";
+}
+
+/** 取出块的真实完整 Markdown 语法（优先 getBlockMarkdown 剥离 IAL，完整保留粗体、斜体、公式与超链接；降级时才取纯文本） */
+async function readBlockMarkdown(blockID: string): Promise<string> {
+    try {
+        const md = await getBlockMarkdown(blockID);
+        if (md && md.trim()) {
+            return md.replace(/\{:[^}]*\}\s*$/g, "").trim();
+        }
+    } catch { /* ignore */ }
+    return readBlockText(blockID);
 }
 
 function getTodayISO(): string {
@@ -167,6 +210,8 @@ export async function executeBlockAction(
     blockID: string,
     host: BlockActionHost,
     batchBlockIDs?: string[],
+    snapshot?: BlockSnapshot,
+    options?: { targetType?: string; anchor?: HTMLElement | null },
 ): Promise<void> {
     const targetIDs = (batchBlockIDs && batchBlockIDs.length > 1) ? batchBlockIDs : [blockID];
     const isBatch = targetIDs.length > 1;
@@ -175,9 +220,12 @@ export async function executeBlockAction(
     recordActionUsage(action.id);
 
     try {
-        // 动态注入/开放 API 动作优先执行自有 handler
+        // 动态注入/开放 API 动作优先执行自有 handler。
+        // lv-kit 契约 execute(blockID, snapshot?, batchIDs?)：snapshot 必须是真实块快照
+        // （isBatch/hasText/hasImage 等探测字段），此前只传 {blockID} 会让外部动作误判块形态。
+        const enrichedSnapshot: BlockSnapshot = { ...(snapshot ?? {}), blockID, batchBlockIDs: targetIDs };
         if (typeof action.handler === "function") {
-            await action.handler(blockID, { blockID } as any, targetIDs);
+            await action.handler(blockID, enrichedSnapshot, targetIDs);
             return;
         }
 
@@ -206,16 +254,24 @@ export async function executeBlockAction(
             // ── 思源原生增强高频动作 ──────────────────────────
             case "focus-block": {
                 try {
-                    const w = window as any;
-                    if (w.siyuan?.ws?.send) {
-                        w.siyuan.ws.send("openFileById", { id: blockID, mode: 0 });
-                        showMessage("已进入当前块聚焦沉浸模式", 2000, "info");
+                    if (typeof host.openDoc === "function") {
+                        host.openDoc(blockID, true);
                     } else {
-                        window.location.hash = `#${blockID}`;
-                        showMessage("已定位当前块", 1600, "info");
+                        const w = window as any;
+                        if (w.siyuan?.ws?.send) {
+                            w.siyuan.ws.send("openFileById", { id: blockID, mode: 0 });
+                        }
                     }
+                    const el = (document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
+                        || document.querySelector(`[data-node-id="${blockID}"]`)) as HTMLElement | null;
+                    if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        el.classList.add("protyle-wysiwyg--select");
+                        setTimeout(() => el.classList.remove("protyle-wysiwyg--select"), 1200);
+                    }
+                    showMessage(execMsg(host, "executor.focusEntered", "已进入当前块聚焦沉浸模式"), 2000, "info");
                 } catch (err: any) {
-                    showMessage(`聚焦当前块失败：${err?.message || "未知原因"}`, 2200, "error");
+                    showMessage(execMsg(host, "executor.focusFail", "聚焦当前块失败：{reason}", {reason: err?.message || "未知原因"}), 2200, "error");
                 }
                 return;
             }
@@ -224,54 +280,78 @@ export async function executeBlockAction(
                 if (isBatch) {
                     const embeds = targetIDs.map((id) => `{{${id}}}`);
                     const ok = await copyToClipboard(embeds.join("\n"));
-                    showMessage(ok ? `已批量复制 ${embeds.length} 个嵌入块引用` : "复制失败", 2200, ok ? "info" : "error");
+                    showMessage(ok ? execMsg(host, "executor.embedCopiedBatch", "已批量复制 {n} 个嵌入块引用", {n: embeds.length}) : execMsg(host, "executor.copyFailed", "复制失败"), 2200, ok ? "info" : "error");
                     return;
                 }
                 const embed = `{{${blockID}}}`;
                 const ok = await copyToClipboard(embed);
-                showMessage(ok ? "已复制嵌入块语法 {{id}}，粘贴即可动态嵌入" : "复制失败", 2200, ok ? "info" : "error");
+                showMessage(ok ? execMsg(host, "executor.embedSyntaxCopied", "已复制嵌入块语法 {{id}}，粘贴即可动态嵌入") : execMsg(host, "executor.copyFailed", "复制失败"), 2200, ok ? "info" : "error");
                 return;
             }
 
             case "toggle-fold-block": {
                 try {
-                    const el = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-                        || document.querySelector(`[data-node-id="${blockID}"]`);
+                    const el = (document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
+                        || document.querySelector(`[data-node-id="${blockID}"]`)) as HTMLElement | null;
                     const currentFold = el?.getAttribute("data-fold") === "1" || el?.getAttribute("fold") === "1";
                     const nextFold = currentFold ? "0" : "1";
                     await setBlockAttrs(blockID, { fold: nextFold });
                     if (el) {
                         el.setAttribute("data-fold", nextFold);
                         el.setAttribute("fold", nextFold);
+                        if (nextFold === "1") el.classList.add("protyle-wysiwyg--fold");
+                        else el.classList.remove("protyle-wysiwyg--fold");
                     }
-                    showMessage(nextFold === "1" ? "已收起当前分支" : "已展开当前分支", 1800, "info");
+                    showMessage(nextFold === "1" ? execMsg(host, "executor.foldCollapsed", "已收起当前分支") : execMsg(host, "executor.foldExpanded", "已展开当前分支"), 1800, "info");
                 } catch (err: any) {
-                    showMessage(`折叠切换失败：${err?.message || "未知原因"}`, 2200, "error");
+                    showMessage(execMsg(host, "executor.foldFail", "折叠切换失败：{reason}", {reason: err?.message || "未知原因"}), 2200, "error");
                 }
                 return;
             }
 
             case "morph-block-type": {
                 try {
-                    const el = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-                        || document.querySelector(`[data-node-id="${blockID}"]`);
-                    const currentType = el?.getAttribute("data-type") || "";
-                    const currentSubtype = el?.getAttribute("data-subtype") || "";
-                    if (currentType === "NodeParagraph") {
-                        const text = await readBlockText(blockID);
-                        const md = `* [ ] ${text.replace(/^(\* \[ \]|\* \[x\]|[-*+]\s+)/i, "").trim()}`;
-                        await updateBlock("markdown", md, blockID);
-                        showMessage("已将段落转为待办任务项", 2000, "info");
-                    } else if (currentType === "NodeListItem" || currentSubtype === "t") {
-                        const text = await readBlockText(blockID);
-                        const md = text.replace(/^(\* \[ \]|\* \[x\]|[-*+]\s+)/i, "").trim();
-                        await updateBlock("markdown", md, blockID);
-                        showMessage("已将待办项转为普通段落", 2000, "info");
-                    } else {
-                        showMessage("当前块类型暂不支持极速转换", 2000, "info");
+                    const el = (typeof document !== "undefined")
+                        ? ((document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
+                            || document.querySelector(`[data-node-id="${blockID}"]`)) as HTMLElement | null)
+                        : null;
+                    const anchor = options?.anchor || el;
+
+                    // 若外部显式指定了目标类型（如单元测试或命令行调用）
+                    if (options?.targetType) {
+                        await morphBlockTypeTo(blockID, options.targetType, {
+                            readMarkdownFn: (id) => readBlockMarkdown(id),
+                            updateBlockFn: (dataType, data, id) => updateBlock(dataType as "markdown", data, id),
+                            getBlockAttrsFn: (id) => getBlockAttrs(id),
+                            setBlockAttrsFn: (id, attrs) => setBlockAttrs(id, attrs),
+                            showMessageFn: (msg, dur, typ) => showMessage(msg, dur, typ as any),
+                        });
+                        return;
                     }
+
+                    // 交互场景：弹出全能块类型转换选择器供用户挑选（标题/列表/待办/引述/代码/公式等）
+                    openBlockTypeMorphPicker(
+                        blockID,
+                        anchor,
+                        async (targetType) => {
+                            await morphBlockTypeTo(blockID, targetType, {
+                                readMarkdownFn: (id) => readBlockMarkdown(id),
+                                updateBlockFn: (dataType, data, id) => updateBlock(dataType as "markdown", data, id),
+                                getBlockAttrsFn: (id) => getBlockAttrs(id),
+                                setBlockAttrsFn: (id, attrs) => setBlockAttrs(id, attrs),
+                                showMessageFn: (msg, dur, typ) => showMessage(msg, dur, typ as any),
+                            });
+                        },
+                        {
+                            readMarkdownFn: (id) => readBlockMarkdown(id),
+                            updateBlockFn: (dataType, data, id) => updateBlock(dataType as "markdown", data, id),
+                            getBlockAttrsFn: (id) => getBlockAttrs(id),
+                            setBlockAttrsFn: (id, attrs) => setBlockAttrs(id, attrs),
+                            showMessageFn: (msg, dur, typ) => showMessage(msg, dur, typ as any),
+                        }
+                    );
                 } catch (err: any) {
-                    showMessage(`转换类型失败：${err?.message || "未知原因"}`, 2200, "error");
+                    showMessage(execMsg(host, "executor.morphFail", "转换类型失败：{reason}", {reason: err?.message || "未知原因"}), 2200, "error");
                 }
                 return;
             }
@@ -297,16 +377,16 @@ export async function executeBlockAction(
                         if (isApplied(outcome)) successCount++;
                     }
                     if (successCount > 0) {
-                        showMessage(`已批量将 ${successCount} 个块转为小驴试题`, 2600, "info");
+                        showMessage(execMsg(host, "executor.toExamBatchDone", "已批量将 {n} 个块转为小驴试题", {n: successCount}), 2600, "info");
                     } else {
-                        showMessage("未能将选中块转为试题，请确认小驴考试运行状态", 2600, "info");
+                        showMessage(execMsg(host, "executor.toExamUnavailable", "未能将选中块转为试题，请确认小驴考试运行状态"), 2600, "info");
                     }
                     return;
                 }
 
                 const text = await readBlockText(blockID);
                 if (!text) {
-                    showMessage("该块没有可转换的文本内容", 2400, "info");
+                    showMessage(execMsg(host, "executor.noTextToConvert", "该块没有可转换的文本内容"), 2400, "info");
                     return;
                 }
                 const type = action.id === "exam-ai-generate" ? "qa" : "cloze";
@@ -324,7 +404,7 @@ export async function executeBlockAction(
                         ? "已交给小驴考试生成题目"
                         : "已转为小驴试题", 2400, "info");
                 } else {
-                    reportBridgeFailure("小驴考试", outcome);
+                    reportBridgeFailure(host, "小驴考试", outcome);
                 }
                 return;
             }
@@ -338,19 +418,21 @@ export async function executeBlockAction(
             }
 
             case "to-glean-library": {
-                const outcome = await callBridgeOutcome<GleanBridgeLike, unknown>(
+                const text = await readBlockText(blockID);
+                const title = text.split("\n")[0].trim().slice(0, 40) || "精选笔记剪藏";
+                const outcome = await callBridgeOutcome<GleanBridgeLike, { ok: boolean; docId?: string }>(
                     "glean",
                     "ingestClip",
                     (bridge) => {
                         if (!bridge.ingestClip) throw new Error("missing ingestClip");
-                        return bridge.ingestClip({ blockId: blockID });
+                        return bridge.ingestClip({ blockId: blockID, title, summary: text.slice(0, 160) });
                     },
                     { timeoutMs: BRIDGE_TIMEOUT_MS },
                 );
-                if (isApplied(outcome)) {
-                    showMessage("已加入小驴拾遗读库", 2400, "info");
+                if (isApplied(outcome) && (outcome.data as any)?.ok !== false) {
+                    showMessage(execMsg(host, "executor.addedToGlean", "已加入小驴拾遗读库"), 2400, "info");
                 } else {
-                    reportBridgeFailure("小驴拾遗", outcome);
+                    reportBridgeFailure(host, "小驴拾遗", outcome);
                 }
                 return;
             }
@@ -358,7 +440,7 @@ export async function executeBlockAction(
             case "capture-quote-common": {
                 const text = await readBlockText(blockID);
                 if (!text) {
-                    showMessage("该块没有可沉淀的金句文本", 2400, "info");
+                    showMessage(execMsg(host, "executor.noQuoteText", "该块没有可沉淀的金句文本"), 2400, "info");
                     return;
                 }
                 const res = await captureQuoteToCommonSafely({
@@ -366,9 +448,9 @@ export async function executeBlockAction(
                     sourceBlockId: blockID,
                 });
                 if (res.ok) {
-                    showMessage("已将金句存入小驴常用语资产库", 2400, "info");
+                    showMessage(execMsg(host, "executor.quoteSaved", "已将金句存入小驴常用语资产库"), 2400, "info");
                 } else {
-                    showMessage("未能存入小驴常用，请检查小驴常用插件运行状态", 2600, "info");
+                    showMessage(execMsg(host, "executor.quoteSaveUnavailable", "未能存入小驴常用，请检查小驴常用插件运行状态"), 2600, "info");
                 }
                 return;
             }
@@ -377,7 +459,7 @@ export async function executeBlockAction(
                 const text = await readBlockText(blockID);
                 const contactsBridge = getBridgeSafely<ContactsBridgeApi>("contacts");
                 if (!contactsBridge) {
-                    showMessage("小驴人脉未安装或未启动", 2600, "info");
+                    showMessage(execMsg(host, "executor.contactsNotInstalled", "小驴人脉未安装或未启动"), 2600, "info");
                     return;
                 }
                 try {
@@ -385,24 +467,61 @@ export async function executeBlockAction(
                     const candidates = typeof contactsBridge.searchPeople === "function"
                         ? await contactsBridge.searchPeople(kw)
                         : [];
-                    if (candidates && candidates.length > 0) {
-                        showMessage(`小驴人脉：已关联联系人「${candidates[0].name}」`, 2600, "info");
+                    // 写路径身份门槛：只有"恰好一个候选且姓名与关键词精确吻合"才自动记账，
+                    // 否则模糊匹配会把互动记到错误的人头上（互动一旦落库即进入温度统计与时间线）。
+                    const norm = (v: string) => (v || "").replace(/\s+/g, "").toLowerCase();
+                    const kwNorm = norm(kw);
+                    const first = candidates?.[0];
+                    const unambiguous = candidates?.length === 1 && Boolean(first?.docId)
+                        && (norm(first.name) === kwNorm || (kwNorm.length >= 2 && norm(first.name).includes(kwNorm)));
+                    if (unambiguous) {
+                        if (typeof contactsBridge.recordInteraction === "function") {
+                            await contactsBridge.recordInteraction([first.docId], {
+                                ref: `((${blockID}))`,
+                                note: text.slice(0, 120),
+                                date: getTodayISO(),
+                            });
+                        }
+                        showMessage(execMsg(host, "executor.interactionLogged", "小驴人脉：已为「{name}」记入一笔互动记录", {name: first.name}), 2600, "info");
+                    } else if (candidates && candidates.length > 1) {
+                        showMessage(execMsg(host, "executor.interactionAmbiguous", "小驴人脉：匹配到 {n} 位联系人，为避免记错人请到人脉中确认后手动记录", {n: candidates.length}), 3200, "info");
                     } else {
-                        showMessage(`小驴人脉：为「${kw}」关联人脉互动`, 2600, "info");
+                        showMessage(execMsg(host, "executor.interactionNoMatch", "小驴人脉：未在名册中精确找到「{kw}」对应联系人，未自动记账", {kw: kw.slice(0, 14)}), 3000, "info");
                     }
                 } catch {
-                    showMessage("小驴人脉操作完成", 2000, "info");
+                    showMessage(execMsg(host, "executor.contactsDone", "小驴人脉操作完成"), 2000, "info");
                 }
                 return;
             }
 
+            case "speedswitch-snippet":
             case "speedswitch-workbench": {
                 const raikiri = getBridgeSafely<RaikiriBridgeApi>("raikiri");
-                if (raikiri && typeof raikiri.openWorkbench === "function") {
+                const code = await readBlockText(blockID);
+                if (code) {
+                    try {
+                        await navigator.clipboard.writeText(code);
+                    } catch { /* ignore */ }
+                    const anyRaikiri = raikiri as any;
+                    if (anyRaikiri && typeof anyRaikiri.openStudio === "function") {
+                        try {
+                            anyRaikiri.openStudio({ entry: "block-action" });
+                            showMessage(execMsg(host, "executor.codeExtractedStudio", "已提取代码块正文至剪贴板，并打开雷切代码工坊"), 2600, "info");
+                            return;
+                        } catch { /* fallback */ }
+                    } else if (anyRaikiri && typeof anyRaikiri.openWorkbench === "function") {
+                        try {
+                            anyRaikiri.openWorkbench({ tab: "snippet" });
+                            showMessage(execMsg(host, "executor.codeExtractedWorkbench", "已提取代码块正文至剪贴板，并呼出雷切工作台"), 2600, "info");
+                            return;
+                        } catch { /* fallback */ }
+                    }
+                    showMessage(execMsg(host, "executor.codeExtractedClipboard", "已提取代码块内容至剪贴板，可在雷切中即时创建片段"), 2400, "info");
+                } else if (raikiri && typeof raikiri.openWorkbench === "function") {
                     raikiri.openWorkbench({ tab: "snippet" });
-                    showMessage("已呼出小驴雷切工作台", 2000, "info");
+                    showMessage(execMsg(host, "executor.speedSwitchOpened", "已呼出小驴雷切工作台"), 2000, "info");
                 } else {
-                    showMessage("小驴雷切未安装或未启动", 2600, "info");
+                    showMessage(execMsg(host, "executor.speedSwitchNotInstalled", "小驴雷切未安装或未启动"), 2600, "info");
                 }
                 return;
             }
@@ -427,16 +546,16 @@ export async function executeBlockAction(
                         if (isApplied(outcome) && outcome.data?.ok) successCount++;
                     }
                     if (successCount > 0) {
-                        showMessage(`已批量为 ${successCount} 个块设立打卡项`, 2600, "info");
+                        showMessage(execMsg(host, "executor.checkinBatchDone", "已批量为 {n} 个块设立打卡项", {n: successCount}), 2600, "info");
                     } else {
-                        showMessage("未能设立打卡项，请检查小驴打卡运行状态", 2600, "info");
+                        showMessage(execMsg(host, "executor.checkinBatchUnavailable", "未能设立打卡项，请检查小驴打卡运行状态"), 2600, "info");
                     }
                     return;
                 }
 
                 const text = await readBlockText(blockID);
                 if (!text) {
-                    showMessage("该块没有可用的文本内容", 2400, "info");
+                    showMessage(execMsg(host, "executor.noTextForCheckin", "该块没有可用的文本内容"), 2400, "info");
                     return;
                 }
                 const name = text.split("\n")[0].trim().slice(0, 40) || "笔记打卡";
@@ -457,14 +576,14 @@ export async function executeBlockAction(
                 if (isApplied(outcome)) {
                     const res = outcome.data;
                     if (res?.alreadyExisted) {
-                        showMessage(`该块已绑定打卡项「${res.item?.name || name}」`, 2600, "info");
+                        showMessage(execMsg(host, "executor.checkinAlreadyBound", "该块已绑定打卡项「{name}」", {name: res.item?.name || name}), 2600, "info");
                     } else if (res?.ok) {
-                        showMessage(`已将本块成功设为打卡项「${name}」`, 2600, "info");
+                        showMessage(execMsg(host, "executor.checkinBound", "已将本块成功设为打卡项「{name}」", {name}), 2600, "info");
                     } else {
-                        showMessage(`设为打卡项失败：${res?.reason || "未知原因"}`, 3000, "error");
+                        showMessage(execMsg(host, "executor.checkinBindFail", "设为打卡项失败：{reason}", {reason: res?.reason || "未知原因"}), 3000, "error");
                     }
                 } else {
-                    reportBridgeFailure("小驴打卡", outcome);
+                    reportBridgeFailure(host, "小驴打卡", outcome);
                 }
                 return;
             }
@@ -472,7 +591,7 @@ export async function executeBlockAction(
             case "add-memo": {
                 const text = await readBlockText(blockID);
                 if (!text) {
-                    showMessage("该块没有可用作备忘标题的文本", 2400, "info");
+                    showMessage(execMsg(host, "executor.noTextForMemo", "该块没有可用作备忘标题的文本"), 2400, "info");
                     return;
                 }
                 // 备忘标题取首行、截断到 60 字，避免把整段笔记塞进提醒列表
@@ -487,9 +606,9 @@ export async function executeBlockAction(
                     { timeoutMs: BRIDGE_TIMEOUT_MS },
                 );
                 if (isApplied(outcome)) {
-                    showMessage("已记入小驴管家提醒中枢（今日到期）", 2600, "info");
+                    showMessage(execMsg(host, "executor.memoSaved", "已记入小驴管家提醒中枢（今日到期）"), 2600, "info");
                 } else {
-                    reportBridgeFailure("小驴管家", outcome);
+                    reportBridgeFailure(host, "小驴管家", outcome);
                 }
                 return;
             }
@@ -502,22 +621,22 @@ export async function executeBlockAction(
                     const refs: string[] = [];
                     for (const id of targetIDs) {
                         const text = await readBlockText(id);
-                        const anchor = text.split("\n")[0].trim().slice(0, 24).replace(/'/g, "’");
+                        const anchor = text.split("\n")[0].trim().slice(0, 24).replace(/'/g, "’").replace(/\)\)/g, ") )");
                         refs.push(anchor ? `((${id} '${anchor}'))` : `((${id}))`);
                     }
                     const ok = await copyToClipboard(refs.join("\n"));
-                    showMessage(ok ? `已批量复制 ${refs.length} 个块引用` : "复制失败，请检查剪贴板权限", 2400, ok ? "info" : "error");
+                    showMessage(ok ? execMsg(host, "executor.refCopiedBatch", "已批量复制 {n} 个块引用", {n: refs.length}) : execMsg(host, "executor.copyFailedPermission", "复制失败，请检查剪贴板权限"), 2400, ok ? "info" : "error");
                     return;
                 }
 
                 // 思源块引用语法：((id '锚文本'))
                 const text = await readBlockText(blockID);
-                const anchorText = text.split("\n")[0].trim().slice(0, 30).replace(/'/g, "’");
+                const anchorText = text.split("\n")[0].trim().slice(0, 30).replace(/'/g, "’").replace(/\)\)/g, ") )");
                 const ref = anchorText
                     ? `((${blockID} '${anchorText}'))`
                     : `((${blockID}))`;
                 const ok = await copyToClipboard(ref);
-                showMessage(ok ? "已复制块引用，可直接粘贴到笔记中" : "复制失败，请检查剪贴板权限", 2400, ok ? "info" : "error");
+                showMessage(ok ? execMsg(host, "executor.refCopied", "已复制块引用，可直接粘贴到笔记中") : execMsg(host, "executor.copyFailedPermission", "复制失败，请检查剪贴板权限"), 2400, ok ? "info" : "error");
                 return;
             }
 
@@ -529,21 +648,28 @@ export async function executeBlockAction(
                         if (t) texts.push(t);
                     }
                     if (texts.length === 0) {
-                        showMessage("选中的块没有可复制的正文文本", 2200, "info");
+                        showMessage(execMsg(host, "executor.noTextForCopyBatch", "选中的块没有可复制的正文文本"), 2200, "info");
                         return;
                     }
                     const ok = await copyToClipboard(texts.join("\n\n"));
-                    showMessage(ok ? `已批量复制 ${texts.length} 个块的纯文本` : "复制失败，请检查剪贴板权限", 2200, ok ? "info" : "error");
+                    showMessage(ok ? execMsg(host, "executor.textCopiedBatch", "已批量复制 {n} 个块的纯文本", {n: texts.length}) : execMsg(host, "executor.copyFailedPermission", "复制失败，请检查剪贴板权限"), 2200, ok ? "info" : "error");
                     return;
                 }
 
                 const text = await readBlockText(blockID);
                 if (!text) {
-                    showMessage("该块没有可复制的文本", 2200, "info");
+                    showMessage(execMsg(host, "executor.noTextForCopy", "该块没有可复制的文本"), 2200, "info");
                     return;
                 }
                 const ok = await copyToClipboard(text);
-                showMessage(ok ? "已复制纯文本" : "复制失败，请检查剪贴板权限", 2200, ok ? "info" : "error");
+                showMessage(ok ? execMsg(host, "executor.textCopied", "已复制纯文本") : execMsg(host, "executor.copyFailedPermission", "复制失败，请检查剪贴板权限"), 2200, ok ? "info" : "error");
+                return;
+            }
+
+            case "copy-block-id": {
+                const payload = targetIDs.join("\n");
+                const ok = await copyToClipboard(payload);
+                showMessage(ok ? (isBatch ? execMsg(host, "executor.blockIdCopiedBatch", "已批量复制 {n} 个块 ID", {n: targetIDs.length}) : execMsg(host, "executor.blockIdCopied", "已复制块 ID: {id}", {id: blockID})) : execMsg(host, "executor.copyFailedPermission", "复制失败，请检查剪贴板权限"), 2200, ok ? "info" : "error");
                 return;
             }
 
@@ -553,7 +679,7 @@ export async function executeBlockAction(
         }
     } catch (err: any) {
         lvLog("error", `[block-action] ${action.id} failed: ${err?.message || String(err)}`);
-        showMessage("该操作未能完成，请稍后重试", 2600, "info");
+        showMessage(execMsg(host, "executor.actionFailedRetry", "该操作未能完成，请稍后重试"), 2600, "info");
     }
 }
 
@@ -570,15 +696,25 @@ export function probeEcosystemPresence(): EcosystemPresence {
         return cachedPresence;
     }
     const w = window as unknown as Record<string, any>;
-    const has = (aliases: string[]) => aliases.some((a) => w[a] && typeof w[a] === "object");
+    const installedPluginIds = new Set<string>();
+    const plugins = w.siyuan?.ws?.app?.plugins;
+    if (Array.isArray(plugins)) {
+        for (const p of plugins) {
+            const pid = String(p.name || p.id || "");
+            if (pid) installedPluginIds.add(pid);
+        }
+    }
+    const has = (aliases: string[], officialId?: string) =>
+        aliases.some((a) => w[a] && typeof w[a] === "object") || Boolean(officialId && installedPluginIds.has(officialId));
+
     const res: EcosystemPresence = {
-        exam: has(["LvExam", "siyuanExam", "xiaolvExam", "lvExam"]),
-        home: has(["LvHome", "siyuanHome", "xiaolvHome", "lvHome"]),
-        contacts: has(["LvContacts", "lvContacts", "xiaolvContacts", "siyuanContacts"]),
-        glean: has(["siyuanGlean", "xiaolvGlean", "lvGlean", "LvGlean"]),
-        checkin: has(["siyuanCheckin", "LvCheckin", "lvCheckin", "xiaolvCheckin"]),
-        raikiri: has(["siyuanSpeedSwitch", "xiaolvSpeedSwitch", "xiaolvRaikiri", "lvRaikiri"]),
-        common: has(["xiaolvCommon", "LvCommon", "lvCommon", "siyuanCommon"]),
+        exam: has(["LvExam", "siyuanExam", "xiaolvExam", "lvExam"], "siyuan-exam"),
+        home: has(["LvHome", "siyuanHome", "xiaolvHome", "lvHome"], "siyuan-home"),
+        contacts: has(["LvContacts", "lvContacts", "xiaolvContacts", "siyuanContacts"], "siyuan-contacts"),
+        glean: has(["siyuanGlean", "xiaolvGlean", "lvGlean", "LvGlean"], "siyuan-glean"),
+        checkin: has(["siyuanCheckin", "LvCheckin", "lvCheckin", "xiaolvCheckin"], "siyuan-checkin"),
+        raikiri: has(["siyuanSpeedSwitch", "xiaolvSpeedSwitch", "xiaolvRaikiri", "lvRaikiri"], "siyuan-speed-switch"),
+        common: has(["xiaolvCommon", "LvCommon", "lvCommon", "siyuanCommon"], "xiaolv-common"),
     };
     cachedPresence = res;
     cachedPresenceTime = now;
@@ -604,10 +740,25 @@ function setCachedAttrs(blockID: string, attrs: Record<string, string>) {
     blockAttrsCache.set(blockID, { attrs, time: Date.now() });
 }
 
+/** 纯净提取块内可见正文，递归剥离 .protyle-attr 属性栏与胶囊微按钮，杜绝脏文本污染 */
+export function getCleanBlockText(el: HTMLElement | null): string {
+    if (!el) return "";
+    const edit = el.querySelector<HTMLElement>(':scope > [contenteditable="true"]')
+        || el.querySelector<HTMLElement>('[contenteditable="true"]');
+    if (edit) {
+        const clone = edit.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach(n => n.remove());
+        return (clone.textContent || "").trim();
+    }
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach(n => n.remove());
+    return (clone.textContent || "").trim();
+}
+
 /** 读取块属性并组装菜单所需的块快照（优先 DOM 同步极速提取，消除网络往返，达成 0ms 秒开） */
 export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: string[]): Promise<BlockSnapshot> {
     const el = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-        || document.querySelector(`[data-node-id="${blockID}"]`);
+        || queryBlockElementById(blockID); // 2026-11-21 修复：兜底改用排除面包屑冒名者的精确查询
 
     // 1. 同步极速提取 DOM 属性（0ms 零网络开销）
     const domAttrs: Record<string, string> = {};
@@ -642,21 +793,24 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
         // 普通块快路径：零 RPC，直接以空属性继续
     } else if (!attrs["custom-riff-decks"] && !attrs["custom-riff-title"] && !attrs["custom-lv-note-review"]) {
         try {
-            const fetched = await Promise.race([
-                getBlockAttrs(blockID),
+            // 2026-11-21 走查修复：45ms 竞速超时（RPC 未归）时不再无条件缓存——外部 API 唤起等
+            // 慢响应场景会把空属性缓存 4s，isCard/hasText 误判致「加入卡组」等门禁失准。
+            let rpcWon = false;
+            const raced = await Promise.race([
+                getBlockAttrs(blockID).then((r) => { rpcWon = true; return r; }),
                 new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(domAttrs), 45)),
             ]);
-            if (fetched && Object.keys(fetched).length > 0) {
-                attrs = { ...domAttrs, ...fetched };
+            if (rpcWon && raced && Object.keys(raced).length > 0) {
+                attrs = { ...domAttrs, ...raced };
             }
-            setCachedAttrs(blockID, attrs);
+            if (rpcWon) setCachedAttrs(blockID, attrs);
         } catch {
             attrs = domAttrs;
         }
     }
 
     const domIsDoc = el?.getAttribute("data-type") === "NodeDocument";
-    const domText = (el?.textContent || "").trim();
+    const domText = getCleanBlockText(el as HTMLElement | null);
     const blockKind = inferBlockKindFromElement(el as HTMLElement | null);
     let headingLevel: number | undefined;
     if (blockKind === "heading" && el) {
@@ -678,13 +832,22 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
 
     // 块内是否包含图片（遮挡卡门禁）
     const hasImage = Boolean(el?.querySelector("img"));
+    // 块内是否包含挖空或问答结构（闪卡加入卡组门禁）
+    const hasCloze = Boolean(
+        el?.querySelector('mark, span[data-type="mark"]')
+        || /==[^=]+==/.test(domText)
+    );
+    const hasQaPattern = Boolean(
+        /::|Q:[\s\S]+A:|问：[\s\S]+答：/i.test(domText)
+    );
+    const isFolded = Boolean(el?.getAttribute("data-fold") === "1" || el?.getAttribute("fold") === "1" || el?.classList.contains("protyle-wysiwyg--fold"));
 
-    // 探查当前编辑器内多选选中的块
+    // 探查当前编辑器内多选选中的块（严格校验当前块必须属于选中集合，防止误判视口历史选区）
     let batchBlockIDs = explicitBatchIDs && explicitBatchIDs.length > 1 ? explicitBatchIDs : undefined;
     if (!batchBlockIDs && typeof document !== "undefined") {
         const selectEls = Array.from(document.querySelectorAll<HTMLElement>(".layout__wnd--active .protyle-wysiwyg--select[data-node-id], .protyle-wysiwyg--select[data-node-id]"));
-        const selectedIDs = selectEls.map((e) => e.getAttribute("data-node-id") || "").filter(Boolean);
-        if (selectedIDs.length > 1) {
+        const selectedIDs = Array.from(new Set(selectEls.map((e) => e.getAttribute("data-node-id") || "").filter(Boolean)));
+        if (selectedIDs.length > 1 && selectedIDs.includes(blockID)) {
             batchBlockIDs = selectedIDs;
         }
     }
@@ -699,6 +862,9 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
         isDocReview: attrs["custom-lv-note-review"] === "true",
         hasSelection,
         hasImage,
+        hasCloze,
+        hasQaPattern,
         hasText: domText.length > 0,
+        isFolded,
     };
 }

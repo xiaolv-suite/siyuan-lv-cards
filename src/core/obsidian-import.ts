@@ -88,7 +88,10 @@ function toMarkdown(card: SrParsedCard, deckTag: string): string {
         return escapeHeadingLines(stripDeckTag(card.front, deckTag));
     }
     const front = stripDeckTag(card.front, deckTag);
-    const back = stripDeckTag(card.back, deckTag);
+    let back = stripDeckTag(card.back, deckTag);
+    if (back.startsWith("==") && back.endsWith("==") && back.length > 4) {
+        back = back.slice(2, -2).trim();
+    }
     const sep = front.includes("\n") ? "\n" : " ";
     return escapeHeadingLines(`${front}${sep}==${back}==`);
 }

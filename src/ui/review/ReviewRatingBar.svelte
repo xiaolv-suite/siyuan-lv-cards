@@ -212,22 +212,17 @@
 <style lang="scss">
     .lv-actions {
         display: flex;
-        gap: var(--lv-sp-3);
+        gap: var(--lv-sp-2);
         justify-content: center;
-        max-width: 640px;
+        max-width: 100%;
         width: 100%;
-        margin: var(--lv-sp-1) auto 0;
-        padding-top: var(--lv-sp-2);
-        padding-bottom: max(var(--lv-sp-2), env(safe-area-inset-bottom));
+        margin: 0 auto;
+        padding-top: 2px;
+        padding-bottom: 2px;
         box-sizing: border-box;
-        position: sticky;
-        bottom: 0;
-        z-index: calc(var(--lv-z-card-control) + 1);
-        background: linear-gradient(
-            to bottom,
-            color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 78%, transparent),
-            var(--lv-bg-page, var(--b3-theme-background)) 28%
-        );
+        position: relative;
+        z-index: 1;
+        background: transparent;
 
         .lv-step-wrap {
             width: 100%;
@@ -256,8 +251,8 @@
             gap: var(--lv-sp-2);
             .lv-btn-rate {
                 max-width: 150px;
-                padding: calc(var(--lv-space-unit) * 5) calc(var(--lv-space-unit) * 7);
-                min-height: 52px;
+                padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 6);
+                min-height: 48px;
             }
         }
 
@@ -265,16 +260,16 @@
            保证评分按钮与卡片内容在矮视口内同框可达。 */
         @media (max-height: 430px) and (orientation: landscape) {
             margin-top: 0;
-            padding-top: var(--lv-sp-1);
+            padding-top: 0;
 
             &.lv-actions-compact .lv-btn-rate {
-                min-height: 44px;
+                min-height: 42px;
             }
         }
 
         .lv-btn-wide {
             flex: 1;
-            min-height: 46px;
+            min-height: 42px;
             border-radius: var(--lv-r-pill);
             background: var(--lv-color-brand);
             border: 1px solid transparent;
@@ -336,20 +331,21 @@
         }
 
         .lv-btn-rate {
-            flex: 1;
-            max-width: 180px;
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: none;
             animation: lv-rating-reveal var(--lv-dur-2) var(--lv-ease);
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            gap: calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline));
+            gap: 2px;
             text-align: left;
-            border-radius: var(--lv-r-m);
-            border: 1px solid var(--lv-border);
-            padding: calc(var(--lv-space-unit) * 7) calc(var(--lv-space-unit) * 8 + var(--lv-space-hairline));
-            min-height: 80px;
-            background: var(--lv-color-surface);
-            box-shadow: var(--lv-shadow-1);
+            border-radius: var(--lv-r-m, 10px);
+            border: 1px solid color-mix(in srgb, var(--lv-border) 80%, transparent);
+            padding: 6px 12px;
+            min-height: 48px;
+            background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
@@ -360,8 +356,8 @@
                 filter var(--lv-dur-1) var(--lv-ease);
 
             &:hover {
-                transform: translateY(-2px);
-                box-shadow: var(--lv-shadow-2);
+                transform: translateY(-1.5px);
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
                 border-color: var(--lv-border-strong);
             }
             &:active {
@@ -389,41 +385,49 @@
                 }
             }
             small {
-                opacity: 0.72;
+                font-weight: 600;
                 font-size: var(--lv-type-meta-size);
                 font-variant-numeric: tabular-nums;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 max-width: 100%;
+                opacity: 0.92;
             }
         }
 
-        /* Mobile Spec v2：窄屏评级栏改为紧凑单行布局（高度从 ~180px 降至 ~56px），软键盘弹起时避免把 .lv-card 挤没 */
+        .lv-b1 small { color: color-mix(in srgb, var(--lv-color-danger) 85%, var(--lv-color-text)); }
+        .lv-b2 small { color: color-mix(in srgb, var(--lv-color-warning) 85%, var(--lv-color-text)); }
+        .lv-b3 small { color: color-mix(in srgb, var(--lv-color-brand) 85%, var(--lv-color-text)); }
+        .lv-b4 small { color: color-mix(in srgb, var(--lv-color-success, #10B981) 85%, var(--lv-color-text)); }
+
+        .lv-btn-suggested {
+            border-color: var(--lv-color-brand) !important;
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv-color-brand) 28%, transparent), var(--lv-shadow-2) !important;
+        }
+
+        /* Mobile Spec v2：窄屏评级栏紧凑单行布局（高度~44px），消除双重 safe-area 与穿透 */
         @media (max-width: 740px) {
             display: flex;
             flex-wrap: nowrap;
             gap: 6px;
-            margin-top: var(--lv-sp-1);
-            padding-top: var(--lv-sp-2);
-            padding-bottom: max(var(--lv-sp-2), env(safe-area-inset-bottom));
-            padding-left: 6px;
-            padding-right: 6px;
-            background: linear-gradient(
-                to bottom,
-                color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 68%, transparent),
-                var(--lv-bg-page, var(--b3-theme-background)) 28%
-            );
-            border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+            margin-top: 0;
+            padding-top: 1px;
+            padding-bottom: 2px;
+            padding-left: 4px;
+            padding-right: 4px;
+            background: transparent;
+            border-top: none;
+
             .lv-btn-rate {
                 flex: 1 1 0;
                 min-width: 0;
                 max-width: none;
                 min-height: 44px;
-                padding: 6px 4px;
+                padding: 5px 3px;
                 align-items: center;
                 text-align: center;
-                gap: 2px;
+                gap: 1px;
                 box-sizing: border-box;
 
                 .lv-rate-top {
@@ -441,7 +445,7 @@
             }
             .lv-btn-wide {
                 flex: 1 1 100%;
-                min-height: 46px;
+                min-height: 44px;
                 .lv-btn-wide-kbd {
                     display: none;
                 }

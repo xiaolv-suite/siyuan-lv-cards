@@ -57,13 +57,17 @@ export function serializeQaCard(q: string, a: string): string {
 
 export function hasMarkedAnswer(markdown: string): boolean {
     const text = String(markdown ?? "");
-    // A marker is exactly two equals signs. Without this guard a malformed
-    // run such as `==answer===` can be matched from the first two signs while
-    // leaving an unmatched third sign behind.
-    if (/={3,}/.test(text)) return false;
-    const matches = [...text.matchAll(/==([\s\S]*?)==/g)];
-    if (matches.length === 0 || matches.some(match => !match[1]?.trim())) return false;
-    return !text.replace(/==[\s\S]*?==/g, "").includes("==");
+    // 挖空定界符规范：必须且仅能为连续两个等号（前后均不能紧挨等号），
+    // 既能精准排除畸形标记（如 ===answer== 或 ==answer===），又天然保护代码中合法的 === 严格全等运算符
+    const CLOZE_REGEX = /(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g;
+    const matches = [...text.matchAll(CLOZE_REGEX)];
+    if (matches.length === 0) return false;
+    for (const match of matches) {
+        const content = match[1];
+        if (!content || !content.trim()) return false;
+    }
+    const withoutValidClozes = text.replace(CLOZE_REGEX, "");
+    return !/(?<!=)==(?!=)/.test(withoutValidClozes);
 }
 
 /** Cloze export must hide every plain-text answer fragment, including extra fields. */

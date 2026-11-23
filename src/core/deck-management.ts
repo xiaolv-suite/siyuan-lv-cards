@@ -185,7 +185,7 @@ export function discoverLegacyDecks(
                     source: "标签卡包 (#deck/...)",
                 });
             }
-        } else if (b.markdown.includes("==") && !(typeof b.ial === "string" ? b.ial : (b.ial ? JSON.stringify(b.ial) : "")).includes("custom-riff-decks")) {
+        } else if (/(?<!=)==(?!=)/.test(b.markdown) && !(typeof b.ial === "string" ? b.ial : (b.ial ? JSON.stringify(b.ial) : "")).includes("custom-riff-decks")) {
             // 未归组的孤儿闪卡（正文带挖空但无任何卡包关联）
             orphanBlockIDs.push(b.id);
         }
@@ -225,6 +225,24 @@ export interface DeckSyncHelpers {
     addRiffCards: (deckID: string, blockIDs: string[]) => Promise<any>;
 }
 
+/** 内核 addRiffCards 单请求写入上限：超大卡包（如"未归组闪卡"全量孤儿块）一次性 POST
+ *  可能触发内核请求体超限或长事务超时，按 200 块/批顺序写入，任何一批失败立即中断。 */
+const ADD_RIFF_CARDS_CHUNK_SIZE = 200;
+
+async function addRiffCardsChunked(
+    addRiffCards: (deckID: string, blockIDs: string[]) => Promise<any>,
+    deckID: string,
+    blockIDs: readonly string[],
+): Promise<number> {
+    let added = 0;
+    for (let i = 0; i < blockIDs.length; i += ADD_RIFF_CARDS_CHUNK_SIZE) {
+        const chunk = blockIDs.slice(i, i + ADD_RIFF_CARDS_CHUNK_SIZE);
+        await addRiffCards(deckID, chunk);
+        added += chunk.length;
+    }
+    return added;
+}
+
 /**
  * 将发现的第三方/存量卡包一键接入并同步为思源原生 RiffDeck
  */
@@ -239,14 +257,15 @@ export async function syncDiscoveredDeckToRiff(
         target = await helpers.createRiffDeck(discovered.name);
     }
 
+    let addedCount = 0;
     if (discovered.blockIDs.length > 0) {
-        await helpers.addRiffCards(target.id, discovered.blockIDs);
+        addedCount = await addRiffCardsChunked(helpers.addRiffCards, target.id, discovered.blockIDs);
     }
 
     return {
         deckID: target.id,
         deckName: target.name,
-        addedCount: discovered.blockIDs.length,
+        addedCount,
     };
 }
 
@@ -269,28 +288,40 @@ export async function mergeRiffDecks(
         return { mergedCount: 0 };
     }
 
-    // 分页获取源卡包全部卡片
+    // 分页获取源卡包全部卡片（total 异常时按"页未满即最后一页"收敛，并设硬页上限防病态循环）
     const allBlockIDs: string[] = [];
+    const seenBlockIDs = new Set<string>();
+    const PAGE_SIZE = 50;
+    const MAX_PAGES = 400;
     let page = 1;
-    while (true) {
-        const resp = await helpers.getRiffCards(sourceDeckID, page, 50);
+    while (page <= MAX_PAGES) {
+        const resp = await helpers.getRiffCards(sourceDeckID, page, PAGE_SIZE);
         if (!resp || !resp.blocks || resp.blocks.length === 0) break;
         for (const b of resp.blocks) {
-            if (b.id) allBlockIDs.push(b.id);
+            if (b.id && !seenBlockIDs.has(b.id)) {
+                seenBlockIDs.add(b.id);
+                allBlockIDs.push(b.id);
+            }
         }
-        if (allBlockIDs.length >= resp.total) break;
+        const total = Number(resp.total);
+        if (Number.isFinite(total) && total > 0) {
+            if (allBlockIDs.length >= total) break;
+        } else if (resp.blocks.length < PAGE_SIZE) {
+            break;
+        }
         page++;
     }
 
+    let mergedCount = 0;
     if (allBlockIDs.length > 0) {
-        await helpers.addRiffCards(targetDeckID, allBlockIDs);
+        mergedCount = await addRiffCardsChunked(helpers.addRiffCards, targetDeckID, allBlockIDs);
     }
 
     if (options?.deleteSourceDeck && helpers.removeRiffDeck) {
         await helpers.removeRiffDeck(sourceDeckID);
     }
 
-    return { mergedCount: allBlockIDs.length };
+    return { mergedCount };
 }
 
 /**

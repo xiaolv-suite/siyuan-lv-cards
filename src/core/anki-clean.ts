@@ -64,6 +64,9 @@ export function cleanAnkiField(html: string): CleanResult {
     });
 
     // 4) LaTeX 定界符归一（思源公式语法）
+    s = s.replace(/\[\$\$\]([\s\S]*?)\[\/\$\$\]/gi, (_m, body) => `$$${body}$$`);
+    s = s.replace(/\[\$\]([\s\S]*?)\[\/\$\]/gi, (_m, body) => `$${body}$`);
+    s = s.replace(/\[latex\]([\s\S]*?)\[\/latex\]/gi, (_m, body) => `$$${body}$$`);
     s = s.replace(/\\\((.+?)\\\)/gs, (_m, body) => `$${body}$`);
     s = s.replace(/\\\[(.+?)\\\]/gs, (_m, body) => `$$${body}$$`);
 

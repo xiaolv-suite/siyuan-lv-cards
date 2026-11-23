@@ -29,6 +29,14 @@ export interface ReviewHistorySnapshot<TCard = any> {
     faceError: string;
     occlusion: OcclusionData | null;
     counters: ReviewCounters;
+    /** 闪卡属性题面标题（custom-riff-title / custom-lv-question），供撤销时即时无缝还原题面 */
+    customRiffTitle?: string;
+    /** 免侵入问答卡自定义答案（custom-riff-answer） */
+    customRiffAnswer?: string;
+    /** 块备注答案 */
+    cardMemo?: string;
+    /** 块属性集合（选择题/判断题等题型属性快照） */
+    cardAttrs?: Record<string, string> | null;
     /** 仅当本次操作实际写入了正式 revlog 时为 true；跳过、重现卡与 Cram 模式均为 false，防止撤销时误删历史记录 */
     revlogAppended?: boolean;
     /** 若本次操作为 Ctrl+D 归档隐藏卡片，记录被归档的 blockID 以供撤销时恢复 */
@@ -56,6 +64,10 @@ export function createReviewHistorySnapshot<TCard>(input: {
     faceError: string;
     occlusion: OcclusionData | null;
     counters: ReviewCounters;
+    customRiffTitle?: string;
+    customRiffAnswer?: string;
+    cardMemo?: string;
+    cardAttrs?: Record<string, string> | null;
     revlogAppended?: boolean;
     dismissedBlockID?: string;
     suspendedCardID?: string;
@@ -73,6 +85,10 @@ export function createReviewHistorySnapshot<TCard>(input: {
         faceError: input.faceError,
         occlusion: input.occlusion ? { v: input.occlusion.v, rects: [...input.occlusion.rects] } : null,
         counters: { ...input.counters },
+        ...(input.customRiffTitle !== undefined ? { customRiffTitle: input.customRiffTitle } : {}),
+        ...(input.customRiffAnswer !== undefined ? { customRiffAnswer: input.customRiffAnswer } : {}),
+        ...(input.cardMemo !== undefined ? { cardMemo: input.cardMemo } : {}),
+        ...(input.cardAttrs !== undefined ? { cardAttrs: input.cardAttrs ? { ...input.cardAttrs } : null } : {}),
         ...(input.revlogAppended !== undefined ? { revlogAppended: input.revlogAppended } : {}),
         ...(input.dismissedBlockID ? { dismissedBlockID: input.dismissedBlockID } : {}),
         ...(input.suspendedCardID ? { suspendedCardID: input.suspendedCardID } : {}),

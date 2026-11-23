@@ -24,7 +24,7 @@ export function allTypeSampleCards(): SampleCardItem[] {
         },
         {
             kind: "superblock",
-            md: "示例 · 超级块多段问答：\n{{{col\n细胞呼吸分为哪三个阶段？\n\n糖酵解、柠檬酸循环、氧化磷酸化。\n\n糖酵解的场所是哪里？\n\n细胞质基质。\n}}}",
+            md: "{{{col\n示例 · 超级块多段问答：细胞呼吸分为哪三个阶段？\n\n糖酵解、柠檬酸循环、氧化磷酸化。\n\n糖酵解的场所是哪里？\n\n细胞质基质。\n}}}",
         },
         {
             kind: "bidi-a",
@@ -68,7 +68,7 @@ export function allTypeSampleCards(): SampleCardItem[] {
         },
         {
             kind: "table",
-            md: "示例 · 表格卡：FSRS 的三大核心变量分别是什么？\n| 变量 | 全称 | 含义 |\n| --- | --- | --- |\n| D | Difficulty | ==难度== |\n| S | Stability | ==稳定性== |\n| R | Retrievability | ==可提取性== |",
+            md: "| 示例 · 表格卡 (FSRS 核心变量) | 全称 | 含义 |\n| --- | --- | --- |\n| D | Difficulty | ==难度== |\n| S | Stability | ==稳定性== |\n| R | Retrievability | ==可提取性== |",
         },
     ];
 }

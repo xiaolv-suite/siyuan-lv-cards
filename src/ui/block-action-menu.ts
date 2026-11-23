@@ -100,6 +100,7 @@ function positionMenu(menu: HTMLElement, anchor: HTMLElement, estWidth: number):
 
     let top: number;
     let maxHeight: number;
+    let isAbove = false;
     if (belowAvail >= Math.min(estHeight, MIN_USABLE)) {
         // 下方空间充足：向下展开，剩余高度截断（内部滚动）
         top = anchorRect.bottom + gap;
@@ -108,10 +109,21 @@ function positionMenu(menu: HTMLElement, anchor: HTMLElement, estWidth: number):
         // 下方不足、上方充足：向上展开，底边对齐锚点上缘（不遮挡锚点）
         top = anchorRect.top - gap - estHeight;
         maxHeight = aboveAvail;
+        isAbove = true;
+    } else if (aboveAvail > belowAvail) {
+        // 双向虽皆紧凑，但上方空间明显更大：智能向上展开，最大化可用可视区
+        maxHeight = Math.max(120, aboveAvail);
+        top = anchorRect.top - gap - maxHeight;
+        isAbove = true;
     } else {
-        // 双向都不足：向下截断，宁可矮也不遮锚点
+        // 下方空间更大或持平：向下展开，严格以可用边界截断
         top = anchorRect.bottom + gap;
-        maxHeight = Math.max(160, belowAvail);
+        maxHeight = Math.max(120, belowAvail);
+    }
+    if (isAbove) {
+        menu.classList.add(`${MENU_CLASS}--above`);
+    } else {
+        menu.classList.remove(`${MENU_CLASS}--above`);
     }
 
     let left = anchorRect.right - estWidth;
@@ -138,9 +150,12 @@ function positionMenu(menu: HTMLElement, anchor: HTMLElement, estWidth: number):
             } else if (aboveAvail >= MIN_USABLE) {
                 exactTop = anchorRect.top - gap - actualHeight;
                 exactMax = aboveAvail;
+            } else if (aboveAvail > belowAvail) {
+                exactMax = Math.max(120, aboveAvail);
+                exactTop = anchorRect.top - gap - Math.min(actualHeight, exactMax);
             } else {
                 exactTop = anchorRect.bottom + gap;
-                exactMax = Math.max(160, belowAvail);
+                exactMax = Math.max(120, belowAvail);
             }
 
             let exactLeft = anchorRect.right - actualRect.width;
@@ -161,6 +176,7 @@ function renderSection(
     i18n: Record<string, any> | undefined,
     onPick: (action: BlockActionDescriptor) => void,
     dense: boolean,
+    snapshot?: BlockSnapshot,
 ): HTMLElement {
     const wrap = document.createElement("div");
     wrap.className = `${MENU_CLASS}__section`;
@@ -203,13 +219,33 @@ function renderSection(
             item.classList.add(`${MENU_CLASS}__item--danger`);
         }
 
+        // 动态自适应动作文案（如折叠状态）
+        let actionLabel = pickLabel(i18n, action.labelKey, action.fallbackLabel);
+        let actionSubtitle = action.subtitle;
+        let actionGlyph = action.glyph;
+
+        if (action.id === "toggle-fold-block" && snapshot) {
+            if (snapshot.isFolded) {
+                actionLabel = "展开子分支";
+                actionSubtitle = "展开该块下属的大纲与全部子节点";
+                actionGlyph = "📂";
+            } else {
+                actionLabel = "折叠子分支";
+                actionSubtitle = "快速收起该块下属的大纲与子节点";
+                actionGlyph = "📁";
+            }
+        } else if (action.id === "add-to-deck" && snapshot?.isCard) {
+            actionLabel = "更换所属卡组";
+            actionSubtitle = "当前块已在复习卡包中，点击可变更卡组归属";
+        }
+
         // 左侧单字/语义字形图标徽章
         const glyphWrap = document.createElement("div");
         glyphWrap.className = `${MENU_CLASS}__glyph-wrap`;
         const glyph = document.createElement("span");
         glyph.className = `${MENU_CLASS}__glyph`;
         glyph.setAttribute("aria-hidden", "true");
-        glyph.textContent = action.glyph;
+        glyph.textContent = actionGlyph;
         glyphWrap.appendChild(glyph);
         item.appendChild(glyphWrap);
 
@@ -222,19 +258,19 @@ function renderSection(
 
         const text = document.createElement("span");
         text.className = `${MENU_CLASS}__label`;
-        text.textContent = pickLabel(i18n, action.labelKey, action.fallbackLabel);
+        text.textContent = actionLabel;
         titleRow.appendChild(text);
 
         contentWrap.appendChild(titleRow);
 
-        if (action.subtitle) {
+        if (actionSubtitle) {
             if (dense) {
                 // Command 中枢模式：副标题降级为原生悬浮提示，省 DOM 与纵向空间，信息不丢失
-                item.title = action.subtitle;
+                item.title = actionSubtitle;
             } else {
                 const sub = document.createElement("div");
                 sub.className = `${MENU_CLASS}__item-subtitle`;
-                sub.textContent = action.subtitle;
+                sub.textContent = actionSubtitle;
                 contentWrap.appendChild(sub);
             }
         }
@@ -298,10 +334,11 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         return () => { /* 无可执行动作 */ };
     }
 
-    // ── 自适应密度判定（O(1)）：> 阈值进入 Command 中枢双列模式 ──
+    // ── 自适应密度判定（O(1)）：桌面端 > 阈值进入 Command 中枢双列模式，移动端保持轻量单列 ──
+    const isMobileViewport = typeof window !== "undefined" && window.innerWidth <= 640;
     const totalCount = sections.reduce((sum, s) => sum + s.actions.length, 0);
-    const dense = totalCount > BLOCK_ACTION_DENSE_THRESHOLD;
-    const currentEstWidth = dense ? 470 : 320;
+    const dense = !isMobileViewport && totalCount > BLOCK_ACTION_DENSE_THRESHOLD;
+    const currentEstWidth = isMobileViewport ? Math.min(window.innerWidth - 24, 320) : (dense ? 470 : 320);
 
     const menu = document.createElement("div");
     menu.className = `${MENU_CLASS} b3-menu${dense ? ` ${MENU_CLASS}--dense` : ""}`;
@@ -343,6 +380,9 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
     }
     header.appendChild(badge);
 
+    const toolsWrap = document.createElement("div");
+    toolsWrap.style.cssText = "display: flex; align-items: center; gap: 6px; margin-left: auto;";
+
     const blockIdEl = document.createElement("span");
     blockIdEl.className = `${MENU_CLASS}__blockid`;
     if (isBatch) {
@@ -352,7 +392,27 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         blockIdEl.textContent = `#${snapshot.blockID.slice(0, 10)}`;
         blockIdEl.title = snapshot.blockID;
     }
-    header.appendChild(blockIdEl);
+    toolsWrap.appendChild(blockIdEl);
+
+    // 右上角：【📦 资产库】直达按钮（置于头部右上角，直观且不遮挡主菜单内容）
+    const storeBtn = document.createElement("button");
+    storeBtn.type = "button";
+    storeBtn.className = `${MENU_CLASS}__store-btn`;
+    storeBtn.style.cssText = "border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 28%, transparent); background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 10%, var(--b3-theme-surface, transparent)); cursor: pointer; color: var(--b3-theme-primary, #6366f1); font-size: 11px; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-weight: 600; line-height: 1.2; transition: all 0.15s ease;";
+    storeBtn.title = "打开块助手资产库，分类装配动作与快捷栏";
+    storeBtn.innerHTML = `<span>📦</span><span>资产库</span>`;
+    storeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeBlockActionMenu();
+        const hub = (window as any).LvBlockAssistant || (window as any).__LV_BLOCK_ASSISTANT_HUB__;
+        if (hub && typeof hub.openStoreDialog === "function") {
+            hub.openStoreDialog();
+        }
+    });
+    toolsWrap.appendChild(storeBtn);
+
+    header.appendChild(toolsWrap);
     menu.appendChild(header);
 
     const pick = (action: BlockActionDescriptor) => {
@@ -362,22 +422,122 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
             .catch(() => { /* 动作层已统一提示 */ });
     };
 
+    // ─────────────────────────────────────────────────────────────
+    // ⭐ 顶部常用优先快捷栏（Top Priority Quick Bar）：
+    // 若用户配置了优先常驻项，在头部下方渲染一行精致单击快捷按钮，
+    // 标注 1~5 数字角标，支持键盘数字闪电直达与一键极速触发。
+    // ─────────────────────────────────────────────────────────────
+    const pinnedActionIds = preferences?.pinnedActionIds ?? [];
+    if (pinnedActionIds.length > 0) {
+        const availableActionMap = new Map<string, BlockActionDescriptor>();
+        for (const sec of sections) {
+            for (const act of sec.actions) {
+                availableActionMap.set(act.id, act);
+            }
+        }
+
+        const activePinnedActions: BlockActionDescriptor[] = [];
+        for (const pId of pinnedActionIds) {
+            const match = availableActionMap.get(pId);
+            if (match) activePinnedActions.push(match);
+        }
+
+        if (activePinnedActions.length > 0) {
+            const quickBar = document.createElement("div");
+            quickBar.className = `${MENU_CLASS}__quick-bar`;
+            quickBar.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px 8px;
+                border-bottom: 1px solid var(--b3-theme-surface-lighter, rgba(0,0,0,0.06));
+                background: color-mix(in srgb, #f59e0b 6%, var(--b3-theme-surface));
+                overflow-x: auto;
+            `;
+
+            activePinnedActions.forEach((act, idx) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = `${MENU_CLASS}__quick-btn`;
+                btn.setAttribute("data-action-id", act.id);
+                btn.style.cssText = `
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    padding: 3px 8px;
+                    border-radius: 6px;
+                    border: 1px solid rgba(245, 158, 11, 0.35);
+                    background: color-mix(in srgb, #f59e0b 10%, var(--b3-theme-surface));
+                    color: var(--b3-theme-on-surface);
+                    cursor: pointer;
+                    font-size: 11.5px;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    transition: all 0.15s ease;
+                `;
+                const actLabel = pickLabel(i18n, act.labelKey, act.fallbackLabel);
+                btn.title = `${actLabel} (快捷键 ${idx + 1})`;
+                // 2026-11-21 走查修复：改 DOM API 组装。第三方 registerAction 的 glyph/label 未转义，
+                // 原 innerHTML 模板存在 HTML 注入面（开放互通动作可注入任意标签）。
+                const numBadge = document.createElement("span");
+                numBadge.style.cssText = "font-size: 9.5px; font-weight: 700; color: #d97706; background: rgba(245, 158, 11, 0.2); border-radius: 3px; padding: 0 4px; line-height: 1.3;";
+                numBadge.textContent = String(idx + 1);
+                const glyphSpan = document.createElement("span");
+                glyphSpan.style.cssText = "font-size: 12px;";
+                glyphSpan.textContent = act.glyph || "⚡";
+                const labelSpan = document.createElement("span");
+                labelSpan.style.cssText = "max-width: 90px; overflow: hidden; text-overflow: ellipsis;";
+                labelSpan.textContent = actLabel;
+                btn.append(numBadge, glyphSpan, labelSpan);
+                btn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pick(act);
+                });
+                quickBar.appendChild(btn);
+            });
+
+            menu.appendChild(quickBar);
+        }
+    }
+
     // 渲染各功能分段
     for (const section of sections) {
-        menu.appendChild(renderSection(section, i18n, pick, dense));
+        menu.appendChild(renderSection(section, i18n, pick, dense, snapshot));
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 底部贴心操作栏：快捷键指引
+    // 底部贴心操作栏：快捷键指引（桌面端支持 1~9 闪电数字直达）
     // ─────────────────────────────────────────────────────────────
     const footer = document.createElement("div");
     footer.className = `${MENU_CLASS}__footer`;
     footer.innerHTML = `
         <span class="${MENU_CLASS}__footer-hint">
-            <kbd>↑</kbd><kbd>↓</kbd> 选择 &nbsp;·&nbsp; <kbd>Enter</kbd> 确认 &nbsp;·&nbsp; <kbd>Esc</kbd> 关闭
+            <kbd>↑</kbd><kbd>↓</kbd> 选择 &nbsp;·&nbsp; <kbd>Enter</kbd> 确认 &nbsp;·&nbsp; <kbd>1~9</kbd> 直达 &nbsp;·&nbsp; <kbd>Esc</kbd> 关闭
         </span>
     `;
     menu.appendChild(footer);
+
+    // 移动端安全阻断遮罩层（防止关闭菜单时意外点透触碰正文超链接或唤起软键盘）
+    let mobileMask: HTMLElement | null = null;
+    if (isMobileViewport) {
+        mobileMask = document.createElement("div");
+        mobileMask.className = `${MENU_CLASS}__mobile-mask`;
+        mobileMask.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 61;
+            background: rgba(15, 23, 42, 0.28);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        `;
+        mobileMask.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeBlockActionMenu();
+        });
+        document.body.appendChild(mobileMask);
+    }
 
     document.body.appendChild(menu);
     activeMenu = menu;
@@ -405,6 +565,25 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
             anchor.focus?.();
             return;
         }
+
+        // 键盘 1~9 闪电数字直达（Raycast / Alfred 级极速流）
+        if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[1-9]$/.test(e.key)) {
+            const num = parseInt(e.key, 10);
+            const quickBtns = Array.from(menu.querySelectorAll<HTMLButtonElement>(`.${MENU_CLASS}__quick-btn`));
+            if (quickBtns.length > 0 && num >= 1 && num <= quickBtns.length) {
+                e.preventDefault();
+                e.stopPropagation();
+                quickBtns[num - 1].click();
+                return;
+            }
+            const items = Array.from(menu.querySelectorAll<HTMLButtonElement>(`.${MENU_CLASS}__item`));
+            if (num >= 1 && num <= items.length) {
+                e.preventDefault();
+                e.stopPropagation();
+                items[num - 1].click();
+                return;
+            }
+        }
         // 方向键导航：Command 双列模式下追加 ←→ 左右移动（网格浏览动线），单列仅 ↑↓
         const isDense = menu.classList.contains(`${MENU_CLASS}--dense`);
         const vertical = e.key === "ArrowDown" || e.key === "ArrowUp";
@@ -425,7 +604,14 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
                     ? items[(idx + 1) % items.length]
                     : items[(idx - 1 + items.length) % items.length];
             }
-            next?.focus();
+            if (next) {
+                try {
+                    next.focus({ preventScroll: true });
+                } catch {
+                    next.focus();
+                }
+                next.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
         }
     };
 
@@ -463,6 +649,10 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         if (followRaf !== null && typeof cancelAnimationFrame === "function") {
             cancelAnimationFrame(followRaf);
             followRaf = null;
+        }
+        if (mobileMask) {
+            mobileMask.remove();
+            mobileMask = null;
         }
         if (targetBlock && targetBlock.isConnected) {
             targetBlock.removeAttribute("data-lv-bam-active");

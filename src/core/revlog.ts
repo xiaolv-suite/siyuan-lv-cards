@@ -254,6 +254,16 @@ export function rollbackLastRevlogEntry(data: RevlogData, cardID?: string): Revl
     if (targetIdx < 0) return null;
     const [removed] = data.entries.splice(targetIdx, 1);
     historyCache.delete(data.entries);
+
+    // 若被撤销卡在当前剩余明细中已无任何有效评分，则从 knownCards 集合中同步移出，避免下次评分时新卡被误计为复习卡
+    if (data.knownCards && !data.entries.some(e => e.cardID === removed.cardID && e.rating > 0)) {
+        const kIdx = data.knownCards.indexOf(removed.cardID);
+        if (kIdx !== -1) {
+            data.knownCards.splice(kIdx, 1);
+            knownCardsCache.delete(data.knownCards);
+        }
+    }
+
     recalcDays(data);
     return removed;
 }

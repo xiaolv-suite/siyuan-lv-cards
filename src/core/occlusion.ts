@@ -17,10 +17,11 @@ export interface OcclusionData {
     rects: OcclusionRect[];
 }
 
-const ATTR_KEY = "lv-occlusion";
+export const ATTR_LV_OCCLUSION = "custom-lv-occlusion";
+export const LEGACY_ATTR_LV_OCCLUSION = "lv-occlusion";
 
 export function parseOcclusion(attrs: Record<string, string>): OcclusionData | null {
-    const raw = attrs[ATTR_KEY];
+    const raw = attrs[ATTR_LV_OCCLUSION] || attrs[LEGACY_ATTR_LV_OCCLUSION];
     if (!raw) {
         return null;
     }
@@ -46,7 +47,13 @@ export function isValidOcclusionRect(value: unknown): value is OcclusionRect {
 }
 
 export function serializeOcclusion(data: OcclusionData): Record<string, string> {
-    return { [ATTR_KEY]: JSON.stringify(data) };
+    const json = JSON.stringify(data);
+    // 只写标准键 custom-lv-occlusion（内核 attributes 表可索引）。
+    // 历史裸键 lv-occlusion 只在 parseOcclusion 的读取侧做兼容回填，绝不在保存侧回写——
+    // 否则遮挡 JSON 会在块 IAL 里双份落盘（数据零污染红线 + IAL 体积翻倍）。
+    return {
+        [ATTR_LV_OCCLUSION]: json,
+    };
 }
 
 export function emptyOcclusion(): OcclusionData {

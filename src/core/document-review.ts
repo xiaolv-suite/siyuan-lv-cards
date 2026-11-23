@@ -43,11 +43,14 @@ export function formatCompactDate(d: Date = new Date()): string {
  */
 export function parseDateString(str: string): Date {
     const clean = String(str ?? "").replace(/-/g, "").trim();
-    if (clean.length >= 8) {
+    if (/^\d{8}$/.test(clean)) {
         const y = parseInt(clean.slice(0, 4), 10);
         const m = parseInt(clean.slice(4, 6), 10) - 1;
         const d = parseInt(clean.slice(6, 8), 10);
-        return new Date(y, m, d, 12, 0, 0);
+        const date = new Date(y, m, d, 12, 0, 0);
+        if (!Number.isNaN(date.getTime()) && date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) {
+            return date;
+        }
     }
     return new Date();
 }
@@ -66,7 +69,7 @@ export function calculateDocNextSchedule(
     const safeEase = Math.max(1.3, ease || 2.5);
 
     if (rating === 1) {
-        const nextDate = new Date(today.getTime() + 1 * 86400000);
+        const nextDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 12, 0, 0);
         return {
             nextInterval: 1,
             nextReps: 0,
@@ -92,7 +95,8 @@ export function calculateDocNextSchedule(
 
     // 边界极值截断：1 ~ 365 天
     const finalInterval = Math.min(365, Math.max(1, nextInterval));
-    const nextDueDate = formatCompactDate(new Date(today.getTime() + finalInterval * 86400000));
+    const nextDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + finalInterval, 12, 0, 0);
+    const nextDueDate = formatCompactDate(nextDate);
 
     return {
         nextInterval: finalInterval,
@@ -104,13 +108,16 @@ export function calculateDocNextSchedule(
 
 /**
  * 组装 SQL 查询所有已加入温故流的文档列表
+ * 放宽检索上限至 2000 篇，优先调度更早加入/更早更新的待复习文档，
+ * 彻底消除硬编码 LIMIT 200 导致的长期未改动文档复习饥饿
  */
-export function buildDocReviewQuerySql(): string {
+export function buildDocReviewQuerySql(limit: number = 2000): string {
+    const safeLimit = Math.min(5000, Math.max(50, limit));
     return `SELECT id, content, hpath, ial 
             FROM blocks 
             WHERE type = 'd' 
               AND (ial LIKE '%custom-lv-note-review="true"%' OR ial LIKE '%custom-lv-note-review=''true''%' OR ial LIKE '%custom-lv-note-review=true%') 
-            ORDER BY updated DESC LIMIT 200;`;
+            ORDER BY updated ASC LIMIT ${safeLimit};`;
 }
 
 /**
@@ -144,11 +151,13 @@ export function parseDocReviewItem(row: any, today: Date = new Date()): DocRevie
     const ease = parseFloat(extractAttrFromIal(ial, "custom-lv-note-ease") || "2.5") || 2.5;
     const deckId = extractAttrFromIal(ial, "custom-riff-decks") || "default";
 
-    // 计算到期日
+    // 计算到期日：全部归一化到本地零点再取整日差。
+    // 旧实现拿"现在墙钟时间"直接减"正午到期时刻"再 floor——上午（00:00~12:00）打开时
+    // diffMs 为负小数、floor 后恒为 -1，当天明明到期却显示"未到期"，中午后才翻正。
     const lastDate = parseDateString(lastReviewDate);
-    const dueDate = new Date(lastDate.getTime() + intervalDays * 86400000);
-    const diffMs = today.getTime() - dueDate.getTime();
-    const dueDiffDays = Math.floor(diffMs / 86400000);
+    const dueCal = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate() + intervalDays);
+    const todayCal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dueDiffDays = Math.round((todayCal.getTime() - dueCal.getTime()) / 86400000);
     const isDue = dueDiffDays >= 0;
 
     const rawTitle = String(row.content ?? "").split("\n")[0].trim() || (row.hpath ? String(row.hpath).split("/").pop() : "") || "未命名文档";
@@ -202,11 +211,17 @@ export function buildDocSnoozeAttrs(
 }
 
 /**
- * 构造移出温故流属性字典（置空或移除标记）
+ * 构造移出温故流属性字典（彻底清理温故流关联属性，避免残留脏排期）
+ * 注意：思源内核 /api/attr/setBlockAttrs 传 "" 只会保留空值键（IAL 永久残留 5 个死键），
+ * 只有传 null 才会真正把键从块属性与 attributes 索引表删除。
  */
-export function buildDocRemoveAttrs(): Record<string, string> {
+export function buildDocRemoveAttrs(): Record<string, string | null> {
     return {
-        "custom-lv-note-review": "",
+        "custom-lv-note-review": null,
+        "custom-lv-note-last-review": null,
+        "custom-lv-note-interval": null,
+        "custom-lv-note-reps": null,
+        "custom-lv-note-ease": null,
     };
 }
 

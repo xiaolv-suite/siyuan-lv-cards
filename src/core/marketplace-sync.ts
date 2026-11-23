@@ -11,6 +11,7 @@
 
 import type { MarketplaceCategory, MarketplaceItem, MarketplaceCatalog, MarketplaceQuestion } from "./marketplace";
 import { type LvPackageCard, normalizeCardFingerprint } from "./lvcards-package";
+import { localDate } from "./revlog";
 
 export interface CardDeltaReport {
   hasUpdates: boolean;
@@ -278,7 +279,7 @@ export function buildMarketplaceItemFromCards(
     license: options.license,
     downloadUrl: `embedded:${options.id.trim()}`,
     verified: false,
-    updatedAt: new Date().toISOString().slice(0, 10),
+    updatedAt: localDate(Date.now()),
     previewItems,
     embeddedQuestions: safeQuestions,
     embeddedCards: [...options.cards],
@@ -297,7 +298,7 @@ export function buildMarketplaceCatalogJson(
     v: 1,
     name: catalogName.trim(),
     description: catalogDesc.trim(),
-    updatedAt: new Date().toISOString().slice(0, 10),
+    updatedAt: localDate(Date.now()),
     items,
   };
   return JSON.stringify(catalog, null, 2);

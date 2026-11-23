@@ -69,9 +69,19 @@ function injectScript(name: ChunkName, version: string): Promise<void> {
         s.id = id;
         s.src = src;
         s.async = false;
-        s.onload = () => resolve();
-        s.onerror = () => {
+        const timer = setTimeout(() => {
             s.remove();
+            invalidateChunk(name);
+            reject(new Error(`lv chunk load timeout: ${name}`));
+        }, 15000);
+        s.onload = () => {
+            clearTimeout(timer);
+            resolve();
+        };
+        s.onerror = () => {
+            clearTimeout(timer);
+            s.remove();
+            invalidateChunk(name);
             reject(new Error(`lv chunk load failed: ${name}`));
         };
         document.head.appendChild(s);

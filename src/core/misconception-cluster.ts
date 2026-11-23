@@ -13,6 +13,7 @@
  */
 
 import type { ErrorReason, ErrorTag } from "./error-reasons";
+import { localDate } from "./revlog";
 
 /** 卡片概念与上下文输入 */
 export interface CardConceptContext {
@@ -365,7 +366,7 @@ export function exportMisconceptionReportMarkdown(
 ): string {
     const lines: string[] = [];
     lines.push(`# ${title}`);
-    lines.push(`> 生成时间：${new Date().toISOString().slice(0, 10)} | 误解簇总数：${clusters.length}`);
+    lines.push(`> 生成时间：${localDate(Date.now())} | 误解簇总数：${clusters.length}`);
     lines.push("");
 
     if (clusters.length === 0) {
@@ -376,9 +377,11 @@ export function exportMisconceptionReportMarkdown(
     lines.push("## 一、 核心误解分布总览");
     lines.push("| 误解簇 | 类型 | 严重度 | 发生频次 | 影响卡片数 | 主导错因 |");
     lines.push("|---|---|:---:|:---:|:---:|---|");
+    const escapeTableCell = (str: string) => str.replace(/\|/g, "\\|").replace(/[\r\n]+/g, " ");
     for (const c of clusters) {
-        const conceptName = c.concepts.length > 0 ? c.concepts.join(" ⚡ ") : `[${c.primaryReason}] 通用簇`;
-        lines.push(`| ${conceptName} | ${c.clusterType} | **${c.severity.toUpperCase()}** | ${c.totalOccurrences} 次 | ${c.affectedCardIDs.length} 张 | \`${c.primaryReason}\` |`);
+        const rawConceptName = c.concepts.length > 0 ? c.concepts.join(" ⚡ ") : `[${c.primaryReason}] 通用簇`;
+        const conceptName = escapeTableCell(rawConceptName);
+        lines.push(`| ${conceptName} | ${c.clusterType} | **${c.severity.toUpperCase()}** | ${c.totalOccurrences} 次 | ${c.affectedCardIDs.length} 张 | \`${escapeTableCell(c.primaryReason)}\` |`);
     }
     lines.push("");
 

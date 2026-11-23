@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.233.6 - 2026-11-23
+- 启动存储槽位分级：将启动同步加载槽位由 23 项收敛至 4 项核心槽（结构槽位计数减少 82.6%），其余 19 项延后分批加载；
+- DOM 观察器范围收敛：MutationObserver 优先绑定至 .layout__center 正文容器（兼容路径保留 fallback），并在卸载时断开监听；
+- 补充 8 处异步 UI 异常分支兜底与启动优化回归测试；修正附带文档中的组织署名与测试路径表述；同步合入本周期工作区已验收功能改进与修复。
+
 ## v0.233.5 · 2026-11-17
 
 ### 属性问答升级、日记防冲突硬化与设置直达 (Attribute QA, Sync Hardening & Settings UX)
@@ -154,7 +159,7 @@
   - **修卡演练与首页排版拥挤/滚动锁死（`src/ui/repair-drill.svelte`、`src/ui/dashboard.svelte`、`src/index.scss`）**：修复修卡演练内边距为 0 的样式污染，清除外层滚动锁死，移除首页冗余顶栏与副标题，并将配对/限时挑战移至学习页，深度统计默认折叠；
   - **工作区示例生成断点恢复与入组补齐（`src/core/workspace-samples.ts`）**：修复示例重试时因已存在卡导致入组列表不匹配的问题，支持幂等识别全类型示例卡。
 - **新增 (Added)**：
-  - **D盘隔离测试网页环境（`scripts/serve-isolated-web.mjs` & `启动隔离测试网页.bat`）**：建立运行于 `D:\siyuan-isolated-lv-cards`、独立端口 `43930` 的思源原生桌面网页环境，内置全类型卡片组快速演练与热重载；
+  - **D盘隔离测试网页环境（`scripts/serve-isolated-web.mjs` & `启动隔离测试网页.bat`）**：建立运行于 `.isolated-workspaces/siyuan-lv-cards`、独立端口 `43930` 的思源原生桌面网页环境，内置全类型卡片组快速演练与热重载；
   - **思源笔记本体闪卡功能调研与 100% 覆盖对照报告（`docs/58-思源本体闪卡功能调研与覆盖对照-2026-10-31.md`）**：详尽梳理 16 项内核原生 Riff API 并验证完全覆盖；
   - **全类型闪卡示例组覆盖 14 种卡型（`src/core/sample-cards.ts` & `src/core/workspace-samples.ts`）**：涵盖问答、挖空、超级块、双向词卡、破折号问答、单选、多选、判断、填空、代码、公式、表格、图片与行内问答；
   - **选择题/多选/判断题专属可视化制卡表单（`src/ui/quick-card.svelte`）**：支持选项动态增删、正确答案点选与 `custom-exam-*` 块属性自动生成；

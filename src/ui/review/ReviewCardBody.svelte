@@ -1,6 +1,6 @@
 <script lang="ts">
     import LvIcon from "../kit/LvIcon.svelte";
-    import { isSuperBlockHtml, renderSuperBlockAnswerFace, scopeCustomCardCss, isAttrQaCard, renderAttrQaAnswerFace, formatMarkdownToSafeHtml } from "@/core/card-face";
+    import { isSuperBlockHtml, isAttrQaCard, renderSuperBlockAnswerFace, scopeCustomCardCss, renderAttrQaQuestionFace, renderAttrQaAnswerFace, formatMarkdownToSafeHtml } from "@/core/card-face";
     import { cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { mathTokensPresent, renderMathIn } from "@/libs/math-render";
     import { isSequenceCard, parseSequenceCard, revealAllSequence, type SequenceCardModel } from "@/core/sequence-card";
@@ -22,6 +22,8 @@
         customRiffTitle?: string;
         /** 免侵入问答卡自定义答案（custom-riff-answer）；为空表示回退笔记正文 */
         customRiffAnswer?: string;
+        /** 翻转问答自测开关（R 键激活） */
+        reversedRecall?: boolean;
         cardAttrs?: Record<string, string> | null;
         faceHints?: string[];
         faceHintText?: (key: string) => string;
@@ -51,6 +53,7 @@
         customCardCss = "",
         customRiffTitle = "",
         customRiffAnswer = "",
+        reversedRecall = false,
         cardAttrs = null,
         faceHints = [],
         faceHintText = (k: string) => k,
@@ -90,12 +93,35 @@
         }
     });
 
-    /** 判断当前卡片是否为纯属性免侵入问答卡 */
-    const isPureAttrQa = $derived(isAttrQaCard(cardHtml, customRiffTitle));
+    /** 判断当前卡片是否为属性问答卡（具备题干问题且正文无挖空标记，严格执行问题在正、答案在反逻辑） */
+    const isQaCard = $derived(isAttrQaCard(cardHtml, customRiffTitle));
+
+    function stripHtmlTags(html: string): string {
+        if (!html) return "";
+        if (typeof document !== "undefined") {
+            const template = document.createElement("template");
+            template.innerHTML = html;
+            template.content.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach(el => el.remove());
+            const contentEl = template.content.querySelector('[contenteditable="true"]') || template.content;
+            return (contentEl.textContent ?? "").replace(/\u00a0/g, " ").trim();
+        }
+        return html.replace(/<div class="protyle-attr[\s\S]*?<\/div>/gi, "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+    }
 
     /** 属性问答卡答案面：自定义答案（custom-riff-answer）优先作为主答案，笔记正文附后备查 */
     const attrQaAnswerHtml = $derived.by(() => {
         const customA = (customRiffAnswer ?? "").trim();
+        if (reversedRecall) {
+            // 翻转作答：题面为正文/自定义答案，背面为题干概念
+            const prompt = customA || stripHtmlTags(cardHtml);
+            return renderAttrQaAnswerFace(
+                formatMarkdownToSafeHtml(customRiffTitle),
+                prompt,
+                t?.reviewAttrAnswerOriginalPrompt ?? "题干 / 概念名称",
+                "",
+                ""
+            );
+        }
         if (!customA) return renderAttrQaAnswerFace(cardHtml, customRiffTitle);
         return renderAttrQaAnswerFace(
             formatMarkdownToSafeHtml(customA),
@@ -106,34 +132,51 @@
         );
     });
 
+    /** 属性问答卡问题面：支持翻转回忆自测 */
+    const attrQaQuestionHtml = $derived.by(() => {
+        if (reversedRecall) {
+            const customA = (customRiffAnswer ?? "").trim();
+            return renderAttrQaQuestionFace(customA || stripHtmlTags(cardHtml));
+        }
+        return renderAttrQaQuestionFace(customRiffTitle);
+    });
+
     let displayHtml = $derived(
         interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2
             ? cleanChoiceHtml(
                   showAnswer
                       ? isSuperBlockHtml(cardHtml)
                           ? renderSuperBlockAnswerFace(cardHtml)
-                          : isPureAttrQa
+                          : isQaCard
                           ? attrQaAnswerHtml
                           : cardHtml
+                      : isSuperBlockHtml(cardHtml)
+                      ? maskedCardHtml
+                      : isQaCard
+                      ? attrQaQuestionHtml
                       : maskedCardHtml,
                   interactiveQuiz.options
               )
             : showAnswer
             ? isSuperBlockHtml(cardHtml)
                 ? renderSuperBlockAnswerFace(cardHtml)
-                : isPureAttrQa
+                : isQaCard
                 ? attrQaAnswerHtml
                 : cardHtml
+            : isSuperBlockHtml(cardHtml)
+            ? maskedCardHtml
+            : isQaCard
+            ? attrQaQuestionHtml
             : maskedCardHtml
     );
 
     let contentEl = $state<HTMLDivElement | null>(null);
 
     $effect(() => {
-        if (!cardHtml) return;
+        if (!cardHtml && !displayHtml) return;
         // 追踪 showAnswer：翻面时答案区公式揭晓，重新触发 KaTeX 渲染；锁高避免公式展开瞬间卡面高度跳动
         void showAnswer;
-        if (mathTokensPresent(cardHtml)) {
+        if (mathTokensPresent(displayHtml) || mathTokensPresent(cardHtml)) {
             const prevHeight = contentEl?.clientHeight ?? 0;
             if (prevHeight > 0 && contentEl) {
                 contentEl.style.minHeight = `${prevHeight}px`;
@@ -193,8 +236,8 @@
                 onFullyRevealed={onSequenceFullyRevealed}
             />
         {:else}
-            <!-- 闪卡自定义题面标题（custom-riff-title）：若为纯属性问答卡，已在卡面正文内作为主问答渲染；若为带挖空卡，展示顶部情境徽章 -->
-            {#if customRiffTitle && !isPureAttrQa}
+            <!-- 闪卡自定义题面标题（custom-riff-title）：若为问答卡，已在卡面正文内作为主问答渲染；若非问答卡，展示顶部情境徽章 -->
+            {#if customRiffTitle && !isQaCard}
                 <div class="lv-riff-title-badge" title="闪卡自定义题面 (custom-riff-title)">
                     <LvIcon name="target" size={12} />
                     <span>{customRiffTitle}</span>
@@ -271,6 +314,56 @@
     .lv-card-content {
         overflow-x: auto;
         max-width: 100%;
+
+        &.lv-masked {
+            :global(mark),
+            :global(span[data-type="mark"]) {
+                background: color-mix(in srgb, var(--lv-color-brand, #5E59CB) 14%, var(--lv-color-surface)) !important;
+                border: 1.5px dashed color-mix(in srgb, var(--lv-color-brand, #5E59CB) 60%, transparent) !important;
+                border-radius: var(--lv-r-pill, 999px) !important;
+                color: var(--lv-color-brand, #5E59CB) !important;
+                font-weight: 600 !important;
+                padding: 1px 10px !important;
+                margin: 0 4px !important;
+                box-shadow: 0 1px 3px color-mix(in srgb, var(--lv-color-brand, #5E59CB) 12%, transparent);
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                vertical-align: baseline;
+                cursor: pointer !important;
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                transition: all 0.15s ease-out;
+
+                &::after {
+                    content: "💭点击揭晓";
+                    font-size: 11px;
+                    opacity: 0.85;
+                    font-weight: 500;
+                    margin-left: 2px;
+                    pointer-events: none;
+                }
+
+                &:hover {
+                    background: color-mix(in srgb, var(--lv-color-brand, #5E59CB) 22%, var(--lv-color-surface)) !important;
+                    border-color: var(--lv-color-brand, #5E59CB) !important;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand, #5E59CB) 25%, transparent) !important;
+                }
+            }
+        }
+
+        &:not(.lv-masked) {
+            :global(mark),
+            :global(span[data-type="mark"]) {
+                background: color-mix(in srgb, var(--lv-color-success, #10B981) 16%, transparent) !important;
+                color: var(--lv-color-text) !important;
+                border-radius: var(--lv-r-s, 4px);
+                padding: 1px 6px;
+                font-weight: 600;
+                border-bottom: 2px solid var(--lv-color-success, #10B981);
+            }
+        }
 
         :global(p) {
             max-width: 48em;
@@ -373,31 +466,31 @@
         :global(.lv-qa-attr-stage) {
             display: flex;
             flex-direction: column;
-            gap: var(--lv-sp-3);
+            gap: 8px;
             width: 100%;
         }
 
         :global(.lv-qa-attr-hero) {
             display: flex;
             align-items: flex-start;
-            gap: var(--lv-sp-3);
-            margin: var(--lv-sp-2) 0;
+            gap: 8px;
+            margin: 2px 0 6px;
         }
 
         :global(.lv-qa-attr-badge) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 26px;
-            height: 26px;
-            padding: 0 6px;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 5px;
             border-radius: var(--lv-r-s);
             background: var(--lv-color-brand);
             color: var(--lv-color-on-brand);
             font-size: var(--lv-type-meta-size);
             font-weight: var(--lv-fw-semibold);
             flex-shrink: 0;
-            margin-top: 2px;
+            margin-top: 1px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
         }
 
@@ -414,14 +507,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: var(--lv-sp-5) var(--lv-sp-4);
+            padding: 10px 14px;
             border-radius: var(--lv-r-m);
             background: color-mix(in srgb, var(--lv-color-brand) 4%, var(--lv-color-canvas));
             border: 1px dashed color-mix(in srgb, var(--lv-color-brand) 25%, transparent);
             color: var(--lv-color-text-muted);
             font-size: var(--lv-type-body-size);
             text-align: center;
-            margin: var(--lv-sp-3) 0;
+            margin: 6px 0;
             cursor: pointer;
             user-select: none;
             transition: all var(--lv-dur-1) var(--lv-ease);

@@ -12,6 +12,7 @@
     import { parseManagerView } from "@/core/settings";
     import { srExportLine, composeSrExport } from "@/core/obsidian-import";
     import { isSequenceCard } from "@/core/sequence-card";
+    import { localDate } from "@/core/revlog";
     import CardDetail from "./card-detail.svelte";
     import LvPage from "./kit/LvPage.svelte";
     import LvEmpty from "./kit/LvEmpty.svelte";
@@ -552,7 +553,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `lv-cards-selected-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `lv-cards-selected-${localDate(Date.now())}.csv`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
@@ -567,7 +568,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `lv-cards-obsidian-${new Date().toISOString().slice(0, 10)}.md`;
+        a.download = `lv-cards-obsidian-${localDate(Date.now())}.md`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         showMessage(t.manager.obExportDone.replace("${n}", String(lines.filter(l => l.kind === "qa").length)).replace("${c}", String(lines.filter(l => l.kind === "cloze").length)), 2500, "info");

@@ -2,7 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { getBlockAttrs, getBlockDOM, setBlockAttrs } from "@/api/siyuan";
     import { rafThrottle } from "@/libs/throttle";
-    import { emptyOcclusion, parseOcclusion, serializeOcclusion, type OcclusionRect } from "@/core/occlusion";
+    import { emptyOcclusion, parseOcclusion, serializeOcclusion, LEGACY_ATTR_LV_OCCLUSION, type OcclusionRect } from "@/core/occlusion";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -21,6 +21,8 @@
     let rects = $state<OcclusionRect[]>([]);
     /** 打开时块上已保存的遮挡框（JSON），用于判断退出前是否有未保存改动 */
     let savedRectsJson = "[]";
+    /** 块上是否残留旧版本裸键 lv-occlusion（保存时同步以 null 清尾迁移） */
+    let hadLegacyOcclusion = false;
     let drawing = $state<OcclusionRect | null>(null);
     let errorMsg = $state("");
     let loading = $state(true);
@@ -126,6 +128,8 @@
             const saved = parseOcclusion(attrs ?? {})?.rects ?? [];
             rects = saved.map(r => ({ ...r }));
             savedRectsJson = JSON.stringify(saved);
+            // 记录旧裸键残留：读取侧 parseOcclusion 兼容旧数据，但保存时须清尾迁移
+            hadLegacyOcclusion = Boolean((attrs as Record<string, string> | null)?.[LEGACY_ATTR_LV_OCCLUSION]);
             if (content) {
                 content.innerHTML = dom;
                 image = content.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occed-overlay), canvas");
@@ -206,7 +210,12 @@
         try {
             const data = emptyOcclusion();
             data.rects = rects;
-            await setBlockAttrs(blockID, serializeOcclusion(data));
+            const attrs = serializeOcclusion(data);
+            // 迁移清尾：旧版本把遮挡 JSON 落在裸键 lv-occlusion 上（不被内核 attributes 表索引）。
+            // 本次保存标准键的同时，若读回时发现块上仍残留旧键，则显式传 null 将其从 IAL 中删除，
+            // 避免遮挡 JSON 永久双份占据块属性（数据零污染红线）。
+            if (hadLegacyOcclusion) attrs[LEGACY_ATTR_LV_OCCLUSION] = null;
+            await setBlockAttrs(blockID, attrs);
             await onSave();
             onClose();
         } catch (e: any) {

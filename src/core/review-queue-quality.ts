@@ -21,6 +21,15 @@ export interface ReviewQualityResult<T extends ReviewQualityCard> {
     dismissedBlockIDs?: string[];
 }
 
+function parseIalAttrs(ial?: string): Record<string, string> {
+    if (!ial) return {};
+    const attrs: Record<string, string> = {};
+    for (const m of ial.matchAll(/([a-zA-Z0-9_-]+)=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
+        attrs[m[1]] = m[2] ?? m[3] ?? m[4] ?? "";
+    }
+    return attrs;
+}
+
 export function isRowDismissed(row?: { ial?: string; attrs?: Record<string, string> } | null): boolean {
     if (!row) return false;
     if (row.attrs && isDismissedCard(row.attrs)) return true;
@@ -48,18 +57,22 @@ export function partitionReviewCardsByQuality<T extends ReviewQualityCard>(
         }
     }
     const activeCards = dismissedSet.size > 0 ? filterDismissedFromQueue(cards, dismissedSet) : cards;
-    const markdownByID = new Map(rows.map(row => [String(row.id), String(row.markdown ?? "")]));
+    const rowMap = new Map(rows.map(row => [String(row.id), row]));
     const valid: T[] = [];
     const invalid: Array<{ blockID: string; cardID: string; issue: CardEntryIssue }> = [];
     for (const card of activeCards) {
         const blockID = String(card.blockID ?? "");
-        const exists = markdownByID.has(blockID);
+        const row = rowMap.get(blockID);
+        const exists = Boolean(row);
+        const markdown = row?.markdown ?? "";
+        const attrs = row?.attrs ?? parseIalAttrs(row?.ial);
         const decision = validateCardEntry({
             blockID,
-            markdown: markdownByID.get(blockID) ?? "",
+            markdown,
+            attrs,
             occlusionValid: validOcclusionBlockIDs.has(blockID),
             exists,
-            allowLegacyFormat: options.allowLegacyFormat,
+            allowLegacyFormat: options.allowLegacyFormat === true,
         });
         if (decision.ok) valid.push(card);
         else invalid.push({ blockID, cardID: String(card.cardID ?? ""), issue: decision.issue ?? "missing-block" });

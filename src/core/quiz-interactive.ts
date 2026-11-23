@@ -9,7 +9,8 @@ import { gradeTyping, type TypingGrade, type Rating1to4 } from "./card-types";
 export type QuizInteractiveKind = "choice" | "judge" | "fill" | "free-recall";
 
 export interface InteractiveOption {
-    key: string;        // "A", "B", "C", "D" 等
+    key: string;        // "A", "B", "C", "D" 等当前展示键
+    originalKey?: string; // 笔记原文中的原选项键（如 "A", "B", "C", "D" 等）
     text: string;       // 选项内容文本
     isAnswer: boolean;  // 是否为正确答案（若已知）
 }
@@ -23,6 +24,10 @@ export interface InteractiveQuizData {
     fillExpected: string;              // 填空题期望答案文本
     analysis: string;                  // 参考解析/解题思路
     hasInteractiveWidgets: boolean;    // 是否具备可交互控件（选择题选项、判断按钮或打字框）
+    isShuffled?: boolean;              // 是否已执行选项乱序打乱
+    originalAnswerKeys?: string[];     // 原始题面中的正确选项代号（如 ["B"]）
+    shuffledAnswerKeys?: string[];     // 乱序后当前呈现的正确选项代号（如 ["A"]）
+    keyMapping?: Record<string, string>; // 渲染展示键到原题键的映射表（如 { "A": "B", "B": "C", ... }）
 }
 
 /**
@@ -48,28 +53,52 @@ export function checkIsAnswer(key: string, optionText: string, knownAnswer: stri
     const cleanKnown = cleanText(knownAnswer).trim();
     if (!cleanKnown) return false;
 
-    // 1. 若 knownAnswer 直接是纯字母（如 "B"、"BC"、"A,B"、"A / C"）
+    const upperKey = key.toUpperCase();
     const upperKnown = cleanKnown.toUpperCase();
-    if (/^[A-Za-z\s,\/、·]+$/.test(cleanKnown)) {
-        if (upperKnown.includes(key.toUpperCase())) return true;
+
+    // 1. 若包含明确的前缀（如 "答案：B"、"正确选项：B"、"【答案】A、C" 等）
+    const prefixMatch = cleanKnown.match(/(?:[【\[]?(?:正确)?(?:答案|选择|选项|参考答案)[】\]]?[：:\s]*)([A-Za-z\s,\/、·]+)/i);
+    if (prefixMatch) {
+        const letters = prefixMatch[1].toUpperCase().split(/[\s,\/、·]+/).filter(Boolean);
+        if (letters.length > 0 && letters.every(l => /^[A-Z]$/.test(l))) {
+            return letters.includes(upperKey);
+        }
+        if (/^[A-Z]{1,8}$/i.test(prefixMatch[1].trim())) {
+            return prefixMatch[1].toUpperCase().includes(upperKey);
+        }
     }
 
-    // 2. 若 knownAnswer 开头是字母加分隔符（如 "B. 25%"、"B、北京"）
-    const leadMatch = cleanKnown.match(/^([A-Za-z])[\.\、\:\：\s]/i);
-    if (leadMatch && leadMatch[1].toUpperCase() === key.toUpperCase()) return true;
+    // 2. 若 knownAnswer 直接是纯字母集合（如 "B"、"BC"、"A,B"、"A / C"、"A and C"）
+    const letterTokens = upperKnown.split(/[\s,\/、·+&]+|\band\b/i).filter(Boolean);
+    const isAllSingleLetters = letterTokens.length > 0 && letterTokens.every(t => /^[A-Z]$/.test(t));
+    if (isAllSingleLetters) {
+        return letterTokens.includes(upperKey);
+    }
+    if (/^[A-Z]{1,8}$/i.test(cleanKnown)) {
+        return upperKnown.includes(upperKey);
+    }
 
-    // 3. 若包含前缀（如 "答案：B"、"正确选项：B"）
-    const ansMatch = cleanKnown.match(/(?:答案|选择|选项|正确)[：:\s]*([A-Za-z])/i);
-    if (ansMatch && ansMatch[1].toUpperCase() === key.toUpperCase()) return true;
+    // 3. 若 knownAnswer 开头是字母加分隔符（如 "B. 25%"、"B、北京"、"(B) 北京"）
+    const leadMatch = cleanKnown.match(/^(?:[\(（\[【]?([A-Za-z])[\)）\]】]?[\.\、\:\：\s]|[\(（\[【]?([A-Za-z])[\)）\]】]\s*)/i);
+    if (leadMatch) {
+        const leadKey = (leadMatch[1] || leadMatch[2]).toUpperCase();
+        return leadKey === upperKey;
+    }
 
-    // 4. 若选项内容文本直接匹配答案（如 optionText="北京"，knownAnswer="北京"）
+    // 4. 仅在已知答案未包含任何字母代号时，才回退到选项内容文本匹配（杜绝在解析中提及错项文本时引发误判）
     const cleanOpt = cleanText(optionText).trim();
-    if (cleanOpt && (cleanOpt === cleanKnown || cleanKnown.includes(cleanOpt) || (cleanOpt.length >= 2 && cleanOpt.includes(cleanKnown)))) {
-        return true;
+    if (cleanOpt && cleanKnown) {
+        if (cleanOpt.toLowerCase() === cleanKnown.toLowerCase()) return true;
+        if (cleanKnown.length >= 2 && cleanOpt.length >= 2) {
+            if (cleanOpt === cleanKnown || (cleanOpt.length >= 4 && cleanKnown.includes(cleanOpt))) return true;
+        }
     }
 
     return false;
 }
+
+/** 匹配以 A.、B.、(A)、[A] 等开头的选项行正则（支持 A 至 Z 选项） */
+const OPTION_LINE_REGEX = /^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*(?:[\(（\[【]?([A-Za-z])[\)）\]】]?[\.\、\:\：\s]\s*|[\(（\[【]?([A-Za-z])[\)）\]】]\s*)(.+)$/;
 
 /**
  * 解析并提取题干中的选项列表（如 A. 20%  B. 25% 等）
@@ -78,41 +107,47 @@ export function extractChoiceOptionsFromText(content: string, knownAnswer = ""):
     const text = String(content ?? "");
     const options: InteractiveOption[] = [];
 
-    // 1. 按行或列表项逐项扫描：支持 "A. 选项"、"A、选项"、"A: 选项"、"- A. 选项"、"* A. 选项"、"• A. 选项"
+    // 1. 按行或列表项逐项扫描：支持 "A. 选项"、"A、选项"、"A: 选项"、"A) 选项"、"(A) 选项"、"[A] 选项"、"• A. 选项" 等
     const lines = text.split(/\r?\n|<br\s*\/?>|<\/li>|<\/div>|<\/p>/i);
-    const optRegex = /^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*([A-Fa-f])[\.\、\:\：\s]\s*(.+)$/;
 
     for (const line of lines) {
         const cleaned = cleanText(line);
-        const match = cleaned.match(optRegex);
+        const match = cleaned.match(OPTION_LINE_REGEX);
         if (match) {
-            const key = match[1].toUpperCase();
-            const optionText = match[2].trim();
+            const rawKey = match[1] || match[2];
+            const key = rawKey.toUpperCase();
+            const optionText = match[3].trim();
             // 避免重复追加同一字母
             if (!options.some(o => o.key === key) && optionText) {
-                options.push({
+                const opt: InteractiveOption = {
                     key,
                     text: optionText,
                     isAnswer: checkIsAnswer(key, optionText, knownAnswer),
-                });
+                };
+                Object.defineProperty(opt, "originalKey", { value: key, enumerable: false, configurable: true, writable: true });
+                options.push(opt);
             }
         }
     }
 
-    // 2. 如果分行没拆出来，尝试单行内多选项正则扫描（如 "A. 20% B. 25% C. 80% D. 125%"）
+    // 2. 如果分行没拆出来，尝试单行内多选项正则扫描（如 "A. 20% B. 25% C. 80% D. 125%" 或 "(A) 选项一 (B) 选项二"）
     if (options.length < 2) {
-        const inlineRegex = /(?:^|\s+)([A-Fa-f])[\.\、\:\：]\s*([^\sA-Fa-f\.\、\:\：][^A-Fa-f\.\、\:\：]*?)(?=(?:\s+[A-Fa-f][\.\、\:\：])|$)/g;
+        const inlineRegex = /(?:^|\s+)(?:[\(（\[【]?([A-Za-z])[\)）\]】]?[\.\、\:\：\s]\s*|[\(（\[【]?([A-Za-z])[\)）\]】]\s*)([^\sA-Za-z\.\、\:\：\)\）\]】][^A-Za-z\.\、\:\：\)\）\]】]*?)(?=(?:\s+(?:[\(（\[【]?[A-Za-z][\)）\]】]?[\.\、\:\：\s]|[\(（\[【]?[A-Za-z][\)）\]】]))|$)/g;
         let m: RegExpExecArray | null;
         const inlineOpts: InteractiveOption[] = [];
-        while ((m = inlineRegex.exec(cleanText(text))) !== null) {
-            const key = m[1].toUpperCase();
-            const optionText = m[2].trim();
+        const cleanContent = cleanText(text);
+        while ((m = inlineRegex.exec(cleanContent)) !== null) {
+            const rawKey = m[1] || m[2];
+            const key = rawKey.toUpperCase();
+            const optionText = m[3].trim();
             if (!inlineOpts.some(o => o.key === key) && optionText) {
-                inlineOpts.push({
+                const opt: InteractiveOption = {
                     key,
                     text: optionText,
                     isAnswer: checkIsAnswer(key, optionText, knownAnswer),
-                });
+                };
+                Object.defineProperty(opt, "originalKey", { value: key, enumerable: false, configurable: true, writable: true });
+                inlineOpts.push(opt);
             }
         }
         if (inlineOpts.length >= 2) {
@@ -131,6 +166,23 @@ export function parseJudgeAnswer(answerText: string): boolean | null {
     if (!raw) return null;
     if (["t", "true", "对", "正确", "√", "1", "yes", "y", "v"].includes(raw)) return true;
     if (["f", "false", "错", "错误", "×", "x", "0", "no", "n"].includes(raw)) return false;
+
+    // 提取带前缀的判断结论（如 "正确答案：对"、"答案：错误"、"【答案】正确"）
+    const prefixMatch = raw.match(/(?:[【\[]?(?:正确)?(?:答案|判断|结论|结果)[】\]]?[：:\s]*)(正确|错误|对|错|true|false|yes|no|[tf√×10])/i);
+    if (prefixMatch) {
+        const val = prefixMatch[1].toLowerCase();
+        if (["t", "true", "对", "正确", "√", "1", "yes", "y", "v"].includes(val)) return true;
+        if (["f", "false", "错", "错误", "×", "x", "0", "no", "n"].includes(val)) return false;
+    }
+
+    // 开头明确带判定词与标点分隔（如 "正确。因为..."、"错误，解析如下："）
+    const leadMatch = raw.match(/^(正确|错误|对|错|true|false|yes|no)[。，,.\s、\n;；:：]/i);
+    if (leadMatch) {
+        const val = leadMatch[1].toLowerCase();
+        if (["t", "true", "对", "正确", "yes"].includes(val)) return true;
+        if (["f", "false", "错", "错误", "no"].includes(val)) return false;
+    }
+
     return null;
 }
 
@@ -144,7 +196,7 @@ export function extractStemFromChoice(content: string, options: InteractiveOptio
     let matchedOption = false;
     for (const line of lines) {
         const cleaned = cleanText(line);
-        if (/^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*[A-Za-z][\.\、\:\：\s]/i.test(cleaned)) {
+        if (OPTION_LINE_REGEX.test(cleaned)) {
             matchedOption = true;
             break;
         }
@@ -155,7 +207,7 @@ export function extractStemFromChoice(content: string, options: InteractiveOptio
         if (res.length > 0) return res;
     }
     return cleanText(content)
-        .replace(/(?:^|\s+)(?:[•·●\-\*\+]\s*)?[A-Za-z][\.\、\:\：\s].*$/i, "")
+        .replace(/(?:^|\s+)(?:[•·●\-\*\+]\s*)?(?:[\(（\[【]?[A-Za-z][\)）\]】]?[\.\、\:\：\s]|[\(（\[【]?[A-Za-z][\)）\]】]\s*).*$/i, "")
         .trim();
 }
 
@@ -167,16 +219,38 @@ export function cleanChoiceHtml(html: string, options: InteractiveOption[]): str
     try {
         const template = document.createElement("template");
         template.innerHTML = html;
-        // 1. 移除列表 (NodeList, ul, ol, .list)
-        template.content.querySelectorAll(":is([data-type='NodeList'], .list, ul, ol)").forEach(el => el.remove());
-        // 2. 移除单独成段的选项段落 (以 A.、B.、• A. 开头)
-        const optRegex = /^\s*(?:[•·●\-\*\+]\s*)?(?:<[^>]*>)*[A-Za-z][\.\、\:\：\s]/i;
-        template.content.querySelectorAll(":is([data-type='NodeParagraph'], p, .p)").forEach(el => {
+
+        // 1. 优先扫描并移除列表项 (NodeListItem, li) 中的选项项
+        template.content.querySelectorAll(":is([data-type='NodeListItem'], li)").forEach(el => {
             const text = (el.textContent ?? "").trim();
-            if (optRegex.test(text)) {
+            if (OPTION_LINE_REGEX.test(text)) {
                 el.remove();
             }
         });
+
+        // 2. 移除变空的列表容器 (NodeList, ul, ol, .list)
+        template.content.querySelectorAll(":is([data-type='NodeList'], .list, ul, ol)").forEach(el => {
+            const remainingItems = el.querySelectorAll(":is([data-type='NodeListItem'], li)");
+            const remainingText = (el.textContent ?? "").trim();
+            if (remainingItems.length === 0 || !remainingText) {
+                el.remove();
+            }
+        });
+
+        // 3. 移除单独成段的选项段落 (以 A.、B.、(A) 开头)
+        template.content.querySelectorAll(":is([data-type='NodeParagraph'], p, .p)").forEach(el => {
+            const text = (el.textContent ?? "").trim();
+            if (OPTION_LINE_REGEX.test(text)) {
+                el.remove();
+            } else {
+                // 如果段落中包含换行或尾随内联选项，剥离掉末尾的选项部分，保留前面的题干
+                const stripped = el.innerHTML.replace(/(?:<br\s*\/?>|\s+)(?:[•·●\-\*\+]\s*)?(?:[\(（\[【]?[A-Za-z][\)）\]】]?[\.\、\:\：\s]|[\(（\[【]?[A-Za-z][\)）\]】]).*$/is, "");
+                if (stripped && stripped !== el.innerHTML) {
+                    el.innerHTML = stripped.trim();
+                }
+            }
+        });
+
         const result = template.innerHTML.trim();
         return result || html;
     } catch {
@@ -184,8 +258,15 @@ export function cleanChoiceHtml(html: string, options: InteractiveOption[]): str
     }
 }
 
+export interface ShuffledOptionsResult extends Array<InteractiveOption> {
+    isShuffled: boolean;
+    keyMapping: Record<string, string>;
+    originalAnswerKeys: string[];
+    shuffledAnswerKeys: string[];
+}
+
 /**
- * 随机打乱选择题选项顺序（Fisher-Yates 算法，保留正确项标记，重新分配 A/B/C/D 展示键）
+ * 随机打乱选择题选项顺序（Fisher-Yates 算法，保留正确项标记，重新分配 A/B/C/D 展示键，记录原选项映射）
  */
 export function shuffleInteractiveOptions(
     options: readonly InteractiveOption[],
@@ -197,13 +278,48 @@ export function shuffleInteractiveOptions(
         }
         return out;
     }
-): InteractiveOption[] {
-    if (!options || options.length <= 1) return [...(options || [])];
+): ShuffledOptionsResult {
+    if (!options || options.length <= 1) {
+        const baseOpts: InteractiveOption[] = (options || []).map(o => ({ ...o, originalKey: o.originalKey || o.key }));
+        const origKeys = baseOpts.filter(o => o.isAnswer).map(o => o.originalKey || o.key);
+        const curKeys = baseOpts.filter(o => o.isAnswer).map(o => o.key);
+        const mapping: Record<string, string> = {};
+        for (const o of baseOpts) {
+            mapping[o.key] = o.originalKey || o.key;
+        }
+        return Object.assign(baseOpts, {
+            isShuffled: false,
+            keyMapping: mapping,
+            originalAnswerKeys: origKeys,
+            shuffledAnswerKeys: curKeys,
+        });
+    }
+
     const shuffled = shuffleFn(options);
-    return shuffled.map((opt, idx) => ({
-        ...opt,
-        key: String.fromCharCode(65 + idx),
-    }));
+    const mapping: Record<string, string> = {};
+    const updatedOptions: InteractiveOption[] = shuffled.map((opt, idx) => {
+        const newKey = String.fromCharCode(65 + idx);
+        const origKey = opt.originalKey || opt.key;
+        mapping[newKey] = origKey;
+        const resOpt: InteractiveOption = {
+            key: newKey,
+            text: opt.text,
+            isAnswer: opt.isAnswer,
+        };
+        Object.defineProperty(resOpt, "originalKey", { value: origKey, enumerable: false, configurable: true, writable: true });
+        return resOpt;
+    });
+
+    const origAnswers = options.filter(o => o.isAnswer).map(o => o.originalKey || o.key);
+    const curAnswers = updatedOptions.filter(o => o.isAnswer).map(o => o.key);
+    const changed = updatedOptions.some(o => o.key !== (o.originalKey || o.key));
+
+    return Object.assign(updatedOptions, {
+        isShuffled: changed,
+        keyMapping: mapping,
+        originalAnswerKeys: origAnswers,
+        shuffledAnswerKeys: curAnswers,
+    });
 }
 
 /**
@@ -230,8 +346,16 @@ export function parseInteractiveQuiz(params: {
     const extractedOptions = extractChoiceOptionsFromText(fullContent, knownAnswer);
 
     if (examType === "single" || examType === "multiple" || extractedOptions.length >= 2) {
-        const isMultiple = examType === "multiple" || (/^[A-Za-z\s,\/、]+$/.test(cleanText(knownAnswer)) && cleanText(knownAnswer).replace(/[^A-Za-z]/g, "").length > 1);
-        const options = shuffleOptions ? shuffleInteractiveOptions(extractedOptions) : extractedOptions;
+        const isMultiple = examType === "multiple" || extractedOptions.filter((option) => option.isAnswer).length > 1;
+        const shuffledRes = shuffleOptions ? shuffleInteractiveOptions(extractedOptions) : null;
+        const options = shuffledRes || extractedOptions;
+        const origAnswers = extractedOptions.filter(o => o.isAnswer).map(o => o.originalKey || o.key);
+        const curAnswers = options.filter(o => o.isAnswer).map(o => o.key);
+        const keyMapping: Record<string, string> = {};
+        for (const o of options) {
+            keyMapping[o.key] = o.originalKey || o.key;
+        }
+
         return {
             kind: "choice",
             stem: extractStemFromChoice(markdown || domHtml, extractedOptions),
@@ -241,6 +365,10 @@ export function parseInteractiveQuiz(params: {
             fillExpected: knownAnswer,
             analysis: examAnalysis,
             hasInteractiveWidgets: options.length >= 2,
+            isShuffled: Boolean(shuffledRes?.isShuffled),
+            originalAnswerKeys: origAnswers,
+            shuffledAnswerKeys: curAnswers,
+            keyMapping,
         };
     }
 
@@ -381,7 +509,13 @@ export function evaluateFillQuiz(
     const text = actualInput.trim();
     if (!text || !expectedText) return null;
 
-    const g = gradeTyping(expectedText, text, strict);
+    // 清洗期望答案前缀（如 "正确答案：SQLite" 剥离为 "SQLite"）与首尾 == 挖空符号
+    const cleanTarget = expectedText
+        .replace(/^(?:[【\[]?(?:正确)?(?:答案|参考答案)[】\]]?[：:\s]*)/i, "")
+        .replace(/^==|==$/g, "")
+        .trim();
+
+    const g = gradeTyping(cleanTarget || expectedText, text, strict);
     const isCorrect = g.suggested >= 3;
 
     return {

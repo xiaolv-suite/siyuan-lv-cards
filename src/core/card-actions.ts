@@ -125,6 +125,7 @@ export interface LastAnsweredSnapshot<T = any> {
     html: string;
     card: T;
     revealed: boolean;
+    customRiffTitle?: string;
 }
 
 /**
@@ -133,10 +134,11 @@ export interface LastAnsweredSnapshot<T = any> {
 export function createLastAnsweredSnapshot<T>(
     card: T | null | undefined,
     html: string,
-    revealed: boolean
+    revealed: boolean,
+    customRiffTitle?: string
 ): LastAnsweredSnapshot<T> | null {
     if (!card) return null;
-    return { html, card, revealed };
+    return { html, card, revealed, customRiffTitle };
 }
 
 /**
@@ -160,10 +162,97 @@ export function buildMemoAttributes(memoText: string): { memo: string } {
 }
 
 /**
- * 判定当前卡片是否正处于异步操作忙碌状态（评分提交中、改期中或解散归档中）
+ * 构造“取消制卡”时需要清空的块属性补丁（清空 custom-riff-*、custom-exam-*、custom-lv-occlusion 等属性，保留正文）
  */
-export function isCardActionBusy(submitting: boolean, rescheduleBusy: boolean, dismissBusy = false): boolean {
-    return submitting || rescheduleBusy || dismissBusy;
+export function buildUnmakeCardAttributes(): Record<string, string> {
+    return {
+        "custom-riff-decks": "",
+        "custom-riff-title": "",
+        "custom-riff-answer": "",
+        "custom-riff-occlusion": "",
+        "custom-lv-question": "",
+        "custom-card-title": "",
+        "custom-card-answer": "",
+        "custom-lv-card-type": "",
+        "custom-lv-starred": "",
+        "custom-lv-dismissed": "",
+        "custom-lv-error-reason": "",
+        "custom-exam-type": "",
+        "custom-exam-answer": "",
+        "custom-exam-analysis": "",
+        "custom-lv-occlusion": "",
+        "lv-occlusion": "",
+    };
+}
+
+export interface CardLifecycleActionResult {
+    success: boolean;
+    blockID: string;
+    action: "unmake" | "delete";
+    error?: string;
+}
+
+/**
+ * 执行“取消制卡”业务流（解定制卡属性保留正文）：
+ * 1. 移出 Riff 闪卡卡组；
+ * 2. 清除 custom-riff-* 与 custom-exam-* 块属性；
+ * 3. 刷新到期缓存。
+ */
+export async function executeUnmakeCard(
+    blockID: string,
+    helpers: {
+        removeFromDeck?: (blockID: string) => Promise<unknown>;
+        setBlockAttrs?: (id: string, attrs: Record<string, string>) => Promise<unknown>;
+        invalidateCache?: () => void;
+    }
+): Promise<CardLifecycleActionResult> {
+    if (!blockID) return { success: false, blockID: "", action: "unmake", error: "missing blockID" };
+    if (helpers.removeFromDeck) {
+        await helpers.removeFromDeck(blockID);
+    }
+    if (helpers.setBlockAttrs) {
+        await helpers.setBlockAttrs(blockID, buildUnmakeCardAttributes()).catch(() => {});
+    }
+    helpers.invalidateCache?.();
+    return { success: true, blockID, action: "unmake" };
+}
+
+/**
+ * 执行“物理删除原笔记块”业务流（高危不可逆操作）：
+ * 1. 尝试从 Riff 卡组移出；
+ * 2. 调用 deleteBlock 物理删除原块；
+ * 3. 刷新到期缓存。
+ */
+export async function executeDeleteBlock(
+    blockID: string,
+    helpers: {
+        deleteBlock: (id: string) => Promise<unknown>;
+        removeFromDeck?: (blockID: string) => Promise<unknown>;
+        invalidateCache?: () => void;
+    }
+): Promise<CardLifecycleActionResult> {
+    if (!blockID) return { success: false, blockID: "", action: "delete", error: "missing blockID" };
+    try {
+        if (helpers.removeFromDeck) {
+            await helpers.removeFromDeck(blockID);
+        }
+    } catch {}
+    await helpers.deleteBlock(blockID);
+    helpers.invalidateCache?.();
+    return { success: true, blockID, action: "delete" };
+}
+
+/**
+ * 判定当前卡片是否正处于异步操作忙碌状态（评分提交中、改期中、解散归档或物理删除中）
+ */
+export function isCardActionBusy(
+    submitting: boolean,
+    rescheduleBusy: boolean,
+    dismissBusy = false,
+    retireBusy = false,
+    deleteBusy = false
+): boolean {
+    return submitting || rescheduleBusy || dismissBusy || retireBusy || deleteBusy;
 }
 
 /**

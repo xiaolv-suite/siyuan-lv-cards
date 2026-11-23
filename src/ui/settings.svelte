@@ -16,6 +16,8 @@
     import LvSwitch from "./kit/LvSwitch.svelte";
     import LvSelect from "./kit/LvSelect.svelte";
     import LvInput from "./kit/LvInput.svelte";
+    // DL2 阶段0：生态统一「外观与动效」偏好分组（庆祝/吉祥物/光效可关）
+    import { createLvUiPrefsSection } from "../libs/lv-ui-prefs";
     import LvIcon from "./kit/LvIcon.svelte";
     import { PROMPT_TEMPLATES } from "@/core/prompt-templates";
     // BU-18 模型能力注册表：快选列表 + 登记状态提示 + 端点预设
@@ -36,6 +38,7 @@
     // Obsidian SR 导入（v0.202.0）：块级解析 → 计划（去重/剥 tag）→ 一卡一段落落库 → 按序对位
     import { planObsidianImport, composeObsidianImportMarkdown, deckNameFor, groupByDeckHint, partitionByLedger, normalizeObLedger, mergeObLedger, type ObLedgerEntry } from "@/core/obsidian-import";
     import { getBridgeSafely, type CheckinBridgeApi, type CheckinItem } from "@/libs/ecosystem-bridge-kit";
+    import { localDate } from "@/core/revlog";
     import { aiChat } from "@/api/ai";
 
     export interface SettingsCtx {
@@ -92,6 +95,12 @@
     }
 
     let { ctx, initialSection }: { ctx: SettingsCtx; initialSection?: "imports" } = $props();
+
+    /** DL2 阶段0：挂载生态外观偏好分组（svelte action） */
+    function mountLvUiPrefsSectionAction(node: HTMLElement) {
+        node.appendChild(createLvUiPrefsSection());
+        return {};
+    }
     const t = $derived(ctx.i18n);
     let searchInput: HTMLInputElement;
     let personaFile = $state<HTMLInputElement>();
@@ -182,7 +191,7 @@
             const boxes = await getNotebooks();
             let nbId = boxes.find((b) => b.name === nbName)?.id;
             if (!nbId) { nbId = (await createNotebook(nbName)) ?? ""; }
-            const docID = await createDocWithMd(nbId, `Obsidian SR/${base} ${new Date().toISOString().slice(0, 10)}`, composeObsidianImportMarkdown(fresh));
+            const docID = await createDocWithMd(nbId, `Obsidian SR/${base} ${localDate(Date.now())}`, composeObsidianImportMarkdown(fresh));
             if (!docID) { throw new Error("createDocWithMd 返回空"); }
             // 一卡一段落对位：真实内核下 createDocWithMd 后 SQLite 索引存在异步延迟，若首查未齐则短退避重试
             const obStmt = `SELECT id, markdown FROM blocks WHERE root_id='${docID}' AND type IN ('p','h','u','o') ORDER BY sort`;
@@ -379,7 +388,7 @@
             // 生成 Markdown 文档
             const docMarkdown = toImportCards.map(c => c.markdown).join("\n\n");
             docRequested = true;
-            const docID = await createDocWithMd(nbId, `${pkg.deck.name} ${new Date().toISOString().slice(0, 10)}`, docMarkdown);
+            const docID = await createDocWithMd(nbId, `${pkg.deck.name} ${localDate(Date.now())}`, docMarkdown);
             if (!docID?.trim()) throw new Error(t.settings.lvcardsImportNoTarget);
             retainedDocID = docID;
 
@@ -479,7 +488,7 @@
             let nbId = boxes.find((b) => b.name === nbName)?.id;
             if (!nbId) nbId = (await createNotebook(nbName)) ?? "";
             const base = file.name.replace(/\.(apkg|colpkg)$/i, "");
-            const docID = await createDocWithMd(nbId, `Anki/${base} ${new Date().toISOString().slice(0, 10)}`, composeImportMarkdown(fresh));
+            const docID = await createDocWithMd(nbId, `Anki/${base} ${localDate(Date.now())}`, composeImportMarkdown(fresh));
             if (!docID) throw new Error("createDocWithMd 返回空");
             const ankiStmt = `SELECT id, content, markdown FROM blocks WHERE root_id='${docID}' AND type='p' ORDER BY sort`;
             let blockRows = await sqlQuery(ankiStmt);
@@ -500,7 +509,15 @@
             if (blockIDs.some(id => validateFlashcardMarkdown(markdownByID.get(id) ?? "") !== null)) {
                 throw new Error(t.settings.ankiImportInvalidCard ?? "导入内容未生成有效答案标记，已停止入组");
             }
-            const deck = await createRiffDeck(`Anki: ${base}`) as any;
+            // 2026-11-21 走查修复：同名卡包先查复用（对照 marketplace-service/quick-card 的先查后建模式），
+            // 分批重导同一 apkg 时不再堆积重名内核卡包
+            let deck: any = null;
+            const wantedDeckName = `Anki: ${base}`;
+            try {
+                const existingDecks = await getRiffDecks();
+                deck = (existingDecks ?? []).find((d: { name?: string }) => d.name === wantedDeckName) ?? null;
+            } catch { /* 查询失败走新建兜底 */ }
+            if (!deck) deck = await createRiffDeck(wantedDeckName) as any;
             const deckID = deck?.id ?? deck?.deck?.id ?? "";
             await addRiffCards(deckID, blockIDs);
             await Promise.all(blockIDs.map(id => ctx.rememberSourceFingerprint?.(id, docID, markdownByID.get(id))));
@@ -760,14 +777,22 @@
         draft.persona = "custom";
     }
 
+    let actionSearchQuery = $state("");
+
     function isActionDisabled(id: string): boolean {
         return Boolean(draft.blockActionPreferences?.disabledActionIds?.includes(id));
     }
     function toggleActionDisabled(id: string, disabled: boolean): void {
         const prefs = draft.blockActionPreferences || { disabledActionIds: [], pinnedActionIds: [] };
         const current = new Set(prefs.disabledActionIds || []);
-        if (disabled) current.add(id);
-        else current.delete(id);
+        if (disabled) {
+            current.add(id);
+            if (prefs.pinnedActionIds?.includes(id)) {
+                prefs.pinnedActionIds = prefs.pinnedActionIds.filter(item => item !== id);
+            }
+        } else {
+            current.delete(id);
+        }
         draft.blockActionPreferences = {
             ...prefs,
             disabledActionIds: Array.from(current),
@@ -778,12 +803,45 @@
     }
     function toggleActionPinned(id: string): void {
         const prefs = draft.blockActionPreferences || { disabledActionIds: [], pinnedActionIds: [] };
-        const current = new Set(prefs.pinnedActionIds || []);
-        if (current.has(id)) current.delete(id);
-        else current.add(id);
+        const list = [...(prefs.pinnedActionIds || [])];
+        const idx = list.indexOf(id);
+        if (idx !== -1) {
+            list.splice(idx, 1);
+        } else {
+            if (list.length >= 5) {
+                showMessage("优先常驻功能最多设置 5 项，请先在上方取消不需要的项", 2400, "info");
+                return;
+            }
+            list.push(id);
+            if (prefs.disabledActionIds?.includes(id)) {
+                prefs.disabledActionIds = prefs.disabledActionIds.filter(item => item !== id);
+            }
+        }
         draft.blockActionPreferences = {
             ...prefs,
-            pinnedActionIds: Array.from(current),
+            pinnedActionIds: list,
+        };
+    }
+    function moveActionPinned(id: string, delta: -1 | 1): void {
+        const prefs = draft.blockActionPreferences || { disabledActionIds: [], pinnedActionIds: [] };
+        const list = [...(prefs.pinnedActionIds || [])];
+        const idx = list.indexOf(id);
+        if (idx === -1) return;
+        const nextIdx = idx + delta;
+        if (nextIdx < 0 || nextIdx >= list.length) return;
+        const [removed] = list.splice(idx, 1);
+        list.splice(nextIdx, 0, removed);
+        draft.blockActionPreferences = {
+            ...prefs,
+            pinnedActionIds: list,
+        };
+    }
+    function removeActionPinned(id: string): void {
+        const prefs = draft.blockActionPreferences || { disabledActionIds: [], pinnedActionIds: [] };
+        const list = (prefs.pinnedActionIds || []).filter(item => item !== id);
+        draft.blockActionPreferences = {
+            ...prefs,
+            pinnedActionIds: list,
         };
     }
     function applyActionPreset(mode: "all" | "exam" | "writing" | "minimal"): void {
@@ -1817,9 +1875,13 @@
         <LvRow label="块操作中心动作管理" hint="自定义编辑器块胶囊展开菜单中显示的动作，支持场景预设、单项开关与星标置顶">
             {#snippet children()}
                 <div class="lv-settings-action-panel" style="width: 100%; margin-top: 6px;">
-                    <!-- 场景预设一键切换栏 -->
+                    <!-- 块助手资产库入口与场景预设一键切换栏 -->
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
-                        <span style="font-size: 11.5px; opacity: 0.75;">场景预设：</span>
+                        <button type="button" class="b3-button" style="padding: 3px 10px; font-size: 11.5px; background: #6366f1; color: #ffffff; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" onclick={() => { const hub = (window as any).LvBlockAssistant || (window as any).__LV_BLOCK_ASSISTANT_HUB__; if (hub?.openStoreDialog) hub.openStoreDialog(); }}>
+                            <span>📦</span>
+                            <span>块助手资产库 (Action Store)</span>
+                        </button>
+                        <span style="font-size: 11.5px; opacity: 0.75; margin-left: 6px;">场景预设：</span>
                         <button type="button" class="b3-button b3-button--cancel" style="padding: 2px 8px; font-size: 11px;" onclick={() => applyActionPreset("all")}>
                             全部启用
                         </button>
@@ -1838,42 +1900,114 @@
                         </button>
                     </div>
 
-                    <details class="lv-settings-action-details" style="width: 100%;">
-                        <summary style="cursor: pointer; font-size: 12.5px; opacity: 0.88; user-select: none; font-weight: 600;">
-                            <span>⚙️ 动作精细配置清单 (已启用 {BLOCK_ACTIONS.length - (draft.blockActionPreferences?.disabledActionIds?.length || 0)}/{BLOCK_ACTIONS.length}，⭐ 置顶 {draft.blockActionPreferences?.pinnedActionIds?.length || 0} 项)</span>
-                        </summary>
+                    <!-- ⭐ 优先常驻快捷槽控制面板 (Top Priority Dock) -->
+                    <div class="lv-settings-pinned-dock" style="margin-bottom: 12px; padding: 10px 14px; background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 6%, var(--b3-theme-surface)); border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 22%, transparent); border-radius: 10px;">
+                        <div style="font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #f59e0b;">⭐</span>
+                                <span>优先常驻功能槽 (已配置 {draft.blockActionPreferences?.pinnedActionIds?.length || 0}/5 项)</span>
+                                <span style="font-size: 11px; font-weight: normal; opacity: 0.68;">· 在胶囊与菜单最顶端展示，支持点击 ← → 调序</span>
+                            </span>
+                            {#if (draft.blockActionPreferences?.pinnedActionIds?.length || 0) > 0}
+                                <button type="button" class="b3-button b3-button--text" style="font-size: 11px; padding: 0 4px; color: var(--b3-theme-on-surface-light, #64748b);" onclick={() => { draft.blockActionPreferences = { ...draft.blockActionPreferences, pinnedActionIds: [] }; }}>
+                                    清空优先项
+                                </button>
+                            {/if}
+                        </div>
 
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                            {#each (draft.blockActionPreferences?.pinnedActionIds || []) as pinnedId, pIndex}
+                                {@const act = BLOCK_ACTIONS.find(a => a.id === pinnedId)}
+                                {#if act}
+                                    <div class="lv-priority-pill" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: color-mix(in srgb, #f59e0b 14%, var(--b3-theme-surface)); border: 1px solid rgba(245, 158, 11, 0.4); font-size: 12px;">
+                                        <span style="font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245, 158, 11, 0.18); border-radius: 4px; padding: 1px 5px;">#{pIndex + 1}</span>
+                                        <span>{act.glyph}</span>
+                                        <span style="font-weight: 600;">{t[act.labelKey] || act.fallbackLabel}</span>
+                                        <div style="display: flex; align-items: center; gap: 2px; margin-left: 4px;">
+                                            <button type="button" style="border: none; background: transparent; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === 0 ? '0.25' : '0.85'};" disabled={pIndex === 0} onclick={() => moveActionPinned(pinnedId, -1)} title="前移一位">←</button>
+                                            <button type="button" style="border: none; background: transparent; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1 ? '0.25' : '0.85'};" disabled={pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1} onclick={() => moveActionPinned(pinnedId, 1)} title="后移一位">→</button>
+                                            <button type="button" style="border: none; background: transparent; cursor: pointer; padding: 0 2px; font-size: 11px; color: #ef4444; opacity: 0.8;" onclick={() => removeActionPinned(pinnedId)} title="取消优先常驻">✕</button>
+                                        </div>
+                                    </div>
+                                {/if}
+                            {/each}
+                            {#if (draft.blockActionPreferences?.pinnedActionIds?.length || 0) < 5}
+                                <div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; border: 1px dashed var(--b3-theme-surface-lighter, rgba(148, 163, 184, 0.35)); color: var(--b3-theme-on-surface-light, #94a3b8); font-size: 11.5px;">
+                                    <span>+ 在下方点击 ☆ 可添加优先项 (还可添加 {5 - (draft.blockActionPreferences?.pinnedActionIds?.length || 0)} 项)</span>
+                                </div>
+                            {/if}
+                        </div>
+                    </div>
+
+                    <!-- 搜索与精细配置折叠区 -->
+                    <div style="width: 100%;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+                            <div style="font-size: 12.5px; font-weight: 600; opacity: 0.88;">
+                                ⚙️ 动作精细配置 (已启用 {BLOCK_ACTIONS.length - (draft.blockActionPreferences?.disabledActionIds?.length || 0)}/{BLOCK_ACTIONS.length} 项)
+                            </div>
+                            <div style="position: relative; width: 220px;">
+                                <input
+                                    type="text"
+                                    class="b3-text-field"
+                                    placeholder="🔍 过滤动作名称/说明..."
+                                    bind:value={actionSearchQuery}
+                                    style="width: 100%; font-size: 11.5px; padding: 4px 8px;"
+                                />
+                                {#if actionSearchQuery}
+                                    <button
+                                        type="button"
+                                        style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; opacity: 0.6; font-size: 11px;"
+                                        onclick={() => actionSearchQuery = ""}
+                                    >✕</button>
+                                {/if}
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
                             {#each BLOCK_ACTION_GROUP_ORDER as group}
                                 {@const groupMeta = BLOCK_ACTION_GROUP_LABELS[group]}
                                 {@const groupActions = BLOCK_ACTIONS.filter(a => a.group === group)}
-                                {#if groupActions.length > 0}
-                                    <div style="padding: 8px 10px; background: var(--b3-theme-background); border-radius: 8px; border: 1px solid var(--b3-border-color);">
-                                        <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; opacity: 0.75; display: flex; align-items: center; gap: 4px;">
+                                {@const filteredActions = groupActions.filter(a => {
+                                    if (!actionSearchQuery.trim()) return true;
+                                    const q = actionSearchQuery.trim().toLowerCase();
+                                    const name = (t[a.labelKey] || a.fallbackLabel || "").toLowerCase();
+                                    const sub = (a.subtitle || "").toLowerCase();
+                                    return name.includes(q) || sub.includes(q) || a.id.toLowerCase().includes(q);
+                                })}
+                                {#if filteredActions.length > 0}
+                                    <div style="padding: 10px 12px; background: var(--b3-theme-background); border-radius: 10px; border: 1px solid var(--b3-border-color);">
+                                        <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 8px; opacity: 0.75; display: flex; align-items: center; gap: 4px;">
                                             <span>{groupMeta?.glyph}</span>
                                             <span>{groupMeta?.fallbackLabel}</span>
+                                            <span style="font-size: 10.5px; opacity: 0.65;">({filteredActions.length})</span>
                                         </div>
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px;">
-                                            {#each groupActions as action}
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px;">
+                                            {#each filteredActions as action}
                                                 {@const disabled = isActionDisabled(action.id)}
                                                 {@const pinned = isActionPinned(action.id)}
-                                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px; border-radius: 6px; background: color-mix(in srgb, var(--b3-theme-surface) 60%, transparent); font-size: 12px;">
-                                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; min-width: 0;">
+                                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--b3-theme-surface) 90%, var(--b3-theme-primary) 2%); border: 1px solid {pinned ? 'rgba(245, 158, 11, 0.45)' : 'var(--b3-theme-surface-lighter, rgba(0,0,0,0.06))'}; font-size: 12px;">
+                                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; min-width: 0;">
                                                         <input
                                                             type="checkbox"
                                                             checked={!disabled}
                                                             onchange={(e) => toggleActionDisabled(action.id, !e.currentTarget.checked)}
                                                         />
-                                                        <span>{action.glyph}</span>
-                                                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t[action.labelKey] || action.fallbackLabel}</span>
+                                                        <span style="font-size: 14px;">{action.glyph}</span>
+                                                        <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
+                                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">{t[action.labelKey] || action.fallbackLabel}</span>
+                                                            {#if action.subtitle}
+                                                                <span style="font-size: 10.5px; color: var(--b3-theme-on-surface-light, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{action.subtitle}</span>
+                                                            {/if}
+                                                        </div>
                                                     </label>
                                                     <button
                                                         type="button"
-                                                        style="border: none; background: transparent; cursor: pointer; font-size: 12px; opacity: {pinned ? '1' : '0.35'}; padding: 2px;"
-                                                        title={pinned ? "取消置顶" : "置顶到菜单最前端"}
+                                                        style="border: 1px solid {pinned ? '#f59e0b' : 'var(--b3-theme-surface-lighter, rgba(148, 163, 184, 0.25))'}; background: {pinned ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: {pinned ? '#d97706' : 'var(--b3-theme-on-surface-light, #64748b)'}; cursor: pointer; font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: {pinned ? '600' : 'normal'}; display: flex; align-items: center; gap: 3px;"
+                                                        title={pinned ? "已常驻在第 " + ((draft.blockActionPreferences?.pinnedActionIds || []).indexOf(action.id) + 1) + " 槽，点击取消" : "设为优先常驻 (排在菜单最前列)"}
                                                         onclick={() => toggleActionPinned(action.id)}
                                                     >
-                                                        {pinned ? "⭐" : "☆"}
+                                                        <span>{pinned ? "⭐" : "☆"}</span>
+                                                        <span>{pinned ? "已优先" : "优先"}</span>
                                                     </button>
                                                 </div>
                                             {/each}
@@ -1882,10 +2016,12 @@
                                 {/if}
                             {/each}
                         </div>
-                    </details>
+                    </div>
                 </div>
             {/snippet}
         </LvRow>
+        <!-- DL2 阶段0：生态统一外观与动效偏好分组 -->
+        <div class="lv-settings-prefs-slot" use:mountLvUiPrefsSectionAction></div>
     </LvSection>
     {/if}
 

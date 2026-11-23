@@ -1,0 +1,44 @@
+/*
+ * DL2 阶段0 · 闪卡装饰动效门控 (data-lv-* 属性由 lv-ui-prefs 生态键写入)
+ *
+ * 门控域：庆祝(纸屑/庆祝卡)与装饰光效(扫光/脉冲/辉光) —— 用户可在
+ * 「外观与动效」设置分组关闭；精简/关闭总闸下属性自动置 off。
+ * 白名单纪律：加载指示(骨架屏 lv-shimmer)、进度、危险警示动效永不挂门控。
+ *
+ * 注：本文件只做「关断覆写」，不重复定义动画本体；
+ *     动画本体仍在 index.scss 与各组件 <style> 中（后期阶段再迁移收敛）。
+ */
+
+/* ---- 庆祝域：目标达成庆祝横幅的粒子彩带 ---- */
+[data-lv-celebration="off"] .lv-celebration-particles {
+    display: none !important;
+}
+/* 光效关闭时庆祝横幅的辉光投影一并收敛（横幅文本信息保留） */
+[data-lv-glow="off"] .lv-target-celebration {
+    box-shadow: none !important;
+}
+
+/* ---- 光效域：脉冲 ---- */
+/* 首启引导主按钮呼吸脉冲（dashboard） */
+[data-lv-glow="off"] .lv-first-use-actions .lv-btn-primary {
+    animation: none !important;
+    box-shadow: none !important;
+}
+/* 复习序列步骤揭示反馈光（review） */
+[data-lv-glow="off"] .lv-step-revealed {
+    animation: none !important;
+}
+/* 推荐评分按钮提醒脉冲（保留静态高亮边框，只停脉冲） */
+[data-lv-glow="off"] .lv-btn-rate.lv-btn-suggested {
+    animation: none !important;
+}
+/* 通用 glow 入场动画（index.scss / review） */
+[data-lv-glow="off"] .lv-anim-glow {
+    animation: none !important;
+}
+
+/* ---- 光效域：卡片扫光/微光内阴影 ---- */
+/* --lv-inset-shine 以 box-shadow 组合项消费；置零长透明内阴影 = 无视觉 */
+[data-lv-glow="off"] {
+    --lv-inset-shine: inset 0 0 0 transparent;
+}

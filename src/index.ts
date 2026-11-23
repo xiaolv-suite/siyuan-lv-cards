@@ -1,7 +1,12 @@
 import "./index.scss";
+// DL2 阶段0：装饰动效门控（庆祝/光效偏好），叠加在 index.scss 之后生效
+import "./styles/motion-gates.css";
+// DL2 阶段0：生态外观偏好自举（data-lv-* 全局属性 + 偏好广播订阅）
+import "./libs/lv-ui-prefs";
 
 import { Plugin, getAllEditor, openTab, openMobileFileById, getAllTabs, type subMenu, type TProtyleAction } from "siyuan";
 import { showMessage, lvNotify, lvTicker, withDocLock, notifyDailyReviewReminder, notifyBatchCardCreation, lvBackup, lvLaunchpad, lvOmnisearch, lvAutomation, lvBlockAssistant, type LvSearchResultItem } from "./libs/notice";
+import { openBlockTypeMorphPicker, morphBlockTypeTo } from "./libs/lv-notice-kit";
 import * as siyuanNamespace from "siyuan";
 
 import { invalidateChunk, loadChunk, type ChunkMount } from "./libs/chunk-loader";
@@ -44,10 +49,11 @@ import { addInboxItem, emptyInbox, normalizeInbox, removeInboxItem, type InboxDa
 import { emptyGoals, type LearningGoalsData, type LearningGoal } from "./core/learning-goal";
 import { emptyEntryContexts, upsertContext, type EntryContextData, type EntryKind } from "./core/entry-context";
 import { ensureLifecycle, emptyLifecycles, transition, type ContentLifecyclesData, type ContentState } from "./core/content-lifecycle";
-import { appendBlock, createDocWithMd, getNotebooks, getBlockAttrs, exportMdContent, sqlQuery, kernelVersion, updateBlock, probeAssetRefs, setBlockAttrs, findDocIDByHPath } from "./api/siyuan";
-import { buildStarredAttrs, buildLeechAttrs, buildErrorReasonAttrs, extractCardQuestionAttr, extractCardAnswerAttr, buildAttrQaAttrs } from "./core/block-attributes";
+import { appendBlock, createDocWithMd, getNotebooks, getBlockAttrs, exportMdContent, sqlQuery, kernelVersion, updateBlock, probeAssetRefs, setBlockAttrs, findDocIDByHPath, flushTransaction } from "./api/siyuan";
+import { buildStarredAttrs, buildLeechAttrs, buildErrorReasonAttrs, extractCardQuestionAttr, extractCardAnswerAttr, buildAttrQaAttrs, buildAttrQaClearAttrs } from "./core/block-attributes";
 import { startEditorQaService, decorateEditorBlock, type EditorQaServiceInstance } from "./core/editor-qa-service";
 import { buildBlockSnapshot, executeBlockAction, probeEcosystemPresence } from "./core/block-action-executor";
+import { BLOCK_ACTIONS } from "./core/block-actions";
 import { openBlockActionMenu, closeBlockActionMenu } from "./ui/block-action-menu";
 import { buildDynamicBoardMarkdown, DYNAMIC_BOARD_DOC_PATH } from "./core/dynamic-notebook";
 import { aiChat, estimateTokens, parseCards, isAICanceled } from "./api/ai";
@@ -110,7 +116,14 @@ import {
     buildPairingDialogArgs,
     buildOcclusionEditorDialogArgs,
 } from "./bootstrap/dialog-openers";
-import { readAllPluginStores, applyAllPluginStores } from "./bootstrap/storage-loader";
+import {
+    readAllPluginStores,
+    applyAllPluginStores,
+    readTier1PluginStores,
+    readTier2PluginStores,
+    applyTier1PluginStores,
+    applyTier2PluginStores,
+} from "./bootstrap/storage-loader";
 import {
     resolveTargetNotebook,
     queryNotebookBlockIDs,
@@ -347,8 +360,22 @@ import {
     AI_COST_LEDGER_DATA,
     OB_LEDGER_DATA,
     MAINTENANCE_REPAIR_JOURNAL_DATA,
+    TIER1_STORE_KEYS,
+    TIER2_STORE_KEYS,
     ALL_STORE_KEYS,
 } from "./bootstrap/storage-keys";
+
+function safePerfMark(name: string): void {
+    if (typeof performance !== "undefined" && typeof performance.mark === "function") {
+        try { performance.mark(name); } catch { /* ignore */ }
+    }
+}
+
+function safePerfMeasure(name: string, startMark: string, endMark: string): void {
+    if (typeof performance !== "undefined" && typeof performance.measure === "function") {
+        try { performance.measure(name, startMark, endMark); } catch { /* ignore */ }
+    }
+}
 
 function createEmptyRepairJournal(): MaintenanceRepairJournal {
     return { schema: 1, entries: [] };
@@ -644,7 +671,8 @@ export default class LvCardsPlugin extends Plugin {
         this.saveSettingsNow();
     }
     sessionState: SessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
-    public clearSessionState(): void {
+    public async clearSessionState(): Promise<void> {
+        await this.ensureTier2Loaded();
         const previous = this.sessionState;
         const version = ++this.sessionMutationVersion;
         this.sessionState = { date: "", reviewedIDs: [], skippedIDs: [], counters: { new: 0, review: 0, forget: 0, skip: 0 } };
@@ -685,6 +713,7 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private async rememberSourceFingerprint(blockID: string, rootID?: string, markdown?: string): Promise<void> {
+        await this.ensureTier2Loaded();
         let md = markdown;
         let root = rootID;
         if (md === undefined || root === undefined) {
@@ -725,6 +754,7 @@ export default class LvCardsPlugin extends Plugin {
     async reconcileSourceHealthForScan(
         cards: Array<{ blockID: string; md: string; baselineMarkdown?: string; rootID?: string; exists?: boolean; mediaRefs?: string[]; mediaBroken?: string[]; mediaUnknown?: string[]; sourceHealthIssues?: { kind: string; detail: string }[] }>,
     ): Promise<void> {
+        await this.ensureTier2Loaded();
         const mediaByCard = new Map(cards.map(card => {
             const present: Record<string, boolean> = {};
             for (const ref of card.mediaRefs ?? []) {
@@ -763,6 +793,7 @@ export default class LvCardsPlugin extends Plugin {
      * action; scans themselves never mutate the baseline.
      */
     async acknowledgeSourceHealth(blockID: string): Promise<void> {
+        await this.ensureTier2Loaded();
         const safe = String(blockID ?? "").replace(/'/g, "''");
         if (!safe) throw new Error("来源块 ID 为空，无法更新来源基线");
         const rows = await sqlQuery(`SELECT markdown, root_id FROM blocks WHERE id='${safe}' LIMIT 1`);
@@ -810,7 +841,8 @@ export default class LvCardsPlugin extends Plugin {
         return (await this.getMaintenanceRepairController()).rollback();
     }
 
-    private getMaintenanceRepairController() {
+    private async getMaintenanceRepairController() {
+        await this.ensureTier2Loaded();
         return this.maintenanceRepairController ??= loadHubServices().then(({ createMaintenanceRepairController }) =>
             createMaintenanceRepairController({
                 previews: this.maintenanceRepairPreviews,
@@ -828,16 +860,19 @@ export default class LvCardsPlugin extends Plugin {
         });
     }
 
-    private saveBlockContentVersion(blockID: string, md: string, recovery?: RepairSnapshotWrite): Promise<boolean | string> {
+    private async saveBlockContentVersion(blockID: string, md: string, recovery?: RepairSnapshotWrite): Promise<boolean | string> {
+        await this.ensureTier2Loaded?.();
         const operation = this.contentVersionQueue.then(async () => {
             // Only the transaction adapter can supply a captured exact old value.
             // Recovery must accept legacy invalid content or a failed batch stays half applied.
             const restoring = recovery?.blockID === blockID && recovery.markdown === md;
             const riff = restoring ? null : await getRiffCardsByBlockIDs([blockID]);
             if (!restoring && (!riff?.blocks || riff.blocks.length === 0 || riff.blocks.some(block => block.id === blockID))) {
+                const attrs = await getBlockAttrs(blockID).catch(() => ({}));
                 const decision = validateCardEntry({
                     blockID,
                     markdown: md,
+                    attrs,
                     exists: true,
                     occlusionValid: await this.hasValidOcclusionCard(blockID, md),
                 });
@@ -884,7 +919,8 @@ export default class LvCardsPlugin extends Plugin {
         return operation;
     }
 
-    acceptContentVersion(blockID: string, at: number): Promise<void> {
+    async acceptContentVersion(blockID: string, at: number): Promise<void> {
+        await this.ensureTier2Loaded();
         const operation = this.contentVersionQueue.then(async () => {
             const next = acceptVersion(this.contentVersions, blockID, at);
             await this.persist.save(CONTENT_VERSIONS_DATA, next);
@@ -898,7 +934,9 @@ export default class LvCardsPlugin extends Plugin {
     private lastDue = 0;
 
     /** AT-1：批量装载键（onload 与同步重载共用同一路径，防错位回归） */
-    private static readonly STORE_KEYS = ALL_STORE_KEYS;
+    public static readonly STORE_KEYS = ALL_STORE_KEYS;
+    public static readonly TIER1_KEYS = TIER1_STORE_KEYS;
+    public static readonly TIER2_KEYS = TIER2_STORE_KEYS;
 
     /** AT-1（保守版）：同步/覆盖变更 → 有界串行重载。防抖 2s、单飞、先冲刷本地在途写（绝不覆盖未 flush 的本地状态）。
      * 打开中的页签不会自动重渲染（完整 UI 刷新协议待真机专项）；重载后新读取即取到新数据，角标即时刷新。 */
@@ -1017,6 +1055,116 @@ export default class LvCardsPlugin extends Plugin {
         }
     }
 
+    private tier2Ready = false;
+    private tier2LoadingPromise: Promise<void> | undefined;
+    private tier2ScheduledTimer: any = undefined;
+    private tier2IdleId: any = undefined;
+    private tier2LoadGeneration = 0;
+
+    private cancelTier2Schedule(): void {
+        if (this.tier2ScheduledTimer !== undefined) {
+            clearTimeout(this.tier2ScheduledTimer);
+            this.tier2ScheduledTimer = undefined;
+        }
+        if (this.tier2IdleId !== undefined) {
+            if (typeof window !== "undefined" && typeof (window as any).cancelIdleCallback === "function") {
+                try {
+                    (window as any).cancelIdleCallback(this.tier2IdleId);
+                } catch { /* ignore */ }
+            }
+            this.tier2IdleId = undefined;
+        }
+    }
+
+    private scheduleTier2Load(): void {
+        if (this.tier2Ready || this.tier2LoadingPromise || this.isUnloading) return;
+        this.cancelTier2Schedule();
+        const trigger = () => {
+            this.tier2ScheduledTimer = undefined;
+            this.tier2IdleId = undefined;
+            if (this.isUnloading || this.tier2Ready) return;
+            void this.ensureTier2Loaded().catch((err) => {
+                lvLog("warn", `[storage] Background Tier 2 load failed, retryable on-demand: ${err instanceof Error ? err.message : String(err)}`);
+            });
+        };
+
+        // 两级延迟调度：先通过 setTimeout 静默期（1500ms）避开首屏渲染与启动高并发期，再转 requestIdleCallback 在浏览器空闲时刻执行
+        this.tier2ScheduledTimer = setTimeout(() => {
+            this.tier2ScheduledTimer = undefined;
+            if (this.isUnloading || this.tier2Ready) return;
+            if (typeof window !== "undefined" && typeof (window as any).requestIdleCallback === "function") {
+                try {
+                    this.tier2IdleId = (window as any).requestIdleCallback(() => trigger(), { timeout: 2000 });
+                    return;
+                } catch { /* ignore and fallback */ }
+            }
+            this.tier2ScheduledTimer = setTimeout(trigger, 120);
+        }, 1500);
+    }
+
+    public ensureTier2Loaded(): Promise<void> {
+        if (this.tier2Ready) return Promise.resolve();
+        if (this.tier2LoadingPromise) return this.tier2LoadingPromise;
+        this.cancelTier2Schedule();
+        this.tier2LoadingPromise = (async () => {
+            try {
+                await this.loadTier2Storage();
+            } finally {
+                this.tier2LoadingPromise = undefined;
+            }
+        })();
+        return this.tier2LoadingPromise;
+    }
+
+    private async loadTier2Storage(): Promise<void> {
+        if (this.isUnloading) return;
+        if (typeof this.loadData !== "function") {
+            this.tier2Ready = true;
+            return;
+        }
+        const currentGen = ++this.tier2LoadGeneration;
+        safePerfMark("siyuan-lv-cards-tier2-start");
+        try {
+            const loaded = await this.readTier2Stores();
+            if (this.isUnloading || currentGen !== this.tier2LoadGeneration) {
+                return;
+            }
+            await this.applyTier2Stores(loaded);
+            if (this.isUnloading || currentGen !== this.tier2LoadGeneration) {
+                return;
+            }
+            this.tier2Ready = true;
+            safePerfMark("siyuan-lv-cards-tier2-end");
+            safePerfMeasure("siyuan-lv-cards-tier2-load", "siyuan-lv-cards-tier2-start", "siyuan-lv-cards-tier2-end");
+        } catch (err) {
+            this.tier2Ready = false;
+            lvLog("error", `[storage] Tier 2 load failed: ${err instanceof Error ? err.message : String(err)}`);
+            throw err;
+        }
+    }
+
+    private async readTier1Stores(): Promise<Record<string, unknown>> {
+        return readTier1PluginStores((key) => this.loadData(key));
+    }
+
+    private async applyTier1Stores(loaded: Record<string, unknown>) {
+        await applyTier1PluginStores(this, loaded);
+    }
+
+    private async readTier2Stores(): Promise<Record<string, unknown>> {
+        return readTier2PluginStores((key) =>
+            key === INTAKE_JOURNAL
+                ? readPluginJsonFile(this.name, key).catch(() => null)
+                : this.loadData(key)
+        );
+    }
+
+    private async applyTier2Stores(loaded: Record<string, unknown>) {
+        await applyTier2PluginStores(this, loaded, {
+            loadHubServices,
+        });
+    }
+
     private async readAllStores(): Promise<Record<string, unknown>> {
         return readAllPluginStores((key) => key === INTAKE_JOURNAL ? readPluginJsonFile(this.name, key) : this.loadData(key), LvCardsPlugin.STORE_KEYS);
     }
@@ -1025,17 +1173,20 @@ export default class LvCardsPlugin extends Plugin {
         await applyAllPluginStores(this, loaded, {
             loadHubServices,
         });
+        this.tier2Ready = true;
     }
 
     /**
      * 全生态联合灾备切面（lvBackup 导出）
-     * 导出闪卡牌组、复习日志与记忆曲线排期等全部 22 槽持久化数据
+     * 导出闪卡牌组、复习日志与记忆曲线排期等全部 23 槽持久化数据
      */
-    public dumpData(): Promise<Record<string, unknown>> {
+    public async dumpData(): Promise<Record<string, unknown>> {
+        await this.ensureTier2Loaded();
         return withExternalIntakeLock(() => this.dumpDataLocked());
     }
 
     private async dumpDataLocked(): Promise<Record<string, unknown>> {
+        await this.ensureTier2Loaded();
         if (this.saveRevlogTimer) {
             this.flushRevlogSave();
         }
@@ -1059,11 +1210,13 @@ export default class LvCardsPlugin extends Plugin {
      * 全生态联合灾备切面（lvBackup 导入恢复）
      * 将全生态灾备包中的闪卡数据恢复到私有存储并重载刷新
      */
-    public restoreData(data: Record<string, unknown>): Promise<boolean> {
+    public async restoreData(data: Record<string, unknown>): Promise<boolean> {
+        await this.ensureTier2Loaded();
         return withExternalIntakeLock(() => this.restoreDataLocked(data));
     }
 
     private async restoreDataLocked(data: Record<string, unknown>): Promise<boolean> {
+        await this.ensureTier2Loaded();
         if (!data || typeof data !== "object") return false;
         const restoreFiles = { ...(data.stores && typeof data.stores === "object" ? data.stores : data) } as Record<string, unknown>;
         try {
@@ -1276,15 +1429,17 @@ export default class LvCardsPlugin extends Plugin {
             }
 
             // 1. 如果已有来源块 ID，直接打上闪卡标记入库。
+            //    走 due-shared 的统一入组入口（带质量门禁）：来源块若为无答案纯文本，
+            //    门禁拒绝后降级为下方"新建标准问答卡"，避免把无效卡塞进卡组却永远不出现在复习队列。
             //    Windows 下内核临时队列文件偶发被杀软/索引器短暂锁定（rename: Access is denied），
             //    属瞬时抖动：对可重试错误做 2 次退避重试，避免把抖动当永久失败上报。
             if (sourceBlockId) {
                 try {
-                    await this.retryTransientKernel(() => riff.addRiffCards(deckID, [String(sourceBlockId)]), 2, 500);
+                    await this.retryTransientKernel(() => addRiffCards(deckID, [String(sourceBlockId)]), 2, 500);
                     notifyBatchCardCreation(`已自动同步错题到待复习闪卡`);
                     return true;
                 } catch {
-                    // 若直接入库失败，降级为新建闪卡
+                    // 若直接入库失败（含门禁拒绝），降级为新建闪卡
                 }
             }
 
@@ -1411,6 +1566,7 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     async onload() {
+        safePerfMark("siyuan-lv-cards-onload-start");
         // AT-6：启动性能计时起点（onload 首行）
         this.perf.markStart();
         this.paletteState = null;
@@ -1434,9 +1590,10 @@ export default class LvCardsPlugin extends Plugin {
         }, ICON_LV_CARDS_SVG);
         this.addIcons(ICON_LV_CARDS_SVG);
 
-        // AQ-1：批量加载以 keys 数组驱动并按位置配对，杜绝「6 项加载只解构 5 项」的错位回归
-        // （AT-1：读取与装配抽成方法，同步/覆盖变更后的有界串行重载复用同一路径）
-        await this.applyLoadedStores(await this.readAllStores());
+        // 轨道 A 启动优化：关键路径仅读取并装配 Tier 1 核心槽（settings, revlog, suspend-today, exam-plans）
+        await this.applyTier1Stores(await this.readTier1Stores());
+        safePerfMark("siyuan-lv-cards-tier1-ready");
+        safePerfMeasure("siyuan-lv-cards-tier1-load", "siyuan-lv-cards-onload-start", "siyuan-lv-cards-tier1-ready");
         this.bindExamPlansSync();
         void this.refreshExamLinkage();
         if (typeof document !== "undefined") {
@@ -1499,6 +1656,24 @@ export default class LvCardsPlugin extends Plugin {
                     }
                 },
             },
+            {
+                filter: ["block", "action", "kuai", "kuaizhushou", "zhushou", "cz", "caozuo", "块助手", "操作中心", "块操作中心", "块级操作"],
+                html: `<div class="b3-list-item__first"><span class="b3-list-item__text">${this.i18n.slashBlockActionCenter ?? "小驴块助手：打开块操作中心"}</span><span class="b3-list-item__meta">Alt+B / Action</span></div>`,
+                id: "lv-cards-slash-block-action",
+                callback: (_protyle, nodeElement) => {
+                    const blockID = nodeElement?.getAttribute("data-node-id")
+                        || nodeElement?.closest?.("[data-node-id]")?.getAttribute("data-node-id");
+                    if (blockID) {
+                        const targetEl = (document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`) || nodeElement) as HTMLElement;
+                        const anchor = (targetEl?.querySelector(":scope > .protyle-attr .lv-card-badge-pill") as HTMLElement | null)
+                            || targetEl
+                            || document.body;
+                        void this.openBlockActionCenter(blockID, anchor);
+                    } else {
+                        void this.openActiveBlockActionCenter();
+                    }
+                },
+            },
         ];
 
         // 原生复习界面的评分事件 → 本地 revlog（宽容解析，事件结构变化不致崩）
@@ -1537,11 +1712,19 @@ export default class LvCardsPlugin extends Plugin {
                     updatedAt: new Date().toISOString(),
                 };
             },
-            openHub: tab => this.openTabOf(TAB_DASHBOARD, tab ? { tab } : undefined),
-            openReview: opts => this.openTabOf(TAB_REVIEW, opts as Record<string, unknown>),
-            receiveExtract: async (envelope: ExtractEnvelope) => this.receiveExtract(envelope),
-            createCard: async (input: IntakeInput) => this.createExternalAtomicCard(input),
-        });
+	            openHub: tab => this.openTabOf(TAB_DASHBOARD, tab ? { tab } : undefined),
+	            openReview: opts => this.openTabOf(TAB_REVIEW, opts as Record<string, unknown>),
+	            receiveExtract: async (envelope: ExtractEnvelope) => this.receiveExtract(envelope),
+	            createCard: async (input: IntakeInput) => this.createExternalAtomicCard(input),
+	            openCardQuestionDialog: (blockID?: string) => void this.openCardQuestionDialog(blockID),
+	            openBlockActionCenter: (blockID: string, anchor?: HTMLElement) => void this.openBlockActionCenter(blockID, anchor || document.body),
+	            openDeckPicker: (blockIDs: string[]) => this.openDeckPicker(blockIDs),
+	            makeClozeCard: (blockID: string) => this.makeClozeCard(blockID),
+	            openOcclusionFlow: (blockID: string) => this.openDeckPicker([blockID], {
+	                skipAdd: true,
+	                onPicked: (deckID: string) => void this.openOcclusionEditor(blockID, deckID),
+	            }),
+	        });
 
         // 向小驴雷切工作台安全注册待复习闪卡组件（Ecosystem Federation Epoch 6 / Bento 3.0）
         this.unregisterRaikiri = registerRaikiriModuleSafely({
@@ -1705,14 +1888,20 @@ export default class LvCardsPlugin extends Plugin {
             };
         }
 
-        // 启动免侵入属性问答卡编辑器监听与装饰服务（支持原生 SVG 快捷按钮与行内「问题」无感渲染）
-        this.initEditorQaService();
+        // 调度 Tier 2 边缘/AI/诊断等非启动关键路径存储延迟空闲加载
+        this.scheduleTier2Load();
+        safePerfMark("siyuan-lv-cards-onload-end");
+        safePerfMeasure("siyuan-lv-cards-onload", "siyuan-lv-cards-onload-start", "siyuan-lv-cards-onload-end");
     }
 
     /** 启动或确保免侵入属性问答卡编辑器监听与装饰服务（双入口幂等保底） */
     private initEditorQaService(): void {
         if (this.editorQaService) return;
+        const centerContainer = typeof document !== "undefined"
+            ? (document.querySelector(".layout__center") || document.querySelector(".protyle-content") || document.querySelector("#layouts"))
+            : null;
         this.editorQaService = startEditorQaService({
+            targetContainer: centerContainer as HTMLElement | undefined,
             onEditQuestion: (blockID: string) => {
                 setTimeout(() => {
                     void this.openCardQuestionDialog(blockID);
@@ -1724,6 +1913,60 @@ export default class LvCardsPlugin extends Plugin {
             onPrefetch: () => {
                 // 智能预热：在主线程空闲时静默预加载问答组件分包，确保用户点击时 0 延迟秒开
                 void loadQuestionAttrDialog().catch(() => {});
+            },
+            getPinnedActions: () => {
+                const prefPinned = this.settings.blockActionPreferences?.pinnedActionIds;
+                const pinnedIds = (Array.isArray(prefPinned) && prefPinned.length > 0)
+                    ? prefPinned
+                    : lvBlockAssistant.getPinnedActions().map(a => a.id);
+
+                const all = lvBlockAssistant.getActions();
+                const map = new Map(all.map(a => [a.id, a]));
+                const result: Array<{ id: string; glyph: string; label: string; badgeText?: string }> = [];
+                for (const id of pinnedIds) {
+                    const a = map.get(id);
+                    if (a) {
+                        result.push({
+                            id: a.id,
+                            glyph: a.glyph,
+                            label: a.label,
+                            badgeText: a.badgeText,
+                        });
+                    }
+                }
+                return result;
+            },
+            onRunAction: async (actionId: string, blockID: string, anchor?: HTMLElement) => {
+                // 探查是否处于多选批量状态
+                let batchIDs: string[] | undefined;
+                if (typeof document !== "undefined") {
+                    const activeSelected = document.querySelectorAll(".layout__wnd--active .protyle-wysiwyg--select[data-node-id], .protyle-wysiwyg--select[data-node-id]");
+                    const selectedIDs = Array.from(new Set(Array.from(activeSelected).map(e => e.getAttribute("data-node-id") || "").filter(Boolean)));
+                    if (selectedIDs.length > 1 && selectedIDs.includes(blockID)) {
+                        batchIDs = selectedIDs;
+                    }
+                }
+
+                const localAction = BLOCK_ACTIONS.find(a => a.id === actionId);
+                if (localAction) {
+                    if (batchIDs && localAction.singleOnly) {
+                        showMessage("该快捷动作仅限单块操作，已为您展开批量操作中心", 2400, "info");
+                        const targetEl = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`) as HTMLElement;
+                        const fallbackAnchor = anchor || (targetEl?.querySelector(":scope > .protyle-attr .lv-card-badge-pill") as HTMLElement | null) || targetEl || document.body;
+                        void this.openBlockActionCenter(blockID, fallbackAnchor);
+                        return;
+                    }
+                    await this.runBlockAction(localAction, blockID, batchIDs, undefined, anchor);
+                    return;
+                }
+                const allActions = lvBlockAssistant.getActions();
+                const matched = allActions.find(a => a.id === actionId);
+                if (matched) {
+                    // 2026-11-21 走查修复：胶囊快捷槽直跑外部动作原先传 undefined 快照，违背 lv-kit
+                    // 契约（executor 明文要求真实快照），依赖 isCard/hasText 的外部动作会误判块形态。
+                    const snap = await buildBlockSnapshot(blockID, batchIDs);
+                    await matched.execute(blockID, snap, batchIDs);
+                }
             },
         });
         // 参与全能块助手跨插件单例 Leader 竞选与仲裁
@@ -1742,34 +1985,95 @@ export default class LvCardsPlugin extends Plugin {
         try {
             const snapshot = await buildBlockSnapshot(blockID);
             const presence = probeEcosystemPresence();
-            // 动态接入第三方社区插件扩展动作与开放总线动作
-            const communityActions = lvBlockAssistant.getActions()
-                .filter(a => a.group === "community")
-                .map(a => ({
-                    id: a.id,
-                    group: "community" as const,
-                    labelKey: a.id,
-                    fallbackLabel: a.label,
-                    subtitle: a.subtitle,
-                    glyph: a.glyph,
-                    supportsBatch: a.supportsBatch,
-                    singleOnly: a.singleOnly,
-                    sourcePlugin: a.sourcePlugin as any,
-                    handler: (id: string, s: any, b?: string[]) => a.execute(id, s, b),
-                }));
+            
+            // 读取全能块助手资产库 (Block Action Store) 用户装配偏好，具备严密防崩退兜底
+            let storeConfig: import("./libs/lv-notice-kit").BlockActionStoreConfig = { version: 1, enabledActionIds: [], pinnedActionIds: [] };
+            try {
+                if (typeof lvBlockAssistant?.getStoreConfig === "function") {
+                    storeConfig = lvBlockAssistant.getStoreConfig();
+                }
+            } catch { /* ignore */ }
+
+            const localActionIds = new Set(BLOCK_ACTIONS.map(a => a.id));
+
+            // 动态接入来自全生态中枢的动作，带异常隔离防护
+            let externalActions: import("./core/block-actions").BlockActionDescriptor[] = [];
+            try {
+                const rawActions = (typeof lvBlockAssistant?.getActions === "function" ? lvBlockAssistant.getActions() : []) || [];
+                externalActions = rawActions
+                    .filter(a => a && a.id && !localActionIds.has(a.id))
+                    .map(a => ({
+                        id: a.id,
+                        group: (a.group === "study" || a.group === "flashcard" ? "flashcard"
+                               : a.group === "reading" || a.group === "knowledge" ? "knowledge"
+                               : a.group === "organization" || a.group === "native" ? "native"
+                               : a.group === "clipboard" ? "clipboard"
+                               : a.group === "time" ? "time"
+                               : "community") as any,
+                        labelKey: a.id,
+                        fallbackLabel: a.label || a.id,
+                        subtitle: a.subtitle,
+                        glyph: a.glyph || "⚡",
+                        supportsBatch: Boolean(a.supportsBatch),
+                        singleOnly: Boolean(a.singleOnly),
+                        sourcePlugin: a.sourcePlugin as any,
+                        preferredBlockKinds: a.preferredBlockKinds as any,
+                        excludedBlockKinds: a.excludedBlockKinds as any,
+                        isAvailable: (s, _p) => {
+                            if (typeof a.isAvailable === "function") {
+                                return Boolean(a.isAvailable(s));
+                            }
+                            return true;
+                        },
+                        handler: (id: string, s: any, b?: string[]) => a.execute?.(id, s, b),
+                    }));
+            } catch (extErr: any) {
+                lvLog("warn", `[block-action] failed to resolve external actions: ${extErr?.message || String(extErr)}`);
+            }
+
+            // 综合计算用户启用的动作与置顶动作（块助手资产库作为第一权威事实源）
+            const allAvailableIds = [...BLOCK_ACTIONS, ...externalActions].map(a => a.id);
+            let effectiveDisabled: string[] = [];
+            if (Array.isArray(storeConfig?.enabledActionIds) && storeConfig.enabledActionIds.length > 0) {
+                effectiveDisabled = allAvailableIds.filter(id => !storeConfig.enabledActionIds.includes(id));
+            } else {
+                effectiveDisabled = this.settings.blockActionPreferences?.disabledActionIds ?? [];
+            }
+
+            const combinedPinned = (Array.isArray(storeConfig?.pinnedActionIds) && storeConfig.pinnedActionIds.length > 0)
+                ? storeConfig.pinnedActionIds
+                : (this.settings.blockActionPreferences?.pinnedActionIds ?? []);
+
+            const effectivePreferences = {
+                disabledActionIds: effectiveDisabled,
+                pinnedActionIds: combinedPinned,
+            };
 
             openBlockActionMenu({
                 snapshot,
                 presence,
-                preferences: this.settings.blockActionPreferences,
-                externalActions: communityActions,
+                preferences: effectivePreferences,
+                externalActions,
                 i18n: this.i18n as unknown as Record<string, any>,
                 anchor,
-                onAction: (action) => this.runBlockAction(action, blockID, snapshot.batchBlockIDs),
+                onAction: (action) => this.runBlockAction(action, blockID, snapshot.batchBlockIDs, snapshot, anchor),
             });
         } catch (err: any) {
-            lvLog("error", `[block-action] open center failed: ${err?.message || String(err)}`);
-            showMessage("打开块操作中心失败，请稍后重试", 2600, "info");
+            lvLog("error", `[block-action] open center failed: ${err?.message || String(err)} ${err?.stack || ""}`);
+            // 极速容灾兜底：降级打开纯净核心菜单，确保界面永不卡死
+            try {
+                const fallbackSnapshot = await buildBlockSnapshot(blockID);
+                openBlockActionMenu({
+                    snapshot: fallbackSnapshot,
+                    presence: {},
+                    i18n: this.i18n as unknown as Record<string, any>,
+                    anchor,
+                    onAction: (action) => this.runBlockAction(action, blockID, fallbackSnapshot.batchBlockIDs, fallbackSnapshot, anchor),
+                });
+            } catch (fatalErr: any) {
+                lvLog("error", `[block-action] fallback failed: ${fatalErr?.message || String(fatalErr)}`);
+                showMessage("打开块操作中心失败，请稍后重试", 2600, "info");
+            }
         }
     }
 
@@ -1778,6 +2082,8 @@ export default class LvCardsPlugin extends Plugin {
         action: import("./core/block-actions").BlockActionDescriptor,
         blockID: string,
         batchBlockIDs?: string[],
+        snapshot?: import("./core/block-actions").BlockSnapshot,
+        anchor?: HTMLElement,
     ): Promise<void> {
         await executeBlockAction(
             action,
@@ -1795,12 +2101,16 @@ export default class LvCardsPlugin extends Plugin {
                 removeCardsFromDeck: (ids) => void this.removeCardsFromDeck(ids),
                 addDocToReview: (id) => void this.addDocToReview(id),
                 removeDocFromReview: (id) => void this.removeDocFromReview(id),
+                openDoc: (id, zoomIn) => this.openSiYuanTarget(id, Boolean(zoomIn)),
             },
             batchBlockIDs,
+            snapshot,
+            { anchor },
         );
     }
 
     onLayoutReady() {
+        safePerfMark("siyuan-lv-cards-layoutready-start");
         this.ensureTopBarElement();
         this.refreshDueBadge();
         this.setupBadgeTimer();
@@ -1812,6 +2122,9 @@ export default class LvCardsPlugin extends Plugin {
                 void this.openOnboarding();
             }, 2000);
         }
+        safePerfMark("siyuan-lv-cards-layoutready-end");
+        safePerfMeasure("siyuan-lv-cards-layoutready", "siyuan-lv-cards-layoutready-start", "siyuan-lv-cards-layoutready-end");
+        safePerfMeasure("siyuan-lv-cards-startup-total", "siyuan-lv-cards-onload-start", "siyuan-lv-cards-layoutready-end");
     }
 
     /** 角标心跳与主时钟（消灭高频唤醒，统一由 lvTicker.onMinute 驱动） */
@@ -1935,6 +2248,8 @@ export default class LvCardsPlugin extends Plugin {
     onunload() {
         const unloadStart = Date.now();
         this.isUnloading = true;
+        this.tier2LoadGeneration++;
+        this.cancelTier2Schedule();
         if (typeof document !== "undefined") {
             document.body.removeAttribute("data-lv-card-badge");
         }
@@ -2139,6 +2454,23 @@ export default class LvCardsPlugin extends Plugin {
                 isAlreadyCard,
                 actions: {
                     addToDeck: (ids) => this.openDeckPicker(ids),
+                    openBlockActionCenter: (ids) => {
+                        const targetId = ids[0];
+                        const targetEl = (detail?.blockElements?.[0] || detail?.element || (targetId ? document.querySelector(`[data-node-id="${targetId}"]`) : undefined)) as HTMLElement | undefined;
+                        const anchor = (targetEl?.querySelector(":scope > .protyle-attr .lv-card-badge-pill") as HTMLElement | null)
+                            || targetEl
+                            || document.body;
+                        void this.openBlockActionCenter(targetId, anchor);
+                    },
+                    morphBlockType: (id) => {
+                        const targetEl = (detail?.blockElements?.[0] || detail?.element || (id ? document.querySelector(`[data-node-id="${id}"]`) : undefined)) as HTMLElement | undefined;
+                        const anchor = (targetEl?.querySelector(":scope > .protyle-attr .lv-card-badge-pill") as HTMLElement | null)
+                            || targetEl
+                            || document.body;
+                        openBlockTypeMorphPicker(id, anchor, async (targetType) => {
+                            await morphBlockTypeTo(id, targetType);
+                        });
+                    },
                     makeFromSelection: (id, text) => {
                         void this.openQuickCardFromSelection(id, text);
                     },
@@ -2230,6 +2562,9 @@ export default class LvCardsPlugin extends Plugin {
     };
 
     private async openDeckPicker(blockIDs: string[], opts: { skipAdd?: boolean; onPicked?: (deckID: string) => void } = {}) {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openDeckPicker failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         const DeckPicker = await loadDeckPicker();
         svelteDialog({
             title: this.i18n.deckPickerTitle,
@@ -2247,31 +2582,42 @@ export default class LvCardsPlugin extends Plugin {
                     if (opts.skipAdd) {
                         return;
                     }
+                    // 挖空卡等刚写入就入组的场景：SQL 索引尚未提交时查询到的是旧正文，
+                    // 质量门禁会把"刚包好 ==挖空=="的块判成无答案纯文本。先请求内核立即
+                    // 提交事务，与 validateRiffCardEntries 的索引就绪策略对齐。
+                    try {
+                        await flushTransaction();
+                    } catch {
+                        // 老版本内核无此端点：退化为短等待，尽力缩短脏读窗口
+                        await new Promise(r => setTimeout(r, 300));
+                    }
                     const escapedIDs = blockIDs.map(id => `'${id.replace(/'/g, "''")}'`).join(",");
-                    const rows = await sqlQuery(`SELECT id, markdown FROM blocks WHERE id IN (${escapedIDs})`);
-                    const markdownById = new Map(rows.map(row => [String(row.id), String(row.markdown ?? "")]));
+                    const rows = await sqlQuery(`SELECT id, markdown, ial FROM blocks WHERE id IN (${escapedIDs})`);
+                    const rowsById = new Map(rows.map(row => [String(row.id), row]));
                     const invalidIds: string[] = [];
                     for (const id of blockIDs) {
-                        const markdown = markdownById.get(id) ?? "";
+                        const row = rowsById.get(id);
+                        const markdown = String(row?.markdown ?? "");
+                        const ial = String(row?.ial ?? "");
+                        const attrs: Record<string, string> = {};
+                        for (const m of ial.matchAll(/([a-zA-Z0-9_-]+)=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
+                            attrs[m[1]] = m[2] ?? m[3] ?? m[4] ?? "";
+                        }
                         const occlusionValid = await this.hasValidOcclusionCard(id, markdown);
                         const decision = validateCardEntry({
                             blockID: id,
                             markdown,
-                            exists: markdownById.has(id),
+                            attrs,
+                            exists: Boolean(row),
                             occlusionValid,
+                            allowLegacyFormat: true,
                         });
                         if (!decision.ok) invalidIds.push(id);
                     }
                     if (invalidIds.length > 0) {
-                        if (blockIDs.length === 1) {
-                            showMessage("该块暂未挖空，正在为您打开免侵入属性问答（设题后自动加入卡包）", 3000, "info");
-                            setTimeout(() => {
-                                void this.openCardQuestionDialog(blockIDs[0]);
-                            }, 80);
-                            return true;
-                        }
-                        showMessage(this.i18n.flashcardNeedsAnswer, 3000, "error");
-                        return false;
+                        const reason = this.i18n.flashcardNeedsAnswer || "选中的块尚未设置问题或挖空，无法加入卡包";
+                        showMessage(reason, 3000, "error");
+                        throw new Error(reason);
                     }
                     const dupes = await checkDuplicateCards(blockIDs);
                     if (dupes > 0) {
@@ -2280,6 +2626,7 @@ export default class LvCardsPlugin extends Plugin {
                             content: `<div class="b3-typography">${this.i18n.dupConfirm.replace("${n}", String(dupes))}</div>`,
                         });
                     }
+                    return true;
                 },
                 onConfirm: async (deckID: string) => {
                     if (!opts.skipAdd) {
@@ -2287,12 +2634,14 @@ export default class LvCardsPlugin extends Plugin {
                             await addRiffCards(deckID, blockIDs);
                             await Promise.all(blockIDs.map(id => this.rememberSourceFingerprint(id)));
                         } catch (error) {
-                            showMessage(formatRiffCardEntryError(error, this.i18n), 3000, "error");
-                            return false;
+                            const errText = formatRiffCardEntryError(error, this.i18n);
+                            showMessage(errText, 3000, "error");
+                            throw new Error(errText);
                         }
                         notifyBatchCardCreation(this.i18n.deckAdded.replace("${n}", String(blockIDs.length)));
                     }
                     opts.onPicked?.(deckID);
+                    return true;
                 },
                 onClose: noop,
             },
@@ -2398,13 +2747,31 @@ export default class LvCardsPlugin extends Plugin {
         let blockID = "";
         const activeEl = document.activeElement;
         if (activeEl instanceof HTMLElement) {
-            blockID = activeEl.closest("[data-node-id]")?.getAttribute("data-node-id") || "";
+            // 若焦点位于文档大标题上（.protyle-title），自动向下回溯至正文首个内容块
+            if (activeEl.closest(".protyle-title") || activeEl.classList.contains("protyle-title__input")) {
+                const activeProtyle = activeEl.closest(".protyle") || document.querySelector(".layout__wnd--active .protyle:not(.fn__none)");
+                const firstContentBlock = activeProtyle?.querySelector(".protyle-wysiwyg > [data-node-id]");
+                if (firstContentBlock) {
+                    blockID = firstContentBlock.getAttribute("data-node-id") || "";
+                }
+            } else {
+                blockID = activeEl.closest("[data-node-id]")?.getAttribute("data-node-id") || "";
+            }
         }
         if (!blockID) {
             const sel = document.getSelection();
             if (sel && sel.rangeCount > 0) {
                 const node = sel.getRangeAt(0).commonAncestorContainer;
-                blockID = (node instanceof HTMLElement ? node : node?.parentElement)?.closest?.("[data-node-id]")?.getAttribute?.("data-node-id") || "";
+                const closestEl = node instanceof HTMLElement ? node : node?.parentElement;
+                if (closestEl?.closest?.(".protyle-title")) {
+                    const activeProtyle = closestEl.closest(".protyle") || document.querySelector(".layout__wnd--active .protyle:not(.fn__none)");
+                    const firstContentBlock = activeProtyle?.querySelector(".protyle-wysiwyg > [data-node-id]");
+                    if (firstContentBlock) {
+                        blockID = firstContentBlock.getAttribute("data-node-id") || "";
+                    }
+                } else {
+                    blockID = closestEl?.closest?.("[data-node-id]")?.getAttribute?.("data-node-id") || "";
+                }
             }
         }
         if (!blockID) {
@@ -2428,6 +2795,15 @@ export default class LvCardsPlugin extends Plugin {
                 blockEl,
                 (id) => void this.openCardQuestionDialog(id),
                 (id, anchor) => void this.openBlockActionCenter(id, anchor),
+                () => lvBlockAssistant.getPinnedActions().map(a => ({ id: a.id, glyph: a.glyph, label: a.label, badgeText: a.badgeText })),
+                (actionId, id) => {
+                    const localAction = BLOCK_ACTIONS.find(a => a.id === actionId);
+                    if (localAction) {
+                        return this.runBlockAction(localAction, id);
+                    }
+                    const matched = lvBlockAssistant.getActions().find(a => a.id === actionId);
+                    if (matched) return matched.execute(id);
+                },
             );
             if (ok) blockEl.setAttribute("data-lv-decorated", "true");
         }
@@ -2551,10 +2927,15 @@ export default class LvCardsPlugin extends Plugin {
                         // 2. 原生卡包关联与切换（附加增强，绝不阻断免侵入属性设置）
                         let targetDeckID = payload.targetDeckID || "";
                         if (targetDeckID) {
+                            const explicitPick = Boolean(payload.targetDeckID);
                             try {
-                                await addRiffCards(targetDeckID, [targetId]).catch(() => {});
+                                await addRiffCards(targetDeckID, [targetId]);
                             } catch (deckErr: any) {
                                 lvLog("warn", `[attr-qa] addRiffCards fallback: ${deckErr?.message || String(deckErr)}`);
+                                // 用户显式选定卡包时入组失败必须回执：只报"属性已保存"会让用户误以为卡片已可复习
+                                if (explicitPick) {
+                                    showMessage(formatRiffCardEntryError(deckErr, this.i18n, deckErr?.message || "入组失败"), 3500, "error");
+                                }
                             }
                         } else if (!isAlreadyCard) {
                             try {
@@ -2589,7 +2970,7 @@ export default class LvCardsPlugin extends Plugin {
                             : (this.i18n.cardQuestionSaved ?? "闪卡问题已保存至块属性"), 2000, "info");
                     },
                     onClear: async () => {
-                        await setBlockAttrs(targetId, buildAttrQaAttrs("", ""));
+                        await setBlockAttrs(targetId, buildAttrQaClearAttrs());
                         try {
                             await this.removeCardsFromDeck([targetId]);
                         } catch { /* 旁路 */ }
@@ -2935,6 +3316,9 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private async openQuickCard(prefillQ = "") {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openQuickCard failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         try {
             const mobile = this.isMobileHost();
             // Mobile Spec v1/v2：手机端全屏自适应 visualViewport，制卡成功后停留继续录入
@@ -2963,6 +3347,9 @@ export default class LvCardsPlugin extends Plugin {
 
     /** R59 选中文本制卡：题面预填选区文本，且自动关联来源块（就近原位制卡） */
     private async openQuickCardFromSelection(blockID: string, selectionText: string) {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openQuickCardFromSelection failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         try {
             const mobile = this.isMobileHost();
             const view = await this.createQuickCardView(false, selectionText);
@@ -3108,6 +3495,9 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private async openOnboarding() {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openOnboarding failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         try {
             const Onboarding = await loadOnboarding();
             let closeOnboardingDialog = () => {};
@@ -3197,10 +3587,16 @@ export default class LvCardsPlugin extends Plugin {
         });
     }
 
-    openReviewScope(scopeKind: "all" | "deck" | "notebook", scopeId: string, cram: boolean, entrySourceID = "") {
-        const scope = buildReviewScopeKey(scopeKind, scopeId);
+    openReviewScope(scopeKindOrKey: string, scopeIdOrCram?: string | boolean, cram = false, entrySourceID = "") {
+        let scope = scopeKindOrKey;
+        let isCram = cram;
+        if (typeof scopeIdOrCram === "boolean") {
+            isCram = scopeIdOrCram;
+        } else if (typeof scopeIdOrCram === "string" && scopeIdOrCram) {
+            scope = buildReviewScopeKey(scopeKindOrKey as any, scopeIdOrCram);
+        }
         // BI-3：考试报告入口（来源=试卷计划，返回点=Hub 考试页签）
-        this.openReviewWithEntry(scope, cram, entrySourceID
+        this.openReviewWithEntry(scope, isCram, entrySourceID
             ? { entryKind: "report", sourceID: entrySourceID, returnPoint: "hub:exam" }
             : undefined);
     }
@@ -3825,6 +4221,7 @@ export default class LvCardsPlugin extends Plugin {
 
     /** 持久化作业快照；失败时恢复调用前的完整作业列表，避免恢复页读到假成功。 */
     private async persistAIJobs(previous: AIJobsData): Promise<void> {
+        await this.ensureTier2Loaded();
         const version = this.aiJobsMutationVersion;
         const next = cloneStore(this.aiJobs);
         try {
@@ -3841,6 +4238,7 @@ export default class LvCardsPlugin extends Plugin {
     /** Persist one idempotent job checkpoint and advance the rollback baseline only
      * after the write has actually succeeded. */
     private async persistAIJobsOnce(operationId: string): Promise<void> {
+        await this.ensureTier2Loaded();
         const next = cloneStore(this.aiJobs);
         const version = this.aiJobsMutationVersion;
         try {
@@ -4065,11 +4463,13 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** BK-1/BK-2：知识对象/关系图的落盘入口（未来 UI 修改后调用；persist 队列承担重试与失败记录） */
-    saveKnowledgeObjects() {
+    async saveKnowledgeObjects() {
+        await this.ensureTier2Loaded();
         return this.persist.save(KNOWLEDGE_OBJECTS_DATA, cloneStore(this.knowledgeObjects)).catch(() => { /* onFail 已记录 */ });
     }
 
-    saveCardRelations() {
+    async saveCardRelations() {
+        await this.ensureTier2Loaded();
         return this.persist.save(CARD_RELATIONS_DATA, cloneStore(this.cardRelations)).catch(() => { /* onFail 已记录 */ });
     }
 
@@ -4079,7 +4479,9 @@ export default class LvCardsPlugin extends Plugin {
         if (tagError(this.errorTags, cardID, reason, todayDate())) {
             const version = ++this.errorTagMutationVersion;
             const next = cloneStore(this.errorTags);
-            void this.persist.save(ERROR_TAGS_DATA, next).then(() => {
+            void this.ensureTier2Loaded().then(() => {
+                return this.persist.save(ERROR_TAGS_DATA, next);
+            }).then(() => {
                 this.persistedErrorTagsSnapshot = cloneStore(next);
             }).catch(() => {
                 if (version === this.errorTagMutationVersion) this.errorTags = cloneStore(this.persistedErrorTagsSnapshot ?? previous);
@@ -4093,7 +4495,8 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** BI-4：材料收件箱落盘入口（未来筛选 UI 修改后调用；persist 队列承担重试与失败记录） */
-    saveInbox() {
+    async saveInbox() {
+        await this.ensureTier2Loaded();
         const next = cloneStore(this.inbox);
         return this.persist.save(INBOX_DATA, next).then(() => {
             this.persistedInboxSnapshot = cloneStore(next);
@@ -4101,7 +4504,8 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** 收件箱允许乐观更新，但写入失败必须恢复完整快照，避免 UI 与磁盘分叉。 */
-    private mutateInbox(mutate: (next: InboxData) => number | boolean | void): void {
+    private async mutateInbox(mutate: (next: InboxData) => number | boolean | void): Promise<void> {
+        await this.ensureTier2Loaded();
         // Always roll back to the last confirmed disk snapshot. Using the
         // current in-memory value here would preserve an earlier failed
         // optimistic mutation after two writes overlap.
@@ -4189,25 +4593,30 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** BI-1/BI-3/BI-5：学习旅程三存储的落盘入口（未来 UI 修改后调用；persist 队列承担重试与失败记录） */
-    saveLearningGoals() {
+    async saveLearningGoals() {
+        await this.ensureTier2Loaded();
         return this.persist.save(LEARNING_GOALS_DATA, cloneStore(this.learningGoals)).catch(() => { /* onFail 已记录 */ });
     }
 
-    saveEntryContexts() {
+    async saveEntryContexts() {
+        await this.ensureTier2Loaded();
         return this.persist.save(ENTRY_CONTEXTS_DATA, cloneStore(this.entryContexts)).catch(() => { /* onFail 已记录 */ });
     }
 
-    saveContentLifecycles() {
+    async saveContentLifecycles() {
+        await this.ensureTier2Loaded();
         return this.persist.save(CONTENT_LIFECYCLES_DATA, cloneStore(this.contentLifecycles)).catch(() => { /* onFail 已记录 */ });
     }
 
     /** BU-31：紧急停用状态落盘 */
-    saveKillSwitch() {
+    async saveKillSwitch() {
+        await this.ensureTier2Loaded();
         return this.persist.save(AI_KILL_SWITCH_DATA, cloneStore(this.killSwitch)).catch(() => { /* onFail 已记录 */ });
     }
 
     /** AI 安全开关采用“新快照先落盘、成功后发布”的原子写入口。 */
     private async mutateKillSwitch(mutate: (next: AIKillSwitchData) => void): Promise<AIKillSwitchData> {
+        await this.ensureTier2Loaded();
         const operation = this.killSwitchMutationQueue.then(async () => {
             const previous = cloneStore(this.killSwitch);
             const next = normalizeKillSwitch(cloneStore(this.killSwitch));
@@ -4235,7 +4644,8 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** BU-31：清理待发队列（活动态作业 → canceled；验收「清理待发队列」） */
-    private cancelPendingAiJobs(): number {
+    private async cancelPendingAiJobs(): Promise<number> {
+        await this.ensureTier2Loaded();
         const result = cancelAllActiveJobs(this.aiJobs.jobs);
         if (result.modified) {
             this.aiJobs.jobs = result.jobs;
@@ -4267,7 +4677,8 @@ export default class LvCardsPlugin extends Plugin {
     );
 
     /** BI-1：目标写入串行化；先持久化不可变快照，成功后才替换运行态。 */
-    private mutateLearningGoals(mutate: (next: LearningGoalsData) => void): Promise<LearningGoalsData> {
+    private async mutateLearningGoals(mutate: (next: LearningGoalsData) => void): Promise<LearningGoalsData> {
+        await this.ensureTier2Loaded();
         return this.learningGoalsMutation(mutate);
     }
 
@@ -4304,6 +4715,9 @@ export default class LvCardsPlugin extends Plugin {
 
     /** Mobile Spec v1/v2：手机端闪卡中心宿主——全屏 Dialog，复用页签同源装配属性（buildHubMountProps 防双份漂移） */
     private async openHubMobileDialog(data?: Record<string, unknown>) {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openHubMobileDialog failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         this.closeMobileReviewDialog();
         if (this.mobileHubDialog && this.mobileHubDialog.element.isConnected) {
             // 单例去重：仅切换子页（与桌面页签 lv-switch-tab 契约一致）
@@ -4356,11 +4770,12 @@ export default class LvCardsPlugin extends Plugin {
     /** Mobile Spec v2：手机端复习工作台全屏 Dialog 宿主（复用 buildReviewMountProps 同源装配，支持与闪卡中心双向流转） */
     private async openReviewMobileDialog(data?: Record<string, unknown>) {
         if (this.mobileReviewDialog && this.mobileReviewDialog.element.isConnected) {
-            this.mobileReviewDialog.element
-                .querySelector(".lv-review")
-                ?.dispatchEvent(new CustomEvent("lv-switch-scope", {
-                    detail: { ...(data ?? {}), cram: Boolean(data?.cram) },
-                }));
+            const reviewEl = this.mobileReviewDialog.element.querySelector(".lv-review");
+            if (reviewEl) {
+                const detailPayload = { ...(data ?? {}), cram: Boolean(data?.cram) };
+                reviewEl.dispatchEvent(new CustomEvent("lv-switch-scope", { detail: detailPayload }));
+                reviewEl.dispatchEvent(new CustomEvent("lv-switch-review", { detail: detailPayload }));
+            }
             return;
         }
         this.mobileReviewDialog = null;
@@ -4406,6 +4821,9 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     private openTabOf(type: string, data?: Record<string, unknown>) {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openTabOf failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         const isDashboard = type === TAB_DASHBOARD || type === "dashboard";
         const isReview = type === TAB_REVIEW || type === "review";
         const canonicalType = isDashboard ? TAB_DASHBOARD : (isReview ? TAB_REVIEW : type);
@@ -4446,9 +4864,12 @@ export default class LvCardsPlugin extends Plugin {
                     ?.querySelector(".lv-hub")
                     ?.dispatchEvent(new CustomEvent("lv-switch-tab", { detail: { tab: targetTab, focusBlockID: data?.focusBlockID } }));
             } else if (isReview) {
-                existing.panelElement
-                    ?.querySelector(".lv-review")
-                    ?.dispatchEvent(new CustomEvent("lv-switch-review", { detail: data }));
+                const reviewEl = existing.panelElement?.querySelector(".lv-review");
+                if (reviewEl) {
+                    const detailPayload = { ...(data ?? {}), cram: Boolean(data?.cram) };
+                    reviewEl.dispatchEvent(new CustomEvent("lv-switch-scope", { detail: detailPayload }));
+                    reviewEl.dispatchEvent(new CustomEvent("lv-switch-review", { detail: detailPayload }));
+                }
             }
             return;
         }
@@ -4504,10 +4925,16 @@ export default class LvCardsPlugin extends Plugin {
 
     /** 覆盖 Plugin 基类 openSetting：让思源官方设置面板（齿轮按钮）直接打开闪卡设置弹窗 */
     public openSetting(): void {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openSetting failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         void this.openSettingsDialog();
     }
 
     public async openSettingsDialog(onSaved?: () => void, initialSection?: "imports") {
+        void this.ensureTier2Loaded().catch((err) => {
+            lvLog("warn", `[storage] ensureTier2Loaded on openSettingsDialog failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
         try {
             const mobile = this.isMobileHost();
             const SettingsPanel = await loadSettingsPanel();
@@ -4533,6 +4960,16 @@ export default class LvCardsPlugin extends Plugin {
                         this.settings = s;
                         try {
                             await this.saveSettingsNow();
+                            if (s.blockActionPreferences) {
+                                const curStoreCfg = lvBlockAssistant.getStoreConfig();
+                                lvBlockAssistant.saveStoreConfig({
+                                    ...curStoreCfg,
+                                    enabledActionIds: BLOCK_ACTIONS
+                                        .map(a => a.id)
+                                        .filter(id => !s.blockActionPreferences?.disabledActionIds?.includes(id)),
+                                    pinnedActionIds: [...(s.blockActionPreferences?.pinnedActionIds || [])],
+                                });
+                            }
                         } catch (e) {
                             this.settings = previous;
                             this.setupBadgeTimer();
@@ -4756,12 +5193,14 @@ export default class LvCardsPlugin extends Plugin {
     }
 
     /** BU-25：导出 AI 用量账本（聚合视图 + 明细；不含 key 与原文） */
-    private exportCostLedger() {
+    private async exportCostLedger(): Promise<void> {
+        await this.ensureTier2Loaded();
         exportAiCostLedger(this.costLedger, todayDate());
     }
 
     /** BU-25：清空 AI 用量账本（预算随之归零重计） */
-    private async clearCostLedger() {
+    private async clearCostLedger(): Promise<void> {
+        await this.ensureTier2Loaded();
         const previous = cloneStore(this.persistedCostLedgerSnapshot ?? this.costLedger);
         const next = emptyCostLedger();
         const version = ++this.costLedgerMutationVersion;
@@ -4780,14 +5219,19 @@ export default class LvCardsPlugin extends Plugin {
 
     /** 备份与恢复中心：导出全部私有存储为单文件 bundle（manifest 含校验和；含用户内容，用户自管） */
     private exportBackup() {
-        this.readAllStores().then(files => {
+        void this.ensureTier2Loaded().then(() => {
+            return this.readAllStores();
+        }).then(files => {
             exportAllBackupBundle(files, todayDate());
+        }).catch((err) => {
+            lvLog("warn", `[backup] export failed: ${err instanceof Error ? err.message : String(err)}`);
         });
     }
 
     /** 备份与恢复中心：导入恢复——预览（校验+逐 key 对比）→ 确认 → 队列落盘 → 内存重载。
      * 预览失败直接抛可读原因（不改任何状态）；确认前当前状态不受影响（可先导出回滚）。 */
     private async restoreBackupFromFile(text: string) {
+        await this.ensureTier2Loaded();
         let parsed: unknown;
         try {
             parsed = JSON.parse(text);

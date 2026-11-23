@@ -27,8 +27,8 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
     const raw = String(markdown ?? "").trim();
     if (!raw) return null;
 
-    // 已包含标准 ==答案== 的优先交由挖空/问答门禁处理
-    if (raw.includes("==")) return null;
+    // 已包含标准 ==答案== 的优先交由挖空/问答门禁处理（严格排除代码中的 === 运算符）
+    if (/(?<!=)==(?!=)/.test(raw)) return null;
 
     // 0. Anki 风格挖空兼容：{{c1::答案}} 或 {{c1::答案::提示}}（支持单卡多处挖空提取）
     const ankiMatches = Array.from(raw.matchAll(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g));
@@ -78,8 +78,8 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
         }
     }
 
-    // 3. Q: ... \nA: ... (英文标记，允许中英文冒号，跨行或同行)
-    const qaMatch = raw.match(/(?:^|\n)\s*(?:Q|q|Question)[:：]\s*([\s\S]+?)(?:\n|\s{2,})(?:A|a|Answer)[:：]\s*([\s\S]+)$/i);
+    // 3. Q: ... \nA: ... (英文标记，允许中英文冒号、方括号/中括号与粗体，跨行或同行)
+    const qaMatch = raw.match(/(?:^|\n)\s*(?:(?:\*{2})?(?:Q|q|Question)(?:\*{2})?[:：\s]|【(?:Q|q|Question)】\s*|\[(?:Q|q|Question)\]\s*)([\s\S]+?)(?:\n|\s{2,})(?:(?:\*{2})?(?:A|a|Answer)(?:\*{2})?[:：\s]|【(?:A|a|Answer)】\s*|\[(?:A|a|Answer)\]\s*)([\s\S]+)$/i);
     if (qaMatch && qaMatch[1]?.trim() && qaMatch[2]?.trim()) {
         return {
             question: qaMatch[1].trim(),
@@ -88,8 +88,8 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
         };
     }
 
-    // 4. 问: ... \n答: ... (中文标记，允许 问题 / 答案)
-    const zhMatch = raw.match(/(?:^|\n)\s*(?:问|问题)[:：]\s*([\s\S]+?)(?:\n|\s{2,})(?:答|答案)[:：]\s*([\s\S]+)$/);
+    // 4. 问: ... \n答: ... (中文标记，允许 问题 / 答案，支持【问】/【答】或粗体)
+    const zhMatch = raw.match(/(?:^|\n)\s*(?:(?:\*{2})?(?:问|问题)(?:\*{2})?[:：\s]|【(?:问|问题)】\s*|\[(?:问|问题)\]\s*)([\s\S]+?)(?:\n|\s{2,})(?:(?:\*{2})?(?:答|答案)(?:\*{2})?[:：\s]|【(?:答|答案)】\s*|\[(?:答|答案)\]\s*)([\s\S]+)$/);
     if (zhMatch && zhMatch[1]?.trim() && zhMatch[2]?.trim()) {
         return {
             question: zhMatch[1].trim(),
@@ -260,7 +260,7 @@ export function upgradeLegacyCardToStandard(markdown: string, memo?: string): { 
     if (!text) return null;
 
     // 已具备 ==答案== 的不需要重复转换
-    if (text.includes("==")) return null;
+    if (/(?<!=)==(?!=)/.test(text)) return null;
 
     // 0. 优先支持 Anki 风格挖空 {{c1::答案}} 升级为标准 ==答案==
     if (/\{\{c\d+::/.test(text)) {

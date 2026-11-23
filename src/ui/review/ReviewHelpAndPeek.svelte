@@ -120,7 +120,7 @@
             </button>
         </div>
         <div class="lv-peek-body b3-typography lv-card-content" class:lv-masked={!peek.revealed}>
-            {@html peek.revealed ? peek.html : maskMarkedAnswersForQuestion(peek.html)}
+            {@html peek.revealed ? peek.html : maskMarkedAnswersForQuestion(peek.html, (peek as any).customRiffTitle)}
         </div>
     </div>
 {/if}

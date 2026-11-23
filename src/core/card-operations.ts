@@ -86,8 +86,13 @@ export interface QuickCardFlowInput {
 export async function executeQuickCardCreation(
     input: QuickCardFlowInput,
 ): Promise<{ docID: string; blockID: string }> {
-    const draftDecision = validateCardEntry({ blockID: "quick-card-draft", markdown: input.markdown });
-    if (!draftDecision.ok || validateFlashcardMarkdown(input.markdown)) throw new Error(input.qualityErrorMessage || "quickCardInvalid");
+    const draftAttrs = input.examAttrs || {};
+    const draftDecision = validateCardEntry({
+        blockID: "quick-card-draft",
+        markdown: input.markdown,
+        attrs: draftAttrs,
+    });
+    if (!draftDecision.ok) throw new Error(input.qualityErrorMessage || "quickCardInvalid");
 
     // 如果指定了原文档就地追加（inPlaceDocID），直接使用该文档 ID；否则在快速制卡目录下创建或复用
     const docID = input.docID ?? (input.inPlaceDocID || await createDocWithMd(input.nbId, "小驴闪卡/快速制卡", ""));
@@ -108,24 +113,22 @@ export async function executeQuickCardCreation(
         const blkId = ids[0];
         await addRiffCards(input.deckID, [blkId]);
 
+        const attrsToSet: Record<string, string> = {};
         if (input.sourceDocID || input.sourceBlockID || input.inPlaceDocID) {
+            Object.assign(attrsToSet, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
+        }
+        if (input.examAttrs && Object.keys(input.examAttrs).length > 0) {
+            Object.assign(attrsToSet, input.examAttrs);
+        }
+        if (Object.keys(attrsToSet).length > 0) {
             try {
-                await setBlockAttrs(blkId, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
+                await setBlockAttrs(blkId, attrsToSet);
             } catch {
                 // 属性写入旁路容错
             }
         }
         return blkId;
     });
-
-    // R59 题型属性（选择题/判断题/填空）——复习端 parseInteractiveQuiz 依赖这些键
-    if (input.examAttrs && Object.keys(input.examAttrs).length > 0) {
-        try {
-            await setBlockAttrs(blockID, input.examAttrs);
-        } catch {
-            // 属性写入旁路容错
-        }
-    }
 
     if (input.q && input.mutateKnowledgeObjects) {
         try {
@@ -196,8 +199,8 @@ export function extractMarkerCardItems(rows: Array<{ id?: string; markdown?: str
             }
         }
 
-        // 以「？」结尾的块：整块直接入组
-        if ((md.endsWith("？") || md.includes("==")) && !validateFlashcardMarkdown(md)) {
+        // 以「？」结尾的块或包含挖空的块：整块直接入组
+        if ((md.endsWith("？") || /(?<!=)==(?!=)/.test(md)) && !validateFlashcardMarkdown(md)) {
             items.push({ blockID, kind: "whole", front: md.replace(/[*`#]/g, ""), back: "" });
             wholeIds.push(blockID);
         }

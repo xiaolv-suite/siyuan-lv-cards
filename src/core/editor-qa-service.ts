@@ -10,6 +10,14 @@
  */
 
 import { inferBlockKindFromElement, BLOCK_KIND_LABELS, type SiYuanBlockKind } from "./block-actions";
+import { openBlockTypeMorphPicker, morphBlockTypeTo } from "../libs/lv-notice-kit";
+
+export interface PinnedQuickActionItem {
+    id: string;
+    glyph: string;
+    label: string;
+    badgeText?: string;
+}
 
 export interface EditorQaServiceOptions {
     onEditQuestion: (blockID: string) => void;
@@ -23,6 +31,16 @@ export interface EditorQaServiceOptions {
      * 鼠标首次掠过编辑器块时在浏览器 idle 空闲时刻执行预热，达成后续点击 0ms 秒开。
      */
     onPrefetch?: () => void;
+    /** 读取当前置顶常驻快捷动作 (最多 3 个展示在胶囊内) */
+    getPinnedActions?: () => PinnedQuickActionItem[];
+    /** 执行置顶快捷动作回调 */
+    onRunAction?: (actionId: string, blockID: string, anchor?: HTMLElement) => void | Promise<void>;
+    /**
+     * 针对编辑器中心容器的监听挂载点（可选）。
+     * 轨道 A 启动优化：将 MutationObserver 范围限定到编辑器中心容器（.layout__center），
+     * 避免全全局 document.body 监听引发的 CPU 抖动；并在 onunload / dispose 时彻底断开。
+     */
+    targetContainer?: HTMLElement | null;
 }
 
 export interface EditorQaServiceInstance {
@@ -71,7 +89,9 @@ export function isBlockDecorated(blockEl: HTMLElement): boolean {
 export function decorateEditorBlock(
     blockEl: HTMLElement,
     onEditQuestion: (blockID: string) => void,
-    onOpenBlockActions?: (blockID: string, anchor: HTMLElement) => void
+    onOpenBlockActions?: (blockID: string, anchor: HTMLElement) => void,
+    getPinnedActions?: () => PinnedQuickActionItem[],
+    onRunAction?: (actionId: string, blockID: string, anchor?: HTMLElement) => void | Promise<void>,
 ): boolean {
     const blockID = blockEl.getAttribute("data-node-id");
     if (!blockID) return false;
@@ -128,36 +148,45 @@ export function decorateEditorBlock(
     if (existingPill) (lastAttr as any).__lvPill = existingPill;
 
     const tooltipText = isCard
-        ? (title ? `✦ 闪卡「${title.slice(0, 18)}${title.length > 18 ? '…' : ''}」：单击展开块操作中心 (双击或 Alt+Q 编辑问答)` : "✦ 闪卡：单击展开块操作中心 (双击或 Alt+Q 编辑问答)")
-        : `✦ ${kindMeta.actionLead}：单击展开块操作中心 (双击或 Alt+Q 问答制卡)`;
+        ? (title ? `✦ 闪卡「${title.slice(0, 16)}${title.length > 16 ? '…' : ''}」· 块助手：单击展开操作中心 (双击快捷转换块类型 · Alt+Q 编辑问答)` : "✦ 闪卡 · 块助手：单击展开操作中心 (双击快捷转换块类型 · Alt+Q 编辑问答)")
+        : `✦ ${kindMeta.actionLead} · 块助手：单击展开操作中心 (双击快捷转换块类型 · Alt+Q 问答工作台)`;
 
     if (!existingPill) {
         const btn = document.createElement("button");
         btn.type = "button";
         // 注意：严禁复用旧类名 lv-cards-attr-edit-btn——index.scss 为隐藏历史独立按钮写了
         // `display:none !important`，复用会让胶囊连同序号一起被永久隐藏（2026-11-16 实机回归根因）。
+        // 纯净采用思源原生 b3-tooltips 配合 aria-label，严禁挂载原生 title 属性避免双重 Tooltip 闪烁遮挡。
         btn.className = `b3-tooltips b3-tooltips__w lv-card-badge-pill ${isCard ? 'lv-card-badge-pill--card' : 'lv-card-badge-pill--ordinary'}`;
         btn.setAttribute("aria-label", tooltipText);
-        btn.setAttribute("title", tooltipText);
         btn.setAttribute("data-block-id", blockID);
         btn.setAttribute("data-block-kind", blockKind);
         // 供旧样式/外部工具箱识别（不参与隐藏规则命中）
         btn.setAttribute("data-lv-card-attr-btn", "1");
 
         const wantsMore = Boolean(onOpenBlockActions);
-        renderPillContent(btn, isCard, wantsMore, blockKind);
+        const pinnedActions = getPinnedActions ? getPinnedActions() : [];
+        renderPillContent(btn, isCard, wantsMore, blockKind, pinnedActions, onRunAction, blockID);
         (btn as any).__lvHasMore = wantsMore;
+        (btn as any).__lvPinnedCount = pinnedActions.length;
         // 展开区在 click 时读取该引用（而非闭包捕获），保证回调更新后立即生效
         (btn as any).__lvOpenBlockActions = onOpenBlockActions;
+        (btn as any).__lvRunAction = onRunAction;
         (lastAttr as any).__lvPill = btn;
 
         let lastTriggerTime = 0;
+        let touchTriggered = false;
         const triggerAction = (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
             const now = Date.now();
-            if (now - lastTriggerTime < 260) return;
+            if (now - lastTriggerTime < 320) return;
             lastTriggerTime = now;
+            try {
+                if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                    navigator.vibrate(10);
+                }
+            } catch { /* ignore */ }
 
             const handler = (btn as any).__lvOpenBlockActions as ((id: string, anchor: HTMLElement) => void) | undefined;
             if (handler) {
@@ -171,7 +200,14 @@ export function decorateEditorBlock(
             }
         };
 
-        btn.addEventListener("click", triggerAction);
+        btn.addEventListener("click", (e) => {
+            if (touchTriggered) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            triggerAction(e);
+        });
         btn.addEventListener("mousedown", (e) => {
             e.stopPropagation();
             // 真实鼠标按下的默认行为会清除文档文本选区，导致「挖空并制卡」在
@@ -182,13 +218,24 @@ export function decorateEditorBlock(
                 e.preventDefault();
             }
         });
-        btn.addEventListener("touchend", triggerAction, { passive: false });
+        btn.addEventListener("touchend", (e) => {
+            touchTriggered = true;
+            setTimeout(() => { touchTriggered = false; }, 450);
+            triggerAction(e);
+        }, { passive: false });
 
-        // 双击胶囊直达问答设置工作台（保留高频制卡用户的极速物理通道）
+        // 双击胶囊默认：【快捷转换块类型】（弹出全生态块类型选择器浮层）
         btn.addEventListener("dblclick", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            onEditQuestion(blockID);
+            const runner = (btn as any).__lvRunAction || onRunAction;
+            if (runner) {
+                void runner("morph-block-type", blockID, btn);
+            } else {
+                openBlockTypeMorphPicker(blockID, btn, async (targetType) => {
+                    await morphBlockTypeTo(blockID, targetType);
+                });
+            }
         });
 
         // 右键胶囊 = 展开块操作中心
@@ -203,21 +250,27 @@ export function decorateEditorBlock(
     } else {
         existingPill.setAttribute("data-block-id", blockID);
         existingPill.setAttribute("aria-label", tooltipText);
-        existingPill.setAttribute("title", tooltipText);
+        existingPill.removeAttribute("title");
         const wasCard = existingPill.classList.contains("lv-card-badge-pill--card");
         const prevKind = existingPill.getAttribute("data-block-kind");
         // ▾ 展开区是否存在需与回调可用性保持一致（首次渲染时回调可能尚未就绪）
         const wantsMore = Boolean(onOpenBlockActions);
         const hasMore = Boolean((existingPill as any).__lvHasMore ?? existingPill.querySelector(".lv-card-badge-pill__more"));
-        if (wasCard !== isCard || wantsMore !== hasMore || prevKind !== blockKind) {
+        const pinnedActions = getPinnedActions ? getPinnedActions() : [];
+        const pinnedKey = pinnedActions.map(a => a.id).join(",");
+        const prevPinnedKey = (existingPill as any).__lvPinnedKey;
+        if (wasCard !== isCard || wantsMore !== hasMore || prevKind !== blockKind || prevPinnedKey !== pinnedKey) {
             // 同样不得复用旧类名 lv-cards-attr-edit-btn（会被 display:none !important 隐藏）
             existingPill.className = `b3-tooltips b3-tooltips__w lv-card-badge-pill ${isCard ? 'lv-card-badge-pill--card' : 'lv-card-badge-pill--ordinary'}`;
             existingPill.setAttribute("data-lv-card-attr-btn", "1");
             existingPill.setAttribute("data-block-kind", blockKind);
-            renderPillContent(existingPill, isCard, wantsMore, blockKind);
+            renderPillContent(existingPill, isCard, wantsMore, blockKind, pinnedActions, onRunAction, blockID);
             (existingPill as any).__lvHasMore = wantsMore;
+            (existingPill as any).__lvPinnedCount = pinnedActions.length;
+            (existingPill as any).__lvPinnedKey = pinnedKey;
         }
         (existingPill as any).__lvOpenBlockActions = onOpenBlockActions;
+        (existingPill as any).__lvRunAction = onRunAction;
     }
     return true;
 }
@@ -227,15 +280,19 @@ export function decorateEditorBlock(
  *
  * 现代一体化 Capsule 设计：整颗胶囊整体可点，直接呼出下拉菜单。
  * 形态 A（无 ▾）：纯编辑按钮，向后兼容。
- * 形态 B（有 ▾）：主体（图标 + 自适应块文案/卡片序号）+ ▾ 指示标，
- *   整颗胶囊单击 = 展开块操作中心下拉菜单；双击 / Alt+Q = 直达问答工作台。
+ * 形态 B（有 ▾）：主体（图标 + 自适应块文案/卡片序号）+ 快捷槽 + ▾ 指示标，
+ *   整颗胶囊单击 = 展开块操作中心下拉菜单；双击 / Alt+Q = 直达问答工作台；快捷微图标 = 0ms 零菜单直达。
  */
 function renderPillContent(
     pill: HTMLElement,
     isCard: boolean,
     withMore: boolean,
     blockKind: SiYuanBlockKind = "paragraph",
+    pinnedActions?: PinnedQuickActionItem[],
+    onRunAction?: (actionId: string, blockID: string, anchor?: HTMLElement) => void | Promise<void>,
+    blockID?: string,
 ): void {
+    pill.innerHTML = "";
     const kindMeta = BLOCK_KIND_LABELS[blockKind] || BLOCK_KIND_LABELS.paragraph;
 
     // 用 DOM API 构建：语义字形（如代码块的 </>）含 HTML 敏感字符，
@@ -261,6 +318,69 @@ function renderPillContent(
         pill.appendChild(text);
     }
 
+    // 常驻快捷动作槽 (Pinned Quick Slots)：桌面端自适应呈现多达 5 个，移动端容纳 3 个
+    if (pinnedActions && pinnedActions.length > 0 && onRunAction && blockID) {
+        const quickSlot = document.createElement("span");
+        quickSlot.className = "lv-card-badge-pill__quick-slot";
+        const isMobileScreen = typeof window !== "undefined" && window.innerWidth <= 640;
+        const maxSlots = isMobileScreen ? 3 : 5;
+        pinnedActions.slice(0, maxSlots).forEach((act) => {
+            const qBtn = document.createElement("span");
+            qBtn.className = "b3-tooltips b3-tooltips__s lv-card-badge-pill__quick-btn";
+            qBtn.setAttribute("role", "button");
+            qBtn.setAttribute("tabindex", "0");
+            qBtn.setAttribute("data-action-id", act.id);
+            const tip = `${act.label}${act.badgeText ? ` (${act.badgeText})` : ""}`;
+            qBtn.setAttribute("aria-label", tip);
+            qBtn.textContent = act.glyph;
+            const runWithVisualFeedback = async () => {
+                try {
+                    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                        navigator.vibrate(12);
+                    }
+                } catch { /* ignore */ }
+                const originalGlyph = qBtn.textContent;
+                try {
+                    await onRunAction(act.id, blockID, qBtn);
+                    if (act.id.startsWith("copy-") || act.id.includes("copy")) {
+                        qBtn.textContent = "✓";
+                        qBtn.style.color = "#10b981";
+                        setTimeout(() => {
+                            if (qBtn.isConnected) {
+                                qBtn.textContent = originalGlyph;
+                                qBtn.style.color = "";
+                            }
+                        }, 500);
+                    }
+                } catch { /* ignore */ }
+            };
+
+            qBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void runWithVisualFeedback();
+            });
+            qBtn.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void runWithVisualFeedback();
+            }, { passive: false });
+            qBtn.addEventListener("mousedown", (e) => {
+                e.stopPropagation();
+            });
+            qBtn.addEventListener("dblclick", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            qBtn.addEventListener("contextmenu", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            quickSlot.appendChild(qBtn);
+        });
+        pill.appendChild(quickSlot);
+    }
+
     if (!withMore) return;
 
     // 现代一体化胶囊：整颗胶囊一体化可点，末端附带精致的 ▾ 展开标记
@@ -268,11 +388,10 @@ function renderPillContent(
     divider.className = "lv-card-badge-pill__divider";
     divider.setAttribute("aria-hidden", "true");
     const more = document.createElement("span");
-    more.className = "lv-card-badge-pill__more";
+    more.className = "b3-tooltips b3-tooltips__s lv-card-badge-pill__more";
     more.setAttribute("role", "button");
     more.setAttribute("tabindex", "0");
     more.setAttribute("aria-label", "展开块操作中心");
-    more.setAttribute("title", "展开块操作中心");
     more.textContent = "▾";
     pill.appendChild(divider);
     pill.appendChild(more);
@@ -292,7 +411,7 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         const blocks = root.querySelectorAll?.(selector) ?? [];
         blocks.forEach((el) => {
             if (el instanceof HTMLElement) {
-                if (decorateEditorBlock(el, options.onEditQuestion, options.onOpenBlockActions)) {
+                if (decorateEditorBlock(el, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction)) {
                     el.setAttribute("data-lv-decorated", "true");
                 }
             }
@@ -376,19 +495,26 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
             }
         });
 
-        try {
-            observer.observe(document.body || document.documentElement, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ["custom-riff-decks", "custom-riff-title", "custom-lv-question"],
-            });
-        } catch {
-            /* ignore */
+        const center = options.targetContainer
+            || (typeof document !== "undefined"
+                ? (document.querySelector(".layout__center") || document.querySelector(".protyle-content") || document.querySelector("#layouts") || document.body || document.documentElement)
+                : null);
+
+        if (center) {
+            try {
+                observer.observe(center, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ["custom-riff-decks", "custom-riff-title", "custom-lv-question"],
+                });
+            } catch {
+                /* ignore */
+            }
         }
     }
 
-    // 2. 外部闪卡工具箱事件兼容监听 (flashcard-title-edit)
+    // 2. 外部闪卡工具箱事件兼容监听 (flashcard-title-edit) 与 资产库快捷槽配置热更事件
     const onTitleEditEvent = (e: Event) => {
         const detail = (e as CustomEvent)?.detail;
         const blockId = detail?.blockId || detail?.id;
@@ -396,8 +522,25 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
             options.onEditQuestion(blockId);
         }
     };
+    const onActionConfigChange = () => {
+        if (disposed) return;
+        if (typeof document !== "undefined") {
+            document.querySelectorAll(".lv-card-badge-pill").forEach(pill => {
+                (pill as any).__lvPinnedKey = undefined;
+                const blockEl = pill.closest?.("[data-node-id]") as HTMLElement | null;
+                if (blockEl) {
+                    decorateEditorBlock(blockEl, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction);
+                }
+            });
+        }
+        scheduleScan();
+    };
     if (typeof document !== "undefined") {
         document.addEventListener("flashcard-title-edit", onTitleEditEvent);
+    }
+    if (typeof window !== "undefined") {
+        window.addEventListener("lv-block-action-config-changed", onActionConfigChange);
+        window.addEventListener("lv-block-action-store-updated", onActionConfigChange);
     }
 
     // 3. 鼠标悬浮普通块时即时懒加载装饰（同块瞬态缓存 + 零主线程开销）
@@ -431,7 +574,7 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
 
         // 装饰判据：标记缺失【或】胶囊已被思源局部重渲染清空时均重新装饰。
         if (!target.hasAttribute("data-lv-decorated") || !isBlockDecorated(target)) {
-            if (decorateEditorBlock(target, options.onEditQuestion, options.onOpenBlockActions)) {
+            if (decorateEditorBlock(target, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction)) {
                 target.setAttribute("data-lv-decorated", "true");
             }
         }
@@ -441,15 +584,27 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
     }
 
     // 4. 触屏交互与移动端精准显隐：
-    //    手机端要在选中块时，当前块的块助手才出现，否则都是隐藏状态。
-    //    通过 touchstart + focusin + selectionchange 实时跟踪活动块，
-    //    实现「选中即现、移开即隐、零多余胶囊覆盖」的极简体验。
-    let lastTouchedBlock: HTMLElement | null = null;
-    const onWysiwygTouchStart = (e: Event) => {
+    //    手机端要在轻触选中块时才显现胶囊；精细区分轻触 (Tap) 与划屏滚动 (Scroll)，
+    //    翻阅长文档时手势滑动绝不产生胶囊闪烁干扰，停下轻触点击时 0ms 精准显现。
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchTargetBlock: HTMLElement | null = null;
+    let isTouchScrolling = false;
+
+    const onWysiwygTouchStart = (e: TouchEvent) => {
         if (disposed) return;
+        const touch = e.touches?.[0] || (e as any).changedTouches?.[0];
+        if (touch) {
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        } else {
+            touchStartX = 0;
+            touchStartY = 0;
+        }
+        isTouchScrolling = false;
         const target = (e.target as HTMLElement)?.closest?.(".protyle-wysiwyg [data-node-id]") as HTMLElement | null;
+        touchTargetBlock = target;
         if (!target) {
-            // 点击空白区域（非操作菜单/弹窗）：清除移动端块选中激活态
             const insideMenu = (e.target as HTMLElement)?.closest?.(".lv-bam, .b3-dialog, .b3-menu");
             if (!insideMenu) {
                 setActiveSelectedBlock(null);
@@ -458,12 +613,43 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         }
         if (target.classList.contains("protyle-title")) return;
 
-        if (target !== lastTouchedBlock) {
-            lastTouchedBlock = target;
+        if (!target.hasAttribute("data-lv-decorated") || !isBlockDecorated(target)) {
+            if (decorateEditorBlock(target, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction)) {
+                target.setAttribute("data-lv-decorated", "true");
+            }
         }
+        setActiveSelectedBlock(target);
+    };
+
+    const onWysiwygTouchMove = (e: TouchEvent) => {
+        if (disposed || isTouchScrolling) return;
+        const touch = e.touches?.[0];
+        if (!touch) return;
+        const dx = Math.abs(touch.clientX - touchStartX);
+        const dy = Math.abs(touch.clientY - touchStartY);
+        if (dx > 8 || dy > 8) {
+            isTouchScrolling = true;
+        }
+    };
+
+    const onWysiwygTouchEnd = (e: TouchEvent) => {
+        if (disposed) return;
+        // 若为滑屏滚动浏览，不激活块助手胶囊，保持翻阅纯净
+        if (isTouchScrolling) {
+            return;
+        }
+        const target = touchTargetBlock;
+        if (!target) {
+            const insideMenu = (e.target as HTMLElement)?.closest?.(".lv-bam, .b3-dialog, .b3-menu");
+            if (!insideMenu) {
+                setActiveSelectedBlock(null);
+            }
+            return;
+        }
+        if (target.classList.contains("protyle-title")) return;
 
         if (!target.hasAttribute("data-lv-decorated") || !isBlockDecorated(target)) {
-            if (decorateEditorBlock(target, options.onEditQuestion, options.onOpenBlockActions)) {
+            if (decorateEditorBlock(target, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction)) {
                 target.setAttribute("data-lv-decorated", "true");
             }
         }
@@ -475,7 +661,7 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         const block = (e.target as HTMLElement)?.closest?.(".protyle-wysiwyg [data-node-id]") as HTMLElement | null;
         if (block && !block.classList.contains("protyle-title")) {
             if (!block.hasAttribute("data-lv-decorated") || !isBlockDecorated(block)) {
-                if (decorateEditorBlock(block, options.onEditQuestion, options.onOpenBlockActions)) {
+                if (decorateEditorBlock(block, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction)) {
                     block.setAttribute("data-lv-decorated", "true");
                 }
             }
@@ -492,7 +678,7 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         const block = anchorEl?.closest?.(".protyle-wysiwyg [data-node-id]") as HTMLElement | null;
         if (block && !block.classList.contains("protyle-title")) {
             if (!block.hasAttribute("data-lv-decorated") || !isBlockDecorated(block)) {
-                if (decorateEditorBlock(block, options.onEditQuestion, options.onOpenBlockActions)) {
+                if (decorateEditorBlock(block, options.onEditQuestion, options.onOpenBlockActions, options.getPinnedActions, options.onRunAction)) {
                     block.setAttribute("data-lv-decorated", "true");
                 }
             }
@@ -503,6 +689,8 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
     if (typeof document !== "undefined") {
         if ("ontouchstart" in window) {
             document.addEventListener("touchstart", onWysiwygTouchStart, { passive: true });
+            document.addEventListener("touchmove", onWysiwygTouchMove, { passive: true });
+            document.addEventListener("touchend", onWysiwygTouchEnd, { passive: true });
         }
         document.addEventListener("focusin", onWysiwygFocusIn, { passive: true });
         document.addEventListener("selectionchange", onSelectionChange, { passive: true });
@@ -527,14 +715,22 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
                 observer.disconnect();
                 observer = null;
             }
+            if (typeof window !== "undefined") {
+                window.removeEventListener("lv-block-action-config-changed", onActionConfigChange);
+                window.removeEventListener("lv-block-action-store-updated", onActionConfigChange);
+            }
             if (typeof document !== "undefined") {
                 document.removeEventListener("flashcard-title-edit", onTitleEditEvent);
                 document.removeEventListener("mouseover", onWysiwygMouseOver);
                 if ("ontouchstart" in window) {
                     document.removeEventListener("touchstart", onWysiwygTouchStart);
+                    document.removeEventListener("touchmove", onWysiwygTouchMove);
+                    document.removeEventListener("touchend", onWysiwygTouchEnd);
                 }
                 document.removeEventListener("focusin", onWysiwygFocusIn);
                 document.removeEventListener("selectionchange", onSelectionChange);
+                lastHoveredBlock = null;
+                touchTargetBlock = null;
                 setActiveSelectedBlock(null);
                 // 干净清理所有注入的按钮与数据属性
                 document.querySelectorAll(".lv-card-badge-pill, .lv-cards-attr-edit-btn").forEach((el) => el.remove());

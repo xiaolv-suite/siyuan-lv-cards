@@ -540,7 +540,7 @@
                 (id, page, pageSize) => getRiffCards(id, page, pageSize),
                 sqlQuery,
             );
-            downloadFile(`${deckName}-${new Date().toISOString().slice(0, 10)}.lvcards`, pkgJson, "application/json");
+            downloadFile(`${deckName}-${localDate(Date.now())}.lvcards`, pkgJson, "application/json");
             showMessage(t.dashboard.ddShareDone
                 .replace("${qa}", String(cards.filter(l => l.kind === "qa" || l.kind === "code" || l.kind === "list").length))
                 .replace("${c}", String(cards.filter(l => l.kind === "cloze").length)), 2500, "info");
@@ -641,14 +641,19 @@
         errorMsg = "";
         ctx.onDueCount?.(null);
         try {
-            const [deckList, due] = await Promise.all([
+            const [deckList, due, cardsIndex] = await Promise.all([
                 getRiffDecks(),
                 dueCache.get(""), // AT-4：与 badge/挑战/配对等并发读取共享缓存，评分后经 invalidate 拉新
+                // 2026-11-21 走查修复（候选⑫定案）：「卡片总数」改用内核卡片索引 total——
+                // 原 Σ(卡包 size) 会重复计入组关系且恒含测试卡包（评审工作区曾虚高至 1,420 vs 真实 6）。
+                getRiffCards("", 1, 1),
             ]);
             if (seq !== refreshSeq) {
                 return; // 旧响应：不改统计与到期数
             }
-            totalCards = deckList.reduce((acc, d) => acc + (d.size ?? 0), 0);
+            totalCards = (typeof cardsIndex?.total === "number" && cardsIndex.total > 0)
+                ? cardsIndex.total
+                : (deckList.reduce((acc, d) => acc + (d.size ?? 0), 0) || (cardsIndex?.total ?? 0));
             decks = deckList.filter(d => {
                 if ((d.size ?? 0) > 0) return true;
                 return totalCards === 0 && !/^(lv-exam-preflight-|lv-dbg|e2e-)/i.test(d.name || "");
@@ -668,9 +673,11 @@
             newCount = due?.unreviewedNewCardCount ?? 0;
             try {
                 const docRows = await sqlQuery(buildDocReviewQuerySql());
+                if (seq !== refreshSeq) return;
                 const docItems = (Array.isArray(docRows) ? docRows : []).map(r => parseDocReviewItem(r));
                 dueDocCount = docItems.filter(d => d.isDue).length;
             } catch {
+                if (seq !== refreshSeq) return;
                 dueDocCount = 0;
             }
             const sess = ctx.getSessionState?.();

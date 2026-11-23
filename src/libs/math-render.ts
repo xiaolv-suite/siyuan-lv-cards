@@ -37,14 +37,25 @@ function loadStylesheet(href: string, id: string): void {
 function loadKatexScript(src: string): Promise<boolean> {
     if (typeof document === "undefined" || !document.head) return Promise.resolve(false);
     return new Promise((resolve) => {
+        let timer: any = null;
         try {
             const script = document.createElement("script");
             script.src = src;
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
+            timer = setTimeout(() => {
+                script.remove();
+                resolve(false);
+            }, 10000);
+            script.onload = () => {
+                if (timer) clearTimeout(timer);
+                resolve(true);
+            };
+            script.onerror = () => {
+                if (timer) clearTimeout(timer);
+                resolve(false);
+            };
             document.head.appendChild(script);
         } catch {
-            // 环境不支持加载外部脚本（如 HappyDOM 测试环境）时返回 false
+            if (timer) clearTimeout(timer);
             resolve(false);
         }
     });

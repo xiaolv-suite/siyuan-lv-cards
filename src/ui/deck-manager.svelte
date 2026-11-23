@@ -78,12 +78,24 @@
     let targetMergeDeckId = $state("");
     let deleteSourceAfterMerge = $state(true);
 
+    let loadDecksSeq = 0;
+    let realCardsTotal = $state(0);
     async function loadDecks() {
+        const seq = ++loadDecksSeq;
         loading = true;
         errorMsg = "";
         try {
-            const rawDecks = await getRiffDecks();
+            const [rawDecks, cardsIndex] = await Promise.all([
+                getRiffDecks(),
+                // 2026-11-21 走查修复（候选⑫定案）：头部「{n} 张闪卡」改用内核卡片索引 total，
+                // 与桌面卡库/中心总览同口径（原 Σ卡包 size 重复计入组关系且恒含测试卡包）。
+                getRiffCards("", 1, 1),
+            ]);
+            if (seq !== loadDecksSeq) return;
             decks = rawDecks ?? [];
+            realCardsTotal = (typeof cardsIndex?.total === "number" && cardsIndex.total > 0)
+                ? cardsIndex.total
+                : (decks.reduce((sum, d) => sum + (d.size ?? 0), 0) || (cardsIndex?.total ?? 0));
 
             // 聚合复习与保持率数据
             if (getRevlog) {
@@ -99,9 +111,12 @@
                 dashboardRows = map;
             }
         } catch (e: any) {
+            if (seq !== loadDecksSeq) return;
             errorMsg = e?.message ?? String(e);
         } finally {
-            loading = false;
+            if (seq === loadDecksSeq) {
+                loading = false;
+            }
         }
     }
 
@@ -322,7 +337,8 @@
         }
     }
 
-    const totalCardsCount = $derived(decks.reduce((sum, d) => sum + (d.size ?? 0), 0));
+    // 2026-11-21 走查修复：统计 pill 改用内核卡片索引 total（loadDecks 拉取），不再用 Σ卡包 size
+    const totalCardsCount = $derived(realCardsTotal);
     const emptyDecksCount = $derived(findEmptyDecks(decks).length);
 
     const filteredDecks = $derived.by(() => {
@@ -338,9 +354,12 @@
     });
 
     onMount(() => {
-        void loadDecks();
-        // 打开时自动做一次静默扫描，发现存量闪卡资产
-        void scanLegacyAndForeignDecks();
+        // 2026-11-21 走查修复：存量扫描原先与 loadDecks 并发——discoverLegacyDecks 读到空 decks 列表
+        // 会把已接入卡包误报为「待接入存量」。先等卡包列表就绪再扫描。
+        void (async () => {
+            await loadDecks();
+            await scanLegacyAndForeignDecks();
+        })();
     });
 </script>
 

@@ -8,7 +8,7 @@ import { hasQuestionContent, hasQuestionMediaContent, validateFlashcardMarkdown,
 import { parseOcclusion } from "./occlusion";
 import { hasDelimitedQa } from "./delimited-qa";
 
-export type CardEntryKind = "markdown" | "image-occlusion" | "memo-qa" | "free-recall";
+export type CardEntryKind = "markdown" | "image-occlusion" | "memo-qa" | "free-recall" | "attribute-qa" | "qa";
 export type CardEntryIssue =
     | "missing-block"
     | "empty-card"
@@ -37,41 +37,62 @@ export interface CardEntryDecision {
 
 /**
  * 按卡型判定一块内容是否具备可入组的最小结构。
- * 普通 Markdown 优先；带图片且有合法 lv-occlusion 属性的块可走遮挡卡型。
+ * 问答卡与挖空卡彻底解耦：免侵入属性问答、结构化问答零挖空直接放行；挖空卡走标准完形填空规则。
  */
 export function validateCardEntry(candidate: CardEntryCandidate): CardEntryDecision {
     const blockID = String(candidate.blockID ?? "");
     const markdown = String(candidate.markdown ?? "");
     if (!blockID || candidate.exists === false) return { blockID, ok: false, issue: "missing-block" };
-    if (!markdown.trim()) return { blockID, ok: false, issue: "empty-card" };
+    if (!markdown.trim() && !candidate.attrs?.["custom-riff-answer"]) return { blockID, ok: false, issue: "empty-card" };
 
+    const attrs = candidate.attrs ?? {};
+
+    // 1. 核心解耦：免侵入属性问答卡（Attribute Q&A）—— 零挖空直接放行！
+    // 题干来自 custom-riff-title / custom-lv-question / custom-card-title，正文即为答案（或在 custom-riff-answer）
+    // 100% 保持笔记正文原貌，绝不强制涂黄或添加 == 标记
+    const customQ = String(attrs["custom-riff-title"] || attrs["custom-lv-question"] || attrs["custom-card-title"] || "").trim();
+    const customA = String(attrs["custom-riff-answer"] || attrs["custom-exam-answer"] || "").trim();
+    if (customQ && (hasMeaningfulPrompt(customQ) || hasQuestionMediaContent(customQ))) {
+        const hasAnsContent = hasMeaningfulPrompt(markdown) || hasQuestionMediaContent(markdown) || hasMeaningfulPrompt(customA);
+        if (hasAnsContent) {
+            return { blockID, ok: true, kind: "attribute-qa" };
+        }
+    }
+
+    // 1.5 核心解耦：考试客观题卡（Exam Question：单选/多选/判断/填空）—— 属性已定义题型与答案直接放行！
+    if (attrs["custom-exam-type"] && (hasMeaningfulPrompt(markdown) || hasQuestionMediaContent(markdown))) {
+        return { blockID, ok: true, kind: "qa" };
+    }
+
+    // 2. 核心解耦：结构化与分隔符问答卡（Delimited Q&A）—— 零挖空直接放行！
+    // 概念 :: 释义、::: 描述卡、Q: ... A: ...、问：... 答：...、—— 破折号问答
+    if (hasDelimitedQa(markdown)) {
+        return { blockID, ok: true, kind: "markdown" };
+    }
+
+    // 3. 经典挖空卡与超级块（Cloze & SuperBlock）
     const markdownIssue = validateFlashcardMarkdown(markdown);
     if (!markdownIssue && hasQuestionContent(markdown)) {
         return { blockID, ok: true, kind: "markdown" };
     }
 
-    // 图片遮挡是独立卡型：它不要求 ==答案==，但必须有图片和至少一个合法区域。
+    // 4. 图片遮挡是独立卡型：它不要求 ==答案==，但必须有图片和至少一个合法区域。
     // 遮挡卡可以没有答案标记，但不能借图片遮挡绕过坏的 Markdown 标记。
     // `missing-answer` 是唯一允许由遮挡数据补足答案语义的结构状态。
     if (markdownIssue !== "invalid-markup" && markdownIssue !== "empty-card"
         && hasQuestionMediaContent(markdown)
-        && (candidate.occlusionValid || parseOcclusion(candidate.attrs ?? {})?.rects.length)) {
+        && (candidate.occlusionValid || parseOcclusion(attrs)?.rects.length)) {
         return { blockID, ok: true, kind: "image-occlusion" };
     }
 
-    // 存量闪卡兼容机制 1：思源块备注作为答案（Block Memo Answer）
-    const memo = String(candidate.attrs?.memo ?? candidate.attrs?.["custom-memo"] ?? "").trim();
+    // 5. 存量闪卡兼容机制 1：思源块备注作为答案（Block Memo Answer）
+    const memo = String(attrs.memo ?? attrs["custom-memo"] ?? "").trim();
     if (memo && (hasMeaningfulPrompt(markdown) || hasQuestionMediaContent(markdown))) {
         return { blockID, ok: true, kind: "memo-qa" };
     }
 
-    // 存量闪卡兼容机制 2：常见分隔符问答格式（:: 或 Q/A 或 问/答）
-    if (hasDelimitedQa(markdown)) {
-        return { blockID, ok: true, kind: "markdown" };
-    }
-
-    // 存量闪卡兼容机制 3：存量卡整块自由回忆（在复习或明确兼容模式下放行）
-    if (candidate.allowLegacyFormat && (hasMeaningfulPrompt(markdown) || hasQuestionMediaContent(markdown))) {
+    // 6. 存量闪卡与自由回忆入包放行：允许整块纯文本无挖空卡加入卡组（仅限 missing-answer）
+    if (candidate.allowLegacyFormat && markdownIssue === "missing-answer" && (hasMeaningfulPrompt(markdown) || hasQuestionMediaContent(markdown))) {
         return { blockID, ok: true, kind: "free-recall" };
     }
 

@@ -27,8 +27,8 @@ export interface DeckPageData {
  */
 export function inferPackageCardKind(markdown: string): "qa" | "cloze" | "code" | "list" {
     if (!markdown || typeof markdown !== "string") return "qa";
-    // 包含 ==挖空==
-    if (markdown.includes("==")) return "cloze";
+    // 包含 ==挖空==（严格排除代码中的 === 等全等运算符）
+    if (/(?<!=)==(?!=)/.test(markdown)) return "cloze";
     // 包含多行代码块
     if (/```[\s\S]*?```/.test(markdown)) return "code";
     // 包含有序或无序列表

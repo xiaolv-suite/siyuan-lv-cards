@@ -202,11 +202,11 @@ export function proposeCardSplits(input: {
     const a = String(input.answer ?? "").trim();
 
     // 1. 单块多处 ==挖空==：按每处挖空独立生成一张原子挖空卡（其余挖空还原为上下文）
-    const clozeMatches = [...q.matchAll(/==([\s\S]*?)==/g)];
+    const clozeMatches = [...q.matchAll(/(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g)];
     if (clozeMatches.length >= 2 && !a) {
         return clozeMatches.map((targetMatch, targetIdx) => {
             let currentIdx = 0;
-            const singleClozeMd = q.replace(/==([\s\S]*?)==/g, (_full, inner) => {
+            const singleClozeMd = q.replace(/(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g, (_full, inner) => {
                 const keepMask = currentIdx === targetIdx;
                 currentIdx += 1;
                 return keepMask ? `==${inner}==` : String(inner);
@@ -329,7 +329,7 @@ export function inspectCardLearnability(input: {
         });
     }
 
-    const qProse = q.replace(CODE_OR_MATH_BLOCK, " ").replace(/==[\s\S]*?==/g, " ").trim();
+    const qProse = q.replace(CODE_OR_MATH_BLOCK, " ").replace(/(?<!=)==(?!=)[\s\S]*?(?<!=)==(?!=)/g, " ").trim();
     const questionMarks = qProse.match(/[?？]/g)?.length ?? 0;
     const hasSemicolonMulti = /[;；]/.test(qProse);
     if (questionMarks >= 2 || hasSemicolonMulti) {
@@ -351,7 +351,7 @@ export function inspectCardLearnability(input: {
     }
 
     if (a) {
-        const qWithoutBlank = normalizeForLeak(q.replace(/____/g, " ").replace(/==[\s\S]*?==/g, " "));
+        const qWithoutBlank = normalizeForLeak(q.replace(/____/g, " ").replace(/(?<!=)==(?!=)[\s\S]*?(?<!=)==(?!=)/g, " "));
         const aNorm = normalizeForLeak(a);
         if (aNorm.length >= 2 && !GENERIC_SHORT_ANSWERS.has(aNorm) && qWithoutBlank.includes(aNorm)) {
             issues.push({
@@ -392,13 +392,13 @@ export function checkMinimumInformationPrinciple(markdown: string): OverloadInsp
     // 清理 markdown 标记与反链引用计算纯字符数
     const cleanedText = raw
         .replace(/>\s*来源：\(\([^\)]+\)\)/g, " ")
-        .replace(/==([\s\S]*?)==/g, "$1")
+        .replace(/(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g, "$1")
         .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
         .replace(/<[^>]*>/g, " ")
         .replace(/\s+/g, "");
 
     const charCount = cleanedText.length;
-    const clozeMatches = [...raw.matchAll(/==([\s\S]*?)==/g)];
+    const clozeMatches = [...raw.matchAll(/(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g)];
     const blankMatches = [...raw.matchAll(/____/g)];
     const clozeCount = clozeMatches.length > 0 ? clozeMatches.length : blankMatches.length;
 

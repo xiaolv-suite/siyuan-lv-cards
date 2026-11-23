@@ -108,7 +108,9 @@ export function shouldTriggerDailyReminder(params: {
     if (!Number.isFinite(h)) {
         return false;
     }
-    const targetMin = h * 60 + (m || 0);
+    const safeH = h >= 24 ? 23 : Math.max(0, h);
+    const safeM = h >= 24 ? 59 : Math.min(59, Math.max(0, m || 0));
+    const targetMin = safeH * 60 + safeM;
     const nowMin = now.getHours() * 60 + now.getMinutes();
     return nowMin >= targetMin;
 }

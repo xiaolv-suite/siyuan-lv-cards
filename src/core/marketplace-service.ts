@@ -10,8 +10,9 @@ import {
   validateMarketplaceCatalog,
   marketplaceItemToLvCardsPackage,
 } from "./marketplace";
-import { getRiffDecks, createRiffDeck, addRiffCards, type RiffDeck } from "@/api/riff";
-import { getNotebooks, createDocWithMd, appendBlock, setBlockAttrs } from "@/api/siyuan";
+import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
+import { addRiffCards as gatedAddRiffCards } from "@/api/due-shared";
+import { getNotebooks, createDocWithMd, appendBlock, setBlockAttrs, findDocIDByHPath } from "@/api/siyuan";
 import { withDocLock } from "@/libs/lv-notice-kit";
 import { applyPackageCardMetadata } from "./lvcards-import";
 
@@ -136,7 +137,9 @@ export async function installMarketplaceItemToDeck(
 ): Promise<InstallResult> {
   const _getRiffDecks = deps.getRiffDecks ?? getRiffDecks;
   const _createRiffDeck = deps.createRiffDeck ?? createRiffDeck;
-  const _addRiffCards = deps.addRiffCards ?? addRiffCards;
+  // 与全部建卡入口同口径：集市一键入库默认走带质量门禁的入组封装，
+  // 畸形片段（如未闭合 == 挖空）在入库前被拦截，避免"卡在组里却永远不出现在复习队列"。
+  const _addRiffCards = deps.addRiffCards ?? gatedAddRiffCards;
   const _getNotebooks = deps.getNotebooks ?? getNotebooks;
   const _createDocWithMd = deps.createDocWithMd ?? createDocWithMd;
   const _appendBlock = deps.appendBlock ?? appendBlock;
@@ -179,13 +182,18 @@ export async function installMarketplaceItemToDeck(
     const targetNb = notebooks.find((n) => /(🐴\s*)?小驴(生态|空间|笔记本|闪卡)/.test(n.name || "")) ?? notebooks[0];
 
     // 4. 创建专属于该卡包的存储文档
+    // 2026-11-21 走查修复：入库幂等——路径已存在时 createDocWithMd 返回 null 导致任何重试恒失败
+    // （重装/重启后按钮复位再点即死锁，且遗留孤儿文档）。改为先查既有文档并复用。
     const safeDocTitle = targetDeckName.replace(/[\\/:*?"<>|]/g, "_");
     const docPath = `/小驴闪卡/公共集市/${safeDocTitle}`;
-    const docId = await _createDocWithMd(
-      targetNb.id,
-      docPath,
-      `# ${targetDeckName}\n\n> 来源：小驴公共集市 · ${item.author?.name || "官方公版"}\n> 许可协议：${item.license} | 版本：${item.version}\n> 简介：${item.description}\n`,
-    );
+    let docId = await findDocIDByHPath(targetNb.id, docPath);
+    if (!docId) {
+      docId = await _createDocWithMd(
+        targetNb.id,
+        docPath,
+        `# ${targetDeckName}\n\n> 来源：小驴公共集市 · ${item.author?.name || "官方公版"}\n> 许可协议：${item.license} | 版本：${item.version}\n> 简介：${item.description}\n`,
+      );
+    }
 
     if (!docId) {
       return { success: false, count: 0, error: "在笔记本中创建闪卡归档文档失败" };

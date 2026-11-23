@@ -18,6 +18,7 @@
         ratingStyle = "four",
         reverseOrder = false,
         mixedRotation = false,
+        shuffleChoiceOptions = true,
         timeoutMode = "off",
         budgetMin = 15,
         budgetEstimate = null,
@@ -39,6 +40,7 @@
         ratingStyle?: "four" | "three";
         reverseOrder?: boolean;
         mixedRotation?: boolean;
+        shuffleChoiceOptions?: boolean;
         timeoutMode?: "off" | "reveal" | "forget";
         budgetMin?: number;
         budgetEstimate?: { done: number; left: number } | null;
@@ -174,6 +176,15 @@
                 checked={mixedRotation}
                 ariaLabel={t.settings?.mixedRotationLabel ?? "混合题型轮换"}
                 onchange={(val) => onSetOverride("mixedRotation", val)}
+            />
+        </div>
+        <div class="lv-prefs-row">
+            <span>{t.settings?.shuffleChoiceOptionsLabel ?? "选择题选项乱序"}</span>
+            <div class="fn__flex-1"></div>
+            <LvSwitch
+                checked={shuffleChoiceOptions}
+                ariaLabel={t.settings?.shuffleChoiceOptionsLabel ?? "选择题选项乱序"}
+                onchange={(val) => onSetOverride("shuffleChoiceOptions", val)}
             />
         </div>
         <div class="lv-prefs-row">

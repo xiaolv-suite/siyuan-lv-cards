@@ -85,17 +85,32 @@ async function createAllTypeSamples(docID: string): Promise<{ created: number; b
     return { created, blockIDs };
 }
 
-/** 幂等把块并入卡组（只补缺失） */
+/** 幂等把块并入卡组（只补缺失且过滤坏块） */
 async function ensureDeckMembership(deckID: string, blockIDs: string[]): Promise<number> {
     const uniqueIDs = [...new Set(blockIDs.filter(Boolean))];
     if (uniqueIDs.length === 0) return 0;
-    const deckCards = await getRiffCards(deckID, 1, 200);
-    const inDeck = new Set(deckCards.blocks.map(block => block.id));
-    const missing = uniqueIDs.filter(id => !inDeck.has(id));
-    if (missing.length > 0) {
-        await addRiffCards(deckID, missing);
+    try {
+        const escaped = uniqueIDs.map(id => `'${id.replace(/'/g, "''")}'`).join(",");
+        const rows = await sqlQuery(`SELECT id, markdown FROM blocks WHERE id IN (${escaped})`);
+        const validIds: string[] = [];
+        for (const row of rows) {
+            const id = String(row.id);
+            const md = String(row.markdown ?? "").trim();
+            // 过滤空导语行或无内容段落，杜绝将无答案的引导文本误当作卡片入库
+            if (!md) continue;
+            validIds.push(id);
+        }
+        const targetIds = validIds.length > 0 ? validIds : uniqueIDs;
+        const deckCards = await getRiffCards(deckID, 1, 200);
+        const inDeck = new Set(deckCards.blocks.map(block => block.id));
+        const missing = targetIds.filter(id => !inDeck.has(id));
+        if (missing.length > 0) {
+            await addRiffCards(deckID, missing);
+        }
+        return missing.length;
+    } catch {
+        return 0;
     }
-    return missing.length;
 }
 
 /**

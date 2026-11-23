@@ -94,6 +94,11 @@ export interface CardsBridgeApi {
     }): Promise<ActionResult<IntakeReceipt>>;
     generateDailyTaskMarkdown(options?: { customPrefix?: string }): Promise<ActionResult<{ markdown: string; dueCount: number }>>;
     getTodaySummaryText(options?: { customPrefix?: string }): Promise<ActionResult<{ text: string; dueCount: number }>>;
+    openCardQuestionDialog?(blockID?: string): void;
+    openBlockActionCenter?(blockID: string, anchor?: HTMLElement): void;
+    openDeckPicker?(blockIDs: string[]): void;
+    makeClozeCard?(blockID: string): void;
+    openOcclusionFlow?(blockID: string): void;
 }
 
 export interface CardsBridgeHost {
@@ -103,6 +108,11 @@ export interface CardsBridgeHost {
     openReview(options?: ReviewOpenOptions): void;
     receiveExtract?(envelope: ExtractEnvelope): Promise<ActionResult<IntakeReceipt>>;
     createCard?(input: IntakeInput): Promise<ActionResult<IntakeReceipt>>;
+    openCardQuestionDialog?(blockID?: string): void;
+    openBlockActionCenter?(blockID: string, anchor?: HTMLElement): void;
+    openDeckPicker?(blockIDs: string[]): void;
+    makeClozeCard?(blockID: string): void;
+    openOcclusionFlow?(blockID: string): void;
 }
 
 export interface CardReviewedEventDetail {
@@ -212,14 +222,19 @@ export function buildCardsBridge(host: CardsBridgeHost): CardsBridgeApi {
                 const text = totalDue === 0
                     ? `【${prefix}】今日已无待复习闪卡（全部完成 🎉）`
                     : `【${prefix}】今日待复习 ${totalDue} 张闪卡`;
-                return {
-                    text,
-                    dueCount: totalDue,
-                };
-            });
-        },
-    };
-}
+	                return {
+	                    text,
+	                    dueCount: totalDue,
+	                };
+	            });
+	        },
+	        openCardQuestionDialog: (blockID?: string) => host.openCardQuestionDialog?.(blockID),
+	        openBlockActionCenter: (blockID: string, anchor?: HTMLElement) => host.openBlockActionCenter?.(blockID, anchor),
+	        openDeckPicker: (blockIDs: string[]) => host.openDeckPicker?.(blockIDs),
+	        makeClozeCard: (blockID: string) => host.makeClozeCard?.(blockID),
+	        openOcclusionFlow: (blockID: string) => host.openOcclusionFlow?.(blockID),
+	    };
+	}
 
 export function mountCardsBridge(
     host: CardsBridgeHost,

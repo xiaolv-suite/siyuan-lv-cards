@@ -73,6 +73,12 @@ export interface BlockSnapshot {
     hasText?: boolean;
     /** 块内是否包含图片（遮挡卡仅对含图块有意义） */
     hasImage?: boolean;
+    /** 块内是否已存在挖空标记（==高亮== 或 mark 标签） */
+    hasCloze?: boolean;
+    /** 块内是否已存在问答结构（::、Q: ... A: 或 问：... 答：） */
+    hasQaPattern?: boolean;
+    /** 当前块（如标题/列表）是否处于折叠收起状态 */
+    isFolded?: boolean;
 }
 
 /** 已安装插件的探测结果：null/undefined 表示未知，false 表示确认未安装 */
@@ -159,6 +165,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         badgeText: "推荐 · Alt+Q",
         singleOnly: true,
         preferredBlockKinds: ["paragraph", "quote"],
+        isAvailable: (s) => !s.isDocument,
     },
     {
         id: "make-cloze",
@@ -170,6 +177,8 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         requiresSelection: true,
         singleOnly: true,
         preferredBlockKinds: ["paragraph", "code", "table"],
+        excludedBlockKinds: ["math"],
+        isAvailable: (s) => !s.isDocument && Boolean(s.hasSelection),
     },
     {
         id: "make-occlusion",
@@ -191,6 +200,9 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         subtitle: "收录入指定卡包并开启间隔重复复习",
         glyph: "📚",
         supportsBatch: true,
+        // 核心门禁：仅当该块已具备闪卡属性（免侵入问答）或正文包含挖空/问答结构时才允许加入卡组！
+        // 普通未制卡文本坚决排除，避免点击后报错卡死
+        isAvailable: (s) => !s.isDocument && Boolean(s.isCard || s.hasCloze || s.hasQaPattern),
     },
     {
         id: "remove-from-deck",
@@ -214,6 +226,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         glyph: "🔍",
         singleOnly: true,
         preferredBlockKinds: ["heading", "paragraph", "quote", "code"],
+        isAvailable: (s) => !s.isDocument,
     },
     {
         id: "copy-embed-ref",
@@ -224,6 +237,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         glyph: "📦",
         supportsBatch: true,
         preferredBlockKinds: ["paragraph", "heading", "table"],
+        isAvailable: (s) => !s.isDocument,
     },
     {
         id: "toggle-fold-block",
@@ -234,18 +248,22 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         glyph: "📂",
         singleOnly: true,
         preferredBlockKinds: ["heading", "list", "quote"],
+        // 核心门禁：仅大纲层级与可收起容器（标题、列表项）支持折叠分支。
+        // 2026-11-21 走查修复：引述块无折叠语义，fold 属性会持久写入文档 IAL（零污染红线边缘），移除 quote。
+        isAvailable: (s) => !s.isDocument && (s.blockKind === "heading" || s.blockKind === "list" || s.blockKind === "task"),
     },
     {
         id: "morph-block-type",
         group: "native",
         labelKey: "blockActMorphType",
         fallbackLabel: "快捷转换块类型",
-        subtitle: "在段落与待办任务之间极速互转",
+        subtitle: "转换为标题、列表、待办、引述或代码块",
         glyph: "🔄",
         singleOnly: true,
-        preferredBlockKinds: ["paragraph", "task"],
-        // 执行器仅支持段落↔待办互转，其余块类型会出现死端提示，直接不展示
-        isAvailable: (s) => s.blockKind === "paragraph" || s.blockKind === "task",
+        preferredBlockKinds: ["paragraph", "task", "heading", "list", "quote", "code", "math"],
+        // 支持绝大部分文本与结构内容块互转（文档除外）。
+        // 2026-11-21 走查修复：排除表格——morph 会把整表压成 `* [ ] |a|b|` 单行列表，结构性破坏且无警告。
+        isAvailable: (s) => !s.isDocument && s.blockKind !== "table",
     },
 
     // ── 知识流转（跨插件联动） ────────────────────────────────
@@ -283,6 +301,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         subtitle: "快速暂存至制卡收集箱供集中批处理",
         glyph: "📥",
         supportsBatch: true,
+        isAvailable: (s) => !s.isDocument && Boolean(s.hasText || s.hasImage),
     },
     {
         id: "to-glean-library",
@@ -295,6 +314,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         requiresPlugin: "glean",
         singleOnly: true,
         preferredBlockKinds: ["quote", "paragraph"],
+        isAvailable: (s) => !s.isDocument && Boolean(s.hasText),
     },
     {
         id: "capture-quote-common",
@@ -323,13 +343,12 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         id: "speedswitch-workbench",
         group: "knowledge",
         labelKey: "blockActSpeedSwitch",
-        fallbackLabel: "雷切极速工作台",
-        subtitle: "在雷切闪电面板中检索并即时查看代码上下文",
+        fallbackLabel: "存为雷切代码片段",
+        subtitle: "提取当前代码块正文，提炼存入雷切代码片段库",
         glyph: "⚡",
         sourcePlugin: "raikiri",
         requiresPlugin: "raikiri",
         preferredBlockKinds: ["code"],
-        // 雷切工作台面向代码检索，仅在代码块上提供（其余块上是死端入口）
         isAvailable: (s) => s.blockKind === "code",
     },
 
@@ -385,6 +404,15 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         preferredBlockKinds: ["code", "paragraph"],
         isAvailable: (s) => Boolean(s.hasText),
     },
+    {
+        id: "copy-block-id",
+        group: "clipboard",
+        labelKey: "blockActCopyId",
+        fallbackLabel: "复制块 ID",
+        subtitle: "提取思源原生块标识符（支持多选输出列表）",
+        glyph: "🆔",
+        supportsBatch: true,
+    },
 ]);
 
 export const BLOCK_ACTION_GROUP_ORDER: readonly BlockActionGroup[] = Object.freeze([
@@ -421,7 +449,18 @@ export function inferBlockKindFromElement(el: HTMLElement | null): SiYuanBlockKi
     if (!el) return "paragraph";
     // 性能优化：优先极速 O(1) 匹配 data-type，消除 95%+ 场景下的 querySelector 引擎开销
     const type = el.getAttribute("data-type") || "";
-    if (type === "NodeParagraph") return "paragraph";
+    if (type === "NodeParagraph") {
+        const listItem = el.closest?.('[data-type="NodeListItem"]');
+        if (listItem) {
+            // 2026-11-21 走查修复：列表项内的段落应归为该列表的 kind（task/list），
+            // 否则同一列表项经正文悬浮与经属性栏悬浮会得到不同菜单（折叠动作时有时无）。
+            if (listItem.getAttribute("data-subtype") === "t" || listItem.querySelector(".protyle-action--task")) {
+                return "task";
+            }
+            return "list";
+        }
+        return "paragraph";
+    }
     if (type === "NodeHeading") return "heading";
     if (type === "NodeCodeBlock") return "code";
     if (type === "NodeBlockquote") return "quote";
@@ -436,7 +475,17 @@ export function inferBlockKindFromElement(el: HTMLElement | null): SiYuanBlockKi
     // 容错降级：仅当 data-type 缺失或非标准时才检查类名与选择器
     const subtype = el.getAttribute("data-subtype") || "";
     if (/^h[1-6]$/i.test(subtype)) return "heading";
-    if (el.classList.contains("p")) return "paragraph";
+    if (el.classList.contains("p")) {
+        const listItem = el.closest?.('[data-type="NodeListItem"], [data-subtype="t"]');
+        if (listItem) {
+            // 与 NodeParagraph 主分支同口径：列表项内段落归为 task/list
+            if (listItem.getAttribute("data-subtype") === "t" || listItem.querySelector(".protyle-action--task")) {
+                return "task";
+            }
+            return "list";
+        }
+        return "paragraph";
+    }
     if (el.classList.contains("bq")) return "quote";
     if (el.querySelector(".code-block")) return "code";
     if (el.querySelector("table")) return "table";

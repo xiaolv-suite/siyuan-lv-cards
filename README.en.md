@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.233.5** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.233.6** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -23,7 +23,7 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 
 ---
 
-## 🆕 What's New In v0.233.5 (Cumulative Updates)
+## 🆕 What's New In v0.233.6 (Cumulative Updates)
 
 - **Zero-Pollution Attribute Q&A System**: Enhanced block attribute (`custom-riff-title`) Q&A workflows across editor inline triggers, floating action capsules, and review workbenches without altering original note markdown;
 - **Obsidian SR Document Review & Outline Breadcrumbs**: Progressive document-level spaced reviews with hierarchical outline breadcrumbs and one-click section navigation;
@@ -100,7 +100,7 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 * **Unified Deck Management & Legacy/3rd-Party Sync**: Deep scanner for native block attributes, 3rd-party plugin attributes, and tag-based decks; 1-click sync into native Riff decks with comprehensive management dashboard (merge, rename, clean empty).
 
 ### v0.226.0
-* **Isolated Web Testing Environment & Native Hollow Icons**: Dedicated isolated SiYuan desktop web instance at `D:\siyuan-isolated-lv-cards` (port 43930); all icons aligned to SiYuan native 24x24 outline Lucide SVG symbol sprites.
+* **Isolated Web Testing Environment & Native Hollow Icons**: Dedicated isolated SiYuan desktop web instance at `<isolated-test-workspace>` (port 43930); all icons aligned to SiYuan native 24x24 outline Lucide SVG symbol sprites.
 * **Authoring & Onboarding Flow Enhancements**: Fixed empty deck selection deadlock; added dedicated Single/Multi-Choice and True/False card form, in-editor selection authoring menu, shortcut template switching, and click-to-flip preview; streamlined 3-step zero-friction onboarding.
 * **All-Type Sample Decks & KaTeX Formula Rendering**: 14 flashcard types covered in sample deck; dynamic host KaTeX asset injection fixing blank formulas; 100% feature coverage survey of native SiYuan flashcard APIs.
 

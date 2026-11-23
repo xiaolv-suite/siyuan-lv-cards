@@ -108,15 +108,19 @@ export function extractMarkTexts(holder: HTMLElement): string[] {
 
 /**
  * 判断卡片是否为基于块属性（custom-riff-title / custom-lv-question）设定的免侵入问答卡
- * （非超级块且正文未带挖空标记，属性作为题干，正文作为答案）
+ * （非超级块，属性作为题干，正文作为背面答案）
  */
 export function isAttrQaCard(
     html: string | undefined | null,
     customQuestion?: string | null
 ): boolean {
-    const q = String(customQuestion ?? "").trim();
-    if (!q) return false;
+    let q = String(customQuestion ?? "").trim();
     const raw = String(html ?? "");
+    if (!q && raw) {
+        const m = raw.match(/custom-riff-title=(?:"([^"]*)"|'([^']*)')|custom-lv-question=(?:"([^"]*)"|'([^']*)')/i);
+        if (m) q = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? "").trim();
+    }
+    if (!q) return false;
     if (isSuperBlockHtml(raw)) return false;
     // 存在挖空标记（mark 或 span[data-type=mark] 或 ==）时为挖空卡
     if (/(?:data-type=["']mark["']|<mark\b|(?<!=)==(?!=))/i.test(raw)) {
@@ -205,6 +209,20 @@ export function maskMarkedAnswersForQuestion(html: string, customQuestion?: stri
         if (sbMasked !== html) return sbMasked;
     }
 
+    // 若未显式传入 customQuestion，尝试从 block 容器 HTML 中自适应提取
+    let q = String(customQuestion ?? "").trim();
+    if (!q && html) {
+        const m = html.match(/custom-riff-title=(?:"([^"]*)"|'([^']*)')|custom-lv-question=(?:"([^"]*)"|'([^']*)')/i);
+        if (m) q = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? "").trim();
+    }
+
+    // 0.5 凡通过块属性（custom-riff-title / custom-lv-question）设定了题干问题的免侵入问答卡（无挖空标记）：
+    // 问题态必须严格以属性问题作为瞩目题面，彻底遮蔽正文答案，杜绝提前剧透！
+    // 若正文内部已包含 ==挖空==，则以挖空卡形态呈现，customQuestion 作为情境徽章保留。
+    if (isAttrQaCard(html, q)) {
+        return renderAttrQaQuestionFace(q);
+    }
+
     const template = document.createElement("template");
     template.innerHTML = String(html ?? "");
     const marks = Array.from(template.content.querySelectorAll(MARK_SELECTOR));
@@ -221,12 +239,6 @@ export function maskMarkedAnswersForQuestion(html: string, customQuestion?: stri
             mark.setAttribute("title", marks.length > 1 ? `第 ${idx} 空（点击揭晓）` : "答案遮蔽（点击揭晓）");
         }
         return template.innerHTML;
-    }
-
-    // 0.5 若通过块属性（custom-riff-title / custom-lv-question）设定了题干问题，且无 == 挖空：
-    // 问题态必须严格遮蔽正文，将属性问题作为高亮题面呈现，彻底根治答案提前泄露的问题！
-    if (customQuestion && customQuestion.trim()) {
-        return renderAttrQaQuestionFace(customQuestion.trim());
     }
 
     // 存量闪卡无损遮罩自适应：若无 == 标记，检查是否存在 :: 概念分隔或 Q/A 问答

@@ -15,6 +15,8 @@ export interface ScanCard {
     md: string;
     /** 块备注（思源 memo 属性，可作为存量问答答案） */
     memo?: string;
+    /** 块属性集合（如 custom-riff-title / custom-exam-type 等） */
+    attrs?: Record<string, string>;
     /** BI-5 生命周期状态（可空——原生卡无档案） */
     state?: string;
     /** 宿主已验证的图片遮挡数据；门禁仍需核对可见题面图片和 Markdown 标记。 */
@@ -191,7 +193,7 @@ export function detectDebts(cards: ScanCard[]): DebtItem[] {
         else qualityIssue = validateCardEntry({
             blockID: c.blockID,
             markdown: c.md,
-            attrs: c.memo ? { memo: c.memo } : undefined,
+            attrs: { ...(c.attrs || {}), ...(c.memo ? { memo: c.memo } : {}) },
             exists: c.exists,
             occlusionValid: c.occlusion === true,
         }).issue;

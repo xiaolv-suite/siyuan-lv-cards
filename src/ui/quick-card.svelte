@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
-    import { inspectCardLearnability, serializeQaCard, validateQaDraft, type CardSplitDraft } from "@/core/flashcard-quality";
+    import { inspectCardLearnability, validateQaDraft, hasMarkedAnswer, type CardSplitDraft } from "@/core/flashcard-quality";
     import { parsePastedQuestionText } from "@/core/question-splitter";
     import { extractDroppedBlockText } from "@/core/drag-drop";
     import { compressImageFile } from "@/core/image-compress";
@@ -342,8 +342,11 @@
             }
         }
         if (template === "cloze") {
-            const hasMarker = q.includes("____") || q.includes("==");
-            const ansOk = a.trim().length > 0 || q.includes("==");
+            // 与质量门禁同口径：题干内联挖空必须成对闭合（hasMarkedAnswer），
+            // 单个未闭合的 "=="（如数学式 a == b）此前会被 includes("==") 误判为就绪，
+            // 提交时才被门禁以 invalid-markup 打回——制作页应提前拦截并给出同样语义的提示。
+            const hasMarker = q.includes("____") || hasMarkedAnswer(q);
+            const ansOk = a.trim().length > 0 || hasMarkedAnswer(q);
             return {
                 ready: hasMarker && ansOk,
                 label: !hasMarker ? "题干需包含空位(____或==答案==)" : !ansOk ? "需填写挖空内容" : "挖空要素已就绪",
@@ -393,12 +396,18 @@
             }
         }
         if (template === "superblock") {
-            return `{{{col\n${question}\n\n${answer}\n}}}`;
+            // 超级块契约：第 1 个非空子块=题干、第 2 个起=答案（parseSuperBlockMarkdown 按空行切块）。
+            // 题干内部若含空行，第二段会被内核解析误当作答案块——先把题干内空行合并为单换行，
+            // 保证整段题干落在第一个子块内。
+            return `{{{col\n${question.replace(/\n\s*\n+/g, "\n")}\n\n${answer}\n}}}`;
         }
         if (template === "formula") {
             return `${question}\n==${cleanFormulaCloze(answer)}==`;
         }
-        return serializeQaCard(question, answer);
+        if (template === "qa" || template === "attr-qa") {
+            return answer;
+        }
+        return answer;
     }
 
     async function confirmSplitCreate() {
@@ -429,6 +438,13 @@
             } : undefined;
             let sharedDocID: string | undefined = insertInPlace ? activeDoc?.docId : undefined;
             for (const draft of drafts) {
+                const draftOpts = {
+                    ...(docOpts ?? {}),
+                    examAttrs: {
+                        ...((docOpts as any)?.examAttrs ?? {}),
+                        ...(template === "qa" || template === "attr-qa" ? { "custom-riff-title": draft.q.trim(), "custom-lv-card-type": "qa" } : {}),
+                    },
+                };
                 const splitArgs: any[] = [
                     serializeDraftByTemplate(draft),
                     deckID,
@@ -436,9 +452,9 @@
                     draft.q.trim(),
                     draft.a.trim(),
                 ];
-                if (sharedDocID || docOpts) {
+                if (sharedDocID || Object.keys(draftOpts).length > 0) {
                     splitArgs.push(sharedDocID);
-                    if (docOpts) splitArgs.push(docOpts);
+                    splitArgs.push(draftOpts);
                 }
                 const res = await (onCreate as any)(...splitArgs);
                 if (!sharedDocID && res && res.docID) {
@@ -512,7 +528,8 @@
         "attr-qa": { q: "什么是哈希表（Hash Table）的核心优势？", a: "哈希表通过散列函数建立键到内存地址的映射，平均情况下具有 O(1) 的极速查找与插入时间复杂度。" },
         cloze: { q: "细胞进行有氧呼吸的主要场所是____。", a: "线粒体" },
         sequence: { q: "请列举敏捷软件开发的 4 大核心价值观：", a: "个体和互动高于流程和工具\n工作的软件高于详尽的文档\n客户合作高于合同谈判\n响应变化高于遵循计划" },
-        superblock: { q: "细胞呼吸分为哪三个阶段？\n\n糖酵解、柠檬酸循环、氧化磷酸化。", a: "" },
+        // 超级块契约：答案必须独立成段（a 非空），题干含空行会被解析成答案块——示例同口径
+        superblock: { q: "细胞呼吸分为哪三个阶段？", a: "糖酵解、柠檬酸循环、氧化磷酸化。" },
         choice: { q: "地球绕太阳公转一周大约需要多长时间？", a: "" },
         formula: { q: "爱因斯坦质能方程的数学表达式是什么？", a: "E = mc^2" },
     };
@@ -636,32 +653,70 @@
                 return;
             }
 
-            if (template === "attr-qa") {
+            if (template === "qa" || template === "attr-qa") {
                 const question = q.trim();
                 const answer = a.trim();
                 const markdown = answer;
                 const opts = {
                     ...(docOpts ?? {}),
                     examAttrs: {
+                        ...((docOpts as any)?.examAttrs ?? {}),
                         "custom-riff-title": question,
+                        "custom-lv-card-type": "qa",
                     },
                 };
-                const callArgs: any[] = [markdown, deckID, deckName, question, answer];
-                if (targetDocID || Object.keys(opts).length > 0) {
-                    callArgs.push(targetDocID);
-                    callArgs.push(opts);
+                if (isBidirectional) {
+                    // 双向卡片：生成正向与反向两张免侵入问答卡（正文零涂黄）
+                    const firstArgs: any[] = [markdown, deckID, deckName, question, answer];
+                    if (targetDocID || Object.keys(opts).length > 0) {
+                        firstArgs.push(targetDocID);
+                        firstArgs.push(opts);
+                    }
+                    const first = await (onCreate as any)(...firstArgs);
+                    if (first && first.docID) {
+                        const secondOpts = {
+                            ...(docOpts ?? {}),
+                            examAttrs: {
+                                ...((docOpts as any)?.examAttrs ?? {}),
+                                "custom-riff-title": answer,
+                                "custom-lv-card-type": "qa",
+                            },
+                        };
+                        const secondArgs: any[] = [question, deckID, deckName, answer, question, first.docID, secondOpts];
+                        await (onCreate as any)(...secondArgs);
+                    } else {
+                        const altOpts = {
+                            ...(docOpts ?? {}),
+                            examAttrs: {
+                                ...((docOpts as any)?.examAttrs ?? {}),
+                                "custom-riff-title": answer,
+                                "custom-lv-card-type": "qa",
+                            },
+                        };
+                        const altArgs: any[] = [question, deckID, deckName, answer, question, undefined, altOpts];
+                        await (onCreate as any)(...altArgs);
+                    }
+                } else {
+                    const callArgs: any[] = [markdown, deckID, deckName, question, answer];
+                    if (targetDocID || Object.keys(opts).length > 0) {
+                        callArgs.push(targetDocID);
+                        callArgs.push(opts);
+                    }
+                    await (onCreate as any)(...callArgs);
                 }
-                await (onCreate as any)(...callArgs);
                 if (disposed) return;
                 rememberDeck(deckID, deckName);
                 lvLaunchpad.haptic(10);
                 if (embedded) {
                     q = "";
                     a = "";
+                    // 2026-11-21 走查修复：先快照双向标记再重置——原顺序使双向分支成为死代码，成功提示恒为普通文案
+                    const wasBidirectional = isBidirectional;
+                    isBidirectional = false;
                     previewAnswer = false;
                     createdNotice = insertInPlace
                         ? (t.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组")
-                        : "免侵入属性问答卡已生成并加入卡组（正文零污染）";
+                        : (wasBidirectional ? (t.quickCardBidiDone ?? "双向问答卡片已生成（2 张 · 零挖空正文纯净）") : (t.quickCardDone ?? "已制卡（正文零污染）"));
                 } else {
                     onClose();
                 }
@@ -670,44 +725,13 @@
 
             const question = q.trim();
             const answer = a.trim();
-            if (template === "qa" && isBidirectional) {
-                // 双向卡片：互为问答生成两张卡片（A -> B 与 B -> A）
-                const firstArgs: any[] = [serializeQaCard(question, answer), deckID, deckName, question, answer];
-                if (targetDocID || docOpts) {
-                    firstArgs.push(targetDocID);
-                    if (docOpts) firstArgs.push(docOpts);
-                }
-                const first = await (onCreate as any)(...firstArgs);
-                if (first && first.docID) {
-                    const secondArgs: any[] = [serializeQaCard(answer, question), deckID, deckName, answer, question, first.docID];
-                    if (docOpts) secondArgs.push(docOpts);
-                    await (onCreate as any)(...secondArgs);
-                } else {
-                    const altArgs: any[] = [serializeQaCard(answer, question), deckID, deckName, answer, question];
-                    if (targetDocID || docOpts) {
-                        altArgs.push(targetDocID);
-                        if (docOpts) altArgs.push(docOpts);
-                    }
-                    await (onCreate as any)(...altArgs);
-                }
-                if (disposed) return;
-                rememberDeck(deckID, deckName);
-                lvLaunchpad.haptic(10); // Mobile Spec v1：制卡成功触感确认
-                if (embedded) {
-                    q = "";
-                    a = "";
-                    isBidirectional = false;
-                    previewAnswer = false;
-                    createdNotice = insertInPlace
-                        ? (t.quickCardDocInPlaceDone ?? "已在当前笔记就地制卡并加入卡组")
-                        : (t.quickCardBidiDone ?? "双向卡片已生成（2 张）并加入卡组");
-                } else {
-                    onClose();
-                }
-            } else if (template === "sequence") {
+            if (template === "sequence") {
                 const items = answer.split("\n").map(l => l.trim()).filter(Boolean);
-                const listMd = items.map(it => `* ${it}`).join("\n");
-                const markdown = `${question}\n${listMd}`;
+                // 阶梯卡契约（parseSequenceCard 首分支）：入组块必须是列表块本身，
+                // 题干仅存 custom-riff-title 属性（免侵入）。此前把"题干段+列表"混排成
+                // 多块 Markdown——内核 appendBlock 会拆成兄弟块，入组与属性只挂题干段，
+                // 复习端拿到的块里没有任何列表项，阶梯卡退化为空壳。
+                const markdown = items.map(it => `* ${it}`).join("\n");
                 const opts = {
                     ...(docOpts ?? {}),
                     examAttrs: {
@@ -733,15 +757,15 @@
                     onClose();
                 }
             } else {
+                // 该分支仅服务挖空/超级块/公式三个模板（问答、属性问答、选择题与序列卡已在上方分支提前返回）
                 const markdown = template === "cloze"
                     ? (question.includes("____")
                         ? question.split("____").join(`==${answer}==`)
                         : (question.includes("==") && answer && !question.includes(answer) ? `${question}\n> 💡 ${answer}` : question))
                     : template === "superblock"
-                    ? `{{{col\n${question}\n\n${answer}\n}}}`
-                    : template === "formula"
-                    ? `${question}\n==${cleanFormulaCloze(answer)}==`
-                    : serializeQaCard(question, answer);
+                    ? // 题干内空行合并为单换行：防止第二段被超级块解析误当作答案块
+                        `{{{col\n${question.replace(/\n\s*\n+/g, "\n")}\n\n${answer}\n}}}`
+                    : `${question}\n==${cleanFormulaCloze(answer)}==`;
                 const callArgs: any[] = [markdown, deckID, deckName, question, answer];
                 if (targetDocID || docOpts) {
                     callArgs.push(targetDocID);

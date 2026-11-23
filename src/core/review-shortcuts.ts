@@ -177,6 +177,14 @@ export function resolveReviewKeyAction(
         return "toggle-star";
     }
 
+    if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+        if (ctx.hasLastAnswered) {
+            e.preventDefault?.();
+            return "undo";
+        }
+        return null;
+    }
+
     if (e.key === "p" || e.key === "q") {
         return ctx.hasLastAnswered ? "undo" : null;
     }
@@ -224,9 +232,12 @@ export function shouldIgnoreReviewKeydown(e: {
     if (e.defaultPrevented || e.isComposing || e.altKey || e.repeat) {
         return true;
     }
-    // 允许 Ctrl+D / Cmd+D（解散/归档卡片），其他修饰键组合默认忽略
-    const isDismissShortcut = (e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D");
-    if ((e.ctrlKey || e.metaKey) && !isDismissShortcut) {
+    // 允许 Ctrl+D / Cmd+D（解散/归档卡片）与 Ctrl+Z / Cmd+Z（撤销上一张评分），其他修饰键组合默认忽略
+    const isAllowedModifierShortcut = (e.ctrlKey || e.metaKey) && (
+        e.key === "d" || e.key === "D" ||
+        e.key === "z" || e.key === "Z"
+    );
+    if ((e.ctrlKey || e.metaKey) && !isAllowedModifierShortcut) {
         return true;
     }
     if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element) {
@@ -263,14 +274,22 @@ export interface ReviewModalFlags {
     showSessionOptionsModal: boolean;
     showMemoEditor: boolean;
     showRetireModal: boolean;
+    showDeleteModal?: boolean;
     showReschedule?: boolean;
 }
 
 /**
- * 判定当前是否存在任意复习操作模态弹窗处于打开状态（包含改期弹窗）
+ * 判定当前是否存在任意复习操作模态弹窗处于打开状态（包含改期弹窗与删块弹窗）
  */
 export function isAnyReviewModalOpen(flags: ReviewModalFlags): boolean {
-    return Boolean(flags.showPauseModal || flags.showSessionOptionsModal || flags.showMemoEditor || flags.showRetireModal || flags.showReschedule);
+    return Boolean(
+        flags.showPauseModal ||
+        flags.showSessionOptionsModal ||
+        flags.showMemoEditor ||
+        flags.showRetireModal ||
+        flags.showDeleteModal ||
+        flags.showReschedule
+    );
 }
 
 /**

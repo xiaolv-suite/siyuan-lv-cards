@@ -2,7 +2,7 @@
   "name": "siyuan-lv-cards",
   "author": "xiaolv-suite",
   "url": "https://github.com/xiaolv-suite/siyuan-lv-cards",
-  "version": "0.233.5",
+  "version": "0.233.6",
   "minAppVersion": "3.8.4",
   "settingsWindow": true,
   "kernels": [

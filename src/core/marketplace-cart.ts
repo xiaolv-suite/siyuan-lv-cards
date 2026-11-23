@@ -16,6 +16,7 @@ import {
   type LvPackageCard,
   PLUGIN_VERSION,
 } from "./lvcards-package";
+import { localDate } from "./revlog";
 
 export type QuestionType = "single" | "multiple" | "judge" | "fill" | "short";
 
@@ -201,7 +202,7 @@ export function cartItemsToLvCardsPackage(
   generator: string = `siyuan-lv-cards/v${PLUGIN_VERSION}`,
 ): LvCardsPackage {
   const cards = cartItemsToLvPackageCards(cart);
-  const nowStr = new Date().toISOString().slice(0, 10);
+  const nowStr = localDate(Date.now());
   const distinctSources = Array.from(new Set(cart.map((c) => c.sourceTitle)));
   const title = packName || `小驴精选闪卡集 (${nowStr})`;
   const description = `由小驴公共知识集市挑选，汇集 ${distinctSources.join("、")} 等 ${cart.length} 张精选题卡。`;
