@@ -3,6 +3,7 @@
     import { getBlockDOM, getBlockAttrs, setBlockAttrs, sqlQuery } from "@/api/siyuan";
     import { extractCardQuestionAttr, extractCardAnswerAttr, buildCardQuestionAttrs, buildCardAnswerAttrs } from "@/core/block-attributes";
     import { decorateEditorBlock } from "@/core/editor-qa-service";
+    import { findFloatingPillAnchor } from "@/core/block-dom-utils";
     import { safeDocTitleFromHPath, showDocTreeNativeMenu } from "@/libs/lv-notice-kit";
     import { diffLines, type DiffRow } from "@/core/line-diff";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
@@ -66,8 +67,13 @@
     let previewEl = $state<HTMLElement | null>(null);
 
     $effect(() => {
-        // 详情预览与复习卡面同源：内核数学空壳节点在此补渲染
-        if (html) void renderMathIn(previewEl);
+        // 详情预览与复习卡面同源：内核数学空壳节点在此补渲染，并为外层 div > table 标类替代 :has()
+        if (html) {
+            void renderMathIn(previewEl);
+            previewEl?.querySelectorAll("div > table").forEach((tbl) => {
+                tbl.parentElement?.classList.add("lv-table-wrap");
+            });
+        }
     });
     let previewLoading = $state(false);
     let previewError = $state(false);
@@ -191,7 +197,9 @@
                 blockEls.forEach((blockEl) => {
                     if (trimmed) blockEl.setAttribute("custom-riff-title", trimmed);
                     else blockEl.removeAttribute("custom-riff-title");
-                    decorateEditorBlock(blockEl as HTMLElement, () => {});
+                    if (findFloatingPillAnchor(block.id)) {
+                        decorateEditorBlock(blockEl as HTMLElement, () => {});
+                    }
                 });
             } catch { /* ignore */ }
             showMessage(t.cardQuestionSaved ?? "闪卡问题已保存至块属性", 2000, "info");
@@ -756,7 +764,7 @@
         /* 表格卡面防列溃缩与横向滚动（根治短文本列被压成单字竖条的严重布局 Bug） */
         :global(.table),
         :global([data-type="NodeTable"]),
-        :global(div:has(> table)) {
+        :global(.lv-table-wrap) {
             max-width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -860,7 +868,7 @@
 
             :global(> .table),
             :global(> [data-type="NodeTable"]),
-            :global(> div:has(> table)) {
+            :global(> .lv-table-wrap) {
                 display: block !important;
                 width: 100% !important;
                 max-width: 100% !important;

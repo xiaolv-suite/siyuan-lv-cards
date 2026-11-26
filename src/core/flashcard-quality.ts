@@ -1,3 +1,6 @@
+import { hasDelimitedQa } from "./delimited-qa";
+import { ATTR_LV_ATTR_SUBTYPE, extractCardAnswerAttr, extractCardQuestionAttr } from "./block-attributes";
+
 export type QaDraftIssue = "empty-question" | "empty-answer" | "reserved-markup";
 
 const INLINE_OR_BLOCK_CODE = /```([\s\S]*?)```|`([^`\n]+)`/g;
@@ -129,8 +132,83 @@ export function parseSuperBlockMarkdown(markdown: string): { question: string; a
     return { question: blocks[0], answers: blocks.slice(1) };
 }
 
-export function validateFlashcardMarkdown(markdown: string): "empty-card" | "missing-answer" | "invalid-markup" | null {
+export function isMeaningfulCardAnswerAttr(value: string): boolean {
+    const trimmed = String(value ?? "").trim();
+    return Boolean(trimmed) && (hasMeaningfulPrompt(trimmed) || hasImageContent(trimmed));
+}
+
+/**
+ * 门禁与复习共用的有效答案属性提取器：
+ * 忽略纯标点占位（如 ??? / ... / &nbsp;），保证无效属性绝不覆盖有效正文。
+ */
+export function extractValidCardAnswerAttr(attrs?: Record<string, string> | null): string {
+    return extractCardAnswerAttr(attrs, isMeaningfulCardAnswerAttr);
+}
+
+export function validateFlashcardMarkdown(
+    markdown: string,
+    attrs?: Record<string, string>,
+): "empty-card" | "missing-answer" | "invalid-markup" | null {
     const text = String(markdown ?? "").trim();
+    const a = attrs ?? {};
+    const explicitSubtype = String(a[ATTR_LV_ATTR_SUBTYPE] || "").trim();
+    const customQ = extractCardQuestionAttr(a);
+    const customAttrA = extractValidCardAnswerAttr(a);
+    const examFallbackA = isMeaningfulCardAnswerAttr(String(a["custom-exam-answer"] || ""))
+        ? String(a["custom-exam-answer"] || "").trim()
+        : "";
+    const customA = String(customAttrA || examFallbackA).trim();
+    const hasRawAttrA = Boolean(extractCardAnswerAttr(a) || String(a["custom-exam-answer"] || "").trim());
+    if (!text && !hasRawAttrA) return "empty-card";
+
+    // 1. 免侵入零标记属性问答 3 子型（与 card-entry-gate 共用显式子型与同一答案字段优先级）
+    if (explicitSubtype === "direct") {
+        if ((hasMeaningfulPrompt(text) || hasImageContent(text))
+            && (hasMeaningfulPrompt(customAttrA) || hasImageContent(customAttrA))
+            && (!text.includes("==") || hasMarkedAnswer(text))) {
+            return null;
+        }
+    } else if (explicitSubtype === "recite" || explicitSubtype === "dual") {
+        if (customQ && (hasMeaningfulPrompt(customQ) || hasImageContent(customQ))) {
+            if (hasMeaningfulPrompt(text) || hasImageContent(text) || hasMeaningfulPrompt(customA) || hasImageContent(customA)) {
+                return null;
+            }
+        }
+    } else {
+        if (customQ && (hasMeaningfulPrompt(customQ) || hasImageContent(customQ))) {
+            if (hasMeaningfulPrompt(text) || hasImageContent(text) || hasMeaningfulPrompt(customA) || hasImageContent(customA)) {
+                return null;
+            }
+        }
+        if (!customQ
+            && (hasMeaningfulPrompt(text) || hasImageContent(text))
+            && (hasMeaningfulPrompt(customAttrA) || hasImageContent(customAttrA))
+            && (!text.includes("==") || hasMarkedAnswer(text))) {
+            return null;
+        }
+    }
+
+    // 2. 选择题 / 判断题 / 填空题（块属性 custom-exam-type 须同时具备可解析答案属性，无答案属性时回落常规 Markdown 校验）
+    const examA = String(
+        a["custom-exam-answer"] || a["exam-answer"] || a["custom-card-answer"] || a["custom-riff-answer"] || a["custom-lv-answer"] || ""
+    ).trim();
+    if (a["custom-exam-type"]
+        && (hasMeaningfulPrompt(text) || hasImageContent(text))
+        && (hasMeaningfulPrompt(examA) || hasImageContent(examA))) {
+        return null;
+    }
+
+    // 3. 阶梯列表卡（custom-lv-card-type="sequence"，含列表或要点内容）
+    if (a["custom-lv-card-type"] === "sequence" && (hasMeaningfulPrompt(text) || hasImageContent(text))) {
+        return null;
+    }
+
+    // 4. 思源块备注问答（memo / custom-memo）
+    const memo = String(a.memo ?? a["custom-memo"] ?? "").trim();
+    if (memo && (hasMeaningfulPrompt(text) || hasImageContent(text))) {
+        return null;
+    }
+
     if (!text) return "empty-card";
     const hasDelimiter = text.includes("==");
     if (hasDelimiter) {
@@ -138,6 +216,9 @@ export function validateFlashcardMarkdown(markdown: string): "empty-card" | "mis
     }
     const sb = parseSuperBlockMarkdown(text);
     if (sb && sb.answers.some(ans => hasMeaningfulPrompt(ans) || hasImageContent(ans))) {
+        return null;
+    }
+    if (hasDelimitedQa(text)) {
         return null;
     }
     return "missing-answer";

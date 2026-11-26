@@ -26,7 +26,7 @@
     import { nominateVariant } from "@/core/question-rotation";
     import { assembleChoiceOptions, extractAnswerFromDomHtml, shuffleArray, recordChoicePick, addDistractorToPool } from "@/core/choice-options";
     import { formatSessionDuration, isEmptyQueueSession, formatTargetProgress, formatStreakMilestone, getDailyScienceTip } from "@/core/completion-metrics";
-    import { analyzeFaceRichness, extractMarkTexts, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing, deriveFaceHints, isCardFaceReady } from "@/core/card-face";
+    import { analyzeFaceRichness, extractMarkTexts, maskMarkedAnswersForQuestion, extractExpectedCardAnswer, parseCardAttrsMetadata, resolveFaceHintLabel, hasSvgOrCanvasDrawing, deriveFaceHints, isCardFaceReady, isAttrQaCard, isReversedRecallAllowed } from "@/core/card-face";
     import { isSequenceCard } from "@/core/sequence-card";
     import { loadReliefChoices, toggleReliefChoice, type LoadChoice } from "@/core/load-relief";
     import { recoveryOptions, resolveRecoveryAction, createRecoverySnapshotFromCounters, type RecoveryOption, type RecoverySnapshot } from "@/core/session-recovery";
@@ -42,7 +42,7 @@
     import { scheduleEditorCenterScroll } from "@/core/editor-navigation";
     import { computeKeyboardViewportState } from "@/core/viewport-keyboard";
     import { computeReschedulePreview, buildRescheduleRequest, type RescheduleRequest } from "@/core/reschedule-preview";
-    import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
+    import { createReviewHistorySnapshot, pushReviewHistory, popReviewHistory, purgeCardFromReviewHistory, type ReviewHistorySnapshot } from "@/core/review-history";
     import { enqueueDelayedRequeue, nextRequeueDelay, createDelayedRequeueScheduler, markAsRequeueCard, isRequeueWaiting, calculateRequeueWaitSeconds, type DelayedRequeue } from "@/core/delayed-requeue";
     import { invalidateDueCache, dueCache } from "@/api/due-shared";
     import { advanceCardHint, resolveHintLevelIndicator, type HintLevel, type HintLogEntry } from "@/core/hint-ladder";
@@ -79,7 +79,7 @@
     import ReviewCramModal from "./review/ReviewCramModal.svelte";
     import ReviewDocumentCanvas from "./review/ReviewDocumentCanvas.svelte";
     import { buildDocReviewQuerySql, parseDocReviewItem, buildDocReviewAttrs, buildDocSnoozeAttrs, buildDocRemoveAttrs, type DocReviewItem } from "@/core/document-review";
-    import { type CramScope } from "@/core/cram-mode";
+    import { filterCramCards, CRAM_LEECH_THRESHOLD, type CramScope } from "@/core/cram-mode";
     import { createOnboardingSampleCards } from "@/core/workspace-samples";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -173,7 +173,7 @@
         /** BI-3：显式清除入口记录（取消/重开不丢——只有用户点 × 才删） */
         dismissEntry?: (entryKind: string, sourceID: string) => void;
         /** 汲取自番茄插件：复习端就地将卡片移出卡组（不伤正文） */
-        removeFromDeck?: (blockID: string) => Promise<{ success: boolean; removedCount?: number } | void>;
+        removeFromDeck?: (blockID: string, deckID?: string) => Promise<{ success: boolean; removedCount?: number; error?: string } | void>;
         /** 星标收藏卡片 ID 集合（与卡片管理器共享持久化状态） */
         getStarredCardIDs?: () => string[];
         toggleStarCard?: (id: string) => Promise<boolean> | boolean;
@@ -262,7 +262,13 @@
     let currentRiffAnswer = $state("");
     let currentCardAttrs = $state<Record<string, string> | null>(null);
     let cardHtml = $state("");
-    let maskedCardHtml = $derived(maskMarkedAnswersForQuestion(cardHtml, currentRiffTitle));
+    let maskedCardHtml = $derived(maskMarkedAnswersForQuestion(cardHtml, currentRiffTitle, currentRiffAnswer));
+    let canReverseRecall = $derived(isReversedRecallAllowed(currentCardAttrs, cardHtml, currentRiffTitle, currentRiffAnswer));
+    $effect(() => {
+        if (!canReverseRecall && reversedRecall) {
+            reversedRecall = false;
+        }
+    });
     const isCurrentSequence = $derived(isSequenceCard(cardHtml, currentCardAttrs));
     /** AS-3：卡面加载失败占位（区别于队列级 errorMsg——队列保持可用，占位可重试） */
     let faceError = $state("");
@@ -286,6 +292,25 @@
     let cramScope = $state<CramScope>("all");
     let cramRandomOrder = $state(false);
     let showCramModal = $state(false);
+    let cramSubsetCards = $state<QueueCard[] | null>(null);
+    interface FormalSessionBackup {
+        reviewedIDs: string[];
+        sessionSkipped: string[];
+        sessionNew: number;
+        sessionReview: number;
+        sessionForget: number;
+        sessionSkip: number;
+        sessionQuizTotal: number;
+        sessionQuizCorrect: number;
+        pendingRequeues: DelayedRequeue<QueueCard>[];
+        history: ReviewHistorySnapshot<QueueCard>[];
+        purpose: SessionPurpose;
+        sessionDone: boolean;
+        forgottenCardIDs: string[];
+        sessionStarredCardIDs: string[];
+        sessionStartedAt: number;
+    }
+    let formalSessionBackup: FormalSessionBackup | null = null;
     let isDocumentReview = $state(false);
     let docReviewQueue = $state<DocReviewItem[]>([]);
     let currentDocReviewItem = $state<DocReviewItem | null>(null);
@@ -420,11 +445,14 @@
     // 撤销历史栈（M3·FR7，ZY 技法：快照恢复 + 内核重评时按官方缓存恢复原状态）
     let history = $state<ReviewHistorySnapshot<QueueCard>[]>([]);
 
+    /** 会话启动时锁死业务日期（防止跨午夜复习中途切日割裂进度快照） */
+    const sessionDate = todayKey();
+
     /** 会话快照统一出口（AQ-2）：计数与 skip 集合的当前值即时落盘；Cram 突击快刷模式不污染正式每日快照 */
     function persistSession() {
         if (cramActive) return;
         ctx.saveSessionState(createSessionSnapshot(
-            todayKey(),
+            sessionDate,
             reviewedIDs,
             sessionSkipped,
             { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip }
@@ -618,7 +646,9 @@
             attrWritten = true;
             reviewedIDs = [...reviewedIDs, cardID];
             persistSession();
-            const hiddenMsg = "已归档隐藏（保留 FSRS 进度，可在「卡库 → 已隐藏」恢复）";
+            const hiddenMsg = typeof t?.review?.cardDismissed === "string"
+                ? t.review.cardDismissed
+                : "已归档隐藏（保留智能记忆算法进度，可在「卡组 → 已隐藏」恢复）";
             announce(hiddenMsg, "polite");
             await next();
             dismissBusy = false;
@@ -987,54 +1017,61 @@
         errorMsg = "";
         try {
             const kernelReviewedIDs = combineExcludedCardIDs(reviewedIDs, qualityExcludedCardIDs);
-            const data = await getRiffDueCardsForScope(scopeKey, kernelReviewedIDs);
-            if (seq !== queueSeq) {
-                return; // 旧响应：不改队列、卡面、计数或计时器
-            }
-            let cards = data.cards ?? [];
-            if (cramActive) {
-                // Cram 突击快刷模式下，按当前范围（卡组/笔记本/文档/全局）拉取全量卡片并与到期队列去重合并
-                try {
-                    const deckID = scopeKey.startsWith("deck:") ? scopeKey.slice(5) : "";
-                    const existingCardIDs = new Set(cards.map(c => c.cardID));
-                    const existingBlockIDs = new Set(cards.map(c => c.blockID).filter(Boolean));
-                    let page = 1;
-                    let pageCount = 1;
-                    do {
-                        const allRes = scopeKey.startsWith("notebook:")
-                            ? await getNotebookRiffCards?.(scopeKey.slice(9), page, 100)
-                            : scopeKey.startsWith("doc:")
-                                ? await getTreeRiffCards?.(scopeKey.slice(4), page, 100)
-                                : await getRiffCards?.(deckID, page, 100);
-                        if (!allRes || typeof allRes !== "object") break;
-                        pageCount = Number(allRes.pageCount ?? 1);
-                        for (const b of allRes?.blocks ?? []) {
-                            const rc = (b as any).riffCard ?? (b as any).RiffCard;
-                            const cid = String(rc?.id ?? rc?.cardID ?? b.id ?? "");
-                            const bid = String(b.id ?? "");
-                            if (!cid || kernelReviewedIDs.includes(cid)) continue;
-                            if (existingCardIDs.has(cid) || (bid && existingBlockIDs.has(bid))) continue;
-                            if (rc) {
-                                existingCardIDs.add(cid);
-                                if (bid) existingBlockIDs.add(bid);
-                                cards.push({
-                                    cardID: cid,
-                                    deckID: String(rc.deckID ?? deckID),
-                                    blockID: bid || cid,
-                                    state: Number(rc.state ?? 0),
-                                    reps: Number(rc.reps ?? 0),
-                                    lapses: Number(rc.lapses ?? 0),
-                                    due: String(rc.due ?? ""),
-                                    stability: typeof rc.stability === "number" ? rc.stability : undefined,
-                                    difficulty: typeof rc.difficulty === "number" ? rc.difficulty : undefined,
-                                } as unknown as RiffDueCard);
+            let cards: QueueCard[] = [];
+            if ((cramActive || isCramMode) && cramSubsetCards !== null) {
+                cards = cramSubsetCards.filter(
+                    c => !kernelReviewedIDs.includes(c.cardID) && !sessionSkipped.includes(c.cardID),
+                );
+            } else {
+                const data = await getRiffDueCardsForScope(scopeKey, kernelReviewedIDs);
+                if (seq !== queueSeq) {
+                    return; // 旧响应：不改队列、卡面、计数或计时器
+                }
+                cards = data.cards ?? [];
+                if (cramActive || isCramMode) {
+                    // Cram 突击快刷模式下，按当前范围（卡组/笔记本/文档/全局）拉取全量卡片并与到期队列去重合并
+                    try {
+                        const deckID = scopeKey.startsWith("deck:") ? scopeKey.slice(5) : "";
+                        const existingCardIDs = new Set(cards.map(c => c.cardID));
+                        const existingBlockIDs = new Set(cards.map(c => c.blockID).filter(Boolean));
+                        let page = 1;
+                        let pageCount = 1;
+                        do {
+                            const allRes = scopeKey.startsWith("notebook:")
+                                ? await getNotebookRiffCards?.(scopeKey.slice(9), page, 100)
+                                : scopeKey.startsWith("doc:")
+                                    ? await getTreeRiffCards?.(scopeKey.slice(4), page, 100)
+                                    : await getRiffCards?.(deckID, page, 100);
+                            if (!allRes || typeof allRes !== "object") break;
+                            pageCount = Number(allRes.pageCount ?? 1);
+                            for (const b of allRes?.blocks ?? []) {
+                                const rc = (b as any).riffCard ?? (b as any).RiffCard;
+                                const cid = String(rc?.id ?? rc?.cardID ?? b.id ?? "");
+                                const bid = String(b.id ?? "");
+                                if (!cid || kernelReviewedIDs.includes(cid)) continue;
+                                if (existingCardIDs.has(cid) || (bid && existingBlockIDs.has(bid))) continue;
+                                if (rc) {
+                                    existingCardIDs.add(cid);
+                                    if (bid) existingBlockIDs.add(bid);
+                                    cards.push({
+                                        cardID: cid,
+                                        deckID: String(rc.deckID ?? deckID),
+                                        blockID: bid || cid,
+                                        state: Number(rc.state ?? 0),
+                                        reps: Number(rc.reps ?? 0),
+                                        lapses: Number(rc.lapses ?? 0),
+                                        due: String(rc.due ?? ""),
+                                        stability: typeof rc.stability === "number" ? rc.stability : undefined,
+                                        difficulty: typeof rc.difficulty === "number" ? rc.difficulty : undefined,
+                                    } as unknown as RiffDueCard);
+                                }
                             }
-                        }
-                        page += 1;
-                    } while (page <= pageCount && page <= 10);
-                    cards = cards.filter(c => !kernelReviewedIDs.includes(c.cardID));
-                } catch {
-                    /* 静默降级 */
+                            page += 1;
+                        } while (page <= pageCount && page <= 10);
+                        cards = cards.filter(c => !kernelReviewedIDs.includes(c.cardID));
+                    } catch {
+                        /* 静默降级 */
+                    }
                 }
             }
             for (const c of cards) {
@@ -1042,11 +1079,19 @@
             }
             // 「今天不学」+ 本场已跳过的卡本地过滤（内核调度不受影响，AJ9）
             cards = filterActiveSessionCards(cards, ctx.isSuspendedToday, sessionSkipped);
-            // 自适应候选窗口：当到期卡量大且设置了每批上限时，对首批候选进行质量排查即可，避免全库千张卡阻塞首卡加载
-            const bl = eff().batchLimit ?? 0;
-            const scopedCandidate = (scopeKey === "new" || scopeKey === "old")
+            // 自适应候选窗口：先按 Cram 条件（水蛭卡 / 本周到期）与新旧范围筛选，再决定候选切片上限
+            let scopedCandidate = (scopeKey === "new" || scopeKey === "old")
                 ? cards.filter(c => (scopeKey === "new") === (c.state === 0))
                 : cards;
+            if ((cramActive || isCramMode) && cramSubsetCards === null) {
+                scopedCandidate = filterCramCards(scopedCandidate as unknown as any[], {
+                    scope: cramScope,
+                    leechThreshold: cramScope === "leech" ? CRAM_LEECH_THRESHOLD : eff().leechThreshold,
+                    randomOrder: cramRandomOrder,
+                    shuffleFn: shuffleArray,
+                }) as QueueCard[];
+            }
+            const bl = eff().batchLimit ?? 0;
             const candidateLimit = bl > 0 ? Math.min(scopedCandidate.length, Math.max(50, bl * 3)) : scopedCandidate.length;
             const candidateCards = candidateLimit < scopedCandidate.length ? scopedCandidate.slice(0, candidateLimit) : scopedCandidate;
 
@@ -1155,7 +1200,7 @@
                         if (checkinItemId) autoMatched = true;
                     }
                     if (checkinItemId && reviewedCount > 0) {
-                        const today = todayKey();
+                        const today = sessionDate;
                         const accuracy = calculateReviewAccuracy({
                             newCount: sessionNew,
                             reviewCount: sessionReview,
@@ -1369,6 +1414,37 @@
         }
     }
 
+    function purgeRemovedCardState(cardID: string, blockID?: string) {
+        queue = removeCardFromQueue(queue, cardID);
+        if (cramSubsetCards) {
+            cramSubsetCards = cramSubsetCards.filter(
+                c => c.cardID !== cardID && (!blockID || c.blockID !== blockID),
+            );
+        }
+        pendingRequeues = pendingRequeues.filter(
+            item => item.card?.cardID !== cardID && (!blockID || item.card?.blockID !== blockID),
+        );
+        if (pendingRequeues.length === 0) {
+            stopRequeueTimers();
+        }
+        history = purgeCardFromReviewHistory(history, cardID, blockID);
+        if (forgottenCardIDs.has(cardID)) {
+            const nextForgotten = new Set(forgottenCardIDs);
+            nextForgotten.delete(cardID);
+            forgottenCardIDs = nextForgotten;
+        }
+        if (sessionStarredCardIDs.has(cardID)) {
+            const nextStarred = new Set(sessionStarredCardIDs);
+            nextStarred.delete(cardID);
+            sessionStarredCardIDs = nextStarred;
+        }
+        sessionCardMap.delete(cardID);
+        if (lastAnswered?.card?.cardID === cardID || (blockID && lastAnswered?.card?.blockID === blockID)) {
+            lastAnswered = null;
+            peek = null;
+        }
+    }
+
     /** 20261117-03：复习端就地取消制卡（解定制卡属性，保留笔记正文） */
     async function unmakeCurrentCard() {
         if (!current || isCardActionBusy(submitting, rescheduleBusy, dismissBusy, retireBusy, deleteBusy)) return;
@@ -1379,10 +1455,11 @@
                 removeFromDeck: ctx.removeFromDeck,
                 setBlockAttrs: siyuanApi.setBlockAttrs,
                 invalidateCache: invalidateDueCache,
+                deckID: card.deckID,
             });
             if (isDisposed) return;
             showMessage("✓ 已取消制卡，笔记正文完整保留", 3000, "info");
-            queue = removeCardFromQueue(queue, card.cardID);
+            purgeRemovedCardState(card.cardID, card.blockID);
             showRetireModal = false;
             showDeleteModal = false;
             if (current?.cardID !== card.cardID) return;
@@ -1415,7 +1492,7 @@
             });
             if (isDisposed) return;
             showMessage("🗑️ 已物理删除该笔记块及正文", 3000, "info");
-            queue = removeCardFromQueue(queue, card.cardID);
+            purgeRemovedCardState(card.cardID, card.blockID);
             showRetireModal = false;
             showDeleteModal = false;
             if (current?.cardID !== card.cardID) return;
@@ -1445,6 +1522,11 @@
 
     function onCardContentClick(e: MouseEvent) {
         const allowClozeReveal = !interactiveQuiz || interactiveQuiz.kind === "free-recall";
+        if (!showAnswer && !allowClozeReveal && e.target instanceof Element && e.target.closest("span[data-type='mark'], mark.lv-masked, [data-cloze-idx]")) {
+            // 交互题型禁用逐空揭晓时，阻止点击不可点遮罩冒泡到外层容器意外翻出整卡答案
+            e.stopPropagation();
+            return;
+        }
         const act = handleCardContentClick(e.target, showAnswer, cardEl, allowClozeReveal);
         if (!act) return;
         e.stopPropagation();
@@ -1596,6 +1678,7 @@
     const emptyQueue = $derived(
         isEmptyQueueSession(sessionDone, { new: sessionNew, review: sessionReview, forget: sessionForget, skip: sessionSkip })
     );
+    const cramEmpty = $derived((cramActive || isCramMode) && emptyQueue);
 
     /** 完成页今日目标进度（544）：本次会话有效评分 vs 每日复习目标 */
     function targetProgressText(): string {
@@ -1705,6 +1788,7 @@
         sessionSkip = snap.counters.skip;
         persistSession(); // 撤销后的计数同样落盘（AQ-2）
         restartTimeout();
+        returnFocus();
         triggerHaptic(12); // Mobile Spec v1：撤销（含右滑撤销切卡）以触感确认生效
         showMessage(t.review.undoDone, 1500, "info");
     }
@@ -1848,7 +1932,7 @@
             submitting = false;
             lvNotify.undo({
                 source: "闪卡",
-                message: isCram ? "仅本场跳过（突击快刷不改动 FSRS 排期）" : "仅本场跳过：今日顺延，不影响 FSRS 排期",
+                message: isCram ? "仅本场跳过（突击快刷不改动智能记忆算法排期）" : "仅本场跳过：今日顺延，不影响智能记忆算法排期",
                 undoLabel: "撤销",
                 duration: 4000,
                 onUndo: () => triggerUndoForSnapshot(undoSnap),
@@ -1875,7 +1959,9 @@
         try {
             await Promise.resolve(ctx.suspendToday(cardID));
             persisted = true;
-            const suspendedMsg = "今天不学：仅今日暂缓，明日自动恢复（保留 FSRS 进度）";
+            const suspendedMsg = typeof t?.review?.suspendedToast === "string"
+                ? t.review.suspendedToast
+                : "今天不学：仅今日暂缓，明日自动恢复（保留智能记忆算法进度）";
             announce(suspendedMsg, "polite");
             await next();
             submitting = false;
@@ -2107,8 +2193,16 @@
         if (!rootEl || !rootEl.isConnected || rootEl.offsetParent === null) {
             return;
         }
+        const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+        if (isInputOrEditable(e.target) || isInputOrEditable(activeEl)) {
+            return;
+        }
+        // 焦点位于其它面板/弹窗/编辑器内时不抢占全局键（例如在编辑器或罗盘搜索输入 '?'）
+        if (activeEl && activeEl !== document.body && activeEl !== document.documentElement && !isEventInsideContainer(rootEl, activeEl)) {
+            return;
+        }
         // CF-10: 长按 H 或 Alt+Space / Alt+H 临时透视答案
-        if (!showAnswer && current && faceReady && !isInputOrEditable(e.target)) {
+        if (!showAnswer && current && faceReady) {
             if (((e.key === "h" || e.key === "H") && (e.repeat || e.altKey)) || (e.code === "Space" && e.altKey)) {
                 isPeekingAnswer = true;
                 e.preventDefault();
@@ -2207,6 +2301,7 @@
 
         switch (action) {
             case "toggle-reversed":
+                if (!canReverseRecall) return;
                 reversedRecall = !reversedRecall;
                 break;
             case "toggle-zen":
@@ -2396,10 +2491,37 @@
         if (fb.hapticPattern) triggerHaptic(fb.hapticPattern);
     }
 
-    function resetCramSessionState() {
+    function captureFormalSessionBackupIfNeeded() {
+        if (cramActive || isCramMode || formalSessionBackup !== null) return;
+        formalSessionBackup = {
+            reviewedIDs: [...reviewedIDs],
+            sessionSkipped: [...sessionSkipped],
+            sessionNew,
+            sessionReview,
+            sessionForget,
+            sessionSkip,
+            sessionQuizTotal,
+            sessionQuizCorrect,
+            pendingRequeues: pendingRequeues.map(item => ({ ...item })),
+            history: history.map(snap => ({ ...snap })),
+            purpose,
+            sessionDone,
+            forgottenCardIDs: [...forgottenCardIDs],
+            sessionStarredCardIDs: [...sessionStarredCardIDs],
+            sessionStartedAt,
+        };
+    }
+
+    function resetCramSessionState(options?: { keepSubset?: boolean }) {
+        captureFormalSessionBackupIfNeeded();
+        if (!options?.keepSubset) {
+            cramSubsetCards = null;
+        }
         cramActive = true;
         isCramMode = true;
         purpose = "practice";
+        current = null;
+        queue = [];
         clearPendingRequeues();
         recovery = null;
         recoverySnap = null;
@@ -2428,13 +2550,63 @@
         void loadQueue();
     }
 
-    function exitCramSession() {
+    function exitCramSession(options?: { reload?: boolean }) {
+        clearPendingRequeues();
+        history = [];
+        cramSubsetCards = null;
         cramActive = false;
         isCramMode = false;
-        purpose = "review";
         showCramModal = false;
-        sessionDone = false;
-        void loadQueue();
+        current = null;
+        queue = [];
+        errorMsg = "";
+
+        if (formalSessionBackup) {
+            const snap = formalSessionBackup;
+            formalSessionBackup = null;
+            reviewedIDs = [...snap.reviewedIDs];
+            sessionSkipped = [...snap.sessionSkipped];
+            sessionNew = snap.sessionNew;
+            sessionReview = snap.sessionReview;
+            sessionForget = snap.sessionForget;
+            sessionSkip = snap.sessionSkip;
+            sessionQuizTotal = snap.sessionQuizTotal;
+            sessionQuizCorrect = snap.sessionQuizCorrect;
+            pendingRequeues = snap.pendingRequeues.map(item => ({ ...item }));
+            history = snap.history.map(item => ({ ...item }));
+            purpose = snap.purpose;
+            forgottenCardIDs = new Set(snap.forgottenCardIDs);
+            sessionStarredCardIDs = new Set(snap.sessionStarredCardIDs);
+            sessionStartedAt = snap.sessionStartedAt;
+            sessionDone = false;
+            if (pendingRequeues.length > 0) {
+                scheduleRequeueTimer();
+            }
+        } else {
+            purpose = "review";
+            const restored = restoreSessionProgress(ctx.getSessionState(), sessionDate);
+            if (restored) {
+                reviewedIDs = restored.reviewedIDs;
+                sessionSkipped = restored.skippedIDs;
+                sessionNew = restored.counters.new;
+                sessionReview = restored.counters.review;
+                sessionForget = restored.counters.forget;
+                sessionSkip = restored.counters.skip;
+            } else {
+                reviewedIDs = [];
+                sessionSkipped = [];
+                sessionNew = 0;
+                sessionReview = 0;
+                sessionForget = 0;
+                sessionSkip = 0;
+            }
+            sessionQuizTotal = 0;
+            sessionQuizCorrect = 0;
+            sessionDone = false;
+        }
+        if (options?.reload !== false) {
+            void loadQueue();
+        }
     }
 
     let creatingSamples = $state(false);
@@ -2492,32 +2664,35 @@
             }
         }
         if (emptyQueue) {
-            cramActive = false;
-            isCramMode = false;
+            exitCramSession({ reload: false });
             showMessage("当前暂无可刷闪卡，可前往「卡组集市」导入精选卡组", 2800, "info");
         }
     }
 
     function startCramForgotten() {
-        const forgottenCards = [...sessionCardMap.values()].filter(c => forgottenCardIDs.has(c.cardID));
-        resetCramSessionState();
-        if (forgottenCards.length > 0) {
-            queue = forgottenCards.map(c => ({ ...c, lvRequeue: undefined }));
-            void setCurrent(queue[0]);
-        } else {
-            void loadQueue();
+        const forgottenCards = [...sessionCardMap.values()]
+            .filter(c => forgottenCardIDs.has(c.cardID))
+            .map(c => ({ ...c, lvRequeue: undefined }));
+        if (forgottenCards.length === 0) {
+            showMessage("本场暂无可强化的遗忘卡", 2000, "info");
+            return;
         }
+        resetCramSessionState({ keepSubset: true });
+        cramSubsetCards = forgottenCards;
+        void loadQueue();
     }
 
     function startCramStarred() {
-        const starredCards = [...sessionCardMap.values()].filter(c => isCardStarred(c) || sessionStarredCardIDs.has(c.cardID));
-        resetCramSessionState();
-        if (starredCards.length > 0) {
-            queue = starredCards.map(c => ({ ...c, lvRequeue: undefined }));
-            void setCurrent(queue[0]);
-        } else {
-            void loadQueue();
+        const starredCards = [...sessionCardMap.values()]
+            .filter(c => isCardStarred(c) || sessionStarredCardIDs.has(c.cardID))
+            .map(c => ({ ...c, lvRequeue: undefined }));
+        if (starredCards.length === 0) {
+            showMessage("本场暂无可专项练习的星标卡", 2000, "info");
+            return;
         }
+        resetCramSessionState({ keepSubset: true });
+        cramSubsetCards = starredCards;
+        void loadQueue();
     }
 
     function handleOptionPick(key: string) {
@@ -2620,7 +2795,7 @@
         // 会话中断恢复（M3）：仅正式复习（非 Cram 突击快刷）恢复当日进度与已复习 ID
         if (!cramActive) {
             const ss = ctx.getSessionState();
-            const restored = restoreSessionProgress(ss, todayKey());
+            const restored = restoreSessionProgress(ss, sessionDate);
             if (restored) {
                 reviewedIDs = restored.reviewedIDs;
                 sessionSkipped = restored.skippedIDs;
@@ -2693,15 +2868,19 @@
                 lastSwitchTime = now;
                 lastSwitchKey = switchSig;
 
+                const wasCram = cramActive || isCramMode;
                 scopeKey = newScope;
-                cramActive = newCram;
                 isDocumentReview = false;
                 sessionDone = false;
-                clearPendingRequeues();
-                history = [];
-                if (cramActive) {
+                if (newCram) {
                     resetCramSessionState();
+                } else if (wasCram) {
+                    exitCramSession({ reload: false });
                 } else {
+                    cramActive = false;
+                    isCramMode = false;
+                    clearPendingRequeues();
+                    history = [];
                     purpose = "review";
                     reviewedIDs = [];
                     sessionSkipped = [];
@@ -2970,6 +3149,24 @@
             onRefresh={loadQueue}
             onUndo={undoHistory}
         />
+    {:else if cramEmpty}
+        <div class="lv-center lv-ready-wrap" role="region" aria-label="突击模式空态" data-testid="cram-empty-state">
+            <div class="lv-ready-hub" style="max-width: 520px; text-align: center; padding: var(--lv-sp-5);">
+                <div class="lv-ready-title-group" style="align-items: center;">
+                    <span class="lv-ready-eyebrow"><LvIcon name="zap" size={13} /> 突击快刷 · {headScopeLabel}</span>
+                    <h2 class="lv-ready-title">当前突击筛选条件下暂无匹配卡片</h2>
+                    <p class="lv-ready-desc">当前范围内没有符合当前突击条件（{cramScope === "leech" ? "水蛭卡" : cramScope === "weekDue" ? "本周到期" : "当前筛选"}）的卡片，正式复习队列与进度均保持完好。</p>
+                </div>
+                <div class="lv-ready-card-footer" style="justify-content: center; margin-top: var(--lv-sp-3);">
+                    <button type="button" class="b3-button b3-button--outline" onclick={openCramModal} data-testid="cram-empty-filter-btn">
+                        <LvIcon name="zap" size={14} /> 调整突击筛选
+                    </button>
+                    <button type="button" class="b3-button lv-btn-primary" onclick={() => exitCramSession()} data-testid="cram-empty-exit-btn">
+                        <LvIcon name="home" size={14} /> 退出突击模式
+                    </button>
+                </div>
+            </div>
+        </div>
     {:else if emptyQueue}
         <ReviewReadyDashboard
             {headScopeLabel}
@@ -3014,9 +3211,9 @@
             targetProgress={targetProgressText()}
             isCramMode={cramActive || isCramMode}
             onPickEnd={pickEnd}
-            onReturnHome={isCramMode ? exitCramSession : () => ctx.openDashboard()}
+            onReturnHome={(cramActive || isCramMode) ? () => exitCramSession() : () => ctx.openDashboard()}
             onOpenManager={() => ctx.openDashboard("manage")}
-            onReviewAgain={isCramMode ? () => { resetCramSessionState(); void loadQueue(); } : loadQueue}
+            onReviewAgain={(cramActive || isCramMode) ? () => { resetCramSessionState({ keepSubset: cramSubsetCards !== null }); void loadQueue(); } : loadQueue}
             onCramForgotten={startCramForgotten}
             onCramStarred={startCramStarred}
         />
@@ -3028,6 +3225,7 @@
                     <ReviewProgressHeader
                         {headScopeLabel}
                         {entryCtx}
+                        showReturnHome={false}
                         cramActive={cramActive || isCramMode}
                         {budgetMin}
                         {budgetExpired}
@@ -3043,6 +3241,7 @@
                         {cardMemo}
                         {isCustomPluginAnswer}
                         customRiffTitle={currentRiffTitle}
+                        customRiffAnswer={currentRiffAnswer}
                         cardAttrs={currentCardAttrs}
                         {interactiveQuiz}
                         leechThreshold={eff().leechThreshold ?? DEFAULT_LEECH_THRESHOLD}
@@ -3071,6 +3270,7 @@
                         {dismissBusy}
                         {lastAnswered}
                         bind:reversedRecall
+                        {canReverseRecall}
                         bind:zenMode
                         {ctxOpen}
                         {prefsOpen}
@@ -3192,6 +3392,7 @@
                             onFillCheck={handleFillCheck}
                             onTypingInput={(val) => { typingInput = val; }}
                             onSequenceFullyRevealed={() => { revealAnswer(); }}
+                            onToggleReversed={() => { reversedRecall = !reversedRecall; }}
                         />
                         {#if isPeekingAnswer && !showAnswer}
                             <div class="lv-peeking-banner" data-testid="review-peeking-badge" role="status">
@@ -3201,8 +3402,10 @@
                         {/if}
                         <ReviewMemoCallout
                             {showAnswer}
-                            {cardMemo}
-                            {isCustomPluginAnswer}
+                            cardMemo={isAttrQaCard(cardHtml, currentRiffTitle, currentRiffAnswer)
+                                ? String(currentCardAttrs?.memo || currentCardAttrs?.["custom-card-memo"] || currentCardAttrs?.["custom-memo"] || "").trim()
+                                : cardMemo}
+                            isCustomPluginAnswer={isAttrQaCard(cardHtml, currentRiffTitle, currentRiffAnswer) ? false : isCustomPluginAnswer}
                             {cardHtml}
                             {occl}
                             {faceError}
@@ -3557,8 +3760,8 @@
                     color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 82%, transparent) 40%,
                     color-mix(in srgb, var(--lv-bg-page, var(--b3-theme-background)) 0%, transparent) 100%
                 );
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
                 padding-top: 4px;
                 padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
             }
@@ -3579,13 +3782,13 @@
             background: var(--lv-color-surface);
             border: 1px solid var(--lv-border-subtle, color-mix(in srgb, var(--lv-color-text) 8%, transparent));
             border-radius: var(--lv-r-card, 16px);
-            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03), 0 10px 24px -4px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03), 0 10px 24px -4px rgba(15, 23, 42, 0.08), var(--lv-inset-shine, inset 0 1px 0 rgba(255, 255, 255, 0.85));
             padding: clamp(14px, 1.8vh, 20px) clamp(16px, 2.2vw, 24px);
             min-height: 100px;
             transition: box-shadow var(--lv-dur-2) var(--lv-ease), transform var(--lv-dur-2) var(--lv-ease), border-color var(--lv-dur-2) var(--lv-ease);
 
             &:hover {
-                box-shadow: 0 4px 8px rgba(15, 23, 42, 0.05), 0 18px 38px -4px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                box-shadow: 0 4px 8px rgba(15, 23, 42, 0.05), 0 18px 38px -4px rgba(15, 23, 42, 0.12), var(--lv-inset-shine, inset 0 1px 0 rgba(255, 255, 255, 0.9));
             }
 
             // 超长卡面底部柔和滚动指示羽化（防突兀截断）

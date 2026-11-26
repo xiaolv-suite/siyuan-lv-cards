@@ -24,7 +24,7 @@
 
 <div class="lv-center lv-done" data-testid="review-requeue-waiting">
     <div class="lv-done-panel lv-empty-queue" role="status" aria-live="polite">
-        <div class="lv-eyebrow">REVIEW / {headScopeLabel}</div>
+        <div class="lv-eyebrow">{t?.review?.panelTitle ?? "复习"} · {headScopeLabel}</div>
         <div class="lv-empty-queue-title">{t?.review?.requeueWaitingTitle ?? "等待重考中"}</div>
         <p class="ft__smaller ft__on-surface" style="margin: calc(var(--lv-space-unit) * 3) 0 0">
             {t?.review?.requeueWaitingSub?.replace("${n}", String(requeueWaitSeconds)) ?? `还有 ${requeueWaitSeconds} 秒重试`}

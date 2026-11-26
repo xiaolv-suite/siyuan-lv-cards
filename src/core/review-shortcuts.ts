@@ -89,19 +89,22 @@ export function resolveReviewKeyAction(
         return null;
     }
 
-    // 2. 帮助遮罩开关与拦截
+    // 2. 输入控件不抢占（输入框/富文本编辑态正常输入 '?' 等所有字符）
+    if (isInputOrEditable(e.target)) {
+        return null;
+    }
+
+    // 3. 帮助遮罩开关与拦截（先判焦点归属：焦点在复习根外时仅允许关闭已打开的帮助，绝不劫持外部面板按 '?'）
     if (e.key === "?") {
+        if (ctx.isTargetInsideRoot === false && !ctx.helpOpen) {
+            return null;
+        }
         return "toggle-help";
     }
     if (ctx.helpOpen) {
         if (e.key === "Escape") {
             return "close-help";
         }
-        return null;
-    }
-
-    // 3. 输入控件不抢占（输入框正常打字）
-    if (isInputOrEditable(e.target)) {
         return null;
     }
 

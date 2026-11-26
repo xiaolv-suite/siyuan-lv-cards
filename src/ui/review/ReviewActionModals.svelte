@@ -230,7 +230,7 @@
                                 <span class="lv-scope-badge lv-scope-badge--today">仅今日</span>
                                 <span class="ft__smaller ft__on-surface">(S)</span>
                             </div>
-                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">仅今日暂缓出题，明日自动回到到期队列，保留全部 FSRS 进度（5 秒内可点撤销，或按 Ctrl+Z / P / Q 恢复）。</div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">仅今日暂缓出题，明日自动回到到期队列，保留全部记忆排期进度（5 秒内可点撤销，或按 Ctrl+Z / P / Q 恢复）。</div>
                         </div>
                         <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => { onSuspendToday(); onCloseRetireModal(); }}>{t.review?.suspendToday ?? "今天不学"}</button>
                     </div>
@@ -243,7 +243,7 @@
                                 <span class="lv-scope-badge lv-scope-badge--archive">长期隐藏</span>
                                 <span class="ft__smaller ft__on-surface">(Ctrl+D)</span>
                             </div>
-                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">保留内核 FSRS 进度，在本插件日常复习中不再出题；可按 Ctrl+Z / P / Q 撤销，或在「卡库 → 已隐藏」恢复（思源原生闪卡面板仍可见）。</div>
+                            <div class="ft__smaller ft__on-surface" style="margin-top: 3px;">保留已有记忆排期进度，在本插件日常复习中不再出题；可按 Ctrl+Z / P / Q 撤销，或在「卡组 → 已隐藏」恢复（思源原生闪卡面板仍可见）。</div>
                         </div>
                         <button type="button" class="b3-button b3-button--outline b3-button--small" disabled={retireBusy || dismissBusy || deleteBusy} onclick={() => { onDismissCard(); onCloseRetireModal(); }}>归档隐藏</button>
                     </div>

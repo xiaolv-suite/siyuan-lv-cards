@@ -4,12 +4,22 @@
     import { showMessage } from "@/libs/notice";
     import { aiChat } from "@/api/ai";
     import type { RiffDeck } from "@/api/riff";
+    import { extractSuggestedQuestionFromAiResponse, type AttrQaSubtype } from "@/core/block-attributes";
+    import { killSwitchBlock } from "@/core/ai-kill-switch";
+    import { budgetState } from "@/core/ai-cost-ledger";
+    import { scanSensitive, maskSensitive } from "@/core/ai-sensitive";
 
     interface Props {
         blockID: string;
         initialQuestion?: string;
-        /** 自定义答案（custom-riff-answer）；为空表示回退使用笔记正文作为答案 */
+        /** 自定义答案（custom-riff-answer / custom-lv-answer）；为空表示回退使用笔记正文作为答案 */
         initialAnswer?: string;
+        /** 零标记属性问答子型 */
+        initialSubtype?: AttrQaSubtype | null;
+        /** 背诵自测型关键词提示（custom-lv-hint） */
+        initialHint?: string;
+        /** 双面对照型双向复习开关（custom-lv-bidi） */
+        initialBidi?: boolean;
         isAlreadyCard?: boolean;
         previewText?: string;
         decks?: RiffDeck[];
@@ -19,8 +29,14 @@
             aiEndpoint?: string;
             aiKey?: string;
             aiModel?: string;
+            aiSensitiveTerms?: string;
+            killSwitch?: any;
+            aiTargets?: string[];
+            costLedger?: any;
+            aiCostBudgetEnabled?: boolean;
+            aiCostMonthlyCap?: number;
         };
-        onSave: (payload: { question: string; answer: string; targetDeckID?: string }) => Promise<void>;
+        onSave: (payload: { question: string; answer: string; targetDeckID?: string; subtype?: AttrQaSubtype; hint?: string; bidi?: boolean }) => Promise<void>;
         onClear: () => Promise<void>;
         onClose: () => void;
     }
@@ -29,6 +45,9 @@
         blockID,
         initialQuestion = "",
         initialAnswer = "",
+        initialSubtype = null,
+        initialHint = "",
+        initialBidi = true,
         isAlreadyCard = false,
         previewText = "",
         decks: initialDecks = [],
@@ -44,8 +63,13 @@
     // 使用指南抽屉展开状态（默认收起，点击随时呼出，不抢占工作区）
     let showGuideDrawer = $state(false);
 
+    // svelte-ignore state_referenced_locally
+    let subtype = $state<AttrQaSubtype>(initialSubtype || (initialQuestion ? "recite" : (initialAnswer ? "direct" : "recite")));
     let question = $state("");
     let answer = $state("");
+    let hint = $state("");
+    // svelte-ignore state_referenced_locally
+    let bidiEnabled = $state(initialBidi ?? true);
     let currentDecks = $state<RiffDeck[]>([]);
     let selectedDeckID = $state("");
 
@@ -66,7 +90,7 @@
     let textareaEl: HTMLTextAreaElement | null = $state(null);
     let answerEl: HTMLTextAreaElement | null = $state(null);
 
-    // 防御性卡包安全数组
+    // 防御性卡组安全数组
     let safeDecks = $derived(Array.isArray(currentDecks) ? currentDecks : []);
     let currentDeckName = $derived.by(() => {
         const found = safeDecks.find(d => d.id === selectedDeckID);
@@ -88,6 +112,9 @@
     onMount(() => {
         question = initialQuestion;
         answer = initialAnswer;
+        hint = initialHint;
+        bidiEnabled = initialBidi ?? true;
+        if (initialSubtype) subtype = initialSubtype;
         if (safeDecks.length > 0 && !selectedDeckID) {
             selectedDeckID = safeDecks[0].id;
         }
@@ -135,12 +162,70 @@
         isAiGenerating = false;
     });
 
-    async function handleAiSuggest() {
+    let aiPreflightOpen = $state(false);
+    let aiPreflightMaskSensitive = $state(true);
+    let aiPreflightHits = $state<{ id: string; count: number; sample: string }[]>([]);
+    let aiPreflightTargetLabel = $state("");
+
+    function parseSensitiveList(): string[] {
+        return String(aiSettings.aiSensitiveTerms || "")
+            .split(/[,，\n]/)
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+
+    function requestAiSuggest() {
         const text = (previewText || "").trim();
         if (!text || text === "(空内容块)") {
             showMessage(t?.cardQuestionAiNoContent ?? "当前块无有效文本，无法拟题", 3000, "info");
             return;
         }
+        if (aiSettings.killSwitch) {
+            const targets = [...(aiSettings.aiTargets ?? []), "task:question-suggest"];
+            const killReason = killSwitchBlock(aiSettings.killSwitch, targets);
+            if (killReason) {
+                const msg = killReason === "consent-revoked"
+                    ? (t?.aiKill?.consentRevoked ?? "AI 使用同意已撤销，已阻断外发")
+                    : (t?.aiKill?.targetDisabled ?? "当前 AI 配置已紧急停用，已阻断外发");
+                showMessage(msg, 3500, "error");
+                return;
+            }
+        }
+        if (aiSettings.costLedger && aiSettings.aiCostBudgetEnabled) {
+            const b = budgetState(aiSettings.costLedger, {
+                enabled: Boolean(aiSettings.aiCostBudgetEnabled),
+                monthlyTokenCap: Number(aiSettings.aiCostMonthlyCap || 0),
+            });
+            if (b.exceeded) {
+                showMessage("本月 AI token 预算已达上限，已阻断外发", 3500, "error");
+                return;
+            }
+        }
+        const mode = (aiSettings.aiMode as "siyuan" | "custom") || "siyuan";
+        if (mode === "custom" && !String(aiSettings.aiEndpoint || "").trim()) {
+            showMessage("请先在设置中配置自定义 AI 端点，或切换为思源内置 AI", 3500, "error");
+            return;
+        }
+
+        aiPreflightHits = scanSensitive(text, parseSensitiveList());
+        aiPreflightMaskSensitive = true;
+        aiPreflightTargetLabel = mode === "custom"
+            ? `自定义端点 (${String(aiSettings.aiEndpoint || "").trim()})`
+            : "思源内置 AI";
+        aiPreflightOpen = true;
+    }
+
+    async function handleAiSuggest() {
+        const rawText = (previewText || "").trim();
+        if (!rawText || rawText === "(空内容块)") {
+            showMessage(t?.cardQuestionAiNoContent ?? "当前块无有效文本，无法拟题", 3000, "info");
+            return;
+        }
+
+        aiPreflightOpen = false;
+        const text = aiPreflightMaskSensitive
+            ? maskSensitive(rawText, parseSensitiveList()).masked
+            : rawText;
 
         isAiGenerating = true;
         aiElapsedSec = 0;
@@ -156,7 +241,7 @@
 
             const res = await aiChat(
                 {
-                    mode: (aiSettings.aiMode as "siyuan" | "custom") || "custom",
+                    mode: (aiSettings.aiMode as "siyuan" | "custom") || "siyuan",
                     endpoint: aiSettings.aiEndpoint || "",
                     apiKey: aiSettings.aiKey || "",
                     model: aiSettings.aiModel || "",
@@ -166,16 +251,14 @@
                 { timeoutMs: 25000, signal: ctrl.signal }
             );
 
-            let cleanQ = res.trim()
-                .replace(/^(?:问题|提问|Q|Question)[：:\s]+/i, "")
-                .replace(/^["'「]+|["'」]+$/g, "")
-                .trim();
-
-            if (cleanQ) {
-                question = cleanQ;
-                textareaEl?.focus();
-                showMessage(t?.cardQuestionAiSuccess ?? "AI 已生成推荐问题，右侧实时卡面已同步更新", 2000, "info");
+            const extracted = extractSuggestedQuestionFromAiResponse(res);
+            if (!extracted.ok) {
+                showMessage(extracted.reason || "AI 拟题返回无效内容，请检查 AI 配置", 3500, "error");
+                return;
             }
+            question = extracted.question;
+            textareaEl?.focus();
+            showMessage(t?.cardQuestionAiSuccess ?? "AI 已生成推荐问题，右侧实时卡面已同步更新", 2000, "info");
         } catch (err: any) {
             if (!ctrl.signal.aborted) {
                 showMessage(err?.message || "AI 拟题失败，请检查 AI 配置", 3000, "error");
@@ -192,9 +275,12 @@
         isSaving = true;
         try {
             await onSave({
-                question: question.trim(),
+                question: subtype === "direct" ? "" : question.trim(),
                 answer: answer.trim(),
                 targetDeckID: !isAlreadyCard ? (selectedDeckID || undefined) : undefined,
+                subtype,
+                hint: subtype === "recite" ? hint.trim() : "",
+                bidi: subtype === "dual" ? bidiEnabled : false,
             });
             onClose();
         } catch (err: any) {
@@ -268,14 +354,14 @@
             <div class="lv-qa-meta-left">
                 <span class="lv-qa-status-pill" class:is-card={isAlreadyCard}>
                     <LvIcon name={isAlreadyCard ? "check" : "cards"} size={12} />
-                    <span>{isAlreadyCard ? "已在闪卡库" : "免侵入属性问答"}</span>
+                    <span>{isAlreadyCard ? "已在闪卡组" : "免侵入属性问答"}</span>
                 </span>
-                <span class="lv-qa-deck-chip" title="归属卡包：{currentDeckName}">
+                <span class="lv-qa-deck-chip" title="归属卡组：{currentDeckName}">
                     <LvIcon name="cards" size={11} />
                     <span>{currentDeckName}</span>
                 </span>
                 <span class="lv-qa-status-desc">
-                    {isAlreadyCard ? "修改即时同步正面题干与卡包" : "零侵入正文 Markdown，笔记保持 100% 纯净"}
+                    {isAlreadyCard ? "修改即时同步正面题干与卡组" : "零侵入正文 Markdown，笔记保持 100% 纯净"}
                 </span>
             </div>
             <div class="lv-qa-meta-right">
@@ -334,15 +420,54 @@
         <!-- 左栏：问答设置编辑器面板（Editor Pane）                     -->
         <!-- ═══════════════════════════════════════════════════════════ -->
         <div class="lv-qa-editor-pane" role="region" aria-label="问答设置">
+            <!-- 区域 0：零标记属性问答 3 子型选择 -->
+            <section class="lv-qa-card lv-qa-subtype-section" aria-label="属性问答子型">
+                <div class="lv-qa-subtype-row" role="group" aria-label="属性问答子型">
+                    <button
+                        type="button"
+                        class="lv-qa-subtype-pill"
+                        class:is-active={subtype === "direct"}
+                        aria-pressed={subtype === "direct"}
+                        onclick={() => { subtype = "direct"; }}
+                        title="正面=块正文题干，背面=答案属性 (custom-lv-answer)"
+                    >
+                        <strong>直接问答型</strong>
+                        <span>正文题干 → 属性答案</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="lv-qa-subtype-pill"
+                        class:is-active={subtype === "recite"}
+                        aria-pressed={subtype === "recite"}
+                        onclick={() => { subtype = "recite"; }}
+                        title="正面=标题/关键词提示，背面=完整块正文或要点对照"
+                    >
+                        <strong>背诵自测型</strong>
+                        <span>标题/提示 → 完整背诵</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="lv-qa-subtype-pill"
+                        class:is-active={subtype === "dual"}
+                        aria-pressed={subtype === "dual"}
+                        onclick={() => { subtype = "dual"; }}
+                        title="正面=概念/术语/外语，背面=释义/例句/译文（支持双向）"
+                    >
+                        <strong>双面对照型</strong>
+                        <span>概念 ↔ 释义/译文</span>
+                    </button>
+                </div>
+            </section>
+
             <!-- 区域 1：笔记正文素材来源 -->
-            <section class="lv-qa-card lv-qa-answer-section" class:is-demoted={hasCustomAnswer} aria-label="笔记正文答案">
+            <section class="lv-qa-card lv-qa-answer-section" class:is-demoted={subtype !== "direct" && hasCustomAnswer} aria-label="笔记正文答案">
                 <div class="lv-qa-card-header">
                     <span class="lv-qa-card-title">
                         <LvIcon name="book" size={13} />
-                        <span>{hasCustomAnswer ? "笔记正文 (已自定义答案，原文仍附卡面备查)" : "笔记正文 (闪卡背面默认答案)"}</span>
+                        <span>{subtype === "direct" ? "笔记正文 (正面题干)" : (hasCustomAnswer ? "笔记正文 (已自定义答案，原文仍附卡面备查)" : "笔记正文 (闪卡背面默认答案)")}</span>
                     </span>
                     <div class="lv-qa-card-header-actions">
-                        {#if (previewText || "").trim() && previewText !== "(空内容块)"}
+                        {#if subtype !== "direct" && (previewText || "").trim() && previewText !== "(空内容块)"}
                             <button
                                 type="button"
                                 class="lv-qa-text-action-btn"
@@ -360,18 +485,19 @@
                 </div>
             </section>
 
-            <!-- 区域 2：背诵提问输入（正面题干） -->
+            <!-- 区域 2：背诵提问输入（正面题干，直接问答型以块正文为正面故隐藏） -->
+            {#if subtype !== "direct"}
             <section class="lv-qa-card lv-qa-prompt-section" aria-label="背诵提问题干">
                 <div class="lv-qa-card-header">
                     <span class="lv-qa-card-title lv-qa-card-title--prompt">
                         <LvIcon name="question" size={14} />
-                        <span>背诵提问 (正面主动回忆)</span>
+                        <span>{subtype === "dual" ? "正面概念 / 术语 / 外语表达" : "背诵提问 (正面主动回忆)"}</span>
                     </span>
                     <button
                         type="button"
                         class="lv-qa-ai-btn"
                         disabled={isAiGenerating}
-                        onclick={handleAiSuggest}
+                        onclick={requestAiSuggest}
                         title="根据正文智能生成最适合主动回忆的核心提问"
                         aria-label="根据正文智能生成最适合主动回忆的核心提问"
                     >
@@ -386,6 +512,27 @@
                 </div>
 
                 <div class="lv-qa-textarea-wrap">
+                    {#if aiPreflightOpen}
+                        <div class="lv-qa-preflight" role="region" aria-label="确认本次 AI 拟题外发" style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--lv-primary-border, rgba(99,102,241,0.3)); background: var(--lv-primary-soft, rgba(99,102,241,0.06)); margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+                            <div style="font-weight: 600;">确认发送当前笔记片段至 AI 拟题</div>
+                            <div style="color: var(--lv-color-text-muted, #64748b);">
+                                目标：{aiPreflightTargetLabel} · 正文 {(previewText || "").trim().length} 字
+                            </div>
+                            {#if aiPreflightHits.length > 0}
+                                <div style="color: var(--lv-color-warning, #b45309);">
+                                    检测到 {aiPreflightHits.length} 类潜在敏感词（如 {aiPreflightHits[0].sample}），建议开启脱敏发送
+                                </div>
+                            {/if}
+                            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" bind:checked={aiPreflightMaskSensitive} />
+                                <span>发送前自动脱敏敏感内容</span>
+                            </label>
+                            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px;">
+                                <button type="button" class="b3-button b3-button--small b3-button--cancel" onclick={() => { aiPreflightOpen = false; }}>取消</button>
+                                <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={handleAiSuggest}>确认外发生成</button>
+                            </div>
+                        </div>
+                    {/if}
                     {#if isAiGenerating}
                         <div class="lv-ai-thinking" role="status" aria-live="polite">
                             <div class="lv-ai-thinking__glow">
@@ -405,7 +552,7 @@
                             onkeydown={handleKeydown}
                             class="b3-text-field lv-qa-textarea"
                             rows="3"
-                            placeholder={t?.cardQuestionInputPlaceholder ?? "输入向自己提问的问题 (按 Ctrl+Enter 快速保存)..."}
+                            placeholder={subtype === "dual" ? "输入概念、术语或外语表达..." : (t?.cardQuestionInputPlaceholder ?? "输入向自己提问的问题 (按 Ctrl+Enter 快速保存)...")}
                             aria-label="背诵提问内容"
                         ></textarea>
 
@@ -420,14 +567,27 @@
                         </div>
                     {/if}
                 </div>
+                {#if subtype === "recite"}
+                    <div class="lv-qa-hint-field">
+                        <input
+                            type="text"
+                            bind:value={hint}
+                            onkeydown={handleKeydown}
+                            class="b3-text-field lv-qa-hint-input"
+                            placeholder="可选：关键词提示（复习时可先点击展开提示再自评）"
+                            aria-label="关键词提示"
+                        />
+                    </div>
+                {/if}
             </section>
+            {/if}
 
-            <!-- 区域 3：自定义答案（可选，留空回退笔记正文） -->
+            <!-- 区域 3：答案输入（直接问答型为主答案；背诵/双面型为可选精炼答案/释义） -->
             <section class="lv-qa-card lv-qa-answer-input-section" aria-label="自定义答案">
                 <div class="lv-qa-card-header">
                     <span class="lv-qa-card-title lv-qa-card-title--answer">
                         <LvIcon name="message" size={13} />
-                        <span>自定义答案 (背面主动回忆 · 可选)</span>
+                        <span>{subtype === "direct" ? "答案内容（写入 custom-lv-answer 属性）" : subtype === "dual" ? "背面释义 / 例句 / 译文（可选，留空用正文）" : "自定义答案 (背面主动回忆 · 可选)"}</span>
                     </span>
                     {#if hasCustomAnswer}
                         <button
@@ -449,13 +609,15 @@
                         onkeydown={handleKeydown}
                         class="b3-text-field lv-qa-textarea lv-qa-textarea--answer"
                         rows="3"
-                        placeholder="可选：输入标准答案要点 (留空则复习翻牌时直接展示上方笔记正文)..."
+                        placeholder={subtype === "direct" ? "输入该题干对应的标准答案（将存于 custom-lv-answer 块属性，不污染正文）..." : "可选：输入标准答案要点 (留空则复习翻牌时直接展示上方笔记正文)..."}
                         aria-label="自定义答案内容"
                     ></textarea>
 
                     <div class="lv-qa-textarea-subbar">
                         <div class="lv-qa-answer-mode-hint" class:is-custom={hasCustomAnswer}>
-                            {hasCustomAnswer
+                            {subtype === "direct"
+                                ? (hasCustomAnswer ? `正面展示正文题干，背面展示此属性答案 (${answerCharCount} 字)` : "请填写直接问答型的背面答案")
+                                : hasCustomAnswer
                                 ? `复习背面将优先展示此答案，笔记原文附后备查 (${answerCharCount} 字)`
                                 : "复习背面将直接展示笔记正文"}
                         </div>
@@ -464,18 +626,24 @@
                         </div>
                     </div>
                 </div>
+                {#if subtype === "dual"}
+                    <label class="lv-qa-bidi-check">
+                        <input type="checkbox" class="lv-check" bind:checked={bidiEnabled} />
+                        <span>启用正反双向复习（支持按 R 键或卡面切换正反方向）</span>
+                    </label>
+                {/if}
             </section>
 
-            <!-- 区域 4：卡包调度与归属管理 -->
-            <section class="lv-qa-card lv-qa-deck-section" aria-label="卡包归属">
+            <!-- 区域 4：卡组调度与归属管理 -->
+            <section class="lv-qa-card lv-qa-deck-section" aria-label="卡组归属">
                 <div class="lv-qa-deck-row">
                     <span class="lv-qa-deck-label">
                         <LvIcon name="cards" size={13} />
-                        <span>{isAlreadyCard ? "当前归属卡包" : "同步制卡加入卡包"}</span>
+                        <span>{isAlreadyCard ? "当前归属卡组" : "同步制卡加入卡组"}</span>
                     </span>
-                    <select bind:value={selectedDeckID} class="b3-select lv-qa-deck-select" aria-label="选择同步加入或调整的卡包">
+                    <select bind:value={selectedDeckID} class="b3-select lv-qa-deck-select" aria-label="选择同步加入或调整的卡组">
                         {#if safeDecks.length === 0}
-                            <option value="">默认卡包（自动创建「小驴闪卡」）</option>
+                            <option value="">默认卡组（自动创建「小驴闪卡」）</option>
                         {:else}
                             {#each safeDecks as deck}
                                 <option value={deck.id}>{deck.name} ({deck.size || 0} 张)</option>
@@ -552,7 +720,7 @@
                 <!-- 卡片顶部信息条 -->
                 <div class="lv-mockup-header">
                     <div class="lv-mockup-tags">
-                        <span class="lv-mockup-tag lv-mockup-tag--type">✦ 属性问答卡</span>
+                        <span class="lv-mockup-tag lv-mockup-tag--type">✦ {subtype === "direct" ? "直接问答" : subtype === "dual" ? "双面对照" : "属性问答卡"}</span>
                         <span class="lv-mockup-tag lv-mockup-tag--deck">{currentDeckName}</span>
                     </div>
                     <span class="lv-mockup-face-indicator">
@@ -564,17 +732,33 @@
                 <div class="lv-mockup-body">
                     {#if previewFace === "front"}
                         <div class="lv-mockup-front">
-                            <div class="lv-mockup-q-badge">💡 提问</div>
-                            <div class="lv-mockup-q-text" class:is-empty={!question.trim()}>
-                                {question.trim() || "（尚未输入提问内容，请在左侧填写或点击 AI 拟题…）"}
+                            <div class="lv-mockup-q-badge">{subtype === "direct" ? "📄 正文题干" : subtype === "dual" ? "⇄ 正面概念" : "💡 提问"}</div>
+                            <div class="lv-mockup-q-text" class:is-empty={subtype !== "direct" && !question.trim()}>
+                                {#if subtype === "direct"}
+                                    {previewText || "(空内容块)"}
+                                {:else}
+                                    {question.trim() || "（尚未输入提问内容，请在左侧填写或点击 AI 拟题…）"}
+                                {/if}
                             </div>
+                            {#if subtype === "recite" && hint.trim()}
+                                <div class="ft__smaller" style="margin-top: 6px; color: var(--lv-color-brand);">💡 可展开提示：{hint.trim()}</div>
+                            {/if}
                             <div class="lv-mockup-cue-strip">
-                                <span>🎯 复习时正面仅展示此提问，强迫主动回忆，绝不剧透正文</span>
+                                <span>{subtype === "direct" ? "🎯 正面展示块正文题干，答案存属性不剧透" : subtype === "dual" ? "🎯 支持概念 ↔ 释义正反双向复习" : "🎯 复习时正面仅展示此提问，强迫主动回忆，绝不剧透正文"}</span>
                             </div>
                         </div>
                     {:else}
                         <div class="lv-mockup-back">
-                            {#if hasCustomAnswer}
+                            {#if subtype === "direct"}
+                                <div class="lv-mockup-single-answer">
+                                    <div class="lv-mockup-badge-row">
+                                        <span class="lv-mockup-ans-badge lv-mockup-ans-badge--custom">🌿 参考答案 (custom-lv-answer)</span>
+                                    </div>
+                                    <div class="lv-mockup-ans-text">
+                                        {answer.trim() || "（尚未输入属性答案…）"}
+                                    </div>
+                                </div>
+                            {:else if hasCustomAnswer}
                                 <!-- 双轨答案展示：自定义答案优先 + 笔记原文备查 -->
                                 <div class="lv-mockup-custom-answer">
                                     <div class="lv-mockup-badge-row">
@@ -693,6 +877,45 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+    }
+
+    .lv-qa-subtype-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .lv-qa-subtype-pill {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        padding: 7px 10px;
+        border-radius: var(--lv-r-m, 8px);
+        border: 1px solid var(--lv-border, var(--b3-border-color));
+        background: var(--b3-theme-surface);
+        color: var(--b3-theme-on-surface);
+        cursor: pointer;
+        text-align: left;
+        font-size: 11px;
+        strong { font-size: 12.5px; font-weight: 600; }
+        span { opacity: 0.72; }
+        &.is-active {
+            border-color: var(--b3-theme-primary);
+            background: color-mix(in srgb, var(--b3-theme-primary) 10%, var(--b3-theme-surface));
+            color: var(--b3-theme-primary);
+        }
+    }
+    .lv-qa-hint-field { margin-top: 8px; }
+    .lv-qa-hint-input { width: 100%; box-sizing: border-box; font-size: 12.5px; }
+    .lv-qa-bidi-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--b3-theme-on-surface);
+        opacity: 0.85;
+        cursor: pointer;
     }
 
     // 顶部状态横幅

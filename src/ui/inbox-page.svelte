@@ -243,7 +243,7 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<LvPage eyebrow="CAPTURE / INBOX" title={t.title} subtitle={`${t.tabInbox} ${counts.inbox} · ${t.tabStaged} ${counts.staged} · ${t.tabSelected} ${counts.selected} · ${t.tabDismissed} ${counts.dismissed}`}>
+<LvPage eyebrow="制卡收件箱" title={t.title} subtitle={`${t.tabInbox} ${counts.inbox} · ${t.tabStaged} ${counts.staged} · ${t.tabSelected} ${counts.selected} · ${t.tabDismissed} ${counts.dismissed}`}>
     {#snippet actions()}
         <input
             class="b3-text-field lv-inbox-search-input"

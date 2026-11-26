@@ -568,7 +568,7 @@
     }
 
     async function removeDeckConfirm(deckID: string, currentName: string) {
-        const confirmed = window.confirm((t.dashboard.removeDeckConfirm ?? "确定删除卡组「${name}」？卡包内的笔记块本身不会受影响。").replace("${name}", currentName));
+        const confirmed = window.confirm((t.dashboard.removeDeckConfirm ?? "确定删除卡组「${name}」？卡组内的笔记块本身不会受影响。").replace("${name}", currentName));
         if (!confirmed) return;
         try {
             await removeRiffDeck(deckID);
@@ -662,7 +662,8 @@
             streak = calcStreak(revlog);
             heat = lastNDays(revlog, Math.max(4, ctx.getHeatmapWeeks()) * 7);
             const todayKey = heat[heat.length - 1]?.date;
-            const reviewedToday = todayKey ? (revlog.days[todayKey]?.review ?? 0) : 0;
+            const todayStat = todayKey ? revlog.days[todayKey] : undefined;
+            const reviewedToday = (todayStat?.new ?? 0) + (todayStat?.review ?? 0);
             todayReview = reviewedToday;
             todayStudyMinutes = Math.round(studySecondsOn(revlog, localDate(Date.now())) / 60);
             coverage = coverageStats(revlog, totalCards || undefined);
@@ -784,7 +785,7 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<LvPage eyebrow={`TODAY / ${heroDateText()}`} title={t.dashboard.title}>
+<LvPage eyebrow={`今日概览 · ${heroDateText()}`} title={t.dashboard.title}>
     {#snippet actions()}
         <div class="lv-dashboard-action-group">
             <button
@@ -949,7 +950,7 @@
                         <span class="lv-chip2 lv-chip2--warn" style="font-size: 11px;">{dueCount} 张待刷</span>
                     </div>
                     <div class="banner-desc">
-                        根据 FSRS 记忆曲线算法，今日有 <strong class="num" style="color: var(--lv-color-warning);">{dueCount}</strong> 张卡片到达最佳复习时点{#if newCount > 0}（含 <strong class="num">{newCount}</strong> 张新卡）{/if}，可随时开始
+                        根据智能记忆曲线算法，今日有 <strong class="num" style="color: var(--lv-color-warning);">{dueCount}</strong> 张卡片到达最佳复习时点{#if newCount > 0}（含 <strong class="num">{newCount}</strong> 张新卡）{/if}，可随时开始
                     </div>
                 </div>
                 <div class="banner-actions">
@@ -969,7 +970,7 @@
                             if (el) el.scrollIntoView({ behavior: "smooth" });
                         }}
                     >
-                        <span>{t.dashboard?.dueBannerPickDeck ?? "选择卡包"}</span>
+                        <span>{t.dashboard?.dueBannerPickDeck ?? "选择卡组"}</span>
                     </button>
                 </div>
             </div>
@@ -1077,7 +1078,7 @@
                 </div>
                 <div class="lv-today-week-summary">
                     <span>{t.dashboard.weekActiveDays.replace("${n}", String(currentWeek.activeDays))}</span>
-                    <strong>{currentWeek.reviews} <small>{t.dashboard.weekReviews}</small></strong>
+                    <strong>{(currentWeek as any).totalRatings ?? currentWeek.reviews} <small>{t.dashboard.weekReviews}</small></strong>
                 </div>
             </div>
         </div>
@@ -1189,14 +1190,14 @@
                         <button
                             type="button"
                             class="b3-button b3-button--small b3-button--outline lv-btn-tool"
-                            title={t.dashboard.cramAll ?? "Cram 考前突击快刷（不改排期）"}
+                            title={t.dashboard.cramAll ?? "考前突击快刷（不改排期）"}
                             onclick={startGlobalCram}
                             data-testid="dashboard-start-cram-btn"
                         >
                             <LvIcon name="zap" size={13} /> <span>{t.dashboard.cramAll ?? "考前突击快刷"}</span>
                         </button>
                         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openHubTab?.("decks")}>
-                            <LvIcon name="cards" size={13} /> <span>{t.hubTabDecks ?? "卡包管理"}</span>
+                            <LvIcon name="cards" size={13} /> <span>{t.hubTabDecks ?? "卡组管理"}</span>
                         </button>
                         <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => ctx.openManager()}>
                             <LvIcon name="search" size={13} /> <span>{t.dashboard.decksViewAll ?? t.hubTabManage}</span>
@@ -1220,7 +1221,7 @@
                                     <LvIcon name="book" size={14} />
                                     <strong class="lv-cluster-name">{cluster.prefix}</strong>
                                     <span class="lv-cluster-meta ft__smaller ft__on-surface">
-                                        {cluster.decks.length} 个子卡包 · 共 {cluster.totalSize} 张
+                                        {cluster.decks.length} 个子卡组 · 共 {cluster.totalSize} 张
                                     </span>
                                 </button>
                                 {#if !collapsedClusters.has(cluster.prefix)}
@@ -1246,7 +1247,7 @@
                             onclick={() => (showAllClusters = !showAllClusters)}
                         >
                             <LvIcon name={showAllClusters ? "chevron-up" : "chevron-down"} size={12} />
-                            <span>{showAllClusters ? "收起多余卡包分组" : `其余 ${clusteredDecks.length - 8} 个卡包分组已折叠，点击展开全部 (${clusteredDecks.length})`}</span>
+                            <span>{showAllClusters ? "收起多余卡组分组" : `其余 ${clusteredDecks.length - 8} 个卡组分组已折叠，点击展开全部 (${clusteredDecks.length})`}</span>
                         </button>
                     </div>
                 {/if}
@@ -2225,7 +2226,9 @@
             align-items: center;
             gap: var(--lv-sp-2);
             margin-left: auto;
-            flex-shrink: 0;
+            min-width: 0;
+            max-width: 100%;
+            flex-shrink: 1;
         }
         .lv-deck-quick-btn {
             border-radius: var(--lv-r-pill);
@@ -2322,7 +2325,7 @@
                 gap: var(--lv-sp-1);
                 margin-left: 0;
                 width: 100%;
-                justify-content: flex-end;
+                justify-content: flex-start;
             }
         }
     }
@@ -2515,7 +2518,7 @@
                 gap: var(--lv-sp-1);
                 margin-left: 0;
                 width: 100%;
-                justify-content: flex-end;
+                justify-content: flex-start;
             }
         }
     }

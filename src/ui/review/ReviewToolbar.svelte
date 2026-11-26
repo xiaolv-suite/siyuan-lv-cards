@@ -16,6 +16,7 @@
         actionBusy = false,
         lastAnswered = null,
         reversedRecall = $bindable(false),
+        canReverseRecall = true,
         zenMode = $bindable(false),
         ctxOpen = false,
         prefsOpen = false,
@@ -54,6 +55,7 @@
         dismissBusy?: boolean;
         lastAnswered?: any;
         reversedRecall?: boolean;
+        canReverseRecall?: boolean;
         zenMode?: boolean;
         ctxOpen?: boolean;
         prefsOpen?: boolean;
@@ -170,8 +172,8 @@
             {#if isCramMode}
                 突击中
             {:else}
-                <span class="lv-cram-label-full">⚡ 考前突击快刷</span>
-                <span class="lv-cram-label-short">⚡ 快刷</span>
+                <span class="lv-cram-label-full">考前突击快刷</span>
+                <span class="lv-cram-label-short">快刷</span>
             {/if}
         </span>
     </button>
@@ -195,7 +197,7 @@
     <button
         type="button"
         class="b3-button b3-button--small lv-btn-ghost lv-tool-btn"
-        title={`${t.review?.skip ?? "跳过"} (X) · 仅本场顺延，不影响 FSRS 记忆排期`}
+        title={`${t.review?.skip ?? "跳过"} (X) · 仅本场顺延，不影响智能记忆算法排期`}
         aria-label={t.review?.skip ?? "跳过"}
         aria-keyshortcuts="x 0"
         disabled={actionBusy}
@@ -284,7 +286,7 @@
                     data-testid="review-menu-cram-btn"
                 >
                     <span class="lv-menu-icon"><LvIcon name="zap" size={16} /></span>
-                    <span>{isCramMode ? "⚡ 突击快刷中（排期保护）" : "⚡ 考前突击快刷…"}</span>
+                    <span>{isCramMode ? "突击快刷中（排期保护）" : "考前突击快刷…"}</span>
                 </button>
 
                 <button
@@ -366,17 +368,19 @@
                     <span>{t.review?.tbCtx ?? "来源上下文"}</span>
                 </button>
 
-                <button
-                    type="button"
-                    class="lv-toolbar-menu-item"
-                    class:lv-active={reversedRecall}
-                    title={t.review?.enableReversed ?? "翻转问答自测 (R)"}
-                    aria-keyshortcuts="r"
-                    onclick={() => { reversedRecall = !reversedRecall; showMoreToolbar = false; }}
-                >
-                    <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span>
-                    <span>{reversedRecall ? (t.review?.cancelReversed ?? "恢复正常顺序") : (t.review?.enableReversed ?? "翻转问答自测 (R)")}</span>
-                </button>
+                {#if canReverseRecall}
+                    <button
+                        type="button"
+                        class="lv-toolbar-menu-item"
+                        class:lv-active={reversedRecall}
+                        title={t.review?.enableReversed ?? "翻转问答自测 (R)"}
+                        aria-keyshortcuts="r"
+                        onclick={() => { if (!canReverseRecall) return; reversedRecall = !reversedRecall; showMoreToolbar = false; }}
+                    >
+                        <span class="lv-menu-icon"><LvIcon name="refresh" size={16} /></span>
+                        <span>{reversedRecall ? (t.review?.cancelReversed ?? "恢复正常顺序") : (t.review?.enableReversed ?? "翻转问答自测 (R)")}</span>
+                    </button>
+                {/if}
 
                 <button
                     type="button"

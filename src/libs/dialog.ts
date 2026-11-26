@@ -68,7 +68,7 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
 </div>
 <div class="b3-dialog__action">
     <button class="b3-button b3-button--cancel">${window.siyuan?.languages?.cancel ?? "取消"}</button><div class="fn__space"></div>
-    <button class="b3-button b3-button--text" id="confirmDialogConfirmBtn">${window.siyuan?.languages?.confirm ?? "确定"}</button>
+    <button class="b3-button lv-btn-primary" id="confirmDialogConfirmBtn">${window.siyuan?.languages?.confirm ?? "确定"}</button>
 </div>`,
         width: width,
         height: height,
@@ -80,7 +80,8 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
             }
         }
     });
-    dialog.element.classList.add("lv-dialog");
+    dialog.element.classList.add("lv-dialog", "lv-cards-dialog");
+    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog", "lv-cards-dialog");
     // 点击遮罩背景快速关闭
     dialog.element.addEventListener("click", (e) => {
         if (e.target === dialog.element || (e.target as HTMLElement).classList?.contains("b3-dialog__scrim")) {
@@ -205,8 +206,8 @@ export const simpleDialog = (args: {
     if (contentEl) {
         contentEl.appendChild(args.ele);
     }
-    dialog.element.classList.add("lv-dialog");
-    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog");
+    dialog.element.classList.add("lv-dialog", "lv-cards-dialog");
+    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog", "lv-cards-dialog");
 
     const outerClose = dialog.element.querySelector<HTMLElement | SVGElement>(".b3-dialog__container > .b3-dialog__close");
     if (outerClose && outerClose.style) {
@@ -368,8 +369,8 @@ export const svelteDialog = (args: {
     }
     dialogHandle = dialog;
     // 样式作用域（R52）：插件对话框挂 lv-dialog，供 index.scss 做按钮语义中性化与滚动条
-    dialog.element.classList.add("lv-dialog");
-    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog");
+    dialog.element.classList.add("lv-dialog", "lv-cards-dialog");
+    dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog", "lv-cards-dialog");
     if (args.panel) {
         dialog.element.classList.add("lv-dialog--panel");
         dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog--panel");

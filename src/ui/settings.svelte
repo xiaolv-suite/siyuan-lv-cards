@@ -16,8 +16,6 @@
     import LvSwitch from "./kit/LvSwitch.svelte";
     import LvSelect from "./kit/LvSelect.svelte";
     import LvInput from "./kit/LvInput.svelte";
-    // DL2 阶段0：生态统一「外观与动效」偏好分组（庆祝/吉祥物/光效可关）
-    import { createLvUiPrefsSection } from "../libs/lv-ui-prefs";
     import LvIcon from "./kit/LvIcon.svelte";
     import { PROMPT_TEMPLATES } from "@/core/prompt-templates";
     // BU-18 模型能力注册表：快选列表 + 登记状态提示 + 端点预设
@@ -39,7 +37,8 @@
     import { planObsidianImport, composeObsidianImportMarkdown, deckNameFor, groupByDeckHint, partitionByLedger, normalizeObLedger, mergeObLedger, type ObLedgerEntry } from "@/core/obsidian-import";
     import { getBridgeSafely, type CheckinBridgeApi, type CheckinItem } from "@/libs/ecosystem-bridge-kit";
     import { localDate } from "@/core/revlog";
-    import { aiChat } from "@/api/ai";
+    import { aiChat, isAICanceled } from "@/api/ai";
+    import { createLvAiProgressTracker, type LvAiProgressTracker } from "@/libs/lv-notice-kit";
 
     export interface SettingsCtx {
         i18n: any;
@@ -74,11 +73,13 @@
         /** BU-31：紧急停用/撤销同意（可选——旧宿主不传则不显示该行） */
         killswitch?: {
             snapshot: () => any;
-            stopCurrent: () => any;
-            resumeAll: () => any;
-            revoke: () => any;
-            grant: () => any;
+            stopCurrent: () => any | Promise<any>;
+            resumeAll: () => any | Promise<any>;
+            revoke: () => any | Promise<any>;
+            grant: () => any | Promise<any>;
         };
+        /** 安全密钥槽读取（避免明文写入 DOM / settings.json） */
+        resolveSecret?: (field: "aiKey" | "aiFallbackKey" | "ankiClientKey") => string;
         redetectV2: () => Promise<string>;
         getV2Status: () => string;
         getSuspendedCount: () => number;
@@ -96,10 +97,27 @@
 
     let { ctx, initialSection }: { ctx: SettingsCtx; initialSection?: "imports" } = $props();
 
-    /** DL2 阶段0：挂载生态外观偏好分组（svelte action） */
-    function mountLvUiPrefsSectionAction(node: HTMLElement) {
-        node.appendChild(createLvUiPrefsSection());
-        return {};
+    let inputFocused = $state(false);
+    function syncSettingsInputFocus(e: FocusEvent) {
+        const root = e.currentTarget as HTMLElement | null;
+        if (e.type === "focusin") {
+            const target = e.target as HTMLElement | null;
+            if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+                inputFocused = true;
+            }
+            return;
+        }
+        const next = e.relatedTarget as HTMLElement | null;
+        if (next && root?.contains(next) && (next instanceof HTMLInputElement || next instanceof HTMLTextAreaElement)) {
+            inputFocused = true;
+            return;
+        }
+        const active = typeof document !== "undefined" ? document.activeElement : null;
+        inputFocused = Boolean(
+            active
+            && root?.contains(active)
+            && (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement),
+        );
     }
     const t = $derived(ctx.i18n);
     let searchInput: HTMLInputElement;
@@ -111,10 +129,18 @@
     // BU-31：紧急停用/撤销同意（设置页本地镜像，操作后回读快照）
     // svelte-ignore state_referenced_locally -- 初值快照刻意的：操作经 applyKill 回读替换
     let ks = $state<any>(ctx.killswitch?.snapshot?.() ?? null);
-    function applyKill(action: "stopCurrent" | "resumeAll" | "revoke" | "grant") {
-        if (!ctx.killswitch) return;
-        ks = ctx.killswitch[action]();
-        showMessage(t.settings.aiKillApplied, 2000, "info");
+    let ksBusy = $state(false);
+    async function applyKill(action: "stopCurrent" | "resumeAll" | "revoke" | "grant") {
+        if (!ctx.killswitch || ksBusy) return;
+        ksBusy = true;
+        try {
+            ks = await ctx.killswitch[action]();
+            showMessage(t.settings.aiKillApplied, 2000, "info");
+        } catch (e: any) {
+            showMessage(e?.message || t.storageWriteFail || "操作失败，请重试", 3500, "error");
+        } finally {
+            ksBusy = false;
+        }
     }
     const providerDisabled = $derived(ks?.disabledTargets?.some((x: string) => x.startsWith("provider:")) ?? false);
     function lastEventText(): string {
@@ -123,9 +149,19 @@
         return `${ev.kind} · ${new Date(ev.at).toLocaleString()}`;
     }
 
-    // 初值语义：draft 是打开设置时的快照，保存前不随源变化
+    // 初值语义：draft 是打开设置时的快照，保存前不随源变化；密钥仅展示状态标记，不将明文写入 DOM value
     // svelte-ignore state_referenced_locally
-    let draft: LvCardsSettings = $state(JSON.parse(JSON.stringify(ctx.settings)));
+    const initialDraftSnapshot: LvCardsSettings = {
+        ...JSON.parse(JSON.stringify(ctx.settings)),
+        aiKey: "",
+        aiFallbackKey: "",
+        ankiClientKey: "",
+        aiKeyConfigured: Boolean(ctx.settings.aiKeyConfigured || ctx.settings.aiKey || ctx.resolveSecret?.("aiKey")),
+        aiFallbackKeyConfigured: Boolean(ctx.settings.aiFallbackKeyConfigured || ctx.settings.aiFallbackKey || ctx.resolveSecret?.("aiFallbackKey")),
+        ankiClientKeyConfigured: Boolean(ctx.settings.ankiClientKeyConfigured || ctx.settings.ankiClientKey || ctx.resolveSecret?.("ankiClientKey")),
+    };
+    let draft: LvCardsSettings = $state(JSON.parse(JSON.stringify(initialDraftSnapshot)));
+    let clearSecrets = $state<{ aiKey?: boolean; aiFallbackKey?: boolean; ankiClientKey?: boolean }>({});
     /** 外观预览里的自定义卡面 CSS，只作用于预览卡片，输错选择器也不会影响设置弹窗本身 */
     const previewCssTag = $derived.by(() => {
         const scoped = scopeCustomCardCss(draft.customCardCss, ".lv-settings-card-preview");
@@ -509,25 +545,45 @@
             if (blockIDs.some(id => validateFlashcardMarkdown(markdownByID.get(id) ?? "") !== null)) {
                 throw new Error(t.settings.ankiImportInvalidCard ?? "导入内容未生成有效答案标记，已停止入组");
             }
-            // 2026-11-21 走查修复：同名卡包先查复用（对照 marketplace-service/quick-card 的先查后建模式），
-            // 分批重导同一 apkg 时不再堆积重名内核卡包
-            let deck: any = null;
-            const wantedDeckName = `Anki: ${base}`;
-            try {
-                const existingDecks = await getRiffDecks();
-                deck = (existingDecks ?? []).find((d: { name?: string }) => d.name === wantedDeckName) ?? null;
-            } catch { /* 查询失败走新建兜底 */ }
-            if (!deck) deck = await createRiffDeck(wantedDeckName) as any;
-            const deckID = deck?.id ?? deck?.deck?.id ?? "";
-            await addRiffCards(deckID, blockIDs);
-            await Promise.all(blockIDs.map(id => ctx.rememberSourceFingerprint?.(id, docID, markdownByID.get(id))));
+            // 2026-11-21 走查修复：同名卡包先查复用；保留 Anki `::` 层级卡组结构
+            const existingDecks = await getRiffDecks().catch(() => []);
+            const deckIdByName = new Map<string, string>();
+            for (const d of existingDecks ?? []) {
+                if (d?.name && d?.id) deckIdByName.set(d.name, d.id);
+            }
+            const deckGroups = new Map<string, typeof fresh>();
+            for (const c of fresh) {
+                const rawDeckName = String(c.deckName || "").trim();
+                const wantedDeckName = rawDeckName && rawDeckName !== "Default" && rawDeckName !== "默认"
+                    ? `Anki: ${rawDeckName}`
+                    : `Anki: ${base}`;
+                const arr = deckGroups.get(wantedDeckName) ?? [];
+                arr.push(c);
+                deckGroups.set(wantedDeckName, arr);
+            }
+            const enrolledBlockIDs: string[] = [];
             const now = Date.now();
-            if (ctx.ankiLedger) {
-                await ctx.ankiLedger.save(mergeLedger(rawLedger, fresh.map((c) => ({ guid: c.guid, deckID, blockID: byGuid.get(c.guid) ?? "", importedAt: now }))));
+            let ledgerState = normalizeLedger(rawLedger);
+            for (const [wantedDeckName, groupCards] of deckGroups) {
+                let deckID = deckIdByName.get(wantedDeckName) ?? "";
+                if (!deckID) {
+                    const created = await createRiffDeck(wantedDeckName) as any;
+                    deckID = created?.id ?? created?.deck?.id ?? "";
+                    if (deckID) deckIdByName.set(wantedDeckName, deckID);
+                }
+                const groupBlockIDs = groupCards.map((c) => byGuid.get(c.guid)).filter((x): x is string => Boolean(x));
+                if (groupBlockIDs.length === 0) continue;
+                await addRiffCards(deckID, groupBlockIDs);
+                await Promise.all(groupBlockIDs.map(id => ctx.rememberSourceFingerprint?.(id, docID, markdownByID.get(id))));
+                enrolledBlockIDs.push(...groupBlockIDs);
+                if (ctx.ankiLedger) {
+                    ledgerState = mergeLedger(ledgerState, groupCards.map((c) => ({ guid: c.guid, deckID, blockID: byGuid.get(c.guid) ?? "", importedAt: now })));
+                    await ctx.ankiLedger.save(ledgerState);
+                }
             }
             ankiStatus = {
                 kind: "warn",
-                text: t.settings.ankiImportDone.replace("${ok}", String(blockIDs.length)).replace("${skip}", String(already.length)).replace("${loss}", String(preview.losses.length)),
+                text: t.settings.ankiImportDone.replace("${ok}", String(enrolledBlockIDs.length)).replace("${skip}", String(already.length)).replace("${loss}", String(preview.losses.length)),
             };
             if (preview.losses.length > 0) {
                 ankiLosses = preview.losses.map((l) => `[${l.guid}] ${l.reason}`);
@@ -634,11 +690,14 @@
         } else if (sectionId === "aiSection") {
             draft.aiMode = defaults.aiMode;
             draft.aiEndpoint = defaults.aiEndpoint;
-            draft.aiKey = defaults.aiKey;
+            draft.aiKey = "";
+            draft.aiKeyConfigured = false;
             draft.aiModel = defaults.aiModel;
             draft.aiFallbackEndpoint = defaults.aiFallbackEndpoint;
-            draft.aiFallbackKey = defaults.aiFallbackKey;
+            draft.aiFallbackKey = "";
+            draft.aiFallbackKeyConfigured = false;
             draft.aiFallbackModel = defaults.aiFallbackModel;
+            clearSecrets = { ...clearSecrets, aiKey: true, aiFallbackKey: true };
             draft.aiSensitiveTerms = defaults.aiSensitiveTerms;
             draft.aiCostBudgetEnabled = defaults.aiCostBudgetEnabled;
             draft.aiCostMonthlyCap = defaults.aiCostMonthlyCap;
@@ -702,6 +761,16 @@
     let onVoicesChanged: (() => void) | null = null;
 
     onMount(() => {
+        if (typeof queueMicrotask === "function") {
+            queueMicrotask(() => {
+                if (searchInput && document.contains(searchInput)) {
+                    const active = document.activeElement;
+                    if (!active || active === document.body || !searchInput.closest(".lv-settings")?.contains(active)) {
+                        try { searchInput.focus({ preventScroll: true }); } catch {}
+                    }
+                }
+            });
+        }
         try {
             if ("speechSynthesis" in window) {
                 voiceSynthesis = window.speechSynthesis;
@@ -726,6 +795,11 @@
         }
         voiceSynthesis = null;
         onVoicesChanged = null;
+        aiTestSeq += 1;
+        aiTestCtrl?.abort();
+        aiTestCtrl = null;
+        aiTestTracker?.dispose();
+        aiTestTracker = null;
     });
     let ankiLabel = $state("");
 
@@ -734,7 +808,8 @@
         ankiTestBusy = true;
         ankiLabel = "";
         try {
-            ankiLabel = await ctx.testAnkiClient(draft.ankiClientUrl, draft.ankiClientKey);
+            const effectiveKey = draft.ankiClientKey || (clearSecrets.ankiClientKey ? "" : (ctx.resolveSecret?.("ankiClientKey") ?? ""));
+            ankiLabel = await ctx.testAnkiClient(draft.ankiClientUrl, effectiveKey);
         } catch (e: any) {
             ankiLabel = `${t.settings.ankiTestFail ?? "Connection failed"}: ${e?.message ?? String(e)}`;
         } finally {
@@ -744,28 +819,81 @@
 
     let aiTestingBusy = $state(false);
     let aiTestResult = $state<{ ok: boolean; msg: string } | null>(null);
+    let aiTestSeq = 0;
+    let aiTestCtrl: AbortController | null = null;
+    let aiTestTracker: LvAiProgressTracker | null = null;
+    let aiTestProgress = $state<{ elapsedSec: number; stageText: string; stageIcon: string }>({
+        elapsedSec: 0,
+        stageText: "🔍 正在建立连接并探测模型可用性…",
+        stageIcon: "🔍",
+    });
+
+    function cancelCustomAiTest() {
+        aiTestSeq += 1;
+        aiTestCtrl?.abort();
+        aiTestCtrl = null;
+        aiTestTracker?.dispose();
+        aiTestTracker = null;
+        aiTestingBusy = false;
+    }
 
     async function testCustomAi() {
         if (aiTestingBusy || !draft.aiEndpoint) return;
+        const seq = ++aiTestSeq;
+        const ctrl = new AbortController();
+        aiTestCtrl = ctrl;
+        aiTestTracker?.dispose();
+        aiTestTracker = createLvAiProgressTracker({
+            stages: [
+                { afterSec: 0, text: "🔍 正在建立连接并校验自定义端点…", icon: "🔍" },
+                { afterSec: 3, text: "📡 正在等待模型响应（ping 探测中）…", icon: "📡" },
+                { afterSec: 8, text: "⏳ 响应较慢，仍在探测连通性（可随时取消）…", icon: "⏳" },
+            ],
+            onUpdate: (st) => {
+                if (seq === aiTestSeq) {
+                    aiTestProgress = {
+                        elapsedSec: st.elapsedSec,
+                        stageText: st.stageText,
+                        stageIcon: st.stageIcon,
+                    };
+                }
+            },
+        });
+        const initProgress = aiTestTracker.getState();
+        aiTestProgress = {
+            elapsedSec: initProgress.elapsedSec,
+            stageText: initProgress.stageText,
+            stageIcon: initProgress.stageIcon,
+        };
         aiTestingBusy = true;
         aiTestResult = null;
         try {
+            const effectiveKey = draft.aiKey || (clearSecrets.aiKey ? "" : (ctx.resolveSecret?.("aiKey") ?? ""));
             await aiChat(
                 {
                     mode: "custom",
                     endpoint: draft.aiEndpoint,
-                    apiKey: draft.aiKey,
+                    apiKey: effectiveKey,
                     model: draft.aiModel || "gpt-4o-mini",
                 },
                 "You are an AI connection tester.",
                 "ping",
-                { timeoutMs: 10000 }
+                { timeoutMs: 10000, signal: ctrl.signal }
             );
+            if (seq !== aiTestSeq) return;
             aiTestResult = { ok: true, msg: "连接成功：服务商响应正常" };
         } catch (e: any) {
+            if (seq !== aiTestSeq || ctrl.signal.aborted || isAICanceled(e)) {
+                return;
+            }
             aiTestResult = { ok: false, msg: `连接失败: ${e?.message ?? String(e)}` };
         } finally {
-            aiTestingBusy = false;
+            if (seq === aiTestSeq) {
+                aiTestCtrl = null;
+                aiTestTracker?.dispose();
+                aiTestTracker = null;
+                aiTestingBusy = false;
+            }
         }
     }
 
@@ -1091,9 +1219,14 @@
         }
     }
 
+    const isDirty = $derived(
+        JSON.stringify(draft) !== JSON.stringify(initialDraftSnapshot)
+        || Boolean(clearSecrets.aiKey || clearSecrets.aiFallbackKey || clearSecrets.ankiClientKey)
+    );
+
     function requestClose() {
         if (saveBusy) return;
-        if (JSON.stringify(draft) === JSON.stringify(ctx.settings)) {
+        if (!isDirty) {
             ctx.close();
             return;
         }
@@ -1114,7 +1247,10 @@
         saveBusy = true;
         saveError = "";
         try {
-            await ctx.save(draft);
+            const payload = (clearSecrets.aiKey || clearSecrets.aiFallbackKey || clearSecrets.ankiClientKey)
+                ? { ...draft, __clearSecrets: { ...clearSecrets } }
+                : draft;
+            await ctx.save(payload as LvCardsSettings);
             ctx.close();
         } catch (e: any) {
             saveError = e?.message || t.settings.saveFail || t.storageWriteFail || "Save failed, try again";
@@ -1122,8 +1258,6 @@
             saveBusy = false;
         }
     }
-
-    const isDirty = $derived(JSON.stringify(draft) !== JSON.stringify(ctx.settings));
 
     function onWindowKeydown(e: KeyboardEvent) {
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !saveBusy) {
@@ -1135,68 +1269,77 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<div class="lv-settings b3-typography" use:trapFocus={{ onEscape: requestClose }}>
+<div
+    class="lv-settings lv-cards-settings b3-typography"
+    class:lv-settings--input-focused={inputFocused}
+    onfocusin={syncSettingsInputFocus}
+    onfocusout={syncSettingsInputFocus}
+    use:trapFocus={{ onEscape: requestClose }}
+>
 
-    <!-- T09 三件套（docs/40）：搜索定位 + 本地样例预览（虚构内容，不触真实卡片） -->
-    <div class="lv-searchbar">
-        <span class="lv-searchbar-icon"><LvIcon name="search" size={14} /></span>
-        <input
-            bind:this={searchInput}
-            class="b3-text-field fn__flex-1"
-            placeholder={t.settings.searchPlaceholder ?? "搜索配置项 (如: 快捷键 / 音效 / 目标 / AI / 导出)..."}
-            aria-label={t.settings.searchPlaceholder ?? "搜索配置项"}
-            spellcheck="false"
-            autocomplete="off"
-            bind:value={searchQuery}
-            onkeydown={(e) => { if (e.key === "Escape" && searchQuery) { e.stopPropagation(); searchQuery = ""; } }}
-        />
-        {#if searchQuery.trim()}
-            <button
-                type="button"
-                class="b3-button b3-button--small b3-button--text lv-searchbar-clear"
-                title="清空搜索"
-                onclick={() => { searchQuery = ""; searchInput?.focus(); }}
-            >
-                <LvIcon name="close" size={13} />
-            </button>
+    <!-- T09 三件套（docs/40）：搜索定位 + 分类胶囊页签独立分行，零重叠裁切 -->
+    <div class="lv-settings-head">
+        <div class="lv-searchbar">
+            <span class="lv-searchbar-icon"><LvIcon name="search" size={14} /></span>
+            <input
+                bind:this={searchInput}
+                class="b3-text-field fn__flex-1"
+                placeholder={t.settings.searchPlaceholder ?? "搜索配置项 (如: 快捷键 / 音效 / 目标 / AI / 导出)..."}
+                aria-label={t.settings.searchPlaceholder ?? "搜索配置项"}
+                spellcheck="false"
+                autocomplete="off"
+                bind:value={searchQuery}
+                onkeydown={(e) => { if (e.key === "Escape" && searchQuery) { e.stopPropagation(); searchQuery = ""; } }}
+            />
+            {#if searchQuery.trim()}
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--text lv-searchbar-clear"
+                    title="清空搜索"
+                    onclick={() => { searchQuery = ""; searchInput?.focus(); }}
+                >
+                    <LvIcon name="close" size={13} />
+                </button>
+            {/if}
+        </div>
+        {#if searchQuery.trim() && matchedSectionCount > 0}
+            <div class="lv-search-summary">
+                <span class="ft__smaller ft__on-surface">找到 {matchedSectionCount} 个匹配的设置分组 (按 Esc 清空)</span>
+            </div>
+        {/if}
+        {#if !searchQuery.trim() && sectionScope !== "imports"}
+            <nav class="lv-settings-nav-rail" aria-label="设置快速导航">
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-persona")}>
+                    <LvIcon name="target" size={13} /> <span>{t.settings.personaSection ?? "学习画像"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-modules")}>
+                    <LvIcon name="cards" size={13} /> <span>{t.settings.modules ?? "功能模块"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyRhythm")}>
+                    <LvIcon name="timer" size={13} /> <span>{t.settings.studyRhythm ?? "学习节奏"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyAnswer")}>
+                    <LvIcon name="zap" size={13} /> <span>{t.settings.studyAnswer ?? "作答偏好"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyVoice")}>
+                    <LvIcon name="bell" size={13} /> <span>{t.settings.studyVoice ?? "语音朗读"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-appearance")}>
+                    <LvIcon name="image" size={13} /> <span>{t.settings.appearance ?? "外观卡面"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-aiSection")}>
+                    <LvIcon name="cards" size={13} /> <span>{t.settings.aiSection ?? "AI服务商"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-ankiSection")}>
+                    <LvIcon name="book" size={13} /> <span>{t.settings.ankiSection ?? "导入导出"}</span>
+                </button>
+                <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-dataSection")}>
+                    <LvIcon name="moon" size={13} /> <span>{t.settings.dataSection ?? "数据备份"}</span>
+                </button>
+            </nav>
         {/if}
     </div>
-    {#if searchQuery.trim() && matchedSectionCount > 0}
-        <div class="lv-search-summary">
-            <span class="ft__smaller ft__on-surface">找到 {matchedSectionCount} 个匹配的设置分组 (按 Esc 清空)</span>
-        </div>
-    {/if}
-    {#if !searchQuery.trim() && sectionScope !== "imports"}
-        <nav class="lv-settings-nav-rail" aria-label="设置快速导航">
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-persona")}>
-                <LvIcon name="target" size={13} /> <span>{t.settings.personaSection ?? "学习画像"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-modules")}>
-                <LvIcon name="cards" size={13} /> <span>{t.settings.modules ?? "功能模块"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyRhythm")}>
-                <LvIcon name="timer" size={13} /> <span>{t.settings.studyRhythm ?? "学习节奏"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyAnswer")}>
-                <LvIcon name="zap" size={13} /> <span>{t.settings.studyAnswer ?? "作答偏好"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-studyVoice")}>
-                <LvIcon name="bell" size={13} /> <span>{t.settings.studyVoice ?? "语音朗读"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-appearance")}>
-                <LvIcon name="image" size={13} /> <span>{t.settings.appearance ?? "外观卡面"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-aiSection")}>
-                <LvIcon name="cards" size={13} /> <span>{t.settings.aiSection ?? "AI服务商"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-ankiSection")}>
-                <LvIcon name="book" size={13} /> <span>{t.settings.ankiSection ?? "导入导出"}</span>
-            </button>
-            <button type="button" class="lv-settings-nav-chip" onclick={() => scrollToSection("sec-dataSection")}>
-                <LvIcon name="moon" size={13} /> <span>{t.settings.dataSection ?? "数据备份"}</span>
-            </button>
-        </nav>
-    {/if}
+    <div class="lv-settings-body">
     {#if sectionScope === "imports"}
         <div class="lv-notice lv-import-scope">
             <strong>{t.settings.importsTitle}</strong>
@@ -1225,7 +1368,7 @@
                 <div class="ft__smaller ft__on-surface">{t.personaCustom_desc}</div>
             </div>
         </div>
-        <div class="fn__flex" style="gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
+        <div class="fn__flex fn__flex-wrap" style="gap: var(--lv-sp-2); margin-top: var(--lv-sp-2)">
             <button class="b3-button b3-button--outline b3-button--small lv-btn-tool" onclick={exportPersona}>
                 <LvIcon name="book" size={12} />
                 <span>{t.settings.personaExport}</span>
@@ -1256,7 +1399,6 @@
         {#each MODULE_DEFS as m (m.id)}
             <LvRow label={t.modules[m.nameKey]} hint={m.locked ? t.settings.lockedModule : t.modules[m.descKey]}>
                 {#snippet children()}
-                    <LvChip tone={m.phase === "v0.1" ? "primary" : m.phase === "v0.9" ? "warn" : "default"}>{m.phase}</LvChip>
                     <LvSwitch
                         checked={m.locked ? true : Boolean(draft.modules[m.id])}
                         disabled={m.locked}
@@ -1288,9 +1430,6 @@
         </LvRow>
         <LvRow label={t.settings.dailyReviewTarget} hint="推荐默认 20 张，设为 0 则不设每日目标">
             <input class="b3-text-field fn__size-60" type="number" inputmode="numeric" min="0" aria-label={t.settings.dailyReviewTarget} bind:value={draft.dailyReviewTarget} />
-        </LvRow>
-        <LvRow label={t.settings.topbarDirectReview}>
-            <LvSwitch bind:checked={draft.topbarDirectReview} />
         </LvRow>
         <LvRow label={t.settings.batchLimit} hint={t.settings.batchLimitHint}>
             <input class="b3-text-field fn__size-60" type="number" inputmode="numeric" min="0" aria-label={t.settings.batchLimit} bind:value={draft.batchLimit} />
@@ -1552,6 +1691,7 @@
                     {#snippet children()}
                         <select
                             class="b3-select b3-button--small"
+                            style="padding-right: 26px; max-width: 100%;"
                             aria-label={t.settings.aiEndpointPreset ?? "服务商快速预设"}
                             onchange={(e: Event) => {
                                 const val = (e.target as HTMLSelectElement).value;
@@ -1559,14 +1699,14 @@
                                 if (p) {
                                     draft.aiEndpoint = p.apiBase;
                                     draft.aiModel = p.defaultModel;
-                                    if (p.isLocal && !draft.aiKey) {
+                                    if (p.isLocal && !draft.aiKey && !draft.aiKeyConfigured) {
                                         draft.aiKey = "ollama";
                                     }
                                 }
                                 (e.target as HTMLSelectElement).value = "";
                             }}
                         >
-                            <option value="">{t.settings.aiEndpointPresetSelect ?? "选择预设 (OpenAI / DeepSeek / Ollama 本地 / LM Studio...)"}</option>
+                            <option value="">{t.settings.aiEndpointPresetSelect ?? "选择预设 (OpenAI / DeepSeek / Ollama...)"}</option>
                             {#each ENDPOINT_PRESETS as p (p.id)}
                                 <option value={p.id}>{p.label}</option>
                             {/each}
@@ -1583,6 +1723,7 @@
                         <!-- BU-18 模型能力注册表：快选只列 active 在册模型（失效模型不出现） -->
                         <select
                             class="b3-select b3-button--small"
+                            style="padding-right: 26px;"
                             aria-label={t.settings.aiModelPreset}
                             onchange={(e: Event) => {
                                 const id = (e.target as HTMLSelectElement).value;
@@ -1599,24 +1740,56 @@
                 {/snippet}
             </LvRow>
             <LvRow label={t.settings.aiKey} hint={t.settings.aiKeyHint}>
-                <LvInput bind:value={draft.aiKey} type="password" width="200px" />
+                {#snippet children()}
+                    <div class="fn__flex" style="gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap">
+                        <LvInput
+                            bind:value={draft.aiKey}
+                            type="password"
+                            width="200px"
+                            placeholder={draft.aiKeyConfigured && !clearSecrets.aiKey ? "已绑定安全密钥（留空不变）" : "sk-..."}
+                        />
+                        {#if draft.aiKeyConfigured && !clearSecrets.aiKey && !draft.aiKey}
+                            <LvChip tone="primary">已绑定安全槽位</LvChip>
+                            <button
+                                type="button"
+                                class="b3-button b3-button--small b3-button--outline"
+                                onclick={() => { clearSecrets = { ...clearSecrets, aiKey: true }; draft.aiKeyConfigured = false; }}
+                            >清除密钥</button>
+                        {/if}
+                    </div>
+                {/snippet}
             </LvRow>
             <LvRow label="连通性测试" hint="向当前配置的自定义服务商端点发送测试消息以验证可用性">
                 {#snippet children()}
-                    <div class="fn__flex" style="gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap">
-                        <button
-                            type="button"
-                            class="b3-button b3-button--outline lv-btn-tool"
-                            disabled={aiTestingBusy || !draft.aiEndpoint}
-                            onclick={testCustomAi}
-                        >
-                            <LvIcon name="zap" size={13} />
-                            <span>{aiTestingBusy ? "测试中…" : "测试 AI 连接"}</span>
-                        </button>
-                        {#if aiTestResult}
-                            <span class="ft__smaller" style={aiTestResult.ok ? "color: var(--lv-color-success)" : "color: var(--lv-color-danger)"}>
-                                {aiTestResult.msg}
-                            </span>
+                    <div style="display: flex; flex-direction: column; gap: var(--lv-sp-2); width: 100%;">
+                        <div class="fn__flex" style="gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap">
+                            <button
+                                type="button"
+                                class="b3-button b3-button--outline lv-btn-tool"
+                                disabled={aiTestingBusy || !draft.aiEndpoint}
+                                onclick={testCustomAi}
+                            >
+                                <LvIcon name="zap" size={13} />
+                                <span>{aiTestingBusy ? "测试中…" : "测试 AI 连接"}</span>
+                            </button>
+                            {#if aiTestResult}
+                                <span class="ft__smaller" style={aiTestResult.ok ? "color: var(--lv-color-success)" : "color: var(--lv-color-danger)"}>
+                                    {aiTestResult.msg}
+                                </span>
+                            {/if}
+                        </div>
+                        {#if aiTestingBusy}
+                            <div class="lv-ai-thinking lv-ai-thinking--compact" role="status" aria-live="polite" style="background: color-mix(in srgb, var(--b3-theme-surface) 95%, transparent); border: 1px solid var(--lv-border); border-radius: var(--lv-r-card, 12px);">
+                                <div class="lv-ai-thinking__glow">
+                                    <span class="lv-ai-thinking__icon">{aiTestProgress.stageIcon}</span>
+                                </div>
+                                <div class="lv-ai-thinking__stage">{aiTestProgress.stageText}</div>
+                                <div class="lv-ai-thinking__timer">已思考 <b>{aiTestProgress.elapsedSec}</b> 秒</div>
+                                <div class="lv-ai-thinking__progress"><div class="lv-ai-thinking__bar"></div></div>
+                                <button type="button" class="b3-button b3-button--cancel lv-ai-thinking__cancel" onclick={cancelCustomAiTest}>
+                                    取消测试
+                                </button>
+                            </div>
                         {/if}
                     </div>
                 {/snippet}
@@ -1629,7 +1802,24 @@
                     <LvInput bind:value={draft.aiFallbackModel} placeholder="gpt-4o-mini" width="200px" />
                 </LvRow>
                 <LvRow label={t.settings.aiFallbackKey}>
-                    <LvInput bind:value={draft.aiFallbackKey} type="password" width="200px" />
+                    {#snippet children()}
+                        <div class="fn__flex" style="gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap">
+                            <LvInput
+                                bind:value={draft.aiFallbackKey}
+                                type="password"
+                                width="200px"
+                                placeholder={draft.aiFallbackKeyConfigured && !clearSecrets.aiFallbackKey ? "已绑定安全密钥（留空不变）" : "sk-..."}
+                            />
+                            {#if draft.aiFallbackKeyConfigured && !clearSecrets.aiFallbackKey && !draft.aiFallbackKey}
+                                <LvChip tone="primary">已绑定安全槽位</LvChip>
+                                <button
+                                    type="button"
+                                    class="b3-button b3-button--small b3-button--outline"
+                                    onclick={() => { clearSecrets = { ...clearSecrets, aiFallbackKey: true }; draft.aiFallbackKeyConfigured = false; }}
+                                >清除密钥</button>
+                            {/if}
+                        </div>
+                    {/snippet}
                 </LvRow>
             {/if}
             <LvRow label={t.settings.aiPromptTemplate} hint={t.settings.aiPromptTemplateHint}>
@@ -1663,16 +1853,16 @@
                     {#snippet children()}
                         <div class="fn__flex fn__flex-wrap" style="gap: calc(var(--lv-space-unit) * 3); align-items: center">
                             {#if ks.revoked}
-                                <button class="b3-button b3-button--small" onclick={() => applyKill("grant")}>{t.settings.aiKillGrant}</button>
+                                <button class="b3-button b3-button--small" disabled={ksBusy} onclick={() => applyKill("grant")}>{t.settings.aiKillGrant}</button>
                                 <LvChip tone="error">{t.settings.aiKillRevokedChip}</LvChip>
                             {:else}
-                                <button class="b3-button b3-button--small" onclick={() => applyKill("revoke")}>{t.settings.aiKillRevoke}</button>
+                                <button class="b3-button b3-button--small" disabled={ksBusy} onclick={() => applyKill("revoke")}>{t.settings.aiKillRevoke}</button>
                             {/if}
                             {#if providerDisabled}
-                                <button class="b3-button b3-button--small" onclick={() => applyKill("resumeAll")}>{t.settings.aiKillResume}</button>
+                                <button class="b3-button b3-button--small" disabled={ksBusy} onclick={() => applyKill("resumeAll")}>{t.settings.aiKillResume}</button>
                                 <LvChip tone="warn">{t.settings.aiKillStoppedChip}</LvChip>
                             {:else}
-                                <button class="b3-button b3-button--small" onclick={() => applyKill("stopCurrent")}>{t.settings.aiKillStop}</button>
+                                <button class="b3-button b3-button--small" disabled={ksBusy} onclick={() => applyKill("stopCurrent")}>{t.settings.aiKillStop}</button>
                             {/if}
                         </div>
                         <div class="ft__smaller ft__on-surface" style="margin-top: calc(var(--lv-space-unit) * 2)">
@@ -1707,7 +1897,25 @@
             <input class="b3-text-field fn__size-200" aria-label={t.settings.ankiUrl} bind:value={draft.ankiClientUrl} />
         </LvRow>
         <LvRow label={t.settings.ankiKey}>
-            <input class="b3-text-field fn__size-200" type="password" aria-label={t.settings.ankiKey} bind:value={draft.ankiClientKey} />
+            {#snippet children()}
+                <div class="fn__flex" style="gap: var(--lv-sp-2); align-items: center; flex-wrap: wrap">
+                    <input
+                        class="b3-text-field fn__size-200"
+                        type="password"
+                        aria-label={t.settings.ankiKey}
+                        placeholder={draft.ankiClientKeyConfigured && !clearSecrets.ankiClientKey ? "已绑定安全密钥（留空不变）" : ""}
+                        bind:value={draft.ankiClientKey}
+                    />
+                    {#if draft.ankiClientKeyConfigured && !clearSecrets.ankiClientKey && !draft.ankiClientKey}
+                        <LvChip tone="primary">已绑定安全槽位</LvChip>
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline"
+                            onclick={() => { clearSecrets = { ...clearSecrets, ankiClientKey: true }; draft.ankiClientKeyConfigured = false; }}
+                        >清除密钥</button>
+                    {/if}
+                </div>
+            {/snippet}
         </LvRow>
         <LvRow label={t.settings.ankiTest}>
             {#snippet children()}
@@ -1877,9 +2085,9 @@
                 <div class="lv-settings-action-panel" style="width: 100%; margin-top: 6px;">
                     <!-- 块助手资产库入口与场景预设一键切换栏 -->
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
-                        <button type="button" class="b3-button" style="padding: 3px 10px; font-size: 11.5px; background: #6366f1; color: #ffffff; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" onclick={() => { const hub = (window as any).LvBlockAssistant || (window as any).__LV_BLOCK_ASSISTANT_HUB__; if (hub?.openStoreDialog) hub.openStoreDialog(); }}>
+                        <button type="button" class="b3-button" style="padding: 3px 10px; font-size: 11.5px; background: var(--lv-color-brand, #6366f1); color: var(--lv-color-on-brand, #ffffff); display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" onclick={() => { const hub = (window as any).LvBlockAssistant || (window as any).__LV_BLOCK_ASSISTANT_HUB__; if (hub?.openStoreDialog) hub.openStoreDialog(); }}>
                             <span>📦</span>
-                            <span>块助手资产库 (Action Store)</span>
+                            <span>块助手功能库</span>
                         </button>
                         <span style="font-size: 11.5px; opacity: 0.75; margin-left: 6px;">场景预设：</span>
                         <button type="button" class="b3-button b3-button--cancel" style="padding: 2px 8px; font-size: 11px;" onclick={() => applyActionPreset("all")}>
@@ -1924,8 +2132,8 @@
                                         <span>{act.glyph}</span>
                                         <span style="font-weight: 600;">{t[act.labelKey] || act.fallbackLabel}</span>
                                         <div style="display: flex; align-items: center; gap: 2px; margin-left: 4px;">
-                                            <button type="button" style="border: none; background: transparent; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === 0 ? '0.25' : '0.85'};" disabled={pIndex === 0} onclick={() => moveActionPinned(pinnedId, -1)} title="前移一位">←</button>
-                                            <button type="button" style="border: none; background: transparent; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1 ? '0.25' : '0.85'};" disabled={pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1} onclick={() => moveActionPinned(pinnedId, 1)} title="后移一位">→</button>
+                                            <button type="button" style="border: none; background: transparent; color: var(--lv-color-text-muted); cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === 0 ? '0.25' : '0.85'};" disabled={pIndex === 0} onclick={() => moveActionPinned(pinnedId, -1)} title="前移一位">←</button>
+                                            <button type="button" style="border: none; background: transparent; color: var(--lv-color-text-muted); cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1 ? '0.25' : '0.85'};" disabled={pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1} onclick={() => moveActionPinned(pinnedId, 1)} title="后移一位">→</button>
                                             <button type="button" style="border: none; background: transparent; cursor: pointer; padding: 0 2px; font-size: 11px; color: #ef4444; opacity: 0.8;" onclick={() => removeActionPinned(pinnedId)} title="取消优先常驻">✕</button>
                                         </div>
                                     </div>
@@ -2020,14 +2228,12 @@
                 </div>
             {/snippet}
         </LvRow>
-        <!-- DL2 阶段0：生态统一外观与动效偏好分组 -->
-        <div class="lv-settings-prefs-slot" use:mountLvUiPrefsSectionAction></div>
     </LvSection>
     {/if}
 
     {#if sectionMatches("dataSection")}
     <LvSection id="sec-dataSection" title={t.settings.dataSection}>
-        <LvRow label="Flashcard V2" hint={t.dashboard.v2Active}>
+        <LvRow label={t.settings.v2StatusLabel ?? "官方统计接口"} hint={t.dashboard.v2Active}>
             {#snippet children()}
                 <LvChip tone={v2Label.startsWith("Active") ? "primary" : v2Label === "N/A (<3.9.0)" ? "default" : "warn"}>{v2Label}</LvChip>
                 <button class="b3-button b3-button--outline lv-btn-tool" aria-label={t.settings.redetectV2} disabled={v2Busy} aria-busy={v2Busy} onclick={redetectV2}>
@@ -2105,7 +2311,7 @@
         {/if}
         <div class="lv-storage">
             <div class="fn__flex lv-st-head ft__smaller ft__on-surface">
-                <span>file</span><div class="fn__flex-1"></div><span>{t.settings.storageLastWrite}</span>
+                <span>{t.settings.storageFileCol ?? "数据文件"}</span><div class="fn__flex-1"></div><span>{t.settings.storageLastWrite}</span>
             </div>
             {#each ctx.storageStats() as row (row.file)}
                 <div class="fn__flex lv-st-row">
@@ -2164,8 +2370,10 @@
     </LvSection>
     {/if}
 
+    </div>
+
     {#if saveError}
-        <div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive" style="margin-bottom: var(--lv-sp-2)">{saveError}</div>
+        <div class="lv-notice lv-notice--warn" role="alert" aria-live="assertive" style="margin: var(--lv-sp-2) var(--lv-sp-4) 0">{saveError}</div>
     {/if}
     <div class="b3-dialog__action lv-settings-sticky-footer">
         {#if isDirty}
@@ -2193,27 +2401,52 @@
 </div>
 
 <style lang="scss">
-    .lv-settings {
-        padding: var(--lv-sp-4);
+    .lv-settings.lv-cards-settings {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
         flex: 1 1 auto;
         min-width: 0;
         min-height: 0;
         width: 100%;
-        height: auto;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        scroll-padding-top: 52px;
+        height: 100%;
+        overflow: hidden;
         box-sizing: border-box;
         max-width: 720px;
         margin: 0 auto;
 
+        .lv-settings-head {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--lv-sp-2);
+            padding: var(--lv-sp-3) var(--lv-sp-4) var(--lv-sp-2);
+            background: var(--lv-color-surface);
+            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+            z-index: var(--lv-z-elevated, 2);
+        }
+
+        .lv-settings-body {
+            flex: 1 1 0;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            scroll-padding-top: var(--lv-sp-3);
+            padding: var(--lv-sp-3) var(--lv-sp-4);
+            box-sizing: border-box;
+        }
+
         .lv-settings-sticky-footer {
-            position: sticky;
-            bottom: 0;
+            flex: 0 0 auto;
+            position: static;
+            width: 100%;
+            box-sizing: border-box;
             z-index: var(--lv-z-sticky, 100);
             background: var(--lv-color-surface);
-            box-shadow: var(--lv-shadow-2);
-            margin: var(--lv-sp-4) calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1);
+            box-shadow: 0 -2px 10px color-mix(in srgb, black 6%, transparent);
+            margin: 0;
             padding: var(--lv-sp-3) var(--lv-sp-4);
             /* iOS 底部安全区：与键盘弹起时的 static 分支保持同等避让 */
             padding-bottom: max(var(--lv-sp-3), env(safe-area-inset-bottom, 0px));
@@ -2246,28 +2479,19 @@
 
         .b3-dialog__action { justify-content: flex-end; }
         .lv-settings-nav-rail {
-            position: sticky;
-            top: 0;
-            z-index: var(--lv-z-elevated, 2);
-            background: var(--lv-color-surface);
+            position: static;
+            background: transparent;
             display: flex;
             gap: var(--lv-sp-2);
-            /* 单行横向滚动：wrap 换行的 chips 会溢出 33px 高的 sticky 条、裸压在下方表格上（2026-11-17 走查） */
             flex-wrap: nowrap;
             overflow-x: auto;
             overflow-y: hidden;
             scrollbar-width: none;
-            margin: calc(var(--lv-sp-4) * -1) calc(var(--lv-sp-4) * -1) var(--lv-sp-3);
-            padding: var(--lv-sp-2) var(--lv-sp-4);
-            border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
+            margin: 0;
+            padding: 2px 0;
+            border-bottom: none;
             &::-webkit-scrollbar {
                 display: none;
-            }
-
-            @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
-                background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
             }
         }
         .lv-settings-nav-chip {
@@ -2321,7 +2545,8 @@
             position: relative;
             display: flex;
             align-items: center;
-            margin-bottom: var(--lv-sp-2);
+            width: 100%;
+            margin: 0;
             .lv-searchbar-icon {
                 position: absolute;
                 left: 14px;
@@ -2331,8 +2556,12 @@
                 align-items: center;
             }
             .b3-text-field {
+                width: 100%;
+                min-height: 36px;
+                height: auto;
+                line-height: 1.4;
                 border-radius: var(--lv-r-pill);
-                padding: calc(var(--lv-space-unit) * 4) calc(var(--lv-space-unit) * 8) calc(var(--lv-space-unit) * 4) 36px;
+                padding: calc(var(--lv-space-unit) * 3) calc(var(--lv-space-unit) * 10) calc(var(--lv-space-unit) * 3) 36px;
                 box-shadow: var(--lv-shadow-1);
                 transition: border-color var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
                 &:focus {
@@ -2358,7 +2587,7 @@
             }
         }
         .lv-search-summary {
-            margin: 0 0 var(--lv-sp-3) 8px;
+            margin: 0 0 0 8px;
         }
         .lv-import-scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lv-sp-2); }
         .lv-import-scope > span { flex: 1 1 220px; }
@@ -2421,17 +2650,23 @@
         .lv-persona-name { font-weight: var(--lv-fw-semibold); margin-bottom: 2px; text-wrap: balance; }
 
         @media (max-width: 680px) {
-            padding: var(--lv-sp-3);
+            padding: 0;
             max-width: 100%;
 
+            .lv-settings-head {
+                padding: var(--lv-sp-2) calc(var(--lv-sp-3) + env(safe-area-inset-right, 0px)) var(--lv-sp-2) calc(var(--lv-sp-3) + env(safe-area-inset-left, 0px));
+            }
+            .lv-settings-body {
+                padding: var(--lv-sp-3);
+            }
             .lv-settings-nav-rail {
                 flex-wrap: nowrap;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 touch-action: pan-x;
                 scrollbar-width: none;
-                margin: calc(var(--lv-sp-3) * -1) calc(var(--lv-sp-3) * -1) var(--lv-sp-3);
-                padding: var(--lv-sp-2) calc(var(--lv-sp-3) + env(safe-area-inset-right, 0px)) var(--lv-sp-2) calc(var(--lv-sp-3) + env(safe-area-inset-left, 0px));
+                margin: 0;
+                padding: 2px 0;
                 &::-webkit-scrollbar {
                     display: none;
                 }
@@ -2446,7 +2681,7 @@
                 }
             }
             .lv-settings-sticky-footer {
-                margin: var(--lv-sp-3) calc(var(--lv-sp-3) * -1) calc(var(--lv-sp-3) * -1);
+                margin: 0;
                 padding: var(--lv-sp-2) var(--lv-sp-3) max(var(--lv-sp-2), env(safe-area-inset-bottom, 0px));
                 flex-wrap: wrap;
             }

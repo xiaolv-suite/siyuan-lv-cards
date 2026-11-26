@@ -17,8 +17,14 @@ export interface ClozeStepResult {
  */
 export function revealSingleCloze(mark: HTMLElement): boolean {
     if (mark.classList.contains("lv-step-revealed")) return false;
+    const realHtml = mark.getAttribute("data-real-html");
     const answer = mark.getAttribute("data-real-answer");
-    if (answer) {
+    if (realHtml) {
+        mark.innerHTML = realHtml;
+        mark.removeAttribute("aria-hidden");
+        mark.classList.add("lv-step-revealed");
+        mark.setAttribute("title", "已揭晓");
+    } else if (answer) {
         mark.textContent = answer;
         mark.removeAttribute("aria-hidden");
         mark.classList.add("lv-step-revealed");

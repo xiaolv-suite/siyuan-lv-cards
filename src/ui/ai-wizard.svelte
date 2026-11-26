@@ -15,6 +15,7 @@
     import { getMotionDuration } from "./kit/motion";
     import LvIcon from "./kit/LvIcon.svelte";
     import { extractDroppedBlockText } from "@/core/drag-drop";
+    import { createLvAiProgressTracker, type LvAiProgressTracker } from "@/libs/lv-notice-kit";
 
     /** BU-36 分层预算报告（宿主 assembleGeneratePrompt 纯函数产出） */
     interface BudgetPreview {
@@ -213,12 +214,12 @@ TCP 建立连接需要进行三次握手：
 三次握手的主要目的是确认双方的发送与接收能力均正常，并同步双方的初始序列号（ISN）。`,
         },
         {
-            label: "记忆科学 (FSRS模型)",
-            text: `FSRS（Free Spaced Repetition Scheduler）是现代先进的间隔重复调度算法。
-其核心基于记忆稳定性（Stability, S）与可提取性（Retrievability, R）模型：
-1. 稳定性 S：指在未复习状态下，记忆保留率从 100% 衰减至 90% 所经过的时间（天数）。
-2. 可提取性 R：指某一时间点能成功回忆起知识点的概率，随时间推移按负幂函数衰减。
-3. 评分级别：Again (1, 遗忘), Hard (2, 困难), Good (3, 良好), Easy (4, 简单)。每次评分后根据当前难度与稳定性动态计算下一轮最佳复习间隔。`,
+            label: "记忆科学 (间隔记忆)",
+            text: `现代间隔重复算法旨在科学预测记忆衰减并安排最优复习时机。
+其核心基于记忆稳定性与可提取性模型：
+1. 记忆稳定性：指在未复习状态下，记忆保留率从 100% 衰减至 90% 所经过的时间（天数）。
+2. 可提取性：指某一时间点能成功回忆起知识点的概率，随时间推移按负幂函数衰减。
+3. 评分级别：遗忘 (1), 困难 (2), 良好 (3), 简单 (4)。每次评分后根据当前难度与稳定性动态计算下一轮最佳复习间隔。`,
         },
     ];
 
@@ -238,9 +239,10 @@ TCP 建立连接需要进行三次握手：
 
     let candidateFilter = $state("");
     const visibleCandidates = $derived.by(() => {
-        if (!candidateFilter.trim()) return candidates;
         const q = candidateFilter.trim().toLowerCase();
-        return candidates.filter(c => c.q.toLowerCase().includes(q) || c.a.toLowerCase().includes(q));
+        return candidates
+            .map((c, candIndex) => ({ c, candIndex }))
+            .filter(({ c }) => !q || c.q.toLowerCase().includes(q) || c.a.toLowerCase().includes(q));
     });
 
     function toggleAllKeep() {
@@ -664,11 +666,23 @@ TCP 建立连接需要进行三次握手：
     // 生成请求守卫（AQ-14）：换源/重生/关闭向导即取消旧请求；晚到响应只接受最后一次
     let genSeq = 0;
     let genCtrl: AbortController | null = null;
+    let regenTracker: LvAiProgressTracker | null = null;
+    let regenProgress = $state<{ elapsedSec: number; stageText: string; stageIcon: string }>({
+        elapsedSec: 0,
+        stageText: "📖 正在快速阅读与理解笔记素材上下文…",
+        stageIcon: "📖",
+    });
 
     function cancelGeneration() {
         genSeq += 1; // 使在途响应失效
         genCtrl?.abort();
         genCtrl = null;
+        if (aiProgressTimer) {
+            clearInterval(aiProgressTimer);
+            aiProgressTimer = null;
+        }
+        regenTracker?.dispose();
+        regenTracker = null;
         busy = false;
         regenBusy = null;
     }
@@ -681,6 +695,8 @@ TCP 建立连接需要进行三次握手：
             clearInterval(aiProgressTimer);
             aiProgressTimer = null;
         }
+        regenTracker?.dispose();
+        regenTracker = null;
         genCtrl?.abort();
         genCtrl = null;
     });
@@ -774,6 +790,25 @@ TCP 建立连接需要进行三次握手：
         const seq = ++genSeq;
         genCtrl = new AbortController();
         const myCtrl = genCtrl;
+        regenTracker?.dispose();
+        regenTracker = createLvAiProgressTracker({
+            scenario: "question-gen",
+            onUpdate: (st) => {
+                if (!disposed && seq === genSeq) {
+                    regenProgress = {
+                        elapsedSec: st.elapsedSec,
+                        stageText: st.stageText,
+                        stageIcon: st.stageIcon,
+                    };
+                }
+            },
+        });
+        const initProgress = regenTracker.getState();
+        regenProgress = {
+            elapsedSec: initProgress.elapsedSec,
+            stageText: initProgress.stageText,
+            stageIcon: initProgress.stageIcon,
+        };
         regenBusy = i;
         errorMsg = "";
         recordUserVersion(i); // BU-15：重生前留痕当前文本（用户改过未接受也不丢）
@@ -812,9 +847,11 @@ TCP 建立连接需要进行三次握手：
         } finally {
             if (seq === genSeq) {
                 genCtrl = null;
-            }
-            if (!disposed) {
-                regenBusy = null;
+                regenTracker?.dispose();
+                regenTracker = null;
+                if (!disposed) {
+                    regenBusy = null;
+                }
             }
         }
     }
@@ -1158,8 +1195,8 @@ TCP 建立连接需要进行三次握手：
                             </div>
                             {#if decks.length > 0}
                                 <div class="lv-param-item lv-param-item--deck">
-                                    <span class="lv-param-label">入库卡包</span>
-                                    <select class="b3-select fn__block lv-param-select" bind:value={selected} disabled={busy} aria-label="目标卡包" title={decks.find(d => d.id === selected)?.name ?? "目标卡包"}>
+                                    <span class="lv-param-label">入库卡组</span>
+                                    <select class="b3-select fn__block lv-param-select" bind:value={selected} disabled={busy} aria-label="目标卡组" title={decks.find(d => d.id === selected)?.name ?? "目标卡组"}>
                                         {#each decks as d (d.id)}
                                             <option value={d.id}>{d.name}</option>
                                         {/each}
@@ -1350,84 +1387,98 @@ TCP 建立连接需要进行三次握手：
                 </div>
             {/if}
             <div class="lv-aiwiz-list">
-                {#each visibleCandidates as c, i (c.origIndex)}
+                {#each visibleCandidates as { c, candIndex } (c.origIndex)}
                     <div class="lv-card2 lv-aiwiz-card">
                         <label class="fn__flex" style="gap: var(--lv-sp-2); align-items: center">
                             <input type="checkbox" bind:checked={c.keep} disabled={creating || regenBusy !== null} />
-                            <b class="ft__smaller">#{i + 1}</b>
+                            <b class="ft__smaller">#{candIndex + 1}</b>
                             {#if c.d}
                                 <LvChip tone={c.d === 3 ? "error" : c.d === 2 ? "warn" : "default"}>{c.d === 3 ? t.aiWizard.diffHard : c.d === 2 ? t.aiWizard.diffMid : t.aiWizard.diffEasy}</LvChip>
                             {/if}
-                            {#each lintWarnings[i] ?? [] as warn (warn)}
+                            {#each lintWarnings[candIndex] ?? [] as warn (warn)}
                                 <LvChip tone="warn">{warn === "duplicate" ? t.aiWizard.lintDup : warn === "overlong" ? t.aiWizard.lintLong : warn === "tooshort" ? t.aiWizard.lintShort : warn}</LvChip>
                             {/each}
-                            {#each draftIssues[i] ?? [] as issue (issue)}
+                            {#each draftIssues[candIndex] ?? [] as issue (issue)}
                                 <LvChip tone="error">{issue === "empty-question" ? t.aiWizard.missingQuestion : issue === "empty-answer" ? t.aiWizard.missingAnswer : t.aiWizard.invalidMarkup}</LvChip>
                             {/each}
-                            {#each gateIssues[i] ?? [] as issue (issue)}
+                            {#each gateIssues[candIndex] ?? [] as issue (issue)}
                                 <LvChip tone="error">{issue === "duplicate-question" ? t.aiWizard.qualityDuplicate : issue === "answer-in-question" ? t.aiWizard.qualityLeak : issue === "multiple-questions" ? t.aiWizard.qualityMultiple : t.aiWizard.qualityTemplate}</LvChip>
                             {/each}
-                            {#each scorecards[i]?.dimensions ?? [] as dim (dim.key)}
+                            {#each scorecards[candIndex]?.dimensions ?? [] as dim (dim.key)}
                                 {#if dim.score >= 1 && dim.key !== "cognitive" && dim.key !== "difficulty"}
                                     <!-- BU-13：问题维度 chip（1=提示 warn / 2=问题 error），点「卡面预览」看说明与建议 -->
                                     <LvChip tone={dim.score >= 2 ? "error" : "warn"}>{dimLabel(dim.key)} · {dim.score}</LvChip>
                                 {/if}
                             {/each}
                             <div class="fn__flex-1"></div>
-                            {#if scorecards[i]?.assertionReport && scorecards[i].assertionReport.unsupportedCount > 0}
-                                <LvChip tone="warn">{t.aiWizard.assertionUnsupportedCount.replace("${n}", String(scorecards[i].assertionReport.unsupportedCount))}</LvChip>
+                            {#if scorecards[candIndex]?.assertionReport && scorecards[candIndex].assertionReport.unsupportedCount > 0}
+                                <LvChip tone="warn">{t.aiWizard.assertionUnsupportedCount.replace("${n}", String(scorecards[candIndex].assertionReport.unsupportedCount))}</LvChip>
                             {/if}
-                            {#if gateIssues[i].length > 0}<LvChip tone="error">{t.aiWizard.qualityBlockStatus}</LvChip>{:else if c.review === "accepted"}<LvChip tone="primary">{t.aiWizard.reviewAccepted}</LvChip>{:else if c.review === "verified"}<LvChip tone="primary">{t.aiWizard.reviewVerified}</LvChip>{:else if c.review === "needsCheck"}<LvChip tone="warn">{t.aiWizard.reviewNeedsCheck}</LvChip>{:else if c.edited}<LvChip tone="warn">{t.aiWizard.editedReaccept}</LvChip>{/if}
-                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
-                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} aria-label={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} disabled={creating || regenBusy !== null || restoredCandidates} onclick={() => regenerateCard(i)}><LvIcon name="refresh" size={13} /></button>
-                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.removeCandidate} aria-label={t.aiWizard.removeCandidate} disabled={creating || regenBusy !== null} onclick={() => removeCandidate(i)}><LvIcon name="close" size={13} /></button>
+                            {#if gateIssues[candIndex].length > 0}<LvChip tone="error">{t.aiWizard.qualityBlockStatus}</LvChip>{:else if c.review === "accepted"}<LvChip tone="primary">{t.aiWizard.reviewAccepted}</LvChip>{:else if c.review === "verified"}<LvChip tone="primary">{t.aiWizard.reviewVerified}</LvChip>{:else if c.review === "needsCheck"}<LvChip tone="warn">{t.aiWizard.reviewNeedsCheck}</LvChip>{:else if c.edited}<LvChip tone="warn">{t.aiWizard.editedReaccept}</LvChip>{/if}
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === candIndex ? null : candIndex)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" class:lv-aiwiz-regen-spinning={regenBusy === candIndex} title={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} aria-label={restoredCandidates ? t.aiWizard.recoveredRegenHint : t.aiWizard.regenerate} disabled={creating || regenBusy !== null || restoredCandidates} onclick={() => regenerateCard(candIndex)}><span class:lv-aiwiz-regen-spin={regenBusy === candIndex}><LvIcon name="refresh" size={13} /></span></button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.removeCandidate} aria-label={t.aiWizard.removeCandidate} disabled={creating || regenBusy !== null} onclick={() => removeCandidate(candIndex)}><LvIcon name="close" size={13} /></button>
                         </label>
-                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.q} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardQ} aria-label={t.quickCardQ} spellcheck="false"></textarea>
-                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.a} oninput={() => touchCandidate(i)} disabled={creating || regenBusy !== null} placeholder={t.quickCardA} aria-label={t.quickCardA} spellcheck="false"></textarea>
-                        {#if scorecards[i]?.assertionReport && scorecards[i].assertionReport.unsupportedCount > 0}
-                            {@const unsupportedList = scorecards[i].assertionReport.assertions.filter(a => a.status === "unsupported").map(a => a.text)}
+                        {#if regenBusy === candIndex}
+                            <div class="lv-ai-thinking lv-ai-thinking--compact" role="status" aria-live="polite" style="margin: var(--lv-sp-2) 0; background: color-mix(in srgb, var(--b3-theme-surface) 95%, transparent); border: 1px solid var(--lv-border); border-radius: var(--lv-r-card, 12px);">
+                                <div class="lv-ai-thinking__title">正在重新生成 #{candIndex + 1}</div>
+                                <div class="lv-ai-thinking__glow">
+                                    <span class="lv-ai-thinking__icon">{regenProgress.stageIcon}</span>
+                                </div>
+                                <div class="lv-ai-thinking__stage">{regenProgress.stageText}</div>
+                                <div class="lv-ai-thinking__timer">已思考 <b>{regenProgress.elapsedSec}</b> 秒</div>
+                                <div class="lv-ai-thinking__progress"><div class="lv-ai-thinking__bar"></div></div>
+                                <button type="button" class="b3-button b3-button--cancel lv-ai-thinking__cancel" onclick={cancelGeneration}>
+                                    取消生成
+                                </button>
+                            </div>
+                        {/if}
+                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.q} oninput={() => touchCandidate(candIndex)} disabled={creating || regenBusy !== null} placeholder={t.quickCardQ} aria-label={t.quickCardQ} spellcheck="false"></textarea>
+                        <textarea class="b3-text-field fn__block" rows="2" bind:value={c.a} oninput={() => touchCandidate(candIndex)} disabled={creating || regenBusy !== null} placeholder={t.quickCardA} aria-label={t.quickCardA} spellcheck="false"></textarea>
+                        {#if scorecards[candIndex]?.assertionReport && scorecards[candIndex].assertionReport.unsupportedCount > 0}
+                            {@const unsupportedList = scorecards[candIndex].assertionReport.assertions.filter(a => a.status === "unsupported").map(a => a.text)}
                             <div class="ft__smaller" style="margin-top: 4px; padding: 4px 8px; border-radius: 4px; background: var(--lv-warn-soft); color: var(--lv-color-on-warning-soft); line-height: 1.5;" role="status">
-                                ⚠️ 答案中有 {scorecards[i].assertionReport.unsupportedCount} 处表述在来源材料中未找到直接依据{#if unsupportedList.length > 0}：「{unsupportedList.slice(0, 2).join("；")}」{/if}，建议对照来源核实或修改。
+                                ⚠️ 答案中有 {scorecards[candIndex].assertionReport.unsupportedCount} 处表述在来源材料中未找到直接依据{#if unsupportedList.length > 0}：「{unsupportedList.slice(0, 2).join("；")}」{/if}，建议对照来源核实或修改。
                             </div>
                         {/if}
                         <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 3); margin-top: 6px; flex-wrap: wrap;">
-                            <button class="b3-button b3-button--small {c.review === 'accepted' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null || draftIssues[i].length > 0 || gateIssues[i].length > 0} onclick={() => setReview(i, "accepted")}>{c.review === "accepted" ? t.aiWizard.reviewAccepted : t.aiWizard.acceptVer}</button>
-                            <button class="b3-button b3-button--small {c.review === 'verified' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "verified")}>{t.aiWizard.markVerified}</button>
-                            <button class="b3-button b3-button--small {c.review === 'needsCheck' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(i, "needsCheck")}>{t.aiWizard.markNeedsCheck}</button>
-                            {#if (candidateSplits[i]?.length ?? 0) >= 2}
+                            <button class="b3-button b3-button--small {c.review === 'accepted' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null || draftIssues[candIndex].length > 0 || gateIssues[candIndex].length > 0} onclick={() => setReview(candIndex, "accepted")}>{c.review === "accepted" ? t.aiWizard.reviewAccepted : t.aiWizard.acceptVer}</button>
+                            <button class="b3-button b3-button--small {c.review === 'verified' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(candIndex, "verified")}>{t.aiWizard.markVerified}</button>
+                            <button class="b3-button b3-button--small {c.review === 'needsCheck' ? 'lv-btn-primary' : ''}" disabled={creating || regenBusy !== null} onclick={() => setReview(candIndex, "needsCheck")}>{t.aiWizard.markNeedsCheck}</button>
+                            {#if (candidateSplits[candIndex]?.length ?? 0) >= 2}
                                 <button
                                     type="button"
                                     class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                                     disabled={creating || regenBusy !== null}
                                     title="将复合问答一键拆分为多张独立原子候选卡"
-                                    onclick={() => splitCandidate(i)}
+                                    onclick={() => splitCandidate(candIndex)}
                                 >
                                     <LvIcon name="zap" size={12} />
-                                    <span>拆成 {candidateSplits[i].length} 张</span>
+                                    <span>拆成 {candidateSplits[candIndex].length} 张</span>
                                 </button>
                             {/if}
                             <div class="fn__flex-1"></div>
-                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === i ? null : i)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
+                            <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" title={t.aiWizard.cardPreview} onclick={() => (previewIdx = previewIdx === candIndex ? null : candIndex)}><LvIcon name="eye" size={12} /> <span>{t.aiWizard.cardPreview}</span></button>
                         </div>
-                        {#if previewIdx === i}
+                        {#if previewIdx === candIndex}
                             {@const rendered = renderUnifiedCardFace({ question: c.q, answer: c.a, template: cardType, answerLabel: t.cardDetail?.answer ?? t.quickCardPreviewBack ?? "参考答案" })}
                             <!-- T03：实际卡面预览（接入统一卡面渲染管线，与复习端渲染一致） -->
                             <div class="lv-card2" style="padding: calc(var(--lv-space-unit) * 9) calc(var(--lv-space-unit) * 10); margin-top: 8px">
                                 <div class="fn__flex between" style="align-items: center; margin-bottom: 8px">
-                                    <div class="lv-eyebrow">{previewAnswerMap[i] ? t.quickCardPreviewBack : t.quickCardPreviewFront}</div>
-                                    <button class="b3-button b3-button--small lv-btn-ghost" onclick={() => (previewAnswerMap[i] = !previewAnswerMap[i])}>
-                                        {previewAnswerMap[i] ? t.quickCardHideAnswer : t.quickCardShowAnswer}
+                                    <div class="lv-eyebrow">{previewAnswerMap[candIndex] ? t.quickCardPreviewBack : t.quickCardPreviewFront}</div>
+                                    <button class="b3-button b3-button--small lv-btn-ghost" onclick={() => (previewAnswerMap[candIndex] = !previewAnswerMap[candIndex])}>
+                                        {previewAnswerMap[candIndex] ? t.quickCardHideAnswer : t.quickCardShowAnswer}
                                     </button>
                                 </div>
                                 <div class="lv-unified-face b3-typography" style="padding: var(--lv-sp-2) 0">
-                                    {@html previewAnswerMap[i] ? rendered.answerHtml : rendered.questionHtml}
+                                    {@html previewAnswerMap[candIndex] ? rendered.answerHtml : rendered.questionHtml}
                                 </div>
-                                {#if scorecards[i]}
+                                {#if scorecards[candIndex]}
                                         <!-- BU-13：八维度评分卡（可解释问题 + 修复建议；综合分仅审阅提示，不入库资格由「已接受」决定） -->
                                         <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
-                                            <div class="lv-eyebrow">{t.aiScore.title} · {scorecards[i].composite}</div>
+                                            <div class="lv-eyebrow">{t.aiScore.title} · {scorecards[candIndex].composite}</div>
                                             <div style="margin-top: calc(var(--lv-space-unit) * 3); display: flex; flex-direction: column; gap: 4px">
-                                                {#each scorecards[i].dimensions as dim (dim.key)}
+                                                {#each scorecards[candIndex].dimensions as dim (dim.key)}
                                                     <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); align-items: baseline">
                                                         <span class="ft__smaller" style="min-width: 88px">{dimLabel(dim.key)}</span>
                                                         {#if dim.level}
@@ -1444,8 +1495,8 @@ TCP 建立连接需要进行三次握手：
                                             </div>
                                         </div>
                                     {/if}
-                                    {#if scorecards[i]?.assertionReport}
-                                        {@const rep = scorecards[i].assertionReport}
+                                    {#if scorecards[candIndex]?.assertionReport}
+                                        {@const rep = scorecards[candIndex].assertionReport}
                                         <!-- BU-10 & docs/48：逐断言来源依据核验 -->
                                         <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
                                         <div class="fn__flex between" style="align-items: center; margin-bottom: 8px">
@@ -1471,17 +1522,17 @@ TCP 建立连接需要进行三次握手：
                                         </div>
                                     </div>
                                 {/if}
-                                {#if (prov[i]?.versions.length ?? 0) > 0}
+                                {#if (prov[candIndex]?.versions.length ?? 0) > 0}
                                     <!-- BU-15：版本链（ai 生成/user 编辑双轨；回到任意历史版本） -->
                                     <div style="border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent); padding-top: 12px; margin-top: calc(var(--lv-space-unit) * 6)">
-                                        <div class="lv-eyebrow">{t.aiScore.versions} · {prov[i].versions.length}</div>
+                                        <div class="lv-eyebrow">{t.aiScore.versions} · {prov[candIndex].versions.length}</div>
                                         <div style="margin-top: calc(var(--lv-space-unit) * 3); display: flex; flex-direction: column; gap: 4px">
-                                            {#each [...prov[i].versions].reverse() as v, vi (prov[i].versions.length - 1 - vi)}
+                                            {#each [...prov[candIndex].versions].reverse() as v, vi (prov[candIndex].versions.length - 1 - vi)}
                                                 <div class="fn__flex" style="gap: calc(var(--lv-space-unit) * 4); align-items: center">
                                                     <LvChip tone={v.via === "ai" ? "default" : "primary"}>{v.via === "ai" ? t.aiScore.viaAI : t.aiScore.viaUser}</LvChip>
                                                     <span class="ft__smaller" style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{v.q.slice(0, 40)}</span>
                                                     {#if v.q !== c.q || v.a !== c.a}
-                                                        <button class="b3-button b3-button--small" disabled={creating || regenBusy !== null} onclick={() => restoreVersion(i, v)}>{t.aiScore.restore}</button>
+                                                        <button class="b3-button b3-button--small" disabled={creating || regenBusy !== null} onclick={() => restoreVersion(candIndex, v)}>{t.aiScore.restore}</button>
                                                     {/if}
                                                 </div>
                                             {/each}
@@ -1516,6 +1567,7 @@ TCP 建立连接需要进行三次握手：
                     spellcheck="false"
                     autocomplete="off"
                     onkeydown={(e) => {
+                        if (e.isComposing || e.keyCode === 229) return;
                         if (e.key === "Enter" && canImport && !creating && regenBusy === null) {
                             e.preventDefault();
                             importCards();
@@ -1824,15 +1876,21 @@ TCP 建立连接需要进行三次握手：
     }
     .lv-side-demo-grid {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
+        min-width: 0;
     }
     .lv-wb-demo-btn {
-        flex: 1 1 50%;
+        flex: 1 1 calc(50% - 3px);
+        min-width: 0;
+        max-width: 100%;
         text-align: center;
         justify-content: center;
         font-size: 11px;
         padding: 4px 6px;
-        white-space: nowrap;
+        white-space: normal;
+        word-break: keep-all;
+        line-height: 1.3;
     }
 
     .lv-wb-header {
@@ -1957,6 +2015,21 @@ TCP 建立连接需要进行三次握手：
     .lv-candidate-search-input {
         height: 28px;
         font-size: var(--lv-type-smaller-size);
+    }
+    .lv-aiwiz-regen-spin {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        animation: lvAiWizSpin 1s linear infinite;
+    }
+    @keyframes lvAiWizSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .lv-aiwiz-regen-spin {
+            animation: none;
+        }
     }
 
     @media (max-width: 640px) {

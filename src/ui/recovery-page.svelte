@@ -96,7 +96,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<LvPage eyebrow="WORKSPACE / RECOVERY" title={t.title} subtitle={t.subtitle}>
+<LvPage eyebrow="学习现场恢复" title={t.title} subtitle={t.subtitle}>
     {#snippet actions()}
         <button
             class="b3-button b3-button--small b3-button--outline lv-btn-tool"

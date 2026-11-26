@@ -171,9 +171,13 @@ export function buildUnmakeCardAttributes(): Record<string, string> {
         "custom-riff-answer": "",
         "custom-riff-occlusion": "",
         "custom-lv-question": "",
+        "custom-lv-answer": "",
         "custom-card-title": "",
         "custom-card-answer": "",
         "custom-lv-card-type": "",
+        "custom-lv-attr-subtype": "",
+        "custom-lv-hint": "",
+        "custom-lv-bidi": "",
         "custom-lv-starred": "",
         "custom-lv-dismissed": "",
         "custom-lv-error-reason": "",
@@ -201,17 +205,23 @@ export interface CardLifecycleActionResult {
 export async function executeUnmakeCard(
     blockID: string,
     helpers: {
-        removeFromDeck?: (blockID: string) => Promise<unknown>;
+        removeFromDeck?: (blockID: string, deckID?: string) => Promise<unknown>;
         setBlockAttrs?: (id: string, attrs: Record<string, string>) => Promise<unknown>;
         invalidateCache?: () => void;
+        deckID?: string;
     }
 ): Promise<CardLifecycleActionResult> {
     if (!blockID) return { success: false, blockID: "", action: "unmake", error: "missing blockID" };
     if (helpers.removeFromDeck) {
-        await helpers.removeFromDeck(blockID);
+        const res = helpers.deckID
+            ? await helpers.removeFromDeck(blockID, helpers.deckID)
+            : await helpers.removeFromDeck(blockID);
+        if (res && typeof res === "object" && (res as any).success === false) {
+            throw new Error(String((res as any).error || "取消制卡失败：未能从卡组移出"));
+        }
     }
     if (helpers.setBlockAttrs) {
-        await helpers.setBlockAttrs(blockID, buildUnmakeCardAttributes()).catch(() => {});
+        await helpers.setBlockAttrs(blockID, buildUnmakeCardAttributes());
     }
     helpers.invalidateCache?.();
     return { success: true, blockID, action: "unmake" };

@@ -34,6 +34,7 @@
         openReviewScope?: (scope: string, cram?: boolean) => void;
         openManagerDeck?: (deckID: string, deckName: string) => void;
         getRevlog?: () => any;
+        openQuickCard?: () => void;
     }
 
     let {
@@ -41,6 +42,7 @@
         openReviewScope,
         openManagerDeck,
         getRevlog,
+        openQuickCard,
     }: Props = $props();
 
     const t = $derived(i18n);
@@ -151,20 +153,20 @@
                 }));
                 discoveredLegacy = discoverLegacyDecks(rawBlocks, decks);
                 if (discoveredLegacy.length > 0) {
-                    noticeMsg = `扫描完成：发现 ${discoveredLegacy.length} 个存量/第三方插件卡包资产，可一键接入`;
+                    noticeMsg = `扫描完成：发现 ${discoveredLegacy.length} 个存量/第三方插件卡组资产，可一键接入`;
                 } else {
-                    noticeMsg = "全库扫描完毕：当前所有闪卡已全部规范纳入原生卡包！";
+                    noticeMsg = "全库扫描完毕：当前所有闪卡已全部规范纳入原生卡组！";
                 }
             }
         } catch (e: any) {
-            errorMsg = `扫描存量卡包失败：${e?.message ?? String(e)}`;
+            errorMsg = `扫描存量卡组失败：${e?.message ?? String(e)}`;
         } finally {
             scanning = false;
         }
     }
 
     /**
-     * 一键同步单个发现的存量/第三方卡包到原生 RiffDeck
+     * 一键同步单个发现的存量/第三方卡组到原生 RiffDeck
      */
     async function syncDeck(item: DiscoveredLegacyDeck) {
         busy = true;
@@ -178,14 +180,14 @@
             discoveredLegacy = discoveredLegacy.filter(d => d.name !== item.name);
             await loadDecks();
         } catch (e: any) {
-            errorMsg = `接入卡包失败：${e?.message ?? String(e)}`;
+            errorMsg = `接入卡组失败：${e?.message ?? String(e)}`;
         } finally {
             busy = false;
         }
     }
 
     /**
-     * 一键全部接入所有发现的存量卡包
+     * 一键全部接入所有发现的存量卡组
      */
     async function syncAllDiscovered() {
         if (discoveredLegacy.length === 0 || busy) return;
@@ -202,7 +204,7 @@
                 totalCards += res.addedCount;
                 deckCount += 1;
             }
-            showMessage(`成功全部接入 ${deckCount} 个存量卡包，共计 ${totalCards} 张闪卡！`, 3500, "info");
+            showMessage(`成功全部接入 ${deckCount} 个存量卡组，共计 ${totalCards} 张闪卡！`, 3500, "info");
             discoveredLegacy = [];
             await loadDecks();
         } catch (e: any) {
@@ -213,7 +215,7 @@
     }
 
     /**
-     * 新建卡包
+     * 新建卡组
      */
     async function handleCreateDeck() {
         const name = newDeckName.trim();
@@ -223,17 +225,17 @@
             await createRiffDeck(name);
             newDeckName = "";
             showNewDeckInput = false;
-            showMessage(`卡包「${name}」已创建`, 2000, "info");
+            showMessage(`卡组「${name}」已创建`, 2000, "info");
             await loadDecks();
         } catch (e: any) {
-            errorMsg = `创建卡包失败：${e?.message ?? String(e)}`;
+            errorMsg = `创建卡组失败：${e?.message ?? String(e)}`;
         } finally {
             busy = false;
         }
     }
 
     /**
-     * 重命名卡包
+     * 重命名卡组
      */
     async function handleRenameDeck(deckID: string) {
         const name = editingDeckName.trim();
@@ -243,7 +245,7 @@
             await renameRiffDeck(deckID, name);
             editingDeckId = "";
             editingDeckName = "";
-            showMessage("卡包名称已更新", 2000, "info");
+            showMessage("卡组名称已更新", 2000, "info");
             await loadDecks();
         } catch (e: any) {
             errorMsg = `重命名失败：${e?.message ?? String(e)}`;
@@ -264,30 +266,30 @@
     }
 
     /**
-     * 删除卡包（安全确认：仅解散卡包，不删卡片块正文）
+     * 删除卡组（安全确认：仅解散卡组，不删卡片块正文）
      */
     async function handleDeleteDeck(deck: RiffDeck) {
         if (busy) return;
         const confirmed = await askConfirm(
-            (t.deckManagerDelete ?? "删除卡包") + `：${deck.name}`,
-            (t.deckManagerDeletePrompt ?? "确定要删除卡包「${name}」吗？").replace("${name}", deck.name)
-                + "\n\n" + (t.deckManagerDeleteSafeNote ?? "注意：仅解除卡包关联，原笔记中的卡片块完整保留在正文中。"),
+            (t.deckManagerDelete ?? "删除卡组") + `：${deck.name}`,
+            (t.deckManagerDeletePrompt ?? "确定要删除卡组「${name}」吗？").replace("${name}", deck.name)
+                + "\n\n" + (t.deckManagerDeleteSafeNote ?? "注意：仅解除卡组关联，原笔记中的卡片块完整保留在正文中。"),
         );
         if (!confirmed) return;
         busy = true;
         try {
             await removeRiffDeck(deck.id);
-            showMessage(`卡包「${deck.name}」已删除`, 2000, "info");
+            showMessage(`卡组「${deck.name}」已删除`, 2000, "info");
             await loadDecks();
         } catch (e: any) {
-            errorMsg = `删除卡包失败：${e?.message ?? String(e)}`;
+            errorMsg = `删除卡组失败：${e?.message ?? String(e)}`;
         } finally {
             busy = false;
         }
     }
 
     /**
-     * 合并卡包
+     * 合并卡组
      */
     async function handleMergeDeck(sourceDeckId: string) {
         if (!sourceDeckId || !targetMergeDeckId || sourceDeckId === targetMergeDeckId || busy) return;
@@ -298,29 +300,29 @@
                 addRiffCards,
                 removeRiffDeck,
             }, { deleteSourceDeck: deleteSourceAfterMerge });
-            showMessage((t.deckManagerMergedNotice ?? "已将 ${n} 张卡片合并至目标卡包").replace("${n}", String(res.mergedCount)), 3000, "info");
+            showMessage((t.deckManagerMergedNotice ?? "已将 ${n} 张卡片合并至目标卡组").replace("${n}", String(res.mergedCount)), 3000, "info");
             mergingDeckId = "";
             targetMergeDeckId = "";
             await loadDecks();
         } catch (e: any) {
-            errorMsg = `合并卡包失败：${e?.message ?? String(e)}`;
+            errorMsg = `合并卡组失败：${e?.message ?? String(e)}`;
         } finally {
             busy = false;
         }
     }
 
     /**
-     * 清理所有卡片数为 0 的冗余空卡包
+     * 清理所有卡片数为 0 的冗余空卡组
      */
     async function handleCleanEmptyDecks() {
         const emptyDecks = findEmptyDecks(decks);
         if (emptyDecks.length === 0) {
-            showMessage("当前没有需要清理的空卡包", 2000, "info");
+            showMessage("当前没有需要清理的空卡组", 2000, "info");
             return;
         }
         const confirmed = await askConfirm(
-            t.deckManagerCleanEmpty ?? "清理空卡包",
-            `检测到 ${emptyDecks.length} 个卡片数为 0 的冗余空卡包（${emptyDecks.map(d => d.name).join("、")}），确定要批量清理吗？`,
+            t.deckManagerCleanEmpty ?? "清理空卡组",
+            `检测到 ${emptyDecks.length} 个卡片数为 0 的冗余空卡组（${emptyDecks.map(d => d.name).join("、")}），确定要批量清理吗？`,
         );
         if (!confirmed) return;
         busy = true;
@@ -328,10 +330,10 @@
             for (const d of emptyDecks) {
                 await removeRiffDeck(d.id);
             }
-            showMessage(`已清理 ${emptyDecks.length} 个空卡包`, 2500, "info");
+            showMessage(`已清理 ${emptyDecks.length} 个空卡组`, 2500, "info");
             await loadDecks();
         } catch (e: any) {
-            errorMsg = `清理空卡包失败：${e?.message ?? String(e)}`;
+            errorMsg = `清理空卡组失败：${e?.message ?? String(e)}`;
         } finally {
             busy = false;
         }
@@ -363,19 +365,19 @@
     });
 </script>
 
-<div class="lv-deck-manager b3-typography" role="region" aria-label={t.deckManagerTitle ?? "卡包管理"}>
+<div class="lv-deck-manager b3-typography" role="region" aria-label={t.deckManagerTitle ?? "卡组管理"}>
     <!-- 头部指标与操作区 -->
     <header class="lv-dm-header">
         <div class="lv-dm-header-main">
             <h2 class="lv-dm-title">
                 <LvIcon name="cards" size={20} />
-                <span>{t.deckManagerTitle ?? "卡包管理"}</span>
+                <span>{t.deckManagerTitle ?? "卡组管理"}</span>
             </h2>
-            <p class="lv-dm-subtitle">{t.deckManagerSubtitle ?? "统筹思源笔记全生态卡包资产：原生卡包、第三方插件卡包与标签卡包一键同步"}</p>
+            <p class="lv-dm-subtitle">{t.deckManagerSubtitle ?? "统筹思源笔记全生态卡组资产：原生卡组、第三方插件卡组与标签卡组一键同步"}</p>
         </div>
         <div class="lv-dm-stats-pills">
             <span class="lv-dm-stat-pill">
-                <strong>{decks.length}</strong> {t.deckManagerTotalDecks ?? "个卡包"}
+                <strong>{decks.length}</strong> {t.deckManagerTotalDecks ?? "个卡组"}
             </span>
             <span class="lv-dm-stat-pill">
                 <strong>{totalCardsCount}</strong> {t.deckManagerTotalCards ?? "张闪卡"}
@@ -398,21 +400,32 @@
                 disabled={busy}
                 onclick={() => (showNewDeckInput = !showNewDeckInput)}
             >
-                <LvIcon name="plus" size={13} /> <span>{t.deckManagerNewDeck ?? "新建卡包"}</span>
+                <LvIcon name="plus" size={13} /> <span>{t.deckManagerNewDeck ?? "新建卡组"}</span>
             </button>
+            {#if openQuickCard}
+                <button
+                    type="button"
+                    class="b3-button b3-button--small b3-button--outline"
+                    disabled={busy}
+                    onclick={() => openQuickCard?.()}
+                    title="快速新建闪卡并加入卡组"
+                >
+                    <LvIcon name="edit" size={13} /> <span>新建闪卡</span>
+                </button>
+            {/if}
             <button
                 type="button"
                 class="b3-button b3-button--small b3-button--outline"
                 disabled={scanning || busy}
                 onclick={scanLegacyAndForeignDecks}
-                title="深度扫描思源正文中存量闪卡、第三方插件属性与 #deck 标签卡包"
+                title="深度扫描思源正文中存量闪卡、第三方插件属性与 #deck 标签卡组"
             >
                 {#if scanning}
                     <span aria-busy="true">…</span>
                 {:else}
                     <LvIcon name="refresh" size={13} />
                 {/if}
-                <span>{scanning ? (t.deckManagerScanning ?? "正在扫描…") : (t.deckManagerScanLegacy ?? "扫描存量与第三方卡包")}</span>
+                <span>{scanning ? (t.deckManagerScanning ?? "正在扫描…") : (t.deckManagerScanLegacy ?? "扫描存量与第三方卡组")}</span>
             </button>
             {#if emptyDecksCount > 0}
                 <button
@@ -420,9 +433,9 @@
                     class="b3-button b3-button--small b3-button--text"
                     disabled={busy}
                     onclick={handleCleanEmptyDecks}
-                    title="批量删除 0 张卡片的空卡包"
+                    title="批量删除 0 张卡片的空卡组"
                 >
-                    <LvIcon name="trash" size={13} /> <span>{t.deckManagerCleanEmpty ?? "清理空卡包"} ({emptyDecksCount})</span>
+                    <LvIcon name="trash" size={13} /> <span>{t.deckManagerCleanEmpty ?? "清理空卡组"} ({emptyDecksCount})</span>
                 </button>
             {/if}
         </div>
@@ -440,13 +453,13 @@
                     class="lv-dm-segment-btn"
                     class:lv-dm-segment-btn-active={filterMode === "active"}
                     onclick={() => (filterMode = "active")}
-                >{t.deckManagerFilterActive ?? "活跃卡包"}</button>
+                >{t.deckManagerFilterActive ?? "活跃卡组"}</button>
                 <button
                     type="button"
                     class="lv-dm-segment-btn"
                     class:lv-dm-segment-btn-active={filterMode === "empty"}
                     onclick={() => (filterMode = "empty")}
-                >{t.deckManagerFilterEmpty ?? "空卡包"}</button>
+                >{t.deckManagerFilterEmpty ?? "空卡组"}</button>
                 {#if discoveredLegacy.length > 0}
                     <button
                         type="button"
@@ -459,13 +472,13 @@
             <input
                 class="b3-text-field lv-dm-search-input"
                 bind:value={searchText}
-                placeholder="搜索卡包名称…"
-                aria-label="搜索卡包"
+                placeholder="搜索卡组名称…"
+                aria-label="搜索卡组"
             />
             <select
                 class="b3-select lv-dm-sort-select"
                 bind:value={sortMode}
-                aria-label="卡包排序方案"
+                aria-label="卡组排序方案"
             >
                 <option value="default">默认排序</option>
                 <option value="size-desc">卡片最多</option>
@@ -474,14 +487,14 @@
         </div>
     </div>
 
-    <!-- 新建卡包内联输入框 -->
+    <!-- 新建卡组内联输入框 -->
     {#if showNewDeckInput}
         <div class="lv-dm-new-card-row">
             <input
                 class="b3-text-field fn__flex-1"
                 bind:value={newDeckName}
-                placeholder="输入新卡包名称，例如「考研英语核心词」"
-                aria-label="新卡包名称"
+                placeholder="输入新卡组名称，例如「考研英语核心词」"
+                aria-label="新卡组名称"
                 onkeydown={(e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === "Enter") handleCreateDeck(); }}
             />
             <button
@@ -510,13 +523,13 @@
         </div>
     {/if}
 
-    <!-- 扫描发现的存量与第三方插件卡包接入区 -->
+    <!-- 扫描发现的存量与第三方插件卡组接入区 -->
     {#if discoveredLegacy.length > 0 && (filterMode === "all" || filterMode === "legacy")}
-        <section class="lv-dm-discovered-section" aria-label="待接入存量卡包">
+        <section class="lv-dm-discovered-section" aria-label="待接入存量卡组">
             <div class="lv-dm-discovered-head">
                 <div class="lv-dm-discovered-title">
                     <LvIcon name="zap" size={15} />
-                    <strong>发现 {discoveredLegacy.length} 个思源存量 / 第三方插件卡包（可一键同步接入）</strong>
+                    <strong>发现 {discoveredLegacy.length} 个思源存量 / 第三方插件卡组（可一键同步接入）</strong>
                 </div>
                 <button
                     type="button"
@@ -533,7 +546,7 @@
                         <div class="lv-dm-disc-main">
                             <div class="lv-dm-disc-name">
                                 <strong>{item.name}</strong>
-                                <span class="lv-chip-source">{item.sourcePlugin ?? "存量卡包"}</span>
+                                <span class="lv-chip-source">{item.sourcePlugin ?? "存量卡组"}</span>
                             </div>
                             <div class="ft__smaller ft__on-surface">
                                 包含 {item.blockIDs.length} 张闪卡
@@ -556,21 +569,21 @@
         </section>
     {/if}
 
-    <!-- 正式 Riff 卡包列表 -->
+    <!-- 正式 Riff 卡组列表 -->
     {#if filterMode !== "legacy"}
         {#if loading}
             <div class="lv-dm-loading" role="status">
-                <LvIcon name="refresh" size={18} /> <span>正在加载卡包列表…</span>
+                <LvIcon name="refresh" size={18} /> <span>正在加载卡组列表…</span>
             </div>
         {:else if filteredDecks.length === 0}
             <div class="lv-dm-empty">
                 <LvIcon name="cards" size={32} />
-                <p>未找到符合条件的卡包</p>
+                <p>未找到符合条件的卡组</p>
                 <button
                     type="button"
                     class="b3-button b3-button--small lv-btn-primary"
                     onclick={() => (showNewDeckInput = true)}
-                >新建第一个卡包</button>
+                >新建第一个卡组</button>
             </div>
         {:else}
             <div class="lv-dm-grid">
@@ -578,7 +591,7 @@
 	                    {@const stats = dashboardRows.get(deck.id)}
 	                    {@const ecoBadge = getDeckEcosystemBadge(deck.name)}
 	                    <div class="lv-dm-deck-card">
-	                        <!-- 卡包头部与名称 -->
+	                        <!-- 卡组头部与名称 -->
 	                        <div class="lv-dm-card-head">
 	                            <div class="lv-dm-deck-meta">
 	                                {#if editingDeckId === deck.id}
@@ -586,7 +599,7 @@
 	                                        <input
 	                                            class="b3-text-field"
 	                                            bind:value={editingDeckName}
-	                                            aria-label="修改卡包名称"
+	                                            aria-label="修改卡组名称"
                                             onkeydown={(e) => {
                                                 if (e.isComposing || e.keyCode === 229) return;
                                                 if (e.key === "Enter") handleRenameDeck(deck.id);
@@ -608,7 +621,7 @@
 	                                    </button>
 	                                {/if}
 	                                {#if pinnedDeckIds.includes(deck.id)}
-	                                    <span class="lv-dm-pinned-chip" title="置顶卡包"><LvIcon name="star" size={11} /> 置顶</span>
+	                                    <span class="lv-dm-pinned-chip" title="置顶卡组"><LvIcon name="star" size={11} /> 置顶</span>
 	                                {/if}
 	                                {#if ecoBadge}
 	                                    <span class="lv-dm-origin-chip lv-dm-origin-chip--{ecoBadge.origin}">
@@ -639,21 +652,21 @@
                         <!-- 合并模式控制 -->
                         {#if mergingDeckId === deck.id}
                             <div class="lv-dm-merge-box">
-                                <span class="ft__smaller ft__on-surface">合并到目标卡包：</span>
+                                <span class="ft__smaller ft__on-surface">合并到目标卡组：</span>
                                 <select
                                     class="b3-select fn__flex-1"
-                                    aria-label="选择合并目标卡包"
+                                    aria-label="选择合并目标卡组"
                                     bind:value={targetMergeDeckId}
                                     onchange={(e) => { targetMergeDeckId = e.currentTarget.value; }}
                                 >
-                                    <option value="">选择目标卡包…</option>
+                                    <option value="">选择目标卡组…</option>
                                     {#each decks.filter(d => d.id !== deck.id) as targetDeck (targetDeck.id)}
                                         <option value={targetDeck.id}>{targetDeck.name}</option>
                                     {/each}
                                 </select>
                                 <label class="lv-dm-merge-opt">
                                     <input type="checkbox" bind:checked={deleteSourceAfterMerge} class="lv-check" />
-                                    <span>{t.deckManagerDeleteSourceAfterMerge ?? "合并后删除源卡包"}</span>
+                                    <span>{t.deckManagerDeleteSourceAfterMerge ?? "合并后删除源卡组"}</span>
                                 </label>
                                 <button
                                     type="button"
@@ -669,7 +682,7 @@
                             </div>
                         {/if}
 
-                        <!-- 卡包动作栏 -->
+                        <!-- 卡组动作栏 -->
                         <div class="lv-dm-card-actions">
                             <button
                                 type="button"
@@ -685,7 +698,7 @@
                                 class="b3-button b3-button--small b3-button--outline"
                                 disabled={(deck.size ?? 0) === 0}
                                 onclick={() => openReviewScope?.(`deck:${deck.id}`, true)}
-                                title="突击练习（全量刷题，不记入正式 FSRS 遗忘惩罚）"
+                                title="突击练习（全量刷题，不记入正式智能记忆算法遗忘惩罚）"
                             >
                                 <LvIcon name="zap" size={13} /> <span>突击</span>
                             </button>
@@ -693,7 +706,7 @@
                                 type="button"
                                 class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                                 onclick={() => openManagerDeck?.(deck.id, deck.name)}
-                                title="查看并管理此卡包内的具体闪卡内容"
+                                title="查看并管理此卡组内的具体闪卡内容"
                             >
                                 <LvIcon name="cards" size={13} /> <span>查看闪卡</span>
                             </button>
@@ -712,8 +725,8 @@
                                 class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
                                 class:lv-btn-pinned={pinnedDeckIds.includes(deck.id)}
                                 onclick={() => handleTogglePin(deck.id)}
-                                title={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡包"}
-                                aria-label={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡包"}
+                                title={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡组"}
+                                aria-label={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡组"}
                             >
                                 <LvIcon name="star" size={13} />
                             </button>
@@ -721,8 +734,8 @@
                                 type="button"
                                 class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
                                 onclick={() => { editingDeckId = deck.id; editingDeckName = deck.name; }}
-                                title="重命名卡包"
-                                aria-label="重命名卡包"
+                                title="重命名卡组"
+                                aria-label="重命名卡组"
                             >
                                 <LvIcon name="edit" size={13} />
                             </button>
@@ -730,8 +743,8 @@
                                 type="button"
                                 class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
                                 onclick={() => { mergingDeckId = deck.id; targetMergeDeckId = ""; }}
-                                title="合并卡片到其他卡包"
-                                aria-label="合并卡片到其他卡包"
+                                title="合并卡片到其他卡组"
+                                aria-label="合并卡片到其他卡组"
                             >
                                 <LvIcon name="swap" size={13} />
                             </button>
@@ -739,8 +752,8 @@
                                 type="button"
                                 class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-btn-danger"
                                 onclick={() => handleDeleteDeck(deck)}
-                                title="删除卡包（原卡片块完整保留在笔记正文中）"
-                                aria-label="删除卡包（原卡片块完整保留在笔记正文中）"
+                                title="删除卡组（原卡片块完整保留在笔记正文中）"
+                                aria-label="删除卡组（原卡片块完整保留在笔记正文中）"
                             >
                                 <LvIcon name="trash" size={13} />
                             </button>
@@ -1054,11 +1067,17 @@
     }
     .lv-dm-card-actions {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 6px;
         margin-top: auto;
         padding-top: 6px;
         border-top: 1px solid var(--lv-border);
+
+        .b3-button {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
     }
     .lv-dm-error-banner {
         display: flex;

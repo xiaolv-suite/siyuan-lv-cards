@@ -5,11 +5,13 @@
 
 import { addRiffCards, invalidateDueCache } from "../api/due-shared";
 import { getRiffCardsByBlockIDs, removeRiffCards } from "../api/riff";
+import * as siyuanApi from "../api/siyuan";
 import { appendBlock, createDocWithMd, setBlockAttrs } from "../api/siyuan";
 import { withDocLock } from "../libs/lv-notice-kit";
 import { attachCardSourceBacklink, buildSourceLinkAttrs } from "./block-attributes";
 import { detachCard, type CardRelationsData } from "./card-relations";
 import { validateCardEntry } from "./card-entry-gate";
+import { extractDecksFromIal } from "./deck-management";
 import { validateFlashcardMarkdown } from "./flashcard-quality";
 import { deriveInstance, registerObject, type KnowledgeObjectsData } from "./knowledge-objects";
 import { parseSrLine, parseSrMultiline, stripSrMarkers } from "./obsidian-sr";
@@ -39,14 +41,94 @@ export async function removeCardsFromDeckFlow(
     blockIDs: string[],
     cardRelations: CardRelationsData,
     mutateRelations: (mutator: (next: CardRelationsData) => void) => Promise<unknown>,
+    options?: { deckID?: string },
 ): Promise<RemoveCardsResult> {
-    const { blocks } = await getRiffCardsByBlockIDs(blockIDs);
-    const ids = (blocks ?? []).map(b => b.id).filter(Boolean);
+    const cleanInputIDs = [...new Set(blockIDs.map(id => String(id || "").trim()).filter(Boolean))];
+    if (cleanInputIDs.length === 0) {
+        return { removedCount: 0, cardIDs: [], hadCards: false };
+    }
+
+    const { blocks } = await getRiffCardsByBlockIDs(cleanInputIDs);
+    const matchedBlocks = (blocks ?? []).filter(b => Boolean(b?.id));
+    let ids = matchedBlocks.map(b => b.id);
+
+    let getBlockAttrsFn: ((id: string) => Promise<Record<string, string>>) | undefined;
+    try {
+        if (Object.prototype.hasOwnProperty.call(siyuanApi, "getBlockAttrs")) {
+            getBlockAttrsFn = (siyuanApi as any).getBlockAttrs;
+        }
+    } catch {
+        getBlockAttrsFn = undefined;
+    }
+    const deckToIds = new Map<string, string[]>();
+    const addDeckMapping = (deckID: string, id: string) => {
+        const cleanDeck = String(deckID || "").trim();
+        if (!cleanDeck) return;
+        const list = deckToIds.get(cleanDeck) ?? [];
+        if (!list.includes(id)) list.push(id);
+        deckToIds.set(cleanDeck, list);
+    };
+
+    const blockById = new Map(matchedBlocks.map(b => [b.id, b]));
+    if (ids.length === 0 && options?.deckID) {
+        ids = [...cleanInputIDs];
+    } else if (ids.length === 0 && typeof getBlockAttrsFn === "function") {
+        for (const id of cleanInputIDs) {
+            try {
+                const attrs = await getBlockAttrsFn(id);
+                const rawDecks = String(attrs?.["custom-riff-decks"] || "").trim();
+                if (rawDecks) {
+                    ids.push(id);
+                    for (const d of rawDecks.split(",").map(s => s.trim()).filter(Boolean)) {
+                        addDeckMapping(d, id);
+                    }
+                }
+            } catch { /* ignore */ }
+        }
+    }
+
     if (ids.length === 0) {
         return { removedCount: 0, cardIDs: [], hadCards: false };
     }
-    // 跨集批量移除
-    await removeRiffCards("", ids);
+
+    for (const id of ids) {
+        const block = blockById.get(id) as any;
+        const resolvedForId = new Set<string>();
+        if (options?.deckID) resolvedForId.add(options.deckID);
+        if (block?.ial) {
+            for (const d of extractDecksFromIal(String(block.ial))) {
+                resolvedForId.add(d);
+            }
+        }
+        if (typeof block?.deckID === "string" && block.deckID.trim()) {
+            resolvedForId.add(block.deckID.trim());
+        }
+        if (Array.isArray(block?.riffCard?.deckIDs)) {
+            for (const d of block.riffCard.deckIDs) {
+                if (typeof d === "string" && d.trim()) resolvedForId.add(d.trim());
+            }
+        }
+        if (resolvedForId.size === 0 && typeof getBlockAttrsFn === "function") {
+            try {
+                const attrs = await getBlockAttrsFn(id);
+                const rawDecks = String(attrs?.["custom-riff-decks"] || "").trim();
+                for (const d of rawDecks.split(",").map(s => s.trim()).filter(Boolean)) {
+                    resolvedForId.add(d);
+                }
+            } catch { /* ignore */ }
+        }
+        for (const d of resolvedForId) {
+            addDeckMapping(d, id);
+        }
+    }
+
+    if (deckToIds.size > 0) {
+        for (const [deckID, targetIds] of deckToIds.entries()) {
+            await removeRiffCards(deckID, targetIds);
+        }
+    } else {
+        await removeRiffCards("", ids);
+    }
     invalidateDueCache();
 
     // BK-2：内核卡已删，关系图端点同步清理
@@ -111,14 +193,18 @@ export async function executeQuickCardCreation(
             throw new Error("quickCardFail");
         }
         const blkId = ids[0];
-        await addRiffCards(input.deckID, [blkId]);
 
+        // 必须先写入问答/题型/阶梯列表等块属性，再调用 addRiffCards 入组门禁：
+        // 门禁依赖 getBlockAttrs 读取 custom-riff-title / custom-exam-type / custom-lv-card-type，
+        // 此前先入组后写属性导致问答/属性问答/阶梯列表在入组校验时全部被误拦为 missing-answer。
         const attrsToSet: Record<string, string> = {};
         if (input.sourceDocID || input.sourceBlockID || input.inPlaceDocID) {
             Object.assign(attrsToSet, buildSourceLinkAttrs(input.sourceDocID || input.inPlaceDocID, input.sourceBlockID));
         }
         if (input.examAttrs && Object.keys(input.examAttrs).length > 0) {
-            Object.assign(attrsToSet, input.examAttrs);
+            for (const [k, v] of Object.entries(input.examAttrs)) {
+                attrsToSet[k] = typeof v === "string" ? v.replace(/[\r\n]+/g, " ").trim() : String(v ?? "");
+            }
         }
         if (Object.keys(attrsToSet).length > 0) {
             try {
@@ -127,6 +213,8 @@ export async function executeQuickCardCreation(
                 // 属性写入旁路容错
             }
         }
+
+        await addRiffCards(input.deckID, [blkId]);
         return blkId;
     });
 

@@ -18,7 +18,7 @@
 
 <div class="lv-page" id={pageId} role="main" aria-label={title || eyebrow || undefined} {onscroll} {onfocusin}>
     {#if title || actions}
-        <div class="lv-pagehead">
+        <div class="lv-pagehead" class:lv-pagehead--with-actions={Boolean(actions)}>
             <div class="lv-pagehead-main">
                 {#if eyebrow}<div class="lv-eyebrow">{eyebrow}</div>{/if}
                 {#if title}<div class="lv-pagehead-title">{title}</div>{/if}

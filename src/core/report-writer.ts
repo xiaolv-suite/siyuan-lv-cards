@@ -99,7 +99,7 @@ export function renderExamReportMarkdown(params: ExamReportRenderParams): string
         lines.push(`- 口径：笔记本范围按来源块归属计算；已删除/移动的来源块无法归属，不计入`);
     }
 
-    lines.push("", `> 由小驴闪卡（内测版）生成 · ${now.toLocaleString()}`);
+    lines.push("", `> 由小驴闪卡生成 · ${now.toLocaleString()}`);
     return lines.join("\n");
 }
 
@@ -182,7 +182,7 @@ export function renderDashboardReportMarkdown(params: DashboardReportParams): st
     const today = params.todayDateStr || (params.generatedAt ? params.generatedAt.toLocaleDateString() : new Date().toLocaleDateString());
     const now = params.generatedAt || new Date();
     const rows: string[] = [
-        `# 小驴闪卡（内测版） · 学习报告（${today}）`, "",
+        `# 小驴闪卡 · 学习报告（${today}）`, "",
         "## 总览", "",
         `- 今日到期：${params.dueCount}（新 ${params.newCount} / 复习 ${params.oldCount}）`,
         `- 今日已复习：${params.todayReview} / 目标 ${params.targetReview}`,
@@ -205,7 +205,7 @@ export function renderDashboardReportMarkdown(params: DashboardReportParams): st
             rows.push(`- ${q.date}：${q.cards} 张 / 复习 ${q.reviews} / ${q.rate === null ? "样本积累中" : Math.round(q.rate * 100) + "%"}`);
         }
     }
-    rows.push("", `> 由小驴闪卡（内测版）生成 · ${now.toLocaleString()}`);
+    rows.push("", `> 由小驴闪卡生成 · ${now.toLocaleString()}`);
     return rows.join("\n");
 }
 
@@ -266,13 +266,17 @@ export function computeWeekOverview(params: {
         };
     });
 
+    const totalReviews = days.reduce((sum, day) => sum + day.reviews, 0);
+    const totalNewCards = days.reduce((sum, day) => sum + day.newCards, 0);
     return {
         days,
         start: days[0].date,
         end: days[6].date,
         activeDays: days.filter(day => day.active).length,
-        reviews: days.reduce((sum, day) => sum + day.reviews, 0),
-    };
+        reviews: totalReviews,
+        newCards: totalNewCards,
+        totalRatings: totalReviews + totalNewCards,
+    } as WeekOverviewResult & { newCards: number; totalRatings: number };
 }
 
 /**

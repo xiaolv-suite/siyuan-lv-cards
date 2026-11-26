@@ -47,7 +47,7 @@
     <!-- 遮罩 overlay：问题态实心（点击逐框显隐），答案态半透明全显 -->
     <svg
         class="lv-occl-overlay"
-        style={`left:${occlBox.l}px;top:${occlBox.t}px;width:${occlBox.w}px;height:${occlBox.h}px;`}
+        style={`left:${occlBox.l}px;top:${occlBox.t}px;width:${occlBox.w}px;height:${occlBox.h}px;pointer-events:${showAnswer ? "none" : "auto"};`}
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         data-testid="review-occl-overlay"

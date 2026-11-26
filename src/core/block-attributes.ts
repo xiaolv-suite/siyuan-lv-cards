@@ -21,7 +21,25 @@ export const ATTR_LV_QUESTION = "custom-lv-question";
 export const ATTR_CARD_TITLE = "custom-card-title";
 export const ATTR_RIFF_ANSWER = "custom-riff-answer";
 export const ATTR_LV_ANSWER = "custom-lv-answer";
+export const ATTR_CARD_ANSWER = "custom-card-answer";
+export const ATTR_LV_ATTR_SUBTYPE = "custom-lv-attr-subtype";
+export const ATTR_LV_HINT = "custom-lv-hint";
+export const ATTR_LV_BIDI = "custom-lv-bidi";
 export const ATTR_LV_OCCLUSION = "custom-lv-occlusion";
+
+/**
+ * 零标记属性问答 3 子型：
+ * - direct：直接问答型（正面=块正文题干，背面=答案属性 custom-lv-answer / custom-card-answer）
+ * - recite：背诵自测型（正面=标题/关键词提示，背面=完整块正文或要点对照，支持提示展开自评）
+ * - dual：双面对照型（正面=概念/术语/外语表达，背面=释义/例句/译文，支持正反双向复习）
+ */
+export type AttrQaSubtype = "direct" | "recite" | "dual";
+
+export const ATTR_QA_SUBTYPE_LABELS: Record<AttrQaSubtype, string> = {
+    direct: "直接问答",
+    recite: "背诵自测",
+    dual: "双面对照",
+};
 
 /**
  * 从块属性集合中提取闪卡自定义问题/标题
@@ -33,12 +51,66 @@ export function extractCardQuestionAttr(attrs?: Record<string, string> | null): 
 }
 
 /**
- * 从块属性集合中提取闪卡自定义答案
- * （custom-riff-answer 为空时，复习背面自动回退使用笔记正文作为答案）
+ * 从块属性集合中提取闪卡自定义答案（全门禁与复习渲染统一优先级事实源）：
+ * - direct 子型：custom-lv-answer > custom-card-answer > custom-riff-answer > custom-flashcard-answer
+ * - 其它/存量：custom-riff-answer > custom-lv-answer > custom-card-answer > custom-flashcard-answer
+ * （为空时回退使用笔记正文）
  */
-export function extractCardAnswerAttr(attrs?: Record<string, string> | null): string {
+export function extractCardAnswerAttr(
+    attrs?: Record<string, string> | null,
+    isValid: (val: string) => boolean = (v) => Boolean(v.trim()),
+): string {
     if (!attrs) return "";
-    return String(attrs[ATTR_RIFF_ANSWER] || attrs[ATTR_LV_ANSWER] || "").trim();
+    const keys = String(attrs[ATTR_LV_ATTR_SUBTYPE] || "").trim() === "direct"
+        ? [ATTR_LV_ANSWER, ATTR_CARD_ANSWER, ATTR_RIFF_ANSWER, "custom-flashcard-answer"]
+        : [ATTR_RIFF_ANSWER, ATTR_LV_ANSWER, ATTR_CARD_ANSWER, "custom-flashcard-answer"];
+    for (const k of keys) {
+        const v = String(attrs[k] || "").trim();
+        if (v && isValid(v)) {
+            return v;
+        }
+    }
+    return "";
+}
+
+/**
+ * 从块属性中提取零标记属性问答子型（缺省按存在问题/答案属性自动推断）
+ */
+export function extractAttrQaSubtype(attrs?: Record<string, string> | null): AttrQaSubtype | null {
+    if (!attrs) return null;
+    const explicit = String(attrs[ATTR_LV_ATTR_SUBTYPE] || "").trim();
+    if (explicit === "direct" || explicit === "recite" || explicit === "dual") {
+        return explicit;
+    }
+    const q = extractCardQuestionAttr(attrs);
+    const a = extractCardAnswerAttr(attrs);
+    if (q) {
+        return attrs[ATTR_LV_BIDI] === "true" ? "dual" : "recite";
+    }
+    if (a) {
+        return "direct";
+    }
+    return null;
+}
+
+/**
+ * 提取背诵自测型的关键词/提示属性（custom-lv-hint）
+ */
+export function extractAttrQaHint(attrs?: Record<string, string> | null): string {
+    if (!attrs) return "";
+    return String(attrs[ATTR_LV_HINT] || "").trim();
+}
+
+/**
+ * 提取双面对照型的双向复习开关（custom-lv-bidi）：
+ * 显式 "false" 返回 false；"true" 或双面对照默认未设则返回 true；非双面返回 false。
+ */
+export function extractAttrQaBidi(attrs?: Record<string, string> | null): boolean {
+    if (!attrs) return false;
+    const raw = String(attrs[ATTR_LV_BIDI] || "").trim().toLowerCase();
+    if (raw === "false") return false;
+    if (raw === "true") return true;
+    return extractAttrQaSubtype(attrs) === "dual";
 }
 
 /**
@@ -74,11 +146,66 @@ export function buildAttrQaAttrs(question: string, answer?: string): Record<stri
 }
 
 /**
+ * 按零标记属性问答 3 子型构建标准化属性补丁（不污染正文 Markdown）：
+ * - direct：正面=块正文题干，背面=custom-lv-answer（清空冗余题干属性）
+ * - recite：正面=custom-riff-title（+ 可选 custom-lv-hint），背面=块正文或 custom-riff-answer
+ * - dual：正面=custom-riff-title（概念/术语），背面=custom-lv-answer / 块正文，标记双向复习
+ */
+export function buildAttrQaSubtypeAttrs(input: {
+    subtype: AttrQaSubtype;
+    question?: string;
+    answer?: string;
+    hint?: string;
+    bidi?: boolean;
+}): Record<string, string | null> {
+    const clean = (v?: string) => String(v ?? "").trim().replace(/[\r\n]+/g, " ");
+    const q = clean(input.question);
+    const a = clean(input.answer);
+    const hint = clean(input.hint);
+
+    if (input.subtype === "direct") {
+        return {
+            [ATTR_LV_CARD_TYPE]: "qa",
+            [ATTR_LV_ATTR_SUBTYPE]: "direct",
+            [ATTR_LV_ANSWER]: a,
+            [ATTR_RIFF_ANSWER]: null,
+            [ATTR_CARD_ANSWER]: null,
+            [ATTR_RIFF_TITLE]: null,
+            [ATTR_LV_QUESTION]: null,
+            [ATTR_CARD_TITLE]: null,
+            [ATTR_LV_HINT]: null,
+            [ATTR_LV_BIDI]: null,
+        };
+    }
+    if (input.subtype === "dual") {
+        return {
+            [ATTR_LV_CARD_TYPE]: "qa",
+            [ATTR_LV_ATTR_SUBTYPE]: "dual",
+            [ATTR_RIFF_TITLE]: q,
+            [ATTR_LV_ANSWER]: a || null,
+            [ATTR_RIFF_ANSWER]: a || null,
+            [ATTR_LV_HINT]: hint || null,
+            [ATTR_LV_BIDI]: input.bidi === false ? "false" : "true",
+        };
+    }
+    // recite
+    return {
+        [ATTR_LV_CARD_TYPE]: "qa",
+        [ATTR_LV_ATTR_SUBTYPE]: "recite",
+        [ATTR_RIFF_TITLE]: q,
+        [ATTR_RIFF_ANSWER]: a || null,
+        [ATTR_LV_ANSWER]: null,
+        [ATTR_LV_HINT]: hint || null,
+        [ATTR_LV_BIDI]: null,
+    };
+}
+
+/**
  * 构建问答属性彻底清除补丁（弹窗"清空"动作专用）：
  * 思源内核 /api/attr/setBlockAttrs 传 "" 只保留空值键（IAL 死键残留），
  * 必须传 null 才会把键从块属性与 attributes 索引表真正删除；
- * 且须同时清除 custom-lv-question / custom-card-title / custom-lv-answer 旧兼容键——
- * 否则读取侧（extractCardQuestionAttr）会从残留旧键回填，清空后问题"复活"。
+ * 且须同时清除 custom-lv-question / custom-card-title / custom-lv-answer / custom-card-answer / 子型键——
+ * 否则读取侧（extractCardQuestionAttr / extractCardAnswerAttr）会从残留旧键回填，清空后问题"复活"。
  */
 export function buildAttrQaClearAttrs(): Record<string, null> {
     return {
@@ -87,7 +214,65 @@ export function buildAttrQaClearAttrs(): Record<string, null> {
         [ATTR_LV_QUESTION]: null,
         [ATTR_LV_ANSWER]: null,
         [ATTR_CARD_TITLE]: null,
+        [ATTR_CARD_ANSWER]: null,
+        [ATTR_LV_CARD_TYPE]: null,
+        [ATTR_LV_ATTR_SUBTYPE]: null,
+        [ATTR_LV_HINT]: null,
+        [ATTR_LV_BIDI]: null,
     };
+}
+
+/**
+ * 清洗并校验 AI 拟题响应，严禁把裸 JSON 或系统提示词回显填入问题输入框。
+ */
+export function extractSuggestedQuestionFromAiResponse(raw: string): { ok: boolean; question: string; reason?: string } {
+    const trimmed = String(raw ?? "").trim();
+    if (!trimmed) {
+        return { ok: false, question: "", reason: "AI 未返回有效问题" };
+    }
+    // 拦截提示词回显或离线启发式回显
+    if (
+        trimmed.includes("请为以下学习笔记内容提炼")
+        || trimmed.includes("只输出问题本身，不要输出任何前缀")
+        || trimmed.includes("[离线启发式回复]")
+        || /^\[问\][\s\S]*\[答\]\s*请为以下学习笔记内容提炼/.test(trimmed)
+    ) {
+        return { ok: false, question: "", reason: "AI 服务未配置或返回了提示词回显，请先检查 AI 配置" };
+    }
+
+    // 剥离 markdown 代码块外壳
+    let candidate = trimmed;
+    const fenceMatch = candidate.match(/^```(?:json|text)?\s*\r?\n([\s\S]*?)\r?\n```$/i);
+    if (fenceMatch) {
+        candidate = fenceMatch[1].trim();
+    }
+
+    // 若返回 JSON 对象或数组，尝试提取其中明确的问题字段；解析失败或无问题字段则绝不回填裸 JSON
+    if (candidate.startsWith("{") || candidate.startsWith("[")) {
+        try {
+            const parsed = JSON.parse(candidate);
+            const firstObj = Array.isArray(parsed) ? parsed.find(item => item && typeof item === "object") : parsed;
+            const extracted = firstObj && typeof firstObj === "object"
+                ? String((firstObj as any).q ?? (firstObj as any).question ?? (firstObj as any).front ?? "").trim()
+                : "";
+            if (!extracted) {
+                return { ok: false, question: "", reason: "AI 返回了非纯文本格式且缺少问题字段" };
+            }
+            candidate = extracted;
+        } catch {
+            return { ok: false, question: "", reason: "AI 返回了无效 JSON 格式，已拦截以免污染题干" };
+        }
+    }
+
+    const cleanQ = candidate
+        .replace(/^(?:问题|提问|Q|Question)[：:\s]+/i, "")
+        .replace(/^["'「]+|["'」]+$/g, "")
+        .trim();
+
+    if (!cleanQ) {
+        return { ok: false, question: "", reason: "AI 未生成有效提问" };
+    }
+    return { ok: true, question: cleanQ };
 }
 
 /**

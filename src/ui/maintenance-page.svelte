@@ -480,7 +480,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<LvPage eyebrow="WORKSPACE / RECOVER" title={t.title} subtitle={t.queueCount.replace("${n}", String(total()))}>
+<LvPage eyebrow="卡片体检与修复" title={t.title} subtitle={t.queueCount.replace("${n}", String(total()))}>
     {#snippet actions()}
         <button
             type="button"

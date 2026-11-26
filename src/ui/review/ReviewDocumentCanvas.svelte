@@ -216,7 +216,7 @@
                     </div>
                     <div class="lv-doc-fallback-body">
                         <p class="lv-fallback-tip">
-                            （整篇文档温故模式：已连接思源原生 Protyle 引擎；若需修改正文或选中文字按 <code>==</code> / <code>/qa</code> 制卡，可直接在长文内操作）
+                            （整篇文档温故模式：已连接思源原生编辑器；若需修改正文或选中文字按 <code>==</code> / <code>/qa</code> 制卡，可直接在长文内操作）
                         </p>
                     </div>
                 </div>

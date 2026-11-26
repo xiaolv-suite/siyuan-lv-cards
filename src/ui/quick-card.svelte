@@ -2,6 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { getRiffDecks, createRiffDeck, type RiffDeck } from "@/api/riff";
     import { inspectCardLearnability, validateQaDraft, hasMarkedAnswer, type CardSplitDraft } from "@/core/flashcard-quality";
+    import type { AttrQaSubtype } from "@/core/block-attributes";
     import { parsePastedQuestionText } from "@/core/question-splitter";
     import { extractDroppedBlockText } from "@/core/drag-drop";
     import { compressImageFile } from "@/core/image-compress";
@@ -53,9 +54,11 @@
     let previewAnswer = $state(false);
     let createdNotice = $state("");
 
-    // R59/R60 卡面表达支持问答/属性问答/挖空/阶梯列表/超级块/选择题/公式推导
+    // R59/R60 卡面表达支持问答/属性问答（3子型）/挖空/阶梯列表/超级块/选择题/公式推导
     type TemplateKind = "qa" | "attr-qa" | "cloze" | "sequence" | "superblock" | "choice" | "formula";
     type ChoiceMode = "single" | "multiple" | "judge";
+    let attrSubType = $state<AttrQaSubtype>("recite");
+    let attrHint = $state("");
     let choiceMode = $state<ChoiceMode>("single");
     let optionTexts = $state<{ text: string }[]>([
         { text: "" },
@@ -158,31 +161,33 @@
 
     /** 序列化选择/判断题为思源块：题干 + 选项行 + 遮罩答案行，属性经 examAttrs 落 custom-exam-* */
     function serializeChoiceCard(): { markdown: string; examAttrs: Record<string, string>; qText: string; aText: string } {
+        const cleanQ = q.trim().replace(/\n\s*\n+/g, "\n");
+        const cleanAnalysis = analysis.trim().replace(/\s*\n+\s*/g, " ");
         if (choiceMode === "judge") {
             const answerText = correctKeys[0] === "A" ? "对" : "错";
             return {
-                markdown: `${q.trim()}\n==正确答案：${answerText}==`,
+                markdown: `${cleanQ}\n==正确答案：${answerText}==`,
                 examAttrs: {
                     "custom-exam-type": "judge",
                     "custom-exam-answer": answerText,
-                    ...(analysis.trim() ? { "custom-exam-analysis": analysis.trim() } : {}),
+                    ...(cleanAnalysis ? { "custom-exam-analysis": cleanAnalysis } : {}),
                 },
-                qText: q.trim(),
+                qText: cleanQ,
                 aText: answerText,
             };
         }
-        const optionLines = nonEmptyOptions.map(o => `${o.key}. ${o.text}`).join("\n");
+        const optionLines = nonEmptyOptions.map(o => `${o.key}. ${o.text.replace(/\s*\n+\s*/g, " ")}`).join("\n");
         const answerLetters = validCorrectKeys.join("");
         const answerSummary = validCorrectKeys.map(k => `${k}．${nonEmptyOptions.find(o => o.key === k)?.text ?? ""}`).join("；");
         return {
-            markdown: `${q.trim()}\n${optionLines}\n==正确答案：${answerLetters}${analysis.trim() ? `（${analysis.trim()}）` : ""}==`,
+            markdown: `${cleanQ}\n${optionLines}\n==正确答案：${answerLetters}${cleanAnalysis ? `（${cleanAnalysis}）` : ""}==`,
             examAttrs: {
                 "custom-exam-type": choiceMode,
                 "custom-exam-answer": answerLetters,
-                ...(analysis.trim() ? { "custom-exam-analysis": analysis.trim() } : {}),
+                ...(cleanAnalysis ? { "custom-exam-analysis": cleanAnalysis } : {}),
             },
-            qText: q.trim(),
-            aText: `正确答案：${answerLetters}${analysis.trim() ? `（${analysis.trim()}）` : ""} — ${answerSummary}`,
+            qText: cleanQ,
+            aText: `正确答案：${answerLetters}${cleanAnalysis ? `（${cleanAnalysis}）` : ""} — ${answerSummary}`,
         };
     }
 
@@ -381,7 +386,7 @@
         } else if (!clean.startsWith("$")) {
             clean = `$${clean}$`;
         }
-        return clean;
+        return clean.replace(/\n\s*\n+/g, "\n");
     }
 
     function serializeDraftByTemplate(draft: CardSplitDraft): string {
@@ -524,7 +529,7 @@
 
     /** R58/R60 一键示例：仅在内容为空时可用，避免覆盖用户已输入的草稿 */
     const SAMPLE_DRAFTS: Record<TemplateKind, { q: string; a: string }> = {
-        qa: { q: "FSRS 调度模型中的 S 代表什么？", a: "稳定性（Stability），表示记忆当前的坚固程度。" },
+        qa: { q: "间隔记忆模型中的「稳定性」代表什么？", a: "表示记忆当前的坚固程度，即记忆保留率从 100% 衰减至 90% 所需的时间。" },
         "attr-qa": { q: "什么是哈希表（Hash Table）的核心优势？", a: "哈希表通过散列函数建立键到内存地址的映射，平均情况下具有 O(1) 的极速查找与插入时间复杂度。" },
         cloze: { q: "细胞进行有氧呼吸的主要场所是____。", a: "线粒体" },
         sequence: { q: "请列举敏捷软件开发的 4 大核心价值观：", a: "个体和互动高于流程和工具\n工作的软件高于详尽的文档\n客户合作高于合同谈判\n响应变化高于遵循计划" },
@@ -656,13 +661,41 @@
             if (template === "qa" || template === "attr-qa") {
                 const question = q.trim();
                 const answer = a.trim();
-                const markdown = answer;
+                const cleanHint = attrHint.trim().replace(/[\r\n]+/g, " ");
+                const isAttrDirect = template === "attr-qa" && attrSubType === "direct";
+                const isAttrDual = template === "attr-qa" && attrSubType === "dual";
+                const isAttrRecite = template === "attr-qa" && attrSubType === "recite";
+                const markdown = isAttrDirect ? question : answer;
+                const baseAttrs: Record<string, string> = isAttrDirect
+                    ? {
+                        "custom-lv-answer": answer,
+                        "custom-lv-card-type": "qa",
+                        "custom-lv-attr-subtype": "direct",
+                    }
+                    : isAttrDual
+                    ? {
+                        "custom-riff-title": question,
+                        "custom-lv-answer": answer,
+                        "custom-lv-card-type": "qa",
+                        "custom-lv-attr-subtype": "dual",
+                        "custom-lv-bidi": "true",
+                    }
+                    : isAttrRecite
+                    ? {
+                        "custom-riff-title": question,
+                        "custom-lv-card-type": "qa",
+                        "custom-lv-attr-subtype": "recite",
+                        ...(cleanHint ? { "custom-lv-hint": cleanHint } : {}),
+                    }
+                    : {
+                        "custom-riff-title": question,
+                        "custom-lv-card-type": "qa",
+                    };
                 const opts = {
                     ...(docOpts ?? {}),
                     examAttrs: {
                         ...((docOpts as any)?.examAttrs ?? {}),
-                        "custom-riff-title": question,
-                        "custom-lv-card-type": "qa",
+                        ...baseAttrs,
                     },
                 };
                 if (isBidirectional) {
@@ -673,13 +706,24 @@
                         firstArgs.push(opts);
                     }
                     const first = await (onCreate as any)(...firstArgs);
+                    const reverseAttrs: Record<string, string> = isAttrDual
+                        ? {
+                            "custom-riff-title": answer,
+                            "custom-lv-answer": question,
+                            "custom-lv-card-type": "qa",
+                            "custom-lv-attr-subtype": "dual",
+                            "custom-lv-bidi": "true",
+                        }
+                        : {
+                            "custom-riff-title": answer,
+                            "custom-lv-card-type": "qa",
+                        };
                     if (first && first.docID) {
                         const secondOpts = {
                             ...(docOpts ?? {}),
                             examAttrs: {
                                 ...((docOpts as any)?.examAttrs ?? {}),
-                                "custom-riff-title": answer,
-                                "custom-lv-card-type": "qa",
+                                ...reverseAttrs,
                             },
                         };
                         const secondArgs: any[] = [question, deckID, deckName, answer, question, first.docID, secondOpts];
@@ -689,8 +733,7 @@
                             ...(docOpts ?? {}),
                             examAttrs: {
                                 ...((docOpts as any)?.examAttrs ?? {}),
-                                "custom-riff-title": answer,
-                                "custom-lv-card-type": "qa",
+                                ...reverseAttrs,
                             },
                         };
                         const altArgs: any[] = [question, deckID, deckName, answer, question, undefined, altOpts];
@@ -710,6 +753,7 @@
                 if (embedded) {
                     q = "";
                     a = "";
+                    attrHint = "";
                     // 2026-11-21 走查修复：先快照双向标记再重置——原顺序使双向分支成为死代码，成功提示恒为普通文案
                     const wasBidirectional = isBidirectional;
                     isBidirectional = false;
@@ -726,7 +770,10 @@
             const question = q.trim();
             const answer = a.trim();
             if (template === "sequence") {
-                const items = answer.split("\n").map(l => l.trim()).filter(Boolean);
+                const items = answer
+                    .split("\n")
+                    .map(l => l.trim().replace(/^[-*+]\s+/, "").trim())
+                    .filter(Boolean);
                 // 阶梯卡契约（parseSequenceCard 首分支）：入组块必须是列表块本身，
                 // 题干仅存 custom-riff-title 属性（免侵入）。此前把"题干段+列表"混排成
                 // 多块 Markdown——内核 appendBlock 会拆成兄弟块，入组与属性只挂题干段，
@@ -758,14 +805,16 @@
                 }
             } else {
                 // 该分支仅服务挖空/超级块/公式三个模板（问答、属性问答、选择题与序列卡已在上方分支提前返回）
+                const singleBlockQ = question.replace(/\n\s*\n+/g, "\n");
+                const singleBlockClozeA = answer.replace(/\n\s*\n+/g, "\n");
                 const markdown = template === "cloze"
-                    ? (question.includes("____")
-                        ? question.split("____").join(`==${answer}==`)
-                        : (question.includes("==") && answer && !question.includes(answer) ? `${question}\n> 💡 ${answer}` : question))
+                    ? (singleBlockQ.includes("____")
+                        ? singleBlockQ.split("____").join(`==${singleBlockClozeA}==`)
+                        : (singleBlockQ.includes("==") && singleBlockClozeA && !singleBlockQ.includes(singleBlockClozeA) ? `${singleBlockQ}\n> 💡 ${singleBlockClozeA}` : singleBlockQ))
                     : template === "superblock"
                     ? // 题干内空行合并为单换行：防止第二段被超级块解析误当作答案块
-                        `{{{col\n${question.replace(/\n\s*\n+/g, "\n")}\n\n${answer}\n}}}`
-                    : `${question}\n==${cleanFormulaCloze(answer)}==`;
+                        `{{{col\n${singleBlockQ}\n\n${answer}\n}}}`
+                    : `${singleBlockQ}\n==${cleanFormulaCloze(answer)}==`;
                 const callArgs: any[] = [markdown, deckID, deckName, question, answer];
                 if (targetDocID || docOpts) {
                     callArgs.push(targetDocID);
@@ -1032,9 +1081,49 @@
     {/if}
     <div class="lv-qc-content">
         <section class="lv-qc-editor" aria-label={t.quickCardEditorLabel}>
+            {#if template === "attr-qa"}
+                <div class="lv-qc-attr-subtypes" role="group" aria-label={t.attrQaSubtypeLabel ?? "属性问答子型"} data-testid="qc-attr-subtypes">
+                    <button
+                        type="button"
+                        class="lv-qc-subtype-btn"
+                        class:lv-qc-subtype-active={attrSubType === "direct"}
+                        aria-pressed={attrSubType === "direct"}
+                        disabled={busy}
+                        onclick={() => { attrSubType = "direct"; isBidirectional = false; previewAnswer = false; }}
+                        title="正面=块正文题干，背面=答案属性 (custom-lv-answer)"
+                    >
+                        <strong>直接问答型</strong>
+                        <span>正文题干 → 属性答案</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="lv-qc-subtype-btn"
+                        class:lv-qc-subtype-active={attrSubType === "recite"}
+                        aria-pressed={attrSubType === "recite"}
+                        disabled={busy}
+                        onclick={() => { attrSubType = "recite"; isBidirectional = false; previewAnswer = false; }}
+                        title="正面=标题/关键词提示，背面=完整块正文或要点对照，支持提示展开自评"
+                    >
+                        <strong>背诵自测型</strong>
+                        <span>标题/提示 → 完整背诵</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="lv-qc-subtype-btn"
+                        class:lv-qc-subtype-active={attrSubType === "dual"}
+                        aria-pressed={attrSubType === "dual"}
+                        disabled={busy}
+                        onclick={() => { attrSubType = "dual"; previewAnswer = false; }}
+                        title="正面=概念/术语/外语表达，背面=释义/例句/译文，支持正反双向复习"
+                    >
+                        <strong>双面对照型</strong>
+                        <span>概念 ↔ 释义/译文</span>
+                    </button>
+                </div>
+            {/if}
             <div class="lv-qc-field">
                 <div class="lv-qc-label-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span class="lv-qc-label">{t.quickCardQ} <span class="lv-qc-count" class:lv-qc-count-warn={q.length > 60}>{q.length} 字</span></span>
+                    <span class="lv-qc-label">{template === "attr-qa" ? (attrSubType === "direct" ? "题干（正文问题）" : attrSubType === "dual" ? "概念 / 术语 / 外语表达" : "背诵标题 / 提示词") : t.quickCardQ} <span class="lv-qc-count" class:lv-qc-count-warn={q.length > 60}>{q.length} 字</span></span>
                     <span style="display: inline-flex; gap: 6px; align-items: center;">
                         <input
                             type="file"
@@ -1222,7 +1311,7 @@
             {#if template !== "choice"}
                 <label class="lv-qc-field">
                     <div class="lv-qc-label-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                        <span class="lv-qc-label">{t.quickCardA} <span class="lv-qc-count" class:lv-qc-count-warn={a.length > 120}>{a.length} 字</span></span>
+                        <span class="lv-qc-label">{template === "attr-qa" ? (attrSubType === "direct" ? "背面答案（写入 custom-lv-answer）" : attrSubType === "dual" ? "释义 / 例句 / 译文" : "完整背诵正文 / 要点对照") : t.quickCardA} <span class="lv-qc-count" class:lv-qc-count-warn={a.length > 120}>{a.length} 字</span></span>
                     </div>
                     <textarea
                         bind:this={aTextareaEl}
@@ -1230,17 +1319,25 @@
                         aria-label={t.quickCardA}
                         rows="4"
                         bind:value={a}
-                        placeholder={template === "superblock" ? (t.quickCardSuperBlockHint ?? "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块") : template === "sequence" ? "每行输入一个要点（按回车换行，复习时按空格逐行阶梯展开回忆）" : template === "formula" ? "输入公式表达式（如 E = mc^2）与推导解析" : t.quickCardA}
+                        placeholder={template === "superblock" ? (t.quickCardSuperBlockHint ?? "答案区支持多段文字，段落之间空行将自动拆分成独立的答案子块") : template === "sequence" ? "每行输入一个要点（按回车换行，复习时按空格逐行阶梯展开回忆）" : template === "formula" ? "输入公式表达式（如 E = mc^2）与推导解析" : template === "attr-qa" ? (attrSubType === "direct" ? "输入标准答案（仅存于块属性 custom-lv-answer，正文保持纯粹题干）" : attrSubType === "dual" ? "输入释义、例句或译文（支持正反双向复习）" : "输入完整背诵正文或记忆要点对照") : t.quickCardA}
                         disabled={busy}
                         spellcheck="false"
                         onfocus={() => (lastFocusedField = "a")}
                     ></textarea>
                 </label>
             {/if}
-            {#if template === "qa"}
+            {#if template === "attr-qa" && attrSubType === "recite"}
+                <label class="lv-qc-field">
+                    <div class="lv-qc-label-bar" style="margin-bottom: 4px;">
+                        <span class="lv-qc-label">关键词提示（可选 · 复习时可先展开提示再自评）</span>
+                    </div>
+                    <input class="b3-text-field fn__block" aria-label="关键词提示" placeholder="例如：核心步骤关键词或记忆线索（留空则不显示提示按钮）" bind:value={attrHint} disabled={busy} />
+                </label>
+            {/if}
+            {#if template === "qa" || (template === "attr-qa" && attrSubType === "dual")}
                 <label class="lv-qc-bidi-toggle">
                     <input type="checkbox" class="lv-check" bind:checked={isBidirectional} disabled={busy} />
-                    <span>{t.quickCardBidiLabel ?? "生成双向卡片（互为问答 A ↔ B）"}</span>
+                    <span>{template === "attr-qa" ? "同时生成正反双向卡片（概念 ↔ 释义各 1 张）" : (t.quickCardBidiLabel ?? "生成双向卡片（互为问答 A ↔ B）")}</span>
                 </label>
             {/if}
             <div class="lv-qc-guidance">
@@ -1265,7 +1362,7 @@
                     <span class="lv-chip2 lv-chip2--default">
                         {#if template === "choice"}<LvIcon name="check" size={14} /> {choiceMode === "judge" ? (t.cardTypeBadgeJudge ?? "判断") : choiceMode === "multiple" ? (t.cardTypeBadgeMulti ?? "多选") : (t.cardTypeBadgeChoice ?? "单选")}
                         {:else if template === "qa" && isBidirectional}<LvIcon name="swap" size={14} /> {t.cardTypeBadgeBidi ?? "双向"}
-                        {:else if template === "attr-qa"}<LvIcon name="target" size={14} /> {t.cardTypeBadgeAttrQa ?? "属性问答"}
+                        {:else if template === "attr-qa"}<LvIcon name="target" size={14} /> {attrSubType === "direct" ? "直接问答" : attrSubType === "dual" ? "双面对照" : (t.cardTypeBadgeAttrQa ?? "属性问答")}
                         {:else if template === "sequence"}<LvIcon name="list" size={14} /> {t.sequenceBadge ?? "阶梯列表"}
                         {:else if template === "superblock"}<LvIcon name="cards" size={14} /> {t.cardTypeBadgeSuperBlock ?? "超级块"}
                         {:else if template === "cloze"}<LvIcon name="edit" size={14} /> {t.cardTypeBadgeCloze ?? "挖空"}
@@ -1335,12 +1432,15 @@
                         </div>
                     {:else if template === "attr-qa"}
                         <div class="lv-qa-attr-hero">
-                            <span class="lv-qa-attr-badge" aria-label="问">问</span>
+                            <span class="lv-qa-attr-badge" aria-label="问">{attrSubType === "direct" ? "直接问答" : attrSubType === "dual" ? "双面对照" : "背诵自测"}</span>
                             <div class="lv-qa-attr-title">{q}</div>
                         </div>
+                        {#if attrSubType === "recite" && attrHint.trim()}
+                            <div class="ft__smaller ft__on-surface" style="margin: 6px 0;">💡 关键词提示：{attrHint.trim()}</div>
+                        {/if}
                         <div class="lv-card-answer-divider"></div>
                         <div class="lv-qa-answer-placeholder" aria-hidden="true">
-                            <span class="lv-mask-slot">［ 笔记正文答案（复习时遮蔽）· 点击查看答案揭晓 ］</span>
+                            <span class="lv-mask-slot">{attrSubType === "direct" ? "［ 答案属性 (custom-lv-answer) · 点击查看答案揭晓 ］" : attrSubType === "dual" ? "［ 释义 / 译文对照（支持双向）· 点击查看答案揭晓 ］" : "［ 笔记正文答案（复习时遮蔽）· 点击查看答案揭晓 ］"}</span>
                         </div>
                     {:else}
                         <p>{q}{#if template === "qa" && a.trim()}<span class="lv-qc-mask">{t.quickCardHiddenAnswer}</span>{/if}</p>
@@ -1652,6 +1752,39 @@
         color: var(--lv-color-brand);
         font-weight: var(--lv-fw-bold);
         box-shadow: 0 2px 8px color-mix(in srgb, black 6%, transparent), var(--lv-inset-shine);
+    }
+    .lv-qc-attr-subtypes {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--lv-sp-2);
+        margin-bottom: var(--lv-sp-3);
+    }
+    .lv-qc-subtype-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        padding: 8px 10px;
+        border-radius: var(--lv-r-m);
+        border: 1px solid var(--lv-border);
+        background: var(--lv-color-surface);
+        color: var(--lv-color-text-muted);
+        cursor: pointer;
+        text-align: left;
+        font-size: var(--lv-type-meta-size);
+        transition: border-color var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), color var(--lv-dur-1) var(--lv-ease);
+        strong { font-size: var(--lv-type-control-size); color: var(--lv-color-text); }
+        span { font-size: 11px; opacity: 0.85; }
+        &:hover:not(:disabled) { border-color: var(--lv-primary-border); }
+    }
+    .lv-qc-subtype-btn.lv-qc-subtype-active {
+        border-color: var(--lv-color-brand);
+        background: color-mix(in srgb, var(--lv-primary-soft) 55%, var(--lv-color-surface));
+        color: var(--lv-color-brand);
+        strong { color: var(--lv-color-brand); }
+    }
+    @container lv-quickcard (max-width: 560px) {
+        .lv-qc-attr-subtypes { grid-template-columns: 1fr; }
     }
     .lv-qc-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--lv-sp-4); align-items: start; }
     .lv-qc-editor { min-width: 0; }

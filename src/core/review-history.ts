@@ -118,3 +118,22 @@ export function popReviewHistory<TCard>(
 ): ReviewHistorySnapshot<TCard> | null {
     return stack.pop() ?? null;
 }
+
+/**
+ * 取消制卡或物理删除原块时，同步清洗撤销栈中对该卡片的全部引用，防止 Ctrl+Z 复活废卡报错。
+ */
+export function purgeCardFromReviewHistory<TCard extends { cardID?: string; blockID?: string }>(
+    stack: readonly ReviewHistorySnapshot<TCard>[],
+    cardID: string,
+    blockID?: string,
+): ReviewHistorySnapshot<TCard>[] {
+    const matches = (c: TCard | null | undefined): boolean =>
+        Boolean(c && ((cardID && c.cardID === cardID) || (blockID && c.blockID === blockID)));
+    return stack
+        .filter((snap) => !matches(snap.current))
+        .map((snap) => ({
+            ...snap,
+            queue: snap.queue.filter((c) => !matches(c)),
+            pendingRequeues: snap.pendingRequeues.filter((item) => !matches(item.card)),
+        }));
+}

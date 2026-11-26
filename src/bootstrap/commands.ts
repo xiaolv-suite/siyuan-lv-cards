@@ -30,6 +30,8 @@ export interface CommandHost {
     openCurrentBlockQuestionDialog?: () => void;
     /** 键盘直达：光标所在块展开块助手操作中心（无鼠标依赖） */
     openBlockActionCenter?: () => void;
+    /** 块助手总开关状态校验（关闭态 Alt+B 绝不呼出菜单） */
+    isBlockAssistantEnabled?: () => boolean;
 }
 
 export const REGISTERED_COMMAND_KEYS = [
@@ -66,13 +68,18 @@ export function registerPluginCommands(host: CommandHost): void {
         hotkey: "⌥Q",
         callback: () => host.openCurrentBlockQuestionDialog?.(),
     });
-    // 块助手键盘直达（Alt+B：光标所在块直接展开块操作中心，无鼠标依赖）
+    // 块助手键盘直达（⌥B / Alt+B：光标所在块直接展开块操作中心，无鼠标依赖）
     if (typeof host.openBlockActionCenter === "function") {
         host.addCommand({
             langKey: "blockActionCenter",
             langText: host.i18n.cmdBlockActionCenter ?? "打开块助手操作中心（当前块）",
-            hotkey: "Alt+B",
-            callback: () => host.openBlockActionCenter!(),
+            hotkey: "⌥B",
+            callback: () => {
+                if (host.isBlockAssistantEnabled && !host.isBlockAssistantEnabled()) {
+                    return;
+                }
+                host.openBlockActionCenter!();
+            },
         });
     }
     host.addCommand({
@@ -112,11 +119,11 @@ export function registerPluginCommands(host: CommandHost): void {
         hotkey: "",
         callback: () => host.openRepairDrill(),
     });
-    // T13 命令面板：动作+导航键盘直达（默认 Alt+K，规避思源富文本插入超链接冲突）
+    // T13 命令面板：动作+导航键盘直达（思源标准 ⌥K，规避思源富文本插入超链接冲突）
     host.addCommand({
         langKey: "palette",
         langText: host.i18n.cmdPalette,
-        hotkey: "Alt+K",
+        hotkey: "⌥K",
         callback: () => host.openPalette(),
     });
     host.addCommand({

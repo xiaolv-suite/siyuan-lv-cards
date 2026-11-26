@@ -7,7 +7,8 @@
 import { addRiffCards as kernelAddRiffCards, getRiffDueCardsForScope, type RiffDueCardsData } from "./riff";
 import { createDueCache } from "../libs/due-cache";
 import { flushTransaction, getBlockAttrs, getBlockMarkdown, SQL_QUERY_CHUNK_SIZE, SQL_QUERY_CONCURRENCY, sqlQuery } from "./siyuan";
-import { hasQuestionMediaContent, validateFlashcardMarkdown } from "../core/flashcard-quality";
+import { hasQuestionContent, validateFlashcardMarkdown } from "../core/flashcard-quality";
+import { hasDelimitedQa } from "../core/delimited-qa";
 import { validateCardEntries, type CardEntryDecision } from "../core/card-entry-gate";
 import { mapChunksOrdered } from "../core/query-chunks";
 
@@ -98,23 +99,27 @@ async function validateRiffCardEntries(blockIDs: string[]): Promise<CardEntryDec
     for (const id of remainingIDs) {
         try {
             const markdown = await getBlockMarkdown(id);
-            if (markdown) markdownByID.set(id, markdown);
+            if (typeof markdown === "string") markdownByID.set(id, markdown);
         } catch {
             // 块不存在：保持缺失，由门禁判为 missing-block
         }
     }
 
-    const occlusionCandidates = uniqueIDs.filter(id => {
-        const markdown = markdownByID.get(id);
-        return Boolean(markdown && validateFlashcardMarkdown(markdown) === "missing-answer" && hasQuestionMediaContent(markdown));
+    // 仅凭 markdown 尚不足以直接放行的块（含属性问答 custom-riff-title、阶梯列表 custom-lv-card-type、
+    // 考试选择题 custom-exam-type、图片遮挡 lv-occlusion、块备注 memo 等），补查块属性再交给门禁联合判定。
+    const attrCandidates = uniqueIDs.filter(id => {
+        if (!markdownByID.has(id)) return false;
+        const markdown = markdownByID.get(id) ?? "";
+        if (hasDelimitedQa(markdown)) return false;
+        return validateFlashcardMarkdown(markdown) !== null || !hasQuestionContent(markdown);
     });
-    const attrChunks = Array.from({ length: Math.ceil(occlusionCandidates.length / SQL_QUERY_CONCURRENCY) }, (_, index) =>
-        occlusionCandidates.slice(index * SQL_QUERY_CONCURRENCY, (index + 1) * SQL_QUERY_CONCURRENCY),
+    const attrChunks = Array.from({ length: Math.ceil(attrCandidates.length / SQL_QUERY_CONCURRENCY) }, (_, index) =>
+        attrCandidates.slice(index * SQL_QUERY_CONCURRENCY, (index + 1) * SQL_QUERY_CONCURRENCY),
     );
     const attrsByID = new Map<string, Record<string, string>>();
     const attrsByChunk = await mapChunksOrdered(attrChunks, ids => Promise.all(ids.map(async id => {
         try {
-            return [id, await getBlockAttrs(id)] as const;
+            return [id, (await getBlockAttrs(id)) ?? {}] as const;
         } catch {
             return [id, {}] as const;
         }

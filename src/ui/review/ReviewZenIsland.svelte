@@ -89,10 +89,10 @@
         box-shadow: var(--lv-shadow-2), var(--lv-inset-shine);
         pointer-events: auto;
 
-        @supports (backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px)) {
+        @supports (backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px)) {
             background: color-mix(in srgb, var(--lv-color-surface) 86%, transparent);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
         }
     }
     .lv-zen-island-sep {

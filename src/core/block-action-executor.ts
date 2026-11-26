@@ -14,8 +14,11 @@ import { showMessage } from "../libs/notice";
 import { lvLog } from "../libs/log";
 import { callBridgeOutcome, getBridgeSafely, captureQuoteToCommonSafely, type BridgeCallOutcome, type ContactsBridgeApi, type RaikiriBridgeApi } from "../libs/ecosystem-bridge-kit";
 import { getBlockAttrs, getBlockMarkdown, setBlockAttrs, updateBlock } from "../api/siyuan";
-import { inferBlockKindFromElement, recordActionUsage, type BlockActionDescriptor, type BlockSnapshot, type EcosystemPresence } from "./block-actions";
-import { openBlockTypeMorphPicker, morphBlockTypeTo, queryBlockElementById } from "../libs/lv-notice-kit";
+import { inferBlockKindFromElement, isBlockElementReadOnly, recordActionUsage, WRITE_BLOCK_ACTION_IDS, type BlockActionDescriptor, type BlockSnapshot, type EcosystemPresence } from "./block-actions";
+import { openBlockTypeMorphPicker, morphBlockTypeTo } from "../libs/lv-notice-kit";
+import { findActiveProtyleBlockElement } from "./block-dom-utils";
+
+export { findActiveProtyleBlockElement };
 
 /** 执行器需要宿主注入的本仓能力（避免本文件反向依赖 index.ts 造成循环） */
 export interface BlockActionHost {
@@ -135,12 +138,11 @@ function getCleanTextFromDom(el: HTMLElement | null): string {
 }
 
 /** 取出块的纯文本（优先 DOM 纯净文本，彻底杜绝 IAL 与属性栏胶囊污染；降级 API 时严格剥离 IAL 与结构前缀） */
-async function readBlockText(blockID: string): Promise<string> {
+async function readBlockText(blockID: string, anchor?: Element | null): Promise<string> {
     try {
-        const el = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-            || queryBlockElementById(blockID); // 2026-11-21 修复：兜底改用排除面包屑冒名者的精确查询
+        const el = findActiveProtyleBlockElement(blockID, anchor);
         if (el) {
-            const cleanText = getCleanTextFromDom(el as HTMLElement);
+            const cleanText = getCleanTextFromDom(el);
             if (cleanText) return cleanText;
         }
     } catch { /* 降级到 API */ }
@@ -216,6 +218,18 @@ export async function executeBlockAction(
     const targetIDs = (batchBlockIDs && batchBlockIDs.length > 1) ? batchBlockIDs : [blockID];
     const isBatch = targetIDs.length > 1;
 
+    // 只读锁定文档拦截写操作（含直接调用 executeBlockAction 或外部动作）
+    const activeEl = findActiveProtyleBlockElement(blockID, options?.anchor);
+    const readOnly = Boolean(
+        snapshot?.isReadOnly
+        || isBlockElementReadOnly(activeEl)
+        || isBlockElementReadOnly(options?.anchor),
+    );
+    if (readOnly && (WRITE_BLOCK_ACTION_IDS.has(action.id) || (action as any).mutatesBlock === true || (action as any).readonlySafe === false)) {
+        showMessage(execMsg(host, "executor.readonlyBlocked", "当前文档处于只读锁定状态，已拦截写入操作"), 2400, "info");
+        return;
+    }
+
     // 本地习惯学习：记录动作实际执行频次，菜单排序随用户使用习惯自适应（零污染，仅 localStorage）
     recordActionUsage(action.id);
 
@@ -262,8 +276,7 @@ export async function executeBlockAction(
                             w.siyuan.ws.send("openFileById", { id: blockID, mode: 0 });
                         }
                     }
-                    const el = (document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-                        || document.querySelector(`[data-node-id="${blockID}"]`)) as HTMLElement | null;
+                    const el = findActiveProtyleBlockElement(blockID, options?.anchor);
                     if (el) {
                         el.scrollIntoView({ behavior: "smooth", block: "center" });
                         el.classList.add("protyle-wysiwyg--select");
@@ -291,8 +304,7 @@ export async function executeBlockAction(
 
             case "toggle-fold-block": {
                 try {
-                    const el = (document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-                        || document.querySelector(`[data-node-id="${blockID}"]`)) as HTMLElement | null;
+                    const el = findActiveProtyleBlockElement(blockID, options?.anchor);
                     const currentFold = el?.getAttribute("data-fold") === "1" || el?.getAttribute("fold") === "1";
                     const nextFold = currentFold ? "0" : "1";
                     await setBlockAttrs(blockID, { fold: nextFold });
@@ -312,8 +324,7 @@ export async function executeBlockAction(
             case "morph-block-type": {
                 try {
                     const el = (typeof document !== "undefined")
-                        ? ((document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-                            || document.querySelector(`[data-node-id="${blockID}"]`)) as HTMLElement | null)
+                        ? findActiveProtyleBlockElement(blockID, options?.anchor)
                         : null;
                     const anchor = options?.anchor || el;
 
@@ -756,9 +767,8 @@ export function getCleanBlockText(el: HTMLElement | null): string {
 }
 
 /** 读取块属性并组装菜单所需的块快照（优先 DOM 同步极速提取，消除网络往返，达成 0ms 秒开） */
-export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: string[]): Promise<BlockSnapshot> {
-    const el = document.querySelector(`.protyle-wysiwyg [data-node-id="${blockID}"]`)
-        || queryBlockElementById(blockID); // 2026-11-21 修复：兜底改用排除面包屑冒名者的精确查询
+export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: string[], anchor?: Element | null): Promise<BlockSnapshot> {
+    const el = findActiveProtyleBlockElement(blockID, anchor);
 
     // 1. 同步极速提取 DOM 属性（0ms 零网络开销）
     const domAttrs: Record<string, string> = {};
@@ -773,6 +783,12 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
         if (noteReview) domAttrs["custom-lv-note-review"] = noteReview;
         const lvQuestion = el.getAttribute("custom-lv-question");
         if (lvQuestion) domAttrs["custom-lv-question"] = lvQuestion;
+        const lvAnswer = el.getAttribute("custom-lv-answer");
+        if (lvAnswer) domAttrs["custom-lv-answer"] = lvAnswer;
+        const cardAnswer = el.getAttribute("custom-card-answer");
+        if (cardAnswer) domAttrs["custom-card-answer"] = cardAnswer;
+        const attrSubtype = el.getAttribute("custom-lv-attr-subtype");
+        if (attrSubtype) domAttrs["custom-lv-attr-subtype"] = attrSubtype;
     }
 
     // 2. 属性裁决：三级信任链，常态零 RPC 秒开。
@@ -787,7 +803,9 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
     let attrs = cached ?? domAttrs;
     const hasDomCardAttrs = Boolean(
         domAttrs["custom-riff-decks"] || domAttrs["custom-riff-title"] ||
-        domAttrs["custom-lv-question"] || domAttrs["custom-lv-note-review"],
+        domAttrs["custom-lv-question"] || domAttrs["custom-lv-answer"] ||
+        domAttrs["custom-card-answer"] || domAttrs["custom-riff-answer"] ||
+        domAttrs["custom-lv-attr-subtype"] || domAttrs["custom-lv-note-review"],
     );
     if (!hasDomCardAttrs && !cached && el) {
         // 普通块快路径：零 RPC，直接以空属性继续
@@ -812,6 +830,15 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
     const domIsDoc = el?.getAttribute("data-type") === "NodeDocument";
     const domText = getCleanBlockText(el as HTMLElement | null);
     const blockKind = inferBlockKindFromElement(el as HTMLElement | null);
+    const isAv = blockKind === "av" || el?.getAttribute("data-type") === "NodeAttributeView";
+    const isReadOnly = Boolean(
+        isBlockElementReadOnly(el)
+        || isBlockElementReadOnly(anchor)
+        || attrs["custom-sy-readonly"] === "true"
+        || attrs["custom-sy-readonly"] === "1"
+        || attrs["custom-siyuan-readonly"] === "true"
+        || attrs["custom-siyuan-readonly"] === "1",
+    );
     let headingLevel: number | undefined;
     if (blockKind === "heading" && el) {
         const subtype = el.getAttribute("data-subtype") || "";
@@ -855,10 +882,16 @@ export async function buildBlockSnapshot(blockID: string, explicitBatchIDs?: str
     return {
         blockID,
         blockKind,
+        isAv,
+        isReadOnly,
         headingLevel,
         batchBlockIDs,
         isDocument: domIsDoc,
-        isCard: Boolean(attrs["custom-riff-decks"] || attrs["custom-riff-title"] || attrs["custom-lv-question"]),
+        isCard: Boolean(
+            attrs["custom-riff-decks"] || attrs["custom-riff-title"] || attrs["custom-lv-question"]
+            || attrs["custom-lv-answer"] || attrs["custom-card-answer"] || attrs["custom-riff-answer"]
+            || attrs["custom-lv-attr-subtype"]
+        ),
         isDocReview: attrs["custom-lv-note-review"] === "true",
         hasSelection,
         hasImage,

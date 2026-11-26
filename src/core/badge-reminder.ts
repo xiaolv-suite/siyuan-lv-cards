@@ -44,7 +44,15 @@ export function decideBacklogWarning(params: {
     nowTs?: number;
 }): BacklogDecision {
     const { reminderEnabled, lastDue, inQuiet, lastRevlogTs, alreadyWarnedToday, nowTs = Date.now() } = params;
-    if (!reminderEnabled || lastDue <= 0 || inQuiet || alreadyWarnedToday) {
+    if (
+        !reminderEnabled
+        || lastDue <= 0
+        || inQuiet
+        || alreadyWarnedToday
+        || !Number.isFinite(lastRevlogTs)
+        || lastRevlogTs <= 0
+        || lastRevlogTs > nowTs
+    ) {
         return { shouldWarn: false, days: 0 };
     }
     const days = Math.floor((nowTs - lastRevlogTs) / 86400000);

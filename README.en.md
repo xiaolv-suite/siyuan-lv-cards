@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.233.6** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.233.7** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -23,23 +23,25 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 
 ---
 
-## 🆕 What's New In v0.233.6 (Cumulative Updates)
+## 🆕 What's New In v0.233.7 (2026-11-26 Milestone Release)
 
-- **Zero-Pollution Attribute Q&A System**: Enhanced block attribute (`custom-riff-title`) Q&A workflows across editor inline triggers, floating action capsules, and review workbenches without altering original note markdown;
-- **Obsidian SR Document Review & Outline Breadcrumbs**: Progressive document-level spaced reviews with hierarchical outline breadcrumbs and one-click section navigation;
-- **Card Sequence Flow Polish**: Restyled sequential block badges within note prose for clean visual hierarchy aligned with SiYuan themes;
-- **Native Settings Gear Navigation**: Implemented explicit `openSetting()` contract, allowing users to click the gear icon in SiYuan's native plugin manager to open settings reliably;
-- **Mobile Touch Resilience**: Fixed touch conflict where vertical scroll was blocked by swipe rating gesture; hardened memory lifecycles against mobile crashes;
-- **Daily Note Sync Hardening**: Review reports automatically reuse native today daily notes across notebooks with in-memory mutex and double conflict exclusions.
-- **Reliability & Motion**: Desktop hover affordances on chips, modes, and segment buttons; ecosystem-wide clipboard error-handling contracts enforced.
+- **Direct Overview Home Landing**: Clicking the Xiaolv Launchpad tile, topbar icon, or reopening lazy-restored tabs reliably reuses the existing tab and lands directly on the **Today · Overview** home view;
+- **Shared Ecosystem Hubs & Block-Assistant Isolation**: Integrated with Xiaolv Launchpad, unified AI Router, Block Assistant 1–8 native base + custom double-click, Omnisearch, and Backup/Restore; block actions are strictly isolated by block type and installed plugins, keeping the review workbench clean with zero capsule intrusion and direct click-to-reveal clozes;
+- **Designed AI Wait Experience & Real Cancellation**: AI Card Wizard (Step 1 generation & Step 2 single-card regeneration) and Settings connectivity test render the animated `.lv-ai-thinking` progress card with live elapsed timer and `AbortSignal` cancellation;
+- **60fps Zero `:has()` / Zero Heavy-Blur Polish**: Eliminated CSS `:has()` selectors and `blur(>=15px)` across the bundle, honored `custom-sy-readonly` / `custom-siyuan-readonly` readonly notes, refined light/dark theme contrast and `390×844` mobile responsiveness, and softened user-facing terminology;
+- **Zero-Pollution Attribute Q&A & Four-Level Diary Zone**: End-to-end `custom-riff-title` Q&A support without touching source note prose, plus conflict-free `#### 🐴 小驴记录` daily review summary sync;
+- **Tiered Startup & Official Settings Gear**: Reduced synchronous boot storage slots from 23 to 4 core slots and wired `openSetting()` for SiYuan's plugin manager gear icon.
 
 <details>
-<summary>View Historical Release Highlights (v0.233.1 and earlier)</summary>
+<summary>View Historical Release Highlights (v0.233.6 and earlier)</summary>
+
+### v0.233.6
+* Shared ecosystem hub integration, `.lv-ai-thinking` AI waiting cards, zero `:has()` polish, and tiered boot storage reduction.
 
 ### v0.233.1
 * External clipping and atomic card authoring separation (Protocol v1.7.8), mobile full-screen exit flow via `openMobileFileById`, and Launchpad topbar startup convergence.
 
-### v0.233.0 (Latest)
+### v0.233.0
 * **Epoch 7 Full Ecosystem Infrastructure Federation (Protocol v1.6.0)**:
   - **Xiaolv Launchpad (`lvLaunchpad`)**: Topbar aggregation with 4 deep secondary actions (Start Review Session, Extract Cards from Selection, Recalculate Forgetting Curves, Manage Decks), with dynamic badge updates;
   - **Ecosystem Omnisearch (`lvOmnisearch`)**: Registered search provider for decks and flashcard block contents across `content` and `markdown` fields with 1-click navigation;
@@ -202,8 +204,9 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 
 | Workspace Panel | Purpose & Capabilities |
 | :--- | :--- |
-| **Today's Action (Today)** | Daily launchpad: Displays cards due today, goal ring, dark streak card, weekly activity grid, deck quick access, and dormant uncarded knowledge block discovery. |
-| **Card Library (Library)** | Full-library search, status filters (New/Review/Due), card-type filters (QA/Cloze/SuperBlock), starred flags, batch add/move/delete, and CSV/Obsidian export. |
+| **Today · Overview (Today)** | Default home landing page: Displays cards due today, goal ring, streak card, weekly activity grid, deck quick review/sprint access, and dormant uncarded knowledge block discovery. |
+| **Card Library (Library)** | Deck management, full-library search, status filters (New/Review/Due), card-type filters, starred flags, batch add/move/delete, maintenance debt repair, and CSV/Obsidian export. |
+| **Marketplace (Market)** | Decentralized public-domain deck showcase across 8 subjects, third-party URL subscriptions, interactive card previews, and 1-click `.lvcards` import. |
 | **Card Detail Drawer** | Slides out from any card: Content preview & real-time markdown editing, source block jump with diff comparison, review history log, version snapshots, knowledge object (KO) inspection, and relation graphs. |
 | **Authoring Studio (Studio)** | **Manual Authoring**: QA/Cloze/SuperBlock templates with live card face rendering;<br>**AI Wizard**: Material import, preflight consent modal, academic prompt templates, per-candidate vetting, and flashcard quality gates;<br>**Repair Drill**: Interactive tutorial teaching how to repair ambiguous cards. |
 | **Learning & Calendar** | **Recap**: 7-day trend charts and recent logs;<br>**Goals**: Exam target dates and daily quotas;<br>**Calendar**: Monthly heatmaps, future 30-day forecast load calendar, and date-level drilldowns. |
@@ -244,7 +247,9 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 All shortcuts can be customized in SiYuan under **Settings → Shortcuts**:
 
 ### 1. Global & Navigation Shortcuts
-* **`Alt+K`**: **Open Command Palette** (search actions, jump to pages, quick operations)
+* **`Alt+K` / `Ctrl+K`**: **Open Command Palette** (search actions, jump to pages, quick operations)
+* **`Alt+Q`**: **Set Attribute Q&A Card** on the current editor block (zero-pollution)
+* **`Alt+B`**: **Open Block Assistant Action Center** on the current block
 * **`Space`**: Start review or continue active session (on Today dashboard)
 * **`==`**: Wrap highlighted selection into cloze card (in editor)
 

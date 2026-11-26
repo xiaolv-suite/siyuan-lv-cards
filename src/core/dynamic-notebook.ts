@@ -26,7 +26,7 @@ export function buildDynamicBoardMarkdown(i18n?: Record<string, any>): string {
         `{{SELECT * FROM blocks WHERE (ial LIKE '%custom-lv-leech="true"%' OR ial LIKE '%custom-lv-lapses="%') ORDER BY updated DESC LIMIT 50}}`,
         ``,
         `## ⭐ 重点星标卡`,
-        `> 提示：在复习工作台或卡库中点亮星标的重点卡片。`,
+        `> 提示：在复习工作台或卡组中点亮星标的重点卡片。`,
         ``,
         `{{SELECT * FROM blocks WHERE ial LIKE '%custom-lv-starred="true"%' ORDER BY updated DESC LIMIT 50}}`,
         ``,

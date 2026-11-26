@@ -16,38 +16,72 @@ export interface CsvRow {
     dur?: number;
 }
 
+/** RFC-4180 状态机 CSV 解析：支持跨行引号字段与转义双引号 */
+function parseCsvRecords(raw: string): string[][] {
+    const clean = raw.replace(/^\ufeff/, "");
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let field = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < clean.length; i++) {
+        const ch = clean[i];
+        if (inQuotes) {
+            if (ch === '"') {
+                if (clean[i + 1] === '"') {
+                    field += '"';
+                    i++;
+                } else {
+                    inQuotes = false;
+                }
+            } else {
+                field += ch;
+            }
+            continue;
+        }
+        if (ch === '"' && field === "") {
+            inQuotes = true;
+        } else if (ch === ",") {
+            row.push(field);
+            field = "";
+        } else if (ch === "\r" || ch === "\n") {
+            if (ch === "\r" && clean[i + 1] === "\n") {
+                i++;
+            }
+            row.push(field);
+            field = "";
+            if (row.some(cell => cell.trim() !== "")) {
+                rows.push(row);
+            }
+            row = [];
+        } else {
+            field += ch;
+        }
+    }
+
+    if (field !== "" || row.length > 0) {
+        row.push(field);
+        if (row.some(cell => cell.trim() !== "")) {
+            rows.push(row);
+        }
+    }
+    return rows;
+}
+
 export function parseRevlogCsv(text: string): { entries: CsvRow[] } {
-    const lines = text.replace(/^\ufeff/, "").split(/\r?\n/).filter(l => l.trim());
-    if (lines.length === 0) {
+    const rows = parseCsvRecords(String(text ?? ""));
+    if (rows.length === 0) {
         throw new Error("empty csv");
     }
-    // 简单 CSV 分行（引号内逗号不切分）
-    const splitLine = (line: string): string[] => {
-        const out: string[] = [];
-        let cur = "";
-        let inQ = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (ch === '"') {
-                if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else { inQ = !inQ; }
-            } else if (ch === "," && !inQ) {
-                out.push(cur); cur = "";
-            } else {
-                cur += ch;
-            }
-        }
-        out.push(cur);
-        return out;
-    };
-    const header = splitLine(lines[0]).map(h => h.trim());
+    const header = rows[0].map(h => h.trim());
     const idx = (name: string) => header.indexOf(name);
     const iTs = idx("ts"), iCard = idx("cardID"), iDeck = idx("deckID"), iBlock = idx("blockID"), iRating = idx("rating"), iSource = idx("source"), iDur = idx("duration");
     if (iTs < 0 || iCard < 0 || iRating < 0) {
         throw new Error("csv missing ts/cardID/rating columns");
     }
     const entries: CsvRow[] = [];
-    for (let i = 1; i < lines.length; i++) {
-        const cols = splitLine(lines[i]);
+    for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i];
         const ts = Number(cols[iTs]);
         const cardID = (cols[iCard] ?? "").trim();
         const rating = Number(cols[iRating]);

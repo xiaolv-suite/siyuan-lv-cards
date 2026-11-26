@@ -26,6 +26,7 @@ export type SiYuanBlockKind =
     | "list"        // 普通无序/有序列表
     | "table"       // 表格矩阵
     | "math"        // 数学公式
+    | "av"          // 属性视图 / 数据库
     | "other";      // 其它容器块
 
 export interface BlockKindMeta {
@@ -47,14 +48,19 @@ export const BLOCK_KIND_LABELS: Record<SiYuanBlockKind, BlockKindMeta> = Object.
     list:      { glyph: "≡", name: "列表阶梯", actionLead: "列表阶梯" },
     table:     { glyph: "▦", name: "表格矩阵", actionLead: "表格矩阵" },
     math:      { glyph: "∑", name: "数学公式", actionLead: "数学公式" },
+    av:        { glyph: "⊞", name: "属性视图", actionLead: "数据库视图" },
     other:     { glyph: "✦", name: "内容块", actionLead: "块助手" },
 });
 
 /** 块自身的身份状态，决定哪些动作可用 */
 export interface BlockSnapshot {
     blockID: string;
-    /** 块类型（paragraph / heading / code / quote / task / list / table / math / other） */
+    /** 块类型（paragraph / heading / code / quote / task / list / table / math / av / other） */
     blockKind?: SiYuanBlockKind;
+    /** 是否为属性视图（NodeAttributeView 数据库块） */
+    isAv?: boolean;
+    /** 所属文档或编辑器是否处于只读锁定状态 */
+    isReadOnly?: boolean;
     /** 标题层级 1~6（仅 heading） */
     headingLevel?: number;
     /** 批量多选模式：包含的目标块 ID 列表（当 length > 1 时触发批量视图与批量动作） */
@@ -165,7 +171,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         badgeText: "推荐 · Alt+Q",
         singleOnly: true,
         preferredBlockKinds: ["paragraph", "quote"],
-        isAvailable: (s) => !s.isDocument,
+        isAvailable: (s) => !s.isDocument && !s.isReadOnly,
     },
     {
         id: "make-cloze",
@@ -178,7 +184,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         singleOnly: true,
         preferredBlockKinds: ["paragraph", "code", "table"],
         excludedBlockKinds: ["math"],
-        isAvailable: (s) => !s.isDocument && Boolean(s.hasSelection),
+        isAvailable: (s) => !s.isDocument && !s.isReadOnly && Boolean(s.hasSelection),
     },
     {
         id: "make-occlusion",
@@ -190,19 +196,19 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         singleOnly: true,
         excludedBlockKinds: ["code", "math"],
         // 只有真实包含图片的块才提供遮挡卡（文本块上出现只会产生死端弹窗）
-        isAvailable: (s) => Boolean(s.hasImage),
+        isAvailable: (s) => !s.isReadOnly && Boolean(s.hasImage),
     },
     {
         id: "add-to-deck",
         group: "flashcard",
         labelKey: "blockActAddDeck",
         fallbackLabel: "加入卡组",
-        subtitle: "收录入指定卡包并开启间隔重复复习",
+        subtitle: "收录入指定卡组并开启间隔重复复习",
         glyph: "📚",
         supportsBatch: true,
         // 核心门禁：仅当该块已具备闪卡属性（免侵入问答）或正文包含挖空/问答结构时才允许加入卡组！
         // 普通未制卡文本坚决排除，避免点击后报错卡死
-        isAvailable: (s) => !s.isDocument && Boolean(s.isCard || s.hasCloze || s.hasQaPattern),
+        isAvailable: (s) => !s.isDocument && !s.isReadOnly && Boolean(s.isCard || s.hasCloze || s.hasQaPattern),
     },
     {
         id: "remove-from-deck",
@@ -213,7 +219,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         glyph: "🗑️",
         destructive: true,
         supportsBatch: true,
-        isAvailable: (s) => Boolean(s.isCard),
+        isAvailable: (s) => !s.isReadOnly && Boolean(s.isCard),
     },
 
     // ── 思源原生增强（常用高频能力提取） ────────────────────────
@@ -250,7 +256,7 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         preferredBlockKinds: ["heading", "list", "quote"],
         // 核心门禁：仅大纲层级与可收起容器（标题、列表项）支持折叠分支。
         // 2026-11-21 走查修复：引述块无折叠语义，fold 属性会持久写入文档 IAL（零污染红线边缘），移除 quote。
-        isAvailable: (s) => !s.isDocument && (s.blockKind === "heading" || s.blockKind === "list" || s.blockKind === "task"),
+        isAvailable: (s) => !s.isDocument && !s.isReadOnly && (s.blockKind === "heading" || s.blockKind === "list" || s.blockKind === "task"),
     },
     {
         id: "morph-block-type",
@@ -260,10 +266,11 @@ export const BLOCK_ACTIONS: readonly BlockActionDescriptor[] = Object.freeze([
         subtitle: "转换为标题、列表、待办、引述或代码块",
         glyph: "🔄",
         singleOnly: true,
-        preferredBlockKinds: ["paragraph", "task", "heading", "list", "quote", "code", "math"],
+        preferredBlockKinds: ["paragraph", "task", "heading", "list", "quote", "math"],
         // 支持绝大部分文本与结构内容块互转（文档除外）。
-        // 2026-11-21 走查修复：排除表格——morph 会把整表压成 `* [ ] |a|b|` 单行列表，结构性破坏且无警告。
-        isAvailable: (s) => !s.isDocument && s.blockKind !== "table",
+        // 2026-11-21 走查修复：排除表格——morph 会把整表压成 `* [ ] |a|b|` 单行列表，结构性破坏且无警告；
+        // 2026-11-25 R6 走查修复：与 lv-kit 对齐排除代码块，避免代码语法结构被误转破坏。
+        isAvailable: (s) => !s.isDocument && !s.isReadOnly && s.blockKind !== "table" && s.blockKind !== "code" && s.blockKind !== "av",
     },
 
     // ── 知识流转（跨插件联动） ────────────────────────────────
@@ -471,6 +478,7 @@ export function inferBlockKindFromElement(el: HTMLElement | null): SiYuanBlockKi
     }
     if (type === "NodeTable") return "table";
     if (type === "NodeMathBlock") return "math";
+    if (type === "NodeAttributeView") return "av";
 
     // 容错降级：仅当 data-type 缺失或非标准时才检查类名与选择器
     const subtype = el.getAttribute("data-subtype") || "";
@@ -487,9 +495,67 @@ export function inferBlockKindFromElement(el: HTMLElement | null): SiYuanBlockKi
         return "paragraph";
     }
     if (el.classList.contains("bq")) return "quote";
+    if (el.classList.contains("av") || el.querySelector(":scope > .av__container, .av__container")) return "av";
     if (el.querySelector(".code-block")) return "code";
     if (el.querySelector("table")) return "table";
     return "other";
+}
+
+/** 会修改块正文/属性/文档结构的写动作集合：只读锁定文档下必须隐藏并拦截执行 */
+export const WRITE_BLOCK_ACTION_IDS: ReadonlySet<string> = new Set([
+    "edit-card-qa",
+    "make-cloze",
+    "make-occlusion",
+    "add-to-deck",
+    "remove-from-deck",
+    "toggle-fold-block",
+    "toggle-block-fold",
+    "morph-block-type",
+    "cut-block",
+    "duplicate-block",
+    "insert-block-above",
+    "insert-block-below",
+    "delete-block",
+    "native-move-up",
+    "native-move-down",
+    "native-duplicate",
+    "native-delete",
+    "plugin-pangu-spacing",
+    "plugin-database-attr",
+    "bind-checkin-item",
+]);
+
+/** 判断给定块元素及其所属 Protyle / 文档是否处于只读锁定态 */
+export function isBlockElementReadOnly(el: Element | null | undefined): boolean {
+    if (!el) return false;
+    const isAttrReadOnly = (node: Element | null | undefined) => {
+        if (!node) return false;
+        const syVal = node.getAttribute("custom-sy-readonly");
+        const siyuanVal = node.getAttribute("custom-siyuan-readonly");
+        return syVal === "true" || syVal === "1" || siyuanVal === "true" || siyuanVal === "1";
+    };
+    if (isAttrReadOnly(el)) return true;
+    if (el.getAttribute("contenteditable") === "false") return true;
+    const wysiwyg = el.closest?.(".protyle-wysiwyg") as HTMLElement | null;
+    if (wysiwyg) {
+        if (wysiwyg.getAttribute("contenteditable") === "false" || isAttrReadOnly(wysiwyg)) return true;
+    }
+    if (el.closest?.('[custom-sy-readonly="true"], [custom-sy-readonly="1"], [custom-siyuan-readonly="true"], [custom-siyuan-readonly="1"]')) return true;
+    const protyle = el.closest?.(".protyle") as (HTMLElement & { disabled?: boolean }) | null;
+    if (protyle) {
+        if (protyle.disabled === true || protyle.hasAttribute("disabled") || protyle.classList.contains("protyle--readonly")) {
+            return true;
+        }
+        const innerWysiwyg = protyle.querySelector?.(".protyle-wysiwyg");
+        if (innerWysiwyg && (innerWysiwyg.getAttribute("contenteditable") === "false" || isAttrReadOnly(innerWysiwyg))) {
+            return true;
+        }
+        const titleEl = protyle.querySelector?.(".protyle-title");
+        if (titleEl && isAttrReadOnly(titleEl)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -565,6 +631,15 @@ export function resolveBlockActions(
 
     const allActions = [...actions, ...externalActions];
     const filtered = allActions.filter((action) => {
+        // 只读锁定文档拦截写操作（含外部写入动作）
+        if (snapshot.isReadOnly && (
+            WRITE_BLOCK_ACTION_IDS.has(action.id)
+            || (action as any).mutatesBlock === true
+            || (action as any).readonlySafe === false
+            || (action as any).readOnlySafe === false
+        )) {
+            return false;
+        }
         // 用户自定义禁用
         if (disabledSet.has(action.id)) {
             return false;

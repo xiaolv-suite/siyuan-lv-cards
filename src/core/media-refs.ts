@@ -97,6 +97,7 @@ export function normalizeMediaRef(value: string): string | null {
     ref = ref.replace(/#.*$/, "");
     ref = ref.replace(/\\/g, "/").replace(/^\.\//, "");
     ref = ref.replace(/\/{2,}/g, "/");
+    ref = ref.replace(/^\/+(?=assets\/)/i, "");
     ref = ref.trim();
     if (!ref) return null;
     return box ? `${ref}?box=${encodeURIComponent(box)}` : ref;

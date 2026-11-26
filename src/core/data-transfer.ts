@@ -6,7 +6,7 @@
 
 import { aggregateByDay, aggregateByModel, type CostLedgerData } from "./ai-cost-ledger";
 import { revlogToCsv, type RevlogData } from "./revlog";
-import type { LvCardsSettings } from "./settings";
+import { stripSecretsForStorage, type LvCardsSettings } from "./settings";
 
 /**
  * 触发浏览器文件下载
@@ -39,7 +39,7 @@ export function formatRevlogExportCsv(revlog: RevlogData): string {
  * 导出设置为标准 JSON 文本
  */
 export function formatSettingsExportJson(settings: LvCardsSettings): string {
-    return JSON.stringify(settings, null, 2);
+    return JSON.stringify(stripSecretsForStorage(settings), null, 2);
 }
 
 /**

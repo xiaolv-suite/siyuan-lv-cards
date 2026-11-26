@@ -84,7 +84,7 @@
                     <span class="lv-cram-protection-icon"><LvIcon name="target" size={16} /></span>
                     <div class="lv-cram-protection-text">
                         <strong>算法排期保护中</strong>
-                        <span>评级纯过筛练习，绝不更新 due/stability/difficulty，绝不写 revlog，零污染长期记忆曲线。</span>
+                        <span>评级仅用于本场快刷练习，不会改动原有复习排期与正式学习记录，零污染长期记忆曲线。</span>
                     </div>
                 </div>
 
@@ -140,7 +140,7 @@
                                 <span class="lv-radio-circle" class:lv-checked={selectedScope === "leech"}></span>
                             </div>
                             <div class="lv-cram-scope-info">
-                                <div class="lv-cram-scope-name">仅水蛭卡 (lapses ≥ 5)</div>
+                                <div class="lv-cram-scope-name">仅易混淆薄弱卡（遗忘 ≥ 5 次）</div>
                                 <div class="lv-cram-scope-desc">集中突破遗忘 5 次及以上的高难易混淆顽固薄弱卡</div>
                             </div>
                         </button>

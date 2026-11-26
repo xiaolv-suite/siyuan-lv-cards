@@ -174,7 +174,7 @@
             };
             const res = await installMarketplaceItemToDeck(item);
             if (res.success && res.deckId) {
-                showMessage(text("studio.cartInstalled", "已将闪卡篮中 {n} 张卡片入库至卡包「{deck}」✓", {n: res.count, deck: res.deckName}), 3200, "info");
+                showMessage(text("studio.cartInstalled", "已将闪卡篮中 {n} 张卡片入库至卡组「{deck}」✓", {n: res.count, deck: res.deckName}), 3200, "info");
                 onDeckCreated?.(res.deckId, res.deckName || item.title);
                 cart = clearCart();
                 cartDrawerOpen = false;
@@ -289,7 +289,7 @@
             </h1>
             <span class="lv-market-badge">{text("studio.badgePublic", "公版精选 · 零版权争议")}</span>
             <span class="lv-market-subtitle">
-                {i18n?.marketplaceSubtitle || "去中心化公共知识集市。精选公共领域常识、国家新课标与学术公式，支持第三方直链订阅与 FSRS 一键入库。"}
+                {i18n?.marketplaceSubtitle || "去中心化公共知识集市。精选公共领域常识、国家新课标与学术公式，支持第三方直链订阅与一键入库。"}
             </span>
         </div>
         <div class="lv-market-actions">
@@ -363,7 +363,7 @@
             <div class="lv-market-stat-item">
                 <span class="lv-stat-emoji">🏛️</span>
                 <div>
-                    <div class="lv-stat-label">{text("studio.statPacks", "公版精选卡包")}</div>
+                    <div class="lv-stat-label">{text("studio.statPacks", "公版精选卡组")}</div>
                     <div class="lv-stat-value brand">{text("studio.statPacksValue", "{n} 门核心学科", {n: catalog.items.length})}</div>
                 </div>
             </div>
@@ -397,7 +397,7 @@
                 <input
                     class="lv-input lv-market-search-input"
                     bind:value={searchQuery}
-                    placeholder={text("studio.searchPlaceholder", "🔍 搜索题库、卡包或考点关键词…")}
+                    placeholder={text("studio.searchPlaceholder", "🔍 搜索题库、卡组或考点关键词…")}
                 />
                 {#if searchQuery}
                     <button
@@ -466,7 +466,7 @@
     {:else if filteredItems.length === 0}
         <div class="lv-market-empty">
             <LvIcon name="cards" size={36} />
-            <div class="lv-empty-title">{text("studio.emptyTitle", "未找到匹配的闪卡包")}</div>
+            <div class="lv-empty-title">{text("studio.emptyTitle", "未找到匹配的闪卡组")}</div>
             <p class="lv-empty-desc">{text("studio.emptyDesc", "尝试清空关键词或切换上方的学科分类。")}</p>
         </div>
     {:else}
@@ -517,7 +517,7 @@
                                 onclick={() => (qualityOpenId = isQualityOpen ? null : item.id)}
                             >
                                 <LvIcon name="target" size={12} />
-                                <span>{isQualityOpen ? text("studio.qualityCollapse", "收起品质画像") : text("studio.qualityOpen", "📊 查看品质画像 (FSRS/卡型)")}</span>
+                                <span>{isQualityOpen ? text("studio.qualityCollapse", "收起品质画像") : text("studio.qualityOpen", "📊 查看品质画像 (难度/卡型)")}</span>
                             </button>
                             <span class="lv-muted" style="font-size: 11px;">
                                 {text("studio.expansionRatio", "💡 便签覆盖率 {n}%", {n: metrics.expansionRatio})}
@@ -551,7 +551,7 @@
 
                                 <!-- FSRS 难度梯队 -->
                                 <div class="lv-quality-section">
-                                    <div class="lv-quality-label">{text("studio.difficultyLadder", "FSRS 推荐难度阶梯：")}</div>
+                                    <div class="lv-quality-label">{text("studio.difficultyLadder", "推荐难度阶梯：")}</div>
                                     <div class="lv-metrics-bar">
                                         {#each metrics.difficultyDistribution as dd}
                                             <div
@@ -608,7 +608,7 @@
                                     <div class="lv-deck-preview-box">
                                         <div class="lv-preview-hint">
                                             <span>{text("studio.previewHint", "🗂️ 闪卡试看形态（点击卡片翻面）")}</span>
-                                            <span class="lv-muted" style="font-size: 11px;">{text("studio.fsrsDifficulty", "FSRS 推荐难度")}</span>
+                                            <span class="lv-muted" style="font-size: 11px;">{text("studio.fsrsDifficulty", "推荐难度")}</span>
                                         </div>
 
                                         {#each item.previewItems.slice(0, 2) as prev, pi}
@@ -813,7 +813,7 @@
                 {text("studio.deltaTitle", "🔄 增量差量更新与无损合并：《{title}》", {title: deltaReport.item.title})}
             </h3>
             <p class="lv-muted" style="font-size: 12px; margin: 0 0 12px; line-height: 1.5;">
-                {text("studio.deltaDemoNote", "🧪 演示预览：当前基于模拟本地数据演示差量算法，确认执行不会写入任何更改。正式版将自动比对本地已安装卡片与集市远端新版，绝对保留本地历史复习排期、错题状态与 FSRS 记忆参数，仅增量补全新卡与正文修订。")}
+                {text("studio.deltaDemoNote", "🧪 演示预览：当前基于模拟本地数据演示差量算法，确认执行不会写入任何更改。正式版将自动比对本地已安装卡片与集市远端新版，绝对保留本地历史复习排期、错题状态与记忆曲线进度，仅增量补全新卡与正文修订。")}
             </p>
 
             <div class="lv-delta-stat-boxes">

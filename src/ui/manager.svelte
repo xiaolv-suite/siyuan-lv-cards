@@ -1,7 +1,8 @@
 <script lang="ts">
     import { onMount, tick, untrack } from "svelte";
     import { openTab } from "siyuan";
-    import { sqlQuery } from "@/api/siyuan";
+    import { getBlockAttrs, sqlQuery } from "@/api/siyuan";
+    import { extractDecksFromIal } from "@/core/deck-management";
     import { safeDocTitleFromHPath, showDocTreeNativeMenu } from "@/libs/lv-notice-kit";
     import { showMessage } from "@/libs/notice";
     import { getRiffCards, getRiffCardsByBlockIDs, getRiffDecks, createRiffDeck, removeRiffCards, resetRiffCards, type SearchBlock, type RiffDeck } from "@/api/riff";
@@ -235,8 +236,27 @@
         return "";
     }
 
+    function getAttrQaAnswer(b: SearchBlock): string {
+        const directVal = b["custom-lv-answer"] || b["custom-card-answer"] || b["custom-riff-answer"];
+        if (directVal) return String(directVal).trim();
+        if (b.content && typeof b.content === "string") {
+            const m = b.content.match(/custom-lv-answer="([^"]+)"|custom-card-answer="([^"]+)"|custom-riff-answer="([^"]+)"/);
+            if (m) return (m[1] || m[2] || m[3] || "").trim();
+        }
+        if ((b as any).ial) {
+            if (typeof (b as any).ial === "string") {
+                const m = (b as any).ial.match(/custom-lv-answer="([^"]+)"|custom-card-answer="([^"]+)"|custom-riff-answer="([^"]+)"/);
+                if (m) return (m[1] || m[2] || m[3] || "").trim();
+            } else if (typeof (b as any).ial === "object") {
+                const a = (b as any).ial["custom-lv-answer"] || (b as any).ial["custom-card-answer"] || (b as any).ial["custom-riff-answer"];
+                if (a) return String(a).trim();
+            }
+        }
+        return "";
+    }
+
     function isAttrQaBlock(b: SearchBlock): boolean {
-        return Boolean(getAttrQaQuestion(b));
+        return Boolean(getAttrQaQuestion(b) || getAttrQaAnswer(b) || blockMatchesAttr(b, "custom-lv-attr-subtype"));
     }
 
     let leechBlockIDSet = $derived.by(() => {
@@ -718,7 +738,24 @@
                 batchBusy = "remove";
                 batchError = "";
                 try {
-                    await removeRiffCards("", [b.id]);
+                    const deckIDs = new Set<string>();
+                    if (deckScope?.id) deckIDs.add(deckScope.id);
+                    if (b.ial) {
+                        for (const d of extractDecksFromIal(String(b.ial))) deckIDs.add(d);
+                    }
+                    if (deckIDs.size === 0) {
+                        const attrs = await getBlockAttrs(b.id).catch(() => ({} as Record<string, string>));
+                        for (const d of String(attrs?.["custom-riff-decks"] || "").split(",").map(s => s.trim()).filter(Boolean)) {
+                            deckIDs.add(d);
+                        }
+                    }
+                    if (deckIDs.size > 0) {
+                        for (const deckID of deckIDs) {
+                            await removeRiffCards(deckID, [b.id]);
+                        }
+                    } else {
+                        await removeRiffCards("", [b.id]);
+                    }
                     if (ctx.detachCards) {
                         await ctx.detachCards([b.id]);
                     }
@@ -1012,7 +1049,7 @@
     pageId="lv-manager-page"
     onscroll={capturePageScroll}
     onfocusin={capturePageFocus}
-    eyebrow="OBJECT / MAINTAIN"
+    eyebrow="卡片管理"
     title={t.manager.title}
     subtitle={t.manager.scopeNote}
 >
@@ -1083,10 +1120,10 @@
             class="b3-select lv-sort lv-deck-selector"
             value={deckScope?.id ?? ""}
             onchange={onDeckFilterChange}
-            title="选择当前卡包范围"
-            aria-label="卡包范围"
+            title="选择当前卡组范围"
+            aria-label="卡组范围"
         >
-            <option value="">全部卡包</option>
+            <option value="">全部卡组</option>
             {#each availableDecks as d (d.id)}
                 <option value={d.id}>{d.name} ({d.size ?? 0})</option>
             {/each}
@@ -1154,17 +1191,17 @@
         </div>
     </div>
     {#if deckScope}
-        <div class="lv-mgr-deck-scope" role="region" aria-label="当前卡包管理">
+        <div class="lv-mgr-deck-scope" role="region" aria-label="当前卡组管理">
             <div class="lv-deck-scope-left">
                 {#if ctx.openDecksTab}
                     <button
                         type="button"
                         class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                         onclick={() => ctx.openDecksTab?.()}
-                        title="返回卡包管理列表"
+                        title="返回卡组管理列表"
                     >
                         <LvIcon name="chevron-left" size={13} />
-                        <span>返回卡包列表</span>
+                        <span>返回卡组列表</span>
                     </button>
                 {/if}
                 <div class="lv-deck-scope-info" role="status">
@@ -1180,23 +1217,23 @@
                         class="b3-button b3-button--small lv-btn-primary"
                         disabled={total === 0}
                         onclick={() => ctx.openReviewScope?.(`deck:${deckScope.id}`)}
-                        title="开始复习本卡包"
+                        title="开始复习本卡组"
                     >
                         <LvIcon name="learn" size={13} />
-                        <span>复习本包</span>
+                        <span>复习本组</span>
                     </button>
                     <button
                         type="button"
                         class="b3-button b3-button--small b3-button--outline lv-btn-tool"
                         disabled={total === 0}
                         onclick={() => ctx.openReviewScope?.(`deck:${deckScope.id}`, true)}
-                        title="突击练习本卡包（不计入遗忘）"
+                        title="突击练习本卡组（不计入遗忘）"
                     >
                         <LvIcon name="zap" size={13} />
                         <span>突击</span>
                     </button>
                 {/if}
-                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearDeckScope} title="清除卡包限制，查看全库闪卡">
+                <button class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={clearDeckScope} title="清除卡组限制，查看全部闪卡">
                     <LvIcon name="close" size={12} />
                     <span>{t.manager.deckScopeClear ?? "查看全部卡组"}</span>
                 </button>
@@ -1341,7 +1378,7 @@
                                     <span class="lv-chip2 lv-chip2--warn" title="星标重点卡"><LvIcon name="star" size={11} /> 星标</span>
                                 {/if}
                                 {#if isAttrQaBlock(b)}
-                                    <span class="lv-chip2 lv-chip2--default" style="color: var(--lv-color-brand); border-color: color-mix(in srgb, var(--lv-color-brand) 30%, transparent); background: color-mix(in srgb, var(--lv-color-brand) 8%, var(--lv-color-surface));" title={`属性提问：${getAttrQaQuestion(b)}`}>
+                                    <span class="lv-chip2 lv-chip2--default" style="color: var(--lv-color-brand); border-color: color-mix(in srgb, var(--lv-color-brand) 30%, transparent); background: color-mix(in srgb, var(--lv-color-brand) 8%, var(--lv-color-surface));" title={getAttrQaQuestion(b) ? `属性提问：${getAttrQaQuestion(b)}` : `属性答案：${getAttrQaAnswer(b)}`}>
                                         <LvIcon name="edit" size={10} /> {t.cardTypeBadgeAttrQa ?? "属性问答"}
                                     </span>
                                 {/if}

@@ -218,7 +218,7 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<LvPage eyebrow={embedded ? "" : "GOAL / PLAN"} title={embedded ? "" : t.title} subtitle={embedded ? "" : t.subtitle}>
+<LvPage eyebrow={embedded ? "" : "目标与计划"} title={embedded ? "" : t.title} subtitle={embedded ? "" : t.subtitle}>
     {#snippet actions()}
         {#if !editing}
             <!-- 主动作：每屏唯一 primary -->

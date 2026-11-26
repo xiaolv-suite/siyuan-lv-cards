@@ -228,16 +228,16 @@
                             class="b3-select"
                             bind:value={selectedDeckId}
                             onchange={(e) => { selectedDeckId = e.currentTarget.value; void load(); }}
-                            aria-label="选择挑战卡包"
+                            aria-label="选择挑战卡组"
                         >
-                            <option value="">全库到期卡片</option>
+                            <option value="">全部到期卡片</option>
                             {#each availableDecks as d (d.id)}
                                 <option value={d.id}>{d.name} ({d.size ?? 0})</option>
                             {/each}
                         </select>
                     </div>
                 {/if}
-                <LvEmpty text={selectedDeckId ? "所选卡包内包含挖空的闪卡不足 4 张" : t.pairing.notEnough} actionLabel={t.pairing.exit} onaction={onExit} />
+                <LvEmpty text={selectedDeckId ? "所选卡组内包含挖空的闪卡不足 4 张" : t.pairing.notEnough} actionLabel={t.pairing.exit} onaction={onExit} />
             </div>
         </div>
     {:else if phase === "error"}
@@ -251,10 +251,10 @@
                     class="b3-select lv-pair-deck-select"
                     bind:value={selectedDeckId}
                     onchange={(e) => { selectedDeckId = e.currentTarget.value; void load(); }}
-                    aria-label="切换卡包范围"
-                    title="选择配对挑战卡包范围"
+                    aria-label="切换卡组范围"
+                    title="选择配对挑战卡组范围"
                 >
-                    <option value="">全库到期卡片</option>
+                    <option value="">全部到期卡片</option>
                     {#each availableDecks as d (d.id)}
                         <option value={d.id}>{d.name} ({d.size ?? 0})</option>
                     {/each}

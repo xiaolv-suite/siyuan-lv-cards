@@ -102,6 +102,11 @@ export interface AnkiModel {
     templateNames: string[];
 }
 
+export interface AnkiDeck {
+    id: string;
+    name: string;
+}
+
 export interface AnkiNote {
     guid: string;
     modelId: string;
@@ -131,6 +136,7 @@ export interface AnkiPackage {
     /** collection.anki2=apkg（旧导出）；collection.anki21=新版格式 */
     kind: "apkg" | "colpkg";
     models: AnkiModel[];
+    decks?: AnkiDeck[];
     notes: AnkiNote[];
     cards: AnkiCard[];
     revlogCount: number;
@@ -165,6 +171,21 @@ export function parseModelsJson(raw: unknown): { models: AnkiModel[]; issue?: st
         });
     }
     return { models };
+}
+
+/** col.decks JSON（id → {name}）→ 卡组清单（保留 `::` 层级路径） */
+export function parseDecksJson(raw: unknown): { decks: AnkiDeck[]; issue?: string } {
+    if (raw == null) return { decks: [] };
+    const { value, issue } = safeJsonParse(typeof raw === "string" ? raw : String(raw));
+    if (value == null) return { decks: [], issue: `col.decks ${issue ?? ""}` };
+    const decks: AnkiDeck[] = [];
+    for (const [id, d] of Object.entries(value as Record<string, any>)) {
+        const name = str(d?.name).trim();
+        if (name) {
+            decks.push({ id, name });
+        }
+    }
+    return { decks };
 }
 
 /** notes 行 → 域对象（flds 按 \x1f 拆分；tags 空格分隔去重） */
@@ -233,6 +254,15 @@ export function parseAnkiPackage(pkgBytes: Uint8Array, openSqlite: (dbBytes: Uin
     } catch (e) {
         issues.push(`col 表读取失败：${e instanceof Error ? e.message : String(e)}`);
     }
+    let decks: AnkiDeck[] = [];
+    try {
+        const deckRow = db.all("SELECT decks FROM col LIMIT 1")[0] as Record<string, unknown> | undefined;
+        const parsedDecks = parseDecksJson(deckRow ? deckRow.decks : null);
+        decks = parsedDecks.decks;
+        issuesIn(parsedDecks);
+    } catch {
+        // 兼容未包含 decks 列的极简桩库
+    }
     const knownModelIds = new Set(models.map(m => m.id));
 
     // notes
@@ -272,5 +302,5 @@ export function parseAnkiPackage(pkgBytes: Uint8Array, openSqlite: (dbBytes: Uin
         issues.push("revlog 表不可读（复习历史不计入）");
     }
 
-    return { kind, models, notes, cards, revlogCount, media, issues };
+    return { kind, models, decks, notes, cards, revlogCount, media, issues };
 }

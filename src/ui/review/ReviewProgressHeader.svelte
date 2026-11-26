@@ -1,6 +1,6 @@
 <script lang="ts">
     import LvIcon from "../kit/LvIcon.svelte";
-    import { isSuperBlockHtml, isAttrQaCard } from "@/core/card-face";
+    import { isSuperBlockHtml, isAttrQaCard, resolveAttrQaSubtype } from "@/core/card-face";
     import { isSequenceCard } from "@/core/sequence-card";
     import { hasDelimitedQa } from "@/core/delimited-qa";
     import { DEFAULT_LEECH_THRESHOLD } from "@/core/revlog";
@@ -23,6 +23,7 @@
         cardMemo?: string;
         isCustomPluginAnswer?: boolean;
         customRiffTitle?: string;
+        customRiffAnswer?: string;
         cardAttrs?: Record<string, string> | null;
         interactiveQuiz?: any;
         leechThreshold?: number;
@@ -31,6 +32,7 @@
         reviewedCount?: number;
         totalCount?: number;
         sessionForget?: number;
+        showReturnHome?: boolean;
         t: any;
         onOpenDashboard?: () => void;
         onReturnToEntry?: (point: any) => void;
@@ -55,6 +57,7 @@
         cardMemo = "",
         isCustomPluginAnswer = false,
         customRiffTitle = "",
+        customRiffAnswer = "",
         cardAttrs = null,
         interactiveQuiz = null,
         leechThreshold = DEFAULT_LEECH_THRESHOLD,
@@ -63,6 +66,7 @@
         reviewedCount = 0,
         totalCount = 1,
         sessionForget = 0,
+        showReturnHome = true,
         t,
         onOpenDashboard = () => {},
         onReturnToEntry = () => {},
@@ -75,16 +79,18 @@
 
 <div class="lv-head-row" data-testid="review-head-row" data-prevent-swipe="true">
     <div class="lv-head-left" style="align-items: center; gap: var(--lv-sp-2); display: flex;">
-        <span class="lv-eyebrow">REVIEW / {headScopeLabel}</span>
-        <button
-            type="button"
-            class="b3-button b3-button--small lv-btn-ghost lv-review-return-home"
-            title={t?.review?.returnHome ?? "返回闪卡主页"}
-            onclick={onOpenDashboard}
-            data-testid="review-return-home-btn"
-        >
-            <LvIcon name="home" size={15} /> {t?.review?.returnHome ?? "返回主页"}
-        </button>
+        <span class="lv-eyebrow">{t?.review?.panelTitle ?? "复习"} · {headScopeLabel}</span>
+        {#if showReturnHome}
+            <button
+                type="button"
+                class="b3-button b3-button--small lv-btn-ghost lv-review-return-home"
+                title={t?.review?.returnHome ?? "返回闪卡主页"}
+                onclick={onOpenDashboard}
+                data-testid="review-return-home-btn"
+            >
+                <LvIcon name="home" size={15} /> {t?.review?.returnHome ?? "返回主页"}
+            </button>
+        {/if}
     </div>
     {#if entryCtx}
         <!-- BI-3：入口上下文条（来源保留；取消/重开不丢，仅 × 显式清除） -->
@@ -118,9 +124,9 @@
     </div>
     <div class="lv-head-right">
         {#if cramActive}
-            <span class="lv-chip2 lv-cram-golden-chip" data-testid="review-cram-chip" data-test-badge="cram-golden" title="突击快刷模式：不更新排期参数，不写 revlog">
+            <span class="lv-chip2 lv-cram-golden-chip" data-testid="review-cram-chip" data-test-badge="cram-golden" title="突击快刷模式：不改动复习排期与正式学习记录">
                 <LvIcon name="zap" size={12} />
-                <span>⚡ 突击快刷模式</span>
+                <span>突击快刷模式</span>
             </span>
         {/if}
         {#if budgetMin > 0}
@@ -154,7 +160,9 @@
             {:else if interactiveQuiz?.kind === "choice"}<LvIcon name="check" size={14} /> {interactiveQuiz.isMultiple ? (t?.cardTypeBadgeChoiceMulti ?? "多选题") : (t?.cardTypeBadgeChoiceSingle ?? "单选题")}
             {:else if interactiveQuiz?.kind === "judge"}<LvIcon name="check" size={14} /> {t?.cardTypeBadgeJudge ?? "判断题"}
             {:else if interactiveQuiz?.kind === "fill"}<LvIcon name="edit" size={14} /> {t?.cardTypeBadgeFill ?? "填空题"}
-            {:else if isAttrQaCard(cardHtml, customRiffTitle)}<LvIcon name="target" size={14} /> {t?.cardTypeBadgeAttrQa ?? "属性问答"}
+            {:else if isAttrQaCard(cardHtml, customRiffTitle, customRiffAnswer)}
+                {@const attrSub = resolveAttrQaSubtype(cardAttrs, cardHtml, customRiffTitle, customRiffAnswer)}
+                <LvIcon name="target" size={14} /> {attrSub === "direct" ? (t?.cardTypeBadgeAttrDirect ?? "属性问答 · 直接") : attrSub === "dual" ? (t?.cardTypeBadgeAttrDual ?? "属性问答 · 双面") : (t?.cardTypeBadgeAttrQa ?? "属性问答")}
             {:else if cardHtml?.includes("language-")}<LvIcon name="code" size={14} /> {t?.cardTypeBadgeCode ?? "代码"}
             {:else if (cardHtml?.includes("NodeList") || cardHtml?.includes("<ul") || cardHtml?.includes("<ol") || cardHtml?.includes("NodeListItem")) && (cardHtml?.includes("lv-masked") || cardHtml?.includes('data-type="mark"'))}<LvIcon name="list" size={14} /> {t?.cardTypeBadgeOutlineCloze ?? "大纲挖空"}
             {:else if cardHtml?.includes("lv-masked") || cardHtml?.includes('data-type="mark"')}<LvIcon name="edit" size={14} /> {t?.cardTypeBadgeCloze ?? "挖空"}

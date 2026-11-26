@@ -4,7 +4,13 @@
 // 阴影用 black 透明梯度（中性，双主题通用）。
 // =============================================================
 
-:root {
+// 令牌作用域严格收敛到小驴闪卡自身宿主容器，绝不污染全局 :root，
+// 防止与同装的小驴考试等生态插件的同名 --lv-* 变量发生跨仓碰撞与重排闪烁。
+$lv-cards-scope: ":is(.lv-cards-root, .lv-hub, .lv-review, .lv-cards-dialog, .lv-cards-dialog-content, .lv-hub-mobile-dialog, .lv-review-mobile-dialog, .lv-bam, .lv-card-badge-pill, .lv-cards-tooltip, .lv-peek-body, .lv-settings, .lv-quickcard, .lv-deckpicker, .lv-chal, .lv-marker, .lv-occed, .lv-onboarding, .lv-pair, .lv-deck-manager, .lv-ko, .lv-relations, .lv-marketplace-studio, .lv-misconception-panel, .lv-r54-workbench, .lv-doc-canvas-wrapper, .lv-aiwiz, .lv-page)";
+// 规则作用域：严格收敛到小驴闪卡根容器与弹窗根容器，绝不向外泄露共享 .lv-* 类名污染小驴考试/人脉等兄弟插件
+$lv-cards-ui-scope: ":is(.lv-cards-root, .lv-cards-dialog)";
+
+#{$lv-cards-scope} {
     // 颜色语义层：R54 唯一规范基线调色板（浅色质感纸面工作台，全量派生自语义令牌）
     --lv-brand: rgb(94, 89, 203); /* 经典长春花紫 / 品牌操作主色 (HSL 243°, 54%, 58%) */
     --lv-brand-hover: rgb(80, 74, 189);
@@ -228,11 +234,8 @@
     --lv-z-popover: 1002;
 }
 
-:root[data-theme-mode="dark"],
-body[data-theme-mode="dark"],
-[data-theme-mode="dark"],
-.theme--dark,
-.body--dark {
+:is(:root[data-theme-mode="dark"], body[data-theme-mode="dark"], [data-theme-mode="dark"], .theme--dark, .body--dark) #{$lv-cards-scope},
+#{$lv-cards-scope}:is([data-theme-mode="dark"], .theme--dark, .body--dark) {
     --lv-brand: rgb(181, 175, 255); /* 柔和长春花紫 */
     --lv-brand-hover: rgb(195, 190, 255);
     --lv-brand-soft: rgb(52, 48, 70);
@@ -289,10 +292,38 @@ body[data-theme-mode="dark"],
 }
 
 @media (prefers-reduced-motion: reduce) {
-    :root {
+    #{$lv-cards-scope} {
         --lv-dur-1: 0ms;
         --lv-dur-2: 0ms;
         --lv-dur-3: 0ms;
+    }
+}
+
+@media (max-width: 680px) {
+    #{$lv-cards-scope} {
+        --lv-type-display-size: 18px;
+        --lv-type-display-hero: 22px;
+        --lv-type-metric-size: 18px;
+    }
+}
+
+@media (forced-colors: active) {
+    #{$lv-cards-scope} {
+        --lv-color-brand: Highlight;
+        --lv-color-on-brand: HighlightText;
+        --lv-color-text: CanvasText;
+        --lv-color-text-muted: CanvasText;
+        --lv-color-canvas: Canvas;
+        --lv-color-canvas-subtle: Canvas;
+        --lv-color-surface: Canvas;
+        --lv-color-danger: CanvasText;
+        --lv-color-warning: CanvasText;
+        --lv-color-success: Highlight;
+        --lv-color-on-danger: HighlightText;
+        --lv-surface-hover: Canvas;
+        --lv-shadow-panel: none;
+        --lv-shadow-card: none;
+        --lv-shadow-overlay: none;
     }
 }
 
@@ -301,9 +332,7 @@ body[data-theme-mode="dark"],
 // Issue #12/#13：防止宿主/主题的宽泛 SVG 规则放大图标；只约束自己的图标，保留宿主行布局。
 .b3-menu__icon.lv-cards-menu-icon,
 .b3-menu__item .lv-cards-menu-icon,
-.b3-menu__item svg.lv-cards-menu-icon,
-.b3-menu__item svg:has(use[*|href*="iconLvCards"]),
-.b3-menu__item svg:has(use[*|href*="icon-lv-cards"]) {
+.b3-menu__item svg.lv-cards-menu-icon {
     width: 16px !important;
     height: 16px !important;
     min-width: 16px !important;
@@ -324,6 +353,8 @@ body[data-theme-mode="dark"],
     }
 }
 
+// R54 所有共享 .lv-* 排版与组件类严格收敛于 #{$lv-cards-ui-scope}，绝不污染兄弟插件或宿主 DOM
+#{$lv-cards-ui-scope} {
 // 页面容器：居中最大宽（docs/13 §3 宽屏线框 1200px）+ 呼吸留白
 .lv-page {
     max-width: 1240px;
@@ -658,7 +689,7 @@ body[data-theme-mode="dark"],
 // 小驴闪卡 · 局部思源变量重定向别名（彻底脱离思源外部主题干扰，实现完全自治）
 // 在小驴闪卡核心作用域内覆盖 --b3-* 别名，使底层 legacy 组件与思源类名自然继承小驴设计系统
 // ============================================================
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+& {
     --b3-theme-background: var(--lv-color-canvas);
     --b3-theme-background-light: var(--lv-color-canvas-subtle);
     --b3-theme-surface: var(--lv-color-surface);
@@ -680,7 +711,7 @@ body[data-theme-mode="dark"],
 
 // 插件全部作用域表单控件质感系统（R54 原型规范）：
 // 统一白面底色、1px 细微边界、10px 现代圆角、平滑光晕聚焦与按压反馈
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+& {
     ::selection {
         background: color-mix(in srgb, var(--lv-color-brand) 22%, transparent);
         color: inherit;
@@ -840,7 +871,7 @@ body[data-theme-mode="dark"],
 // 插件界面按钮语义基线（R52：主色只给核心动作）——思源 .b3-button 基类是实心主色，
 // 在插件页面/中心/对话框内统一回到白面中性；主动作必须显式挂 .lv-btn-primary。
 // :not 白名单 = 宿主已有语义档 + 插件自有语义类（ghost/主色/挑战软色/soft）。
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+& {
     .b3-button:not(.b3-button--outline):not(.b3-button--text):not(.b3-button--cancel):not(.lv-btn-primary):not(.lv-btn-ghost):not(.lv-chal-btn):not(.lv-btn-soft) {
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
@@ -855,13 +886,7 @@ body[data-theme-mode="dark"],
 }
 
 // 插件全部作用域：按压反馈与禁用态一致（R53 §3.1 active scale .98 / disabled .6）
-.lv-page,
-.lv-hub,
-.lv-dialog,
-.lv-peek-body,
-.lv-review,
-.lv-aiwiz,
-.lv-drawer {
+& {
     .b3-button:not(:disabled):not(.lv-btn-rate):not(.lv-btn-primary):active { transform: translateY(0.5px) scale(0.985); }
     .b3-button:disabled {
         opacity: 0.55;
@@ -873,7 +898,7 @@ body[data-theme-mode="dark"],
 
 // 移动端与触控屏最小触控目标保护（WCAG 2.5.5 / 2.5.8 Target Size >= 44px）
 @media (pointer: coarse) {
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+    & {
         .b3-button--small,
         .lv-btn-tool,
         .lv-chipbtn,
@@ -901,7 +926,7 @@ body[data-theme-mode="dark"],
 }
 
 // 移动与触控端防 300ms 点击延迟（UI-UX Pro Max · tap-delay 规则）
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) {
+& {
     .b3-button,
     .b3-switch,
     .lv-chipbtn,
@@ -918,7 +943,7 @@ body[data-theme-mode="dark"],
 
 // 完整设置是长表单：弹窗本身提供固定视口高度，面板承担唯一纵向滚动。
 // min-height: 0 是 flex 子项能够收缩并出现滚动条的必要约束。
-.lv-dialog.lv-dialog--settings {
+&.lv-cards-dialog.lv-dialog--settings {
     // simpleDialog 的宿主内容节点是 b3-dialog__body；把宿主滚动交给设置根面板。
     .b3-dialog__body {
         display: flex;
@@ -937,12 +962,26 @@ body[data-theme-mode="dark"],
         min-width: 0;
         width: 100%;
     }
+
+    // 防止同屏多插件（如小驴管家全局 .lv-settings grid）污染小驴闪卡设置面板布局
+    .lv-settings.lv-cards-settings {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
+        grid-template-rows: none !important;
+        gap: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
 }
 
 // ══ 软键盘弹起时（bindMobileVisualViewport 标记 lv-vv-keyboard-open）：
 //    粘底保存栏转为文档流，不再悬在键盘上方遮挡输入焦点 ══
-.lv-dialog.lv-vv-keyboard-open:has(.lv-settings :is(input:focus, textarea:focus)) .lv-settings-sticky-footer,
-.lv-dialog.lv-vv-keyboard-open .lv-qc-actions {
+&.lv-cards-dialog.lv-vv-keyboard-open .lv-settings.lv-settings--input-focused .lv-settings-sticky-footer,
+&.lv-cards-dialog.lv-vv-keyboard-open .lv-qc-actions {
     position: static !important;
     box-shadow: none !important;
     padding-bottom: max(var(--lv-sp-3), env(safe-area-inset-bottom, 0px));
@@ -955,7 +994,7 @@ body[data-theme-mode="dark"],
 }
 
 // ══ 输入框专项精修：光标 / 占位符 / 自旋钮 / 搜索清除钮 / 禁用态 ══
-:is(.lv-page, .lv-dialog, .lv-hub, .lv-review) {
+& {
     :is(input[type="text"], input[type="search"], input[type="number"], input[type="time"], input[type="date"], input:not([type]), textarea, .b3-text-field) {
         caret-color: var(--lv-color-brand, var(--b3-theme-primary));
         min-width: 0;
@@ -1000,6 +1039,7 @@ body[data-theme-mode="dark"],
 }
 
 // 细滚动条（插件容器内）：半透明药丸滑块，悬停加深
+&,
 .lv-page,
 .lv-list,
 .lv-peek-body,
@@ -1010,7 +1050,7 @@ body[data-theme-mode="dark"],
 .lv-drawer-body,
 .lv-diff,
 .lv-hist-list,
-.lv-dialog .b3-dialog__content,
+.b3-dialog__content,
 .lv-dialog-card,
 .lv-pause-dialog,
 .lv-help-body,
@@ -1208,11 +1248,11 @@ pre,
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.lv-dialog .b3-dialog__container {
+&.lv-cards-dialog .b3-dialog__container {
     animation: lv-dialog-in var(--lv-dur-2) var(--lv-ease) both;
 }
 
-.lv-dialog.lv-dialog--panel {
+&.lv-cards-dialog.lv-dialog--panel {
     .b3-dialog__container {
         border-radius: var(--lv-r-dialog);
         overflow: hidden;
@@ -1230,7 +1270,7 @@ pre,
     }
 }
 
-.lv-dialog {
+&.lv-cards-dialog {
     .b3-dialog__header {
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
         .lv-dialog-title-wrap {
@@ -1265,16 +1305,16 @@ pre,
 
         #confirmDialogConfirmBtn {
             border-radius: var(--lv-r-pill);
-            background: var(--lv-color-brand);
-            color: var(--lv-color-on-brand);
+            background: var(--lv-color-brand) !important;
+            color: var(--lv-color-on-brand) !important;
             padding: calc(var(--lv-space-unit) * 2) calc(var(--lv-space-unit) * 6);
             font-weight: var(--lv-fw-semibold);
             box-shadow: var(--lv-shadow-1);
-            transition: transform var(--lv-dur-1) var(--lv-ease), background var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
+            transition: transform var(--lv-dur-1) var(--lv-ease), box-shadow var(--lv-dur-2) var(--lv-ease);
 
             &:hover {
                 transform: translateY(-1px);
-                background: var(--lv-color-brand-strong);
+                background: var(--lv-color-brand-strong) !important;
                 box-shadow: var(--lv-shadow-2);
             }
             &:active {
@@ -1408,7 +1448,7 @@ pre,
 }
 
 // 焦点环（必须严格作用于小驴闪卡核心作用域内，绝不外溢至思源正文编辑器与标题区）
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :focus-visible {
+:focus-visible {
     outline: none;
     box-shadow: var(--lv-focus-ring);
 }
@@ -1594,13 +1634,6 @@ pre,
 }
 
 @media (max-width: 680px) {
-    :root,
-    .lv-cards-root,
-    .lv-hub {
-        --lv-type-display-size: 18px;
-        --lv-type-display-hero: 22px;
-        --lv-type-metric-size: 18px;
-    }
     .lv-cards .lv-stat-cell {
         min-width: 0 !important;
         max-width: none !important;
@@ -1882,8 +1915,7 @@ pre,
     }
 
     // 任何包含 #iconDot 的 SVG 严格约束尺寸为 8px-10px 小圆点
-    svg:has(use[*|href*="iconDot"]),
-    svg:has(use[xlink\:href*="iconDot"]) {
+    svg.lv-icon-dot {
         width: 10px !important;
         height: 10px !important;
         max-width: 10px !important;
@@ -1961,7 +1993,7 @@ pre,
 
         > .table,
         > [data-type="NodeTable"],
-        > div:has(> table) {
+        > .lv-table-wrap {
             display: block !important;
             width: 100% !important;
             max-width: 100% !important;
@@ -2058,7 +2090,7 @@ pre,
     // 表格卡面自适应（超宽表格卡内滚动，保护 880px 舞台不被撑破，且彻底根治短列被压成单字竖条的严重布局 Bug）
     .table,
     [data-type="NodeTable"],
-    div:has(> table) {
+    .lv-table-wrap {
         max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -2103,24 +2135,6 @@ pre,
 // 补全系统变量映射、轮廓与焦点可见性（box-shadow 在高对比度模式下被系统剔除）
 // =============================================================
 @media (forced-colors: active) {
-    :root {
-        --lv-color-brand: Highlight;
-        --lv-color-on-brand: HighlightText;
-        --lv-color-text: CanvasText;
-        --lv-color-text-muted: CanvasText;
-        --lv-color-canvas: Canvas;
-        --lv-color-canvas-subtle: Canvas;
-        --lv-color-surface: Canvas;
-        --lv-color-danger: CanvasText;
-        --lv-color-warning: CanvasText;
-        --lv-color-success: Highlight;
-        --lv-color-on-danger: HighlightText;
-        --lv-surface-hover: Canvas;
-        --lv-shadow-panel: none;
-        --lv-shadow-card: none;
-        --lv-shadow-overlay: none;
-    }
-
     .lv-card,
     .lv-card2,
     .lv-modal-content,
@@ -2128,7 +2142,7 @@ pre,
     .lv-drawer-panel,
     .lv-review-box,
     .lv-btn-rate,
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :is(.b3-button, .b3-text-field, .b3-select),
+    :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card,
     .lv-badge,
     .lv-chip,
@@ -2879,7 +2893,7 @@ pre,
     .lv-card2,
     .lv-modal-content,
     .lv-palette-panel,
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :is(.b3-button, .b3-text-field, .b3-select),
+    :is(.b3-button, .b3-text-field, .b3-select),
     .lv-stat-card {
         border: 1px solid var(--lv-color-text);
     }
@@ -2892,17 +2906,18 @@ pre,
         font-weight: var(--lv-fw-bold);
     }
 
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer) :where(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
+    :where(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
         outline: 3px solid var(--lv-color-brand);
         outline-offset: 2px;
     }
 }
+} // end #{$lv-cards-ui-scope}
 
 // =============================================================
 // 手机端闪卡中心 / 复习 / 制卡全屏宿主 (Mobile Spec v1 & v2)
 // 100vw / var(--lv-vv-h, 100dvh) + safe-area；消除双顶栏冗余并响应软键盘
 // =============================================================
-.lv-dialog.lv-hub-mobile-dialog {
+.lv-cards-dialog.lv-hub-mobile-dialog {
     .b3-dialog {
         padding: 0 !important;
     }
@@ -2949,7 +2964,7 @@ pre,
     }
 }
 
-.lv-dialog.lv-mobile-sheet-dialog {
+.lv-cards-dialog.lv-mobile-sheet-dialog {
     .b3-dialog {
         padding: 0 !important;
     }
@@ -3040,7 +3055,7 @@ pre,
     }
 }
 
-.lv-mobile-dialog-close {
+.lv-cards-dialog .lv-mobile-dialog-close {
     border: none;
     background: transparent;
     color: var(--lv-color-text-muted);
@@ -3057,7 +3072,7 @@ pre,
     margin-left: auto;
 }
 
-.lv-hub-mobile-host {
+.lv-cards-root.lv-hub-mobile-host {
     width: 100%;
     height: 100%;
     min-height: 0;
@@ -3075,8 +3090,7 @@ pre,
 }
 
 /* ══════════ 小驴闪卡主权弹窗外壳防护 (Sovereign Modal Shell Defense) ══════════ */
-.b3-dialog:has(.lv-cards-dialog-content, [class*="lv-cards"], [id*="lv-cards"]):not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog),
-.b3-dialog.lv-dialog:not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog) {
+.b3-dialog.lv-cards-dialog:not(.lv-hub-mobile-dialog):not(.lv-mobile-sheet-dialog):not(.lv-hub-mobile-dialog .b3-dialog):not(.lv-mobile-sheet-dialog .b3-dialog) {
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3224,8 +3238,8 @@ pre,
 }
 
 /* ══════════ 主权自洽抗污染重置 (Scoped Box-Sizing & SVG Immunity) ══════════ */
-.lv-cards,
-.lv-hub-mobile-host,
+#{$lv-cards-ui-scope} .lv-cards,
+.lv-cards-root.lv-hub-mobile-host,
 .lv-cards-dialog-content {
     &, *, *::before, *::after {
         box-sizing: border-box;
@@ -3247,7 +3261,7 @@ pre,
 }
 
 /* ══════════ 按钮专项：按压反馈 / 忙碌态拦截 / 文字显示 ══════════ */
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer, .lv-settings) {
+#{$lv-cards-ui-scope} {
     /* 自绘按钮族统一按压回弹（禁用/忙碌态不响应） */
     :is(.b3-button, .lv-chipbtn, .lv-link-button, .lv-tab, .lv-facet, .lv-tool-btn, .lv-btn-tool, .lv-persona, .lv-settings-nav-chip, .lv-btn-icon, .lv-zen-btn, .lv-zen-tool-btn, .lv-zen-exit-btn):not(:disabled):not([aria-busy="true"]):active {
         transform: scale(0.96);
@@ -3269,19 +3283,15 @@ pre,
         overflow: hidden;
         text-overflow: ellipsis;
     }
-}
 
-/* ══════════ 触控点击高亮抑制：灰色闪块与自有 :active 回弹冲突，统一透明 ══════════ */
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer, .lv-settings) {
+    /* ══════════ 触控点击高亮抑制：灰色闪块与自有 :active 回弹冲突，统一透明 ══════════ */
     -webkit-tap-highlight-color: transparent;
 
     button, .lv-chipbtn, .lv-tab, .lv-facet, .lv-link-button, .lv-persona {
         -webkit-tap-highlight-color: transparent;
     }
-}
 
-/* ══════════ 下拉菜单专项：选项可读性 / 光标 ══════════ */
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-peek-body, .lv-review, .lv-aiwiz, .lv-drawer, .lv-settings) {
+    /* ══════════ 下拉菜单专项：选项可读性 / 光标 ══════════ */
     :is(select, .b3-select) {
         cursor: pointer;
     }
@@ -3290,10 +3300,8 @@ pre,
         background-color: var(--lv-color-surface, var(--b3-theme-background));
         color: var(--lv-color-text, var(--b3-theme-on-background));
     }
-}
 
-/* ══════════ 文字专项：等宽数字对齐 / 行高节奏 / 换行保护 ══════════ */
-:is(.lv-page, .lv-hub, .lv-dialog, .lv-review, .lv-settings) {
+    /* ══════════ 文字专项：等宽数字对齐 / 行高节奏 / 换行保护 ══════════ */
     font-variant-numeric: tabular-nums;
 
     .lv-stat-card .lv-stat-label,
@@ -3301,91 +3309,71 @@ pre,
         line-height: 1.5;
         overflow-wrap: anywhere;
     }
-}
 
-/* ══════════ 手机端专项：滚动边界防抖 / 粘滞 hover 抑制 ══════════ */
-.lv-dialog .b3-dialog__body,
-.lv-page,
-.lv-hub {
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-}
+    /* ══════════ 手机端专项：滚动边界防抖 / 粘滞 hover 抑制 ══════════ */
+    .b3-dialog__body,
+    .lv-page,
+    .lv-hub {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
 
-@media (hover: none) and (pointer: coarse) {
-    :is(.lv-page, .lv-hub, .lv-dialog, .lv-settings) {
+    @media (hover: none) and (pointer: coarse) {
         .lv-tab:hover:not(.is-active):not([aria-selected="true"]),
         .lv-facet:hover:not(.is-active) {
             background: transparent;
         }
-    }
-}
 
-/* ══════════ 手机端专项：卡组卡片按压反馈 ══════════ */
-@media (hover: none) and (pointer: coarse) {
-    :is(.lv-page, .lv-hub) .lv-deck-card:active {
-        filter: brightness(0.96);
+        .lv-deck-card:active {
+            filter: brightness(0.96);
+        }
     }
-}
 
-/* R14 桌面 hover 收口（触屏不生效） */
-@media (hover: hover) {
-    .lv-chipbtn:hover,
-    .lv-studio-mode-btn:hover,
-    .lv-dm-segment-btn:hover,
-    .lv-dm-merge-opt:hover {
-        background: color-mix(in srgb, var(--lv-color-brand) 8%, transparent);
+    /* R14 桌面 hover 收口（触屏不生效） */
+    @media (hover: hover) {
+        .lv-chipbtn:hover,
+        .lv-studio-mode-btn:hover,
+        .lv-dm-segment-btn:hover,
+        .lv-dm-merge-opt:hover {
+            background: color-mix(in srgb, var(--lv-color-brand) 8%, transparent);
+        }
     }
 }
 
 /* BUG-4 同类预防（2026-11-14 静态审计 A1）：SiYuan Dialog 根被运行时写入内联 z-index(11)，
-   可能被宿主插件 z≥11 的 sticky/fixed chrome 盖住命中测试。闪卡全部 Dialog 统一挂 lv-dialog
+   可能被宿主插件 z≥11 的 sticky/fixed chrome 盖住命中测试。闪卡全部 Dialog 统一挂 lv-cards-dialog
    根类（libs/dialog.ts），此规则整体抬到宿主 chrome 之上；所有弹窗等 z，层间次序由 DOM 序决定，无副作用。 */
-.b3-dialog.lv-dialog {
+.b3-dialog.lv-cards-dialog {
     z-index: 60 !important;
 }
 
-/* ══════════ 文档内闪卡块序号与一体化交互胶囊 ══════════
-   纯 CSS 计数器轻量呈现，实时自愈重排，零写脏，严守数据零污染红线。
-   彻底消除与编辑按钮/原生属性日期的重叠碰撞：将序号、状态与编辑操作合并为一体化高质感胶囊按钮。 */
-body[data-lv-card-badge="on"] .protyle-wysiwyg,
-.lv-doc-card-badge-on .protyle-wysiwyg {
-    counter-reset: lv-card-doc-seq;
-
-    [data-node-id][custom-riff-decks],
-    [data-node-id][custom-riff-title] {
-        counter-increment: lv-card-doc-seq;
-        position: relative;
-
-        // 彻底隐藏旧的、冲突的 ::before 伪元素（已合并至 .lv-card-badge-pill 交互胶囊）
-        &::before {
-            display: none !important;
-        }
-
-        .lv-card-badge-pill__seq::before {
-            content: "闪卡 #" counter(lv-card-doc-seq);
-        }
-    }
+/* ══════════ 文档内闪卡块视觉提示与脱离式浮动交互胶囊 ══════════
+   零 DOM 侵入红线：绝不向 .protyle-wysiwyg / [data-node-id] / .protyle-attr 写入节点、class 或属性。
+   闪卡左边框与自定义题面提示纯 CSS 读取思源原生 IAL；交互胶囊以独立 Portal 挂载在 document.body。 */
+.protyle-wysiwyg [data-node-id]:is([custom-riff-decks], [custom-riff-title], [custom-lv-question], [custom-lv-answer], [custom-card-answer], [custom-riff-answer], [custom-lv-attr-subtype]):not([data-type="NodeDocument"]) {
+    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--b3-theme-primary, #6366f1) 36%, transparent);
+    border-radius: 2px;
 }
 
 // =============================================================
-// 免侵入属性问答卡（custom-riff-title）编辑器装饰与快捷按钮
+// 免侵入属性问答卡（纯 CSS 读取 custom-riff-title / custom-lv-question）
 // =============================================================
-[data-custom-title] {
+.protyle-wysiwyg [data-node-id][custom-riff-title]:not([custom-riff-title=""]),
+.protyle-wysiwyg [data-node-id][custom-lv-question]:not([custom-lv-question=""]):not([custom-riff-title]),
+.protyle-wysiwyg [data-node-id][custom-lv-question]:not([custom-lv-question=""])[custom-riff-title=""] {
     &::after {
-        content: "✦ 问: " attr(data-custom-title);
         display: inline-flex;
         align-items: center;
-        max-width: min(360px, 50vw);
+        max-width: min(360px, 60vw);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        vertical-align: 1px;
-        margin-left: 8px;
+        margin: 2px 0 0 4px;
         padding: 1.5px 8px;
         border-radius: 999px;
-        background: color-mix(in srgb, var(--lv-color-brand, var(--b3-theme-primary, #6366f1)) 12%, var(--lv-color-surface, transparent));
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand, var(--b3-theme-primary, #6366f1)) 28%, transparent);
-        color: var(--lv-color-brand, var(--b3-theme-primary, #6366f1));
+        background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 12%, var(--b3-theme-surface, transparent));
+        border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 28%, transparent);
+        color: var(--b3-theme-primary, #6366f1);
         font-size: 11px;
         font-weight: 500;
         line-height: 1.35;
@@ -3394,24 +3382,19 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
         user-select: none;
         -webkit-user-select: none;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        transition: opacity var(--lv-dur-fast, 0.15s) ease, transform var(--lv-dur-fast, 0.15s) ease;
+        transition: opacity 0.15s ease;
     }
 
-    &:focus::after,
-    &:focus-within::after,
-    &:focus-visible::after {
+    &:focus-within::after {
         opacity: 0.38;
-        transform: scale(0.96);
         pointer-events: none;
     }
 
     &:hover::after,
-    &:focus:hover::after,
     &:focus-within:hover::after {
         opacity: 1;
-        background: color-mix(in srgb, var(--lv-color-brand, var(--b3-theme-primary, #6366f1)) 18%, var(--lv-color-surface, transparent));
-        border-color: color-mix(in srgb, var(--lv-color-brand, var(--b3-theme-primary, #6366f1)) 42%, transparent);
-        transform: translateY(-0.5px);
+        background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 18%, var(--b3-theme-surface, transparent));
+        border-color: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 42%, transparent);
     }
 
     @media (max-width: 640px) {
@@ -3419,310 +3402,269 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
             max-width: 180px;
             font-size: 10.5px;
             padding: 1px 6px;
-            margin-left: 6px;
+            margin-left: 4px;
         }
     }
 }
 
+.protyle-wysiwyg [data-node-id][custom-riff-title]:not([custom-riff-title=""])::after {
+    content: "✦ 问: " attr(custom-riff-title);
+}
+
+.protyle-wysiwyg [data-node-id][custom-lv-question]:not([custom-lv-question=""]):not([custom-riff-title])::after,
+.protyle-wysiwyg [data-node-id][custom-lv-question]:not([custom-lv-question=""])[custom-riff-title=""]::after {
+    content: "✦ 问: " attr(custom-lv-question);
+}
+
+// 兼容清理：隐藏任何历史遗留的旧版独立按钮（不触发对 .protyle-attr 本身的任何写入）
 .protyle-attr {
-    // 一体化闪卡交互胶囊（序号标号 + 编辑修改集成按钮）
-    .lv-card-badge-pill {
-        order: 9999 !important;
-        margin-left: 6px !important;
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        height: 22px;
-        padding: 0 8px;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: 600;
-        line-height: 1;
-        cursor: pointer;
-        touch-action: manipulation;
-        user-select: none;
-        -webkit-user-select: none;
-        box-sizing: border-box;
-        transition: transform var(--lv-dur-fast, 0.15s) ease, background var(--lv-dur-fast, 0.15s) ease, border-color var(--lv-dur-fast, 0.15s) ease, box-shadow var(--lv-dur-fast, 0.15s) ease, opacity var(--lv-dur-fast, 0.15s) ease;
-
-        // 不可见命中扩展：22px 视觉胶囊的实际可点热区向四周外扩，
-        // 鼠标与指尖都能轻松点中（悬停生效时随宿主一起命中，无布局影响）
-        &::before {
-            content: "";
-            position: absolute;
-            inset: -5px -6px;
-            border-radius: 14px;
-        }
-
-        .lv-card-badge-pill__icon {
-            font-size: 10.5px;
-            color: var(--b3-theme-primary, #6366f1);
-        }
-
-        .lv-card-badge-pill__seq {
-            font-family: var(--lv-font-mono, var(--b3-font-family-code, monospace));
-            font-size: 10.5px;
-            letter-spacing: 0.02em;
-        }
-
-        .lv-card-badge-pill__action {
-            display: inline-flex;
-            align-items: center;
-            opacity: 0.75;
-            margin-left: 2px;
-
-            svg {
-                width: 11px;
-                height: 11px;
-                fill: none;
-                stroke: currentColor;
-                stroke-width: 2;
-                stroke-linecap: round;
-                stroke-linejoin: round;
-                display: block;
-            }
-        }
-
-        // 常驻快捷动作槽 (Pinned Quick Slots)：展示在胶囊内的高频单图标按钮
-        .lv-card-badge-pill__quick-slot {
-            display: inline-flex;
-            align-items: center;
-            gap: 2px;
-            margin-left: 2px;
-        }
-
-        .lv-card-badge-pill__quick-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 16px;
-            height: 16px;
-            padding: 0 1px;
-            border-radius: 4px;
-            font-size: 11px;
-            line-height: 1;
-            opacity: 0.75;
-            cursor: pointer;
-            transition: opacity var(--lv-dur-fast, 0.15s) ease, background var(--lv-dur-fast, 0.15s) ease, transform var(--lv-dur-fast, 0.15s) ease;
-
-            &:hover,
-            &:focus-visible {
-                opacity: 1;
-                background: color-mix(in srgb, currentColor 18%, transparent);
-                box-shadow: 0 0 6px color-mix(in srgb, currentColor 28%, transparent);
-                transform: scale(1.15);
-                outline: none;
-            }
-
-            &:active {
-                transform: scale(0.92);
-            }
-        }
-
-        // 主体与 ▾ 之间的细分隔线：视觉上把「高频编辑」与「更多操作」分开
-        .lv-card-badge-pill__divider {
-            width: 1px;
-            height: 11px;
-            margin: 0 1px 0 2px;
-            background: currentColor;
-            opacity: 0.28;
-            flex: 0 0 auto;
-        }
-
-        // ▾ 展开块操作中心：独立命中区，触控友好（最小 16×16 视觉 + padding 扩大热区）
-        .lv-card-badge-pill__more {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 14px;
-            height: 16px;
-            margin: -2px -2px -2px 0;
-            padding: 0 2px;
-            font-size: 9px;
-            line-height: 1;
-            opacity: 0.7;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: opacity var(--lv-dur-fast, 0.15s) ease, background var(--lv-dur-fast, 0.15s) ease;
-
-            &:hover,
-            &:focus-visible {
-                opacity: 1;
-                background: color-mix(in srgb, currentColor 16%, transparent);
-                outline: none;
-            }
-        }
-
-        // 闪卡块形态：精致微胶囊，永不与原生日期/书签冲突
-        &--card {
-            color: var(--b3-theme-primary, #6366f1);
-            background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 10%, var(--b3-theme-surface, #ffffff));
-            border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 28%, transparent);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-
-            &:hover {
-                color: #ffffff;
-                background: var(--b3-theme-primary, #6366f1);
-                border-color: var(--b3-theme-primary, #6366f1);
-                transform: translateY(-1px);
-                box-shadow: 0 2px 8px color-mix(in srgb, var(--b3-theme-primary, #6366f1) 32%, transparent);
-
-                .lv-card-badge-pill__icon,
-                .lv-card-badge-pill__action {
-                    color: #ffffff;
-                    opacity: 1;
-                }
-            }
-        }
-
-        // 普通块形态：微光胶囊，自适应展示「块类型 · 动作引导」
-        // 块类型身份色板（--lv-pill-tint）：data-block-kind 驱动，与菜单头部 accent 共用同一映射，
-        // 「当前在操作哪类块」从胶囊到菜单视觉一体；段落/其它保持主题色基调。
-        &--ordinary {
-            --lv-pill-tint: var(--b3-theme-primary, #6366f1);
-            opacity: 0;
-            pointer-events: none;
-            color: color-mix(in srgb, var(--lv-pill-tint) 62%, var(--b3-theme-on-surface, #1f1f1f));
-            background: color-mix(in srgb, var(--lv-pill-tint) 7%, var(--b3-theme-surface, #ffffff));
-            border: 1px solid color-mix(in srgb, var(--lv-pill-tint) 24%, transparent);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-
-            &[data-block-kind="heading"] { --lv-pill-tint: #d97706; }
-            &[data-block-kind="code"]    { --lv-pill-tint: #0891b2; }
-            &[data-block-kind="quote"]   { --lv-pill-tint: #7c3aed; }
-            &[data-block-kind="task"]    { --lv-pill-tint: #059669; }
-            &[data-block-kind="list"]    { --lv-pill-tint: #0284c7; }
-            &[data-block-kind="table"]   { --lv-pill-tint: #ea580c; }
-            &[data-block-kind="math"]    { --lv-pill-tint: #db2777; }
-
-            // 代码块 </> 多字符字形：等宽缩小，保持胶囊视觉平衡
-            &[data-block-kind="code"] .lv-card-badge-pill__icon {
-                font-family: var(--b3-font-family-code, monospace);
-                font-size: 9px;
-                font-weight: 700;
-                letter-spacing: -0.02em;
-            }
-
-            .lv-card-badge-pill__icon {
-                color: var(--lv-pill-tint);
-                font-size: 11px;
-                line-height: 1;
-            }
-
-            .lv-card-badge-pill__text {
-                font-size: 10.5px;
-                opacity: 0.9;
-                font-weight: 500;
-            }
-
-            &:hover {
-                opacity: 1 !important;
-                color: var(--lv-pill-tint);
-                border-color: color-mix(in srgb, var(--lv-pill-tint) 55%, transparent);
-                background: color-mix(in srgb, var(--lv-pill-tint) 15%, var(--b3-theme-surface, #ffffff));
-                transform: translateY(-0.5px);
-                box-shadow: 0 2px 8px color-mix(in srgb, var(--lv-pill-tint) 20%, transparent);
-            }
-        }
-
-        // 触屏设备与移动视口（pointer: coarse 或 max-width: 768px）：
-        // 彻底根治「整个页面都是块助手」的视觉干扰（2026-11-17 专项优化）。
-        // 移动端默认一律隐藏块助手胶囊，仅在当前块处于「选中态（.protyle-wysiwyg--select）」、
-        // 「编辑聚焦态（:focus-within）」、「活跃激活态（[data-lv-selected="true"]）」、
-        // 或「操作菜单展开中（[data-lv-bam-active="true"]）」时，才显现当前块的块助手胶囊。
-        @media (pointer: coarse), (max-width: 768px) {
-            opacity: 0 !important;
-            pointer-events: none !important;
-            visibility: hidden !important;
-            transform: scale(0.92);
-            transition: opacity var(--lv-dur-fast, 0.15s) ease, transform var(--lv-dur-fast, 0.15s) ease, visibility var(--lv-dur-fast, 0.15s) ease;
-
-            // 移动端触控热区扩展至 44×44px（符合 ui-ux-pro-max 黄金触控标准）
-            &::before {
-                inset: -11px -8px !important;
-            }
-
-            .lv-card-badge-pill__quick-slot {
-                gap: 4px;
-                margin-left: 3px;
-            }
-
-            .lv-card-badge-pill__quick-btn {
-                min-width: 18px;
-                height: 18px;
-                font-size: 11.5px;
-                position: relative;
-
-                &::before {
-                    content: "";
-                    position: absolute;
-                    inset: -8px -4px;
-                    border-radius: 6px;
-                }
-            }
-        }
-    }
-
-    // ── 深色模式胶囊对比度与呼吸感强化 ──
-    [data-theme-mode="dark"] &,
-    .body--dark &,
-    body.dark & {
-        .lv-card-badge-pill--card {
-            background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 22%, var(--b3-theme-surface, #1e1e20));
-            border-color: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 45%, transparent);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-        }
-
-        .lv-card-badge-pill--ordinary {
-            background: color-mix(in srgb, var(--lv-pill-tint) 16%, var(--b3-theme-surface, #1e1e20));
-            border-color: color-mix(in srgb, var(--lv-pill-tint) 38%, transparent);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-            color: color-mix(in srgb, var(--lv-pill-tint) 75%, var(--b3-theme-on-surface, #f1f5f9));
-        }
-    }
-
-    // 历史独立编辑按钮（仅 hide 非胶囊节点）：必须显式排除 .lv-card-badge-pill，
-    // 否则一体化胶囊的序号/编辑入口会被一并隐藏（2026-11-16 实机回归根因）
     .ft-editor-edit-btn,
     .lv-cards-attr-edit-btn:not(.lv-card-badge-pill) {
         display: none !important;
     }
 }
 
-// 悬停段落时浮现普通块的问答卡入口
-.protyle-wysiwyg [data-node-id]:hover {
-    .lv-card-badge-pill--ordinary {
-        opacity: 0.82;
+// ── 100% 脱离式浮动 Portal 胶囊（挂载于 document.body，position: fixed 跟随块坐标）──
+.lv-card-badge-pill {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 6;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-family: var(--b3-font-family);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    box-sizing: border-box;
+    will-change: transform;
+    transition: background var(--lv-dur-fast, 0.15s) ease, border-color var(--lv-dur-fast, 0.15s) ease, box-shadow var(--lv-dur-fast, 0.15s) ease, opacity var(--lv-dur-fast, 0.15s) ease;
+
+    // 不可见命中扩展：22px 视觉胶囊的实际可点热区向四周外扩，无布局影响
+    &::before {
+        content: "";
+        position: absolute;
+        inset: -5px -6px;
+        border-radius: 14px;
+    }
+
+    .lv-card-badge-pill__icon {
+        font-size: 10.5px;
+        color: var(--b3-theme-primary, #6366f1);
+    }
+
+    .lv-card-badge-pill__seq {
+        font-family: var(--lv-font-mono, var(--b3-font-family-code, monospace));
+        font-size: 10.5px;
+        letter-spacing: 0.02em;
+    }
+
+    .lv-card-badge-pill__action {
+        display: inline-flex;
+        align-items: center;
+        opacity: 0.75;
+        margin-left: 2px;
+
+        svg {
+            width: 11px;
+            height: 11px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: block;
+        }
+    }
+
+    .lv-card-badge-pill__quick-slot {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: 2px;
+    }
+
+    .lv-card-badge-pill__quick-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 1px;
+        border-radius: 4px;
+        font-size: 11px;
+        line-height: 1;
+        opacity: 0.75;
+        cursor: pointer;
+        transition: opacity var(--lv-dur-fast, 0.15s) ease, background var(--lv-dur-fast, 0.15s) ease, transform var(--lv-dur-fast, 0.15s) ease;
+
+        &:hover,
+        &:focus-visible {
+            opacity: 1;
+            background: color-mix(in srgb, currentColor 18%, transparent);
+            box-shadow: 0 0 6px color-mix(in srgb, currentColor 28%, transparent);
+            transform: scale(1.15);
+            outline: none;
+        }
+
+        &:active {
+            transform: scale(0.92);
+        }
+    }
+
+    .lv-card-badge-pill__divider {
+        width: 1px;
+        height: 11px;
+        margin: 0 1px 0 2px;
+        background: currentColor;
+        opacity: 0.28;
+        flex: 0 0 auto;
+    }
+
+    .lv-card-badge-pill__more {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 14px;
+        height: 16px;
+        margin: -2px -2px -2px 0;
+        padding: 0 2px;
+        font-size: 9px;
+        line-height: 1;
+        opacity: 0.7;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: opacity var(--lv-dur-fast, 0.15s) ease, background var(--lv-dur-fast, 0.15s) ease;
+
+        &:hover,
+        &:focus-visible {
+            opacity: 1;
+            background: color-mix(in srgb, currentColor 16%, transparent);
+            outline: none;
+        }
+    }
+
+    &--card {
+        color: var(--b3-theme-primary, #6366f1);
+        background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 12%, var(--b3-theme-surface, #ffffff));
+        border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 30%, transparent);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+        &:hover {
+            color: var(--b3-theme-on-primary, #ffffff);
+            background: var(--b3-theme-primary, #6366f1);
+            border-color: var(--b3-theme-primary, #6366f1);
+            box-shadow: 0 3px 10px color-mix(in srgb, var(--b3-theme-primary, #6366f1) 32%, transparent);
+
+            .lv-card-badge-pill__icon,
+            .lv-card-badge-pill__action {
+                color: var(--b3-theme-on-primary, #ffffff);
+                opacity: 1;
+            }
+        }
+    }
+
+    &--ordinary {
+        --lv-pill-tint: var(--b3-theme-primary, #6366f1);
+        opacity: 0.94;
         pointer-events: auto;
+        color: color-mix(in srgb, var(--lv-pill-tint) 68%, var(--b3-theme-on-surface, #1f1f1f));
+        background: color-mix(in srgb, var(--lv-pill-tint) 9%, var(--b3-theme-surface, #ffffff));
+        border: 1px solid color-mix(in srgb, var(--lv-pill-tint) 26%, transparent);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+        &[data-block-kind="heading"] { --lv-pill-tint: #d97706; }
+        &[data-block-kind="code"]    { --lv-pill-tint: #0891b2; }
+        &[data-block-kind="quote"]   { --lv-pill-tint: #7c3aed; }
+        &[data-block-kind="task"]    { --lv-pill-tint: #059669; }
+        &[data-block-kind="list"]    { --lv-pill-tint: #0284c7; }
+        &[data-block-kind="table"]   { --lv-pill-tint: #ea580c; }
+        &[data-block-kind="math"]    { --lv-pill-tint: #db2777; }
+
+        &[data-block-kind="code"] .lv-card-badge-pill__icon {
+            font-family: var(--b3-font-family-code, monospace);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .lv-card-badge-pill__icon {
+            color: var(--lv-pill-tint);
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        .lv-card-badge-pill__text {
+            font-size: 10.5px;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        &:hover {
+            opacity: 1;
+            color: var(--lv-pill-tint);
+            border-color: color-mix(in srgb, var(--lv-pill-tint) 55%, transparent);
+            background: color-mix(in srgb, var(--lv-pill-tint) 16%, var(--b3-theme-surface, #ffffff));
+            box-shadow: 0 3px 10px color-mix(in srgb, var(--lv-pill-tint) 22%, transparent);
+        }
+    }
+
+    // 移动端 / 粗指针：脱离式胶囊仅在轻触/选中时挂载，挂载态保持清晰可见并扩展 44×44px 触控热区
+    @media (pointer: coarse), (max-width: 768px) {
+        opacity: 1;
+        pointer-events: auto;
+        visibility: visible;
+
+        &::before {
+            inset: -11px -8px !important;
+        }
+
+        .lv-card-badge-pill__quick-slot {
+            gap: 4px;
+            margin-left: 3px;
+        }
+
+        .lv-card-badge-pill__quick-btn {
+            min-width: 18px;
+            height: 18px;
+            font-size: 11.5px;
+            position: relative;
+
+            &::before {
+                content: "";
+                position: absolute;
+                inset: -8px -4px;
+                border-radius: 6px;
+            }
+        }
     }
 }
 
-// 宿主未开启「显示书签/属性模式」时，原生 .protyle-attr 自身 opacity:0 会连累胶囊；
-// 仅在确实注入了胶囊的块上、悬浮/聚焦时抬升属性栏，避免影响原生属性显隐语义。
-.protyle-wysiwyg [data-node-id]:hover > .protyle-attr:has(> .lv-card-badge-pill),
-.protyle-wysiwyg [data-node-id]:focus-within > .protyle-attr:has(> .lv-card-badge-pill) {
-    opacity: 1;
-}
+// ── 深色模式脱离式胶囊对比度与呼吸感强化 ──
+[data-theme-mode="dark"] .lv-card-badge-pill,
+.body--dark .lv-card-badge-pill,
+body.dark .lv-card-badge-pill {
+    &.lv-card-badge-pill--card {
+        background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 24%, var(--b3-theme-surface, #1e1e20));
+        border-color: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 48%, transparent);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
 
-// 移动端激活守卫：仅在当前块处于选中态、聚焦编辑态、触碰激活态或菜单展开态时，抬升属性栏并显现胶囊
-@media (pointer: coarse), (max-width: 768px) {
-    .protyle-wysiwyg [data-node-id].protyle-wysiwyg--select,
-    .protyle-wysiwyg [data-node-id]:focus-within,
-    .protyle-wysiwyg [data-node-id][data-lv-selected="true"],
-    .protyle-wysiwyg [data-node-id][data-lv-bam-active="true"],
-    .protyle-wysiwyg [data-node-id]:has(.lv-card-badge-pill[data-lv-bam-anchor="open"]) {
-        > .protyle-attr {
-            opacity: 1 !important;
-            pointer-events: auto !important;
-
-            .lv-card-badge-pill {
-                opacity: 1 !important;
-                pointer-events: auto !important;
-                visibility: visible !important;
-                transform: scale(1);
-            }
-        }
+    &.lv-card-badge-pill--ordinary {
+        background: color-mix(in srgb, var(--lv-pill-tint) 18%, var(--b3-theme-surface, #1e1e20));
+        border-color: color-mix(in srgb, var(--lv-pill-tint) 40%, transparent);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+        color: color-mix(in srgb, var(--lv-pill-tint) 75%, var(--b3-theme-on-surface, #f1f5f9));
     }
 }
 
@@ -3751,8 +3693,8 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
     // 块类型 accent：段落/其它默认主题色，具体块类型由 data-kind 覆写
     --lv-bam-accent: var(--b3-theme-primary, #6366f1);
     background: color-mix(in srgb, var(--b3-theme-surface, #ffffff) 94%, transparent);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid color-mix(in srgb, var(--b3-theme-on-surface, #1f1f1f) 12%, transparent);
     box-shadow: 0 16px 42px rgba(0, 0, 0, 0.15), 0 3px 10px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     font-family: var(--b3-font-family);
@@ -4166,13 +4108,22 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
         }
     }
 
-    // ── 深色主题：靠 CSS 变量天然适配，补充多层阴影对比 ──
+    // ── 深色主题：靠 CSS 变量天然适配，补充多层阴影与标签对比度 ──
     [data-theme-mode="dark"] &,
     .body--dark &,
     body.dark & {
         background: color-mix(in srgb, var(--b3-theme-surface, #1e1e20) 90%, transparent);
         box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
         border-color: color-mix(in srgb, var(--b3-theme-on-surface, #ffffff) 15%, transparent);
+
+        .lv-bam__badge--batch { color: #93c5fd; }
+        .lv-bam__source-tag--exam { color: #fbbf24; }
+        .lv-bam__source-tag--checkin { color: #6ee7b7; }
+        .lv-bam__source-tag--home { color: #fdba74; }
+        .lv-bam__source-tag--glean { color: #a5b4fc; }
+        .lv-bam__source-tag--raikiri { color: #67e8f9; }
+        .lv-bam__source-tag--common { color: #c4b5fd; }
+        .lv-bam__source-tag--contacts { color: #f9a8d4; }
     }
 
     // ── 移动端：加大触控高度，限制宽度避免超出 390px 视口 ──
@@ -4203,7 +4154,8 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
 }
 
 // 属性问答卡设置对话框专用微排版
-.lv-qa-dialog-body {    display: flex;
+.lv-cards-dialog .lv-qa-dialog-body {
+    display: flex;
     flex-direction: column;
     gap: var(--lv-sp-3);
     padding: var(--lv-sp-3) 0;
@@ -4257,6 +4209,7 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
 }
 
 // 会话恢复横幅与今日待刷横幅：高级玻璃拟态与细腻渐变彩条
+#{$lv-cards-ui-scope} {
 .lv-session-resume-banner,
 .lv-session-due-banner {
     margin-bottom: var(--lv-sp-4);
@@ -4332,5 +4285,14 @@ body[data-lv-card-badge="on"] .protyle-wysiwyg,
     border: 1px solid color-mix(in srgb, var(--lv-color-warning, #f59e0b) 22%, transparent);
     border-left: 4px solid var(--lv-color-warning, #f59e0b);
 }
+}
 
+@media print {
+    .lv-card-badge-pill,
+    .lv-bam,
+    .lv-bam-mobile-mask,
+    .lv-cards-tooltip {
+        display: none !important;
+    }
+}
 

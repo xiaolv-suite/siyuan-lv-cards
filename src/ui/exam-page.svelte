@@ -177,7 +177,7 @@
             longName: isChinese ? "计划名称不能超过 120 个字符" : "Plan names must be 120 characters or fewer",
             invalidDate: isChinese ? "请输入有效的考试日期" : "Enter a valid exam date",
             invalidTotalCards: isChinese ? "总卡量须为 1 到 1,000,000 之间的整数，或留空" : "Total cards must be a whole number from 1 to 1,000,000, or blank",
-            invalidCramDays: isChinese ? "考前天数须为 0 到 365 之间的整数" : "Cram days must be a whole number from 0 to 365",
+            invalidCramDays: isChinese ? "考前天数须为 0 到 365 之间的整数" : "Sprint days must be a whole number from 0 to 365",
         });
         fieldErrors = result.errors;
         const firstError = Object.keys(result.errors)[0];
@@ -268,7 +268,7 @@
     {#if actionError}
         <LvError message={actionError} onretry={retryPlanAction} retryLabel={t.dashboard.refresh} />
     {/if}
-    <div class="lv-pagehead">
+    <div class="lv-pagehead lv-pagehead--with-actions">
         <div class="lv-pagehead-main">
             <div class="lv-eyebrow">EXAM / CRAM</div>
             <div class="lv-pagehead-title">{t.exam.title}</div>

@@ -113,10 +113,12 @@ export interface LvCardsSettings {
     aiMode: "siyuan" | "custom";
     aiEndpoint: string;
     aiKey: string;
+    aiKeyConfigured?: boolean;
     aiModel: string;
     /** AI 备用端点（300 回退链）：主端点失败自动切换（custom 模式） */
     aiFallbackEndpoint: string;
     aiFallbackKey: string;
+    aiFallbackKeyConfigured?: boolean;
     aiFallbackModel: string;
     /** BU-8：自定义敏感词（逗号分隔）——发送前扫描提示脱敏，仅本地 */
     aiSensitiveTerms: string;
@@ -132,6 +134,7 @@ export interface LvCardsSettings {
     /** AnkiConnect 客户端（M9·FR1）：连本机 Anki Desktop */
     ankiClientUrl: string;
     ankiClientKey: string;
+    ankiClientKeyConfigured?: boolean;
     /** 复习舞台最大宽度 px（AC） */
     cardMaxWidth: number;
     /** 记忆：上次所在中心子页 / 上次复习范围 */
@@ -248,9 +251,11 @@ export function defaultSettings(): LvCardsSettings {
         aiMode: "siyuan",
         aiEndpoint: "",
         aiKey: "",
+        aiKeyConfigured: false,
         aiModel: "",
         aiFallbackEndpoint: "",
         aiFallbackKey: "",
+        aiFallbackKeyConfigured: false,
         aiFallbackModel: "",
         aiSensitiveTerms: "",
         aiCostBudgetEnabled: false,
@@ -260,6 +265,7 @@ export function defaultSettings(): LvCardsSettings {
         dailyTipEnabled: true,
         ankiClientUrl: "http://127.0.0.1:8765",
         ankiClientKey: "",
+        ankiClientKeyConfigured: false,
         cardMaxWidth: 880,
         lastHubTab: "overview",
         lastReviewScope: "all",
@@ -305,6 +311,7 @@ const BOOL_FIELDS: (keyof LvCardsSettings)[] = [
     "randomOrder", "burySiblings", "typingEnabled", "typingStrict", "dictationEnabled", "choiceEnabled", "mixedRotation", "requeueAgain",
     "xpEnabled", "markerEnabled", "hideMetaUntilAnswer", "reverseOrder", "ttsEnabled", "reminderEnabled",
     "sfxEnabled", "examEnabled", "dailyTipEnabled", "onboarded", "aiCostBudgetEnabled", "weeklyReportEnabled",
+    "aiKeyConfigured", "aiFallbackKeyConfigured", "ankiClientKeyConfigured",
 ];
 const STR_FIELDS: (keyof LvCardsSettings)[] = [
     "weeklyReportLast", "customCardCss", "checkinItemId",
@@ -358,7 +365,58 @@ export function normalizeSettings(raw: unknown): LvCardsSettings {
     for (const key of STR_FIELDS) {
         (merged as unknown as Record<string, unknown>)[key] = toStr(obj[key]);
     }
+    if (merged.aiKey) merged.aiKeyConfigured = true;
+    if (merged.aiFallbackKey) merged.aiFallbackKeyConfigured = true;
+    if (merged.ankiClientKey) merged.ankiClientKeyConfigured = true;
     return merged;
+}
+
+export interface StripSecretsOptions {
+    /**
+     * 显式指定各密钥槽是否已确认成功写入思源 setSecrets。
+     * 仅当对应槽位确认为 true 时才剥离明文并置 *Configured = true；
+     * 若明确为 false 且仍存在明文（写入 setSecrets 失败），保留明文且不假报已绑定。
+     */
+    boundFields?: Partial<Record<"aiKey" | "aiFallbackKey" | "ankiClientKey", boolean>>;
+}
+
+/**
+ * 持久化脱敏：写盘/导出 settings.json 前按槽位绑定状态剥离明文密钥，仅保留是否已配置状态标记。
+ */
+export function stripSecretsForStorage(settings: LvCardsSettings, options?: StripSecretsOptions): LvCardsSettings {
+    const normalized = normalizeSettings(settings);
+    const bound = options?.boundFields;
+    const processSecretField = (
+        field: "aiKey" | "aiFallbackKey" | "ankiClientKey",
+        configuredField: "aiKeyConfigured" | "aiFallbackKeyConfigured" | "ankiClientKeyConfigured",
+    ): { val: string; configured: boolean } => {
+        const val = normalized[field];
+        const flag = bound?.[field];
+        if (flag === true) {
+            return { val: "", configured: true };
+        }
+        if (flag === false) {
+            return val
+                ? { val, configured: false }
+                : { val: "", configured: false };
+        }
+        return {
+            val: "",
+            configured: Boolean(normalized[configuredField] || val),
+        };
+    };
+    const ai = processSecretField("aiKey", "aiKeyConfigured");
+    const fb = processSecretField("aiFallbackKey", "aiFallbackKeyConfigured");
+    const anki = processSecretField("ankiClientKey", "ankiClientKeyConfigured");
+    return {
+        ...normalized,
+        aiKeyConfigured: ai.configured,
+        aiFallbackKeyConfigured: fb.configured,
+        ankiClientKeyConfigured: anki.configured,
+        aiKey: ai.val,
+        aiFallbackKey: fb.val,
+        ankiClientKey: anki.val,
+    };
 }
 
 function normalizeModules(raw: unknown, defModules: Record<string, boolean>): Record<string, boolean> {

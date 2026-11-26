@@ -16,6 +16,9 @@ import Drill from "@/ui/repair-drill.svelte"; // T10 修卡演练
 import LvPalette from "@/ui/kit/LvPalette.svelte"; // T13 ⌘K 命令面板（docs/41 P0）
 import QuestionAttrDialog from "@/ui/question-attr-dialog.svelte";
 import { createPaletteView } from "@/ui/palette-view";
+import { openBlockActionMenu, closeBlockActionMenu } from "@/ui/block-action-menu";
+import { buildBlockSnapshot, probeEcosystemPresence, executeBlockAction } from "@/core/block-action-executor";
+import type { DialogsChunkModule } from "@/libs/chunk-loader";
 
 type Props = Record<string, any>;
 
@@ -25,8 +28,7 @@ function mountDialogComponent(comp: any, target: HTMLElement, props: Props) {
 }
 
 // 按键合并注册（v0.185.1 修复，同 hub.ts；components 子表=shell loadDialogsComp 消费形态）
-const w = window as unknown as { __lvChunks?: Record<string, unknown> };
-(w.__lvChunks ??= {}).dialogs = {
+const dialogsModule: DialogsChunkModule = {
     components: {
         AIWizard,
         OcclusionEditor,
@@ -43,4 +45,14 @@ const w = window as unknown as { __lvChunks?: Record<string, unknown> };
     },
     mountDialogComponent,
     createPaletteView,
+    blockActionRuntime: {
+        openBlockActionMenu,
+        closeBlockActionMenu,
+        buildBlockSnapshot,
+        probeEcosystemPresence,
+        executeBlockAction,
+    },
 };
+
+const w = window as unknown as { __lvChunks?: Record<string, unknown> };
+(w.__lvChunks ??= {}).dialogs = dialogsModule;

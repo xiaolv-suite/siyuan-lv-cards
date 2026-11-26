@@ -154,6 +154,10 @@ export function normalizeRevlog(raw: unknown): RevlogData {
     return data;
 }
 
+export function dayFormalCount(stat?: { new?: number; review?: number } | null): number {
+    return (stat?.new ?? 0) + (stat?.review ?? 0);
+}
+
 export function localDate(ts: number): string {
     const d = new Date(ts);
     const m = `${d.getMonth() + 1}`.padStart(2, "0");

@@ -64,7 +64,7 @@
                 "SELECT id, content, markdown FROM blocks WHERE (ial LIKE '%custom-lv-leech=\"true\"%' OR ial LIKE '%custom-lv-lapses=\"%') ORDER BY updated DESC LIMIT 10"
             );
             if (!rows || rows.length === 0) {
-                showMessage("当前卡库未检测到水蛭卡（遗忘记录良好），无需急救！", 2500, "info");
+                showMessage("当前卡组未检测到水蛭卡（遗忘记录良好），无需急救！", 2500, "info");
                 return;
             }
             const target = rows[Math.floor(Math.random() * rows.length)] as any;
@@ -165,7 +165,7 @@
             class="b3-button b3-button--small b3-button--outline lv-btn-tool"
             disabled={importing}
             onclick={importPersonalLeechCard}
-            title="从个人真实水蛭卡库提取高遗忘卡片进行救治重构演练"
+            title="从个人真实水蛭卡组提取高遗忘卡片进行救治重构演练"
         >
             <LvIcon name="zap" size={12} />
             <span>{importing ? "正在提取…" : "导入个人水蛭卡实战"}</span>

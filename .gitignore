@@ -18,6 +18,7 @@ dist-inline/
 .tmp-*
 
 # 本地视觉核对台与临时产物（design/preview.html、icon 候选、内核日志等）
+output/
 design/
 .jeikcode/codegraph/
 .zcode/

@@ -3,16 +3,18 @@
 import { mount, unmount } from "svelte";
 import Hub from "@/ui/hub.svelte";
 import { hubServices } from "@/core/hub-services";
+import type { HubChunkModule } from "@/libs/chunk-loader";
 
 type Props = Record<string, unknown>;
 
-// 按键合并注册（v0.185.1 修复）：loader 以 window.__lvChunks[name] 取模块——
-// 此前的整表覆盖赋值使 __lvChunks.hub 恒为 undefined，生产页签必空白（真机实证）
-const w = window as unknown as { __lvChunks?: Record<string, unknown> };
-(w.__lvChunks ??= {}).hub = {
+// 按键合并注册（v0.185.1 修复）：loader 以 window.__lvChunks[name] 取模块
+const hubModule: HubChunkModule = {
     services: hubServices,
     mount(target: HTMLElement, props: Props) {
         const app = mount(Hub, { target, props });
         return { destroy: () => { void unmount(app); } };
     },
 };
+
+const w = window as unknown as { __lvChunks?: Record<string, unknown> };
+(w.__lvChunks ??= {}).hub = hubModule;

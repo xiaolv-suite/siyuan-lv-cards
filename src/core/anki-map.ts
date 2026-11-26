@@ -14,6 +14,8 @@ export interface MapPlan {
     answerField: number;
     /** 其余字段索引（按序并入答案备注） */
     extraFields: number[];
+    /** 单字段模型标识（仅 1 个字段时为 true，问答同源） */
+    singleField?: boolean;
     /** false = 无法映射（进损失报告） */
     ok: boolean;
     issue?: string;
@@ -26,8 +28,8 @@ export function planForModel(model: AnkiModel): MapPlan {
         return { ...base, questionField: -1, answerField: -1, extraFields: [], ok: false, issue: `模型「${model.name}」没有字段定义` };
     }
     if (n === 1) {
-        // 单字段模型（典型：填空/完形）：问答同源，如实标注
-        return { ...base, questionField: 0, answerField: 0, extraFields: [], ok: true, issue: `模型「${model.name}」仅一个字段：问答同源` };
+        // 单字段模型（典型：填空/完形）：问答同源，标注 singleField 防止预览/导入翻倍重复
+        return { ...base, questionField: 0, answerField: 0, extraFields: [], singleField: true, ok: true, issue: `模型「${model.name}」仅一个字段：问答同源` };
     }
     return { ...base, questionField: 0, answerField: 1, extraFields: model.fieldNames.map((_, i) => i).slice(2), ok: true };
 }

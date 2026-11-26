@@ -7,14 +7,32 @@
 import type { PreviewCard } from "./anki-preview";
 import { concealUnmarkedText, hasMarkedAnswer, serializeQaCard } from "./flashcard-quality";
 
+/** 转义行首 Markdown 块级前缀（# / - / * / + / > / 1. / 围栏），确保落块稳定为普通段落 p 而非标题/列表/引述 */
+function escapeLeadingBlockSyntax(line: string): string {
+    return line
+        .replace(/^(#{1,6})(?=\s|$)/, "\\$1")
+        .replace(/^([>*+-])(?=\s|$)/, "\\$1")
+        .replace(/^(\d+)\.(?=\s|$)/, "$1\\.")
+        .replace(/^(`{3,}|~{3,})/, (m) => "\\" + m);
+}
+
+function unescapeLeadingBlockSyntax(line: string): string {
+    return line
+        .replace(/^\\(#{1,6})(?=\s|$)/, "$1")
+        .replace(/^\\([>*+-])(?=\s|$)/, "$1")
+        .replace(/^(\d+)\\\.(?=\s|$)/, "$1.")
+        .replace(/^\\(`{3,}|~{3,})/, "$1");
+}
+
 /** 单卡 → 思源挖空单行；换行折叠为 " / "，确保答案在问题态被遮挡。 */
 export function composeCardLine(card: PreviewCard): string {
     const q = card.question.replace(/\s*\n+\s*/g, " / ").trim();
     const a = card.answer.replace(/\s*\n+\s*/g, " / ").trim();
-    if (!card.cloze) return serializeQaCard(q, a);
-    const markedAnswer = a ? concealUnmarkedText(a) : "";
+    if (!card.cloze) return escapeLeadingBlockSyntax(serializeQaCard(q, a));
+    const effectiveA = a && !(a === q && hasMarkedAnswer(q)) ? a : "";
+    const markedAnswer = effectiveA ? concealUnmarkedText(effectiveA) : "";
     if (!hasMarkedAnswer(q) && !markedAnswer) throw new Error("invalid flashcard: missing cloze answer");
-    return [q, markedAnswer].filter(Boolean).join(" ");
+    return escapeLeadingBlockSyntax([q, markedAnswer].filter(Boolean).join(" "));
 }
 
 /** 批次 → 单个导入文档 markdown：每行一卡（顺序即 cards 顺序，配对以此为准） */
@@ -38,7 +56,8 @@ export function pairImportedBlocks(
     }
     const unmatched: PreviewCard[] = [];
     for (const c of cards) {
-        const blockId = byLine.get(composeCardLine(c));
+        const composed = composeCardLine(c);
+        const blockId = byLine.get(composed) ?? byLine.get(unescapeLeadingBlockSyntax(composed));
         if (blockId) byGuid.set(c.guid, blockId);
         else unmatched.push(c);
     }

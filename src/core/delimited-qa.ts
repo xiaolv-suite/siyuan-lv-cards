@@ -8,6 +8,8 @@
  * 4. 纯文本卡（自由回忆/自评卡）
  */
 
+import { findNextAnkiCloze, replaceAnkiClozes } from "./anki-clean";
+
 export type DelimitedQaFormat = "triple-colon" | "double-colon" | "qa-prefix" | "qa-chinese" | "dash" | "anki-cloze";
 
 export interface DelimitedQaResult {
@@ -30,13 +32,12 @@ export function parseDelimitedQa(markdown: string): DelimitedQaResult | null {
     // 已包含标准 ==答案== 的优先交由挖空/问答门禁处理（严格排除代码中的 === 运算符）
     if (/(?<!=)==(?!=)/.test(raw)) return null;
 
-    // 0. Anki 风格挖空兼容：{{c1::答案}} 或 {{c1::答案::提示}}（支持单卡多处挖空提取）
-    const ankiMatches = Array.from(raw.matchAll(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g));
-    if (ankiMatches.length > 0 && ankiMatches[0][1]?.trim()) {
-        const question = raw.replace(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g, (_, _ans, hint) => `［${hint || "…"}］`);
-        const answers = ankiMatches.map(m => m[1].trim()).filter(Boolean);
+    // 0. Anki 风格挖空兼容：{{c1::答案}} 或 {{c1::答案::提示}}（平衡花括号兼容公式/代码，支持单卡多处挖空提取）
+    const ankiRes = replaceAnkiClozes(raw, (tok) => `［${tok.hint.trim() || "…"}］`);
+    if (ankiRes.matches.length > 0 && ankiRes.matches[0].answer.trim()) {
+        const answers = ankiRes.matches.map(m => m.answer.trim()).filter(Boolean);
         return {
-            question,
+            question: ankiRes.text,
             answer: answers.join("；"),
             format: "anki-cloze",
         };
@@ -148,6 +149,7 @@ export function maskDelimitedQaInHtml(root: Node): boolean {
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node: Text | null = null;
+    let clozeIdx = 0;
 
     while ((node = walker.nextNode() as Text | null)) {
         const parent = node.parentElement;
@@ -160,18 +162,22 @@ export function maskDelimitedQaInHtml(root: Node): boolean {
 
         const text = node.nodeValue ?? "";
 
-        // 0.2 匹配 Anki 风格挖空 {{c1::答案}} 或 {{c1::答案::提示}}
-        const ankiMatch = text.match(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/);
-        if (ankiMatch && ankiMatch.index !== undefined) {
-            const before = text.slice(0, ankiMatch.index);
-            const answerText = ankiMatch[1].trim();
-            const hintText = (ankiMatch[2] ?? "").trim() || "Anki 挖空";
-            const after = text.slice(ankiMatch.index + ankiMatch[0].length);
+        // 0.2 匹配 Anki 风格挖空 {{c1::答案}} 或 {{c1::答案::提示}}（平衡花括号，严禁在 title 泄题）
+        const ankiToken = findNextAnkiCloze(text);
+        if (ankiToken) {
+            const before = text.slice(0, ankiToken.start);
+            const answerText = ankiToken.answer.trim();
+            const rawHint = ankiToken.hint.trim();
+            const hintText = rawHint || "Anki 挖空";
+            const after = text.slice(ankiToken.end);
+            clozeIdx++;
             const slot = document.createElement("mark");
             slot.className = "lv-masked";
             slot.setAttribute("data-type", "mark");
             slot.setAttribute("aria-hidden", "true");
-            slot.title = `Anki 挖空（点击揭晓）：${answerText}`;
+            slot.setAttribute("data-cloze-idx", String(clozeIdx));
+            slot.setAttribute("data-real-answer", answerText);
+            slot.title = rawHint ? `Anki 挖空提示：${rawHint}（点击揭晓）` : "Anki 挖空（点击揭晓）";
             // hintText 来自卡片原文（用户可控），必须经 textContent 注入防 XSS
             const slotLabel = document.createElement("span");
             slotLabel.className = "lv-mask-slot";
@@ -264,11 +270,13 @@ export function upgradeLegacyCardToStandard(markdown: string, memo?: string): { 
 
     // 0. 优先支持 Anki 风格挖空 {{c1::答案}} 升级为标准 ==答案==
     if (/\{\{c\d+::/.test(text)) {
-        const upgraded = text.replace(/\{\{c\d+::([^}]+?)(?:::([^}]+?))?\}\}/g, "==$1==");
-        return {
-            markdown: upgraded,
-            reason: "将 Anki 挖空语法升级为思源标准闪卡挖空标记",
-        };
+        const { text: upgraded, matches } = replaceAnkiClozes(text, (tok) => `==${tok.answer}==`);
+        if (matches.length > 0) {
+            return {
+                markdown: upgraded,
+                reason: "将 Anki 挖空语法升级为思源标准闪卡挖空标记",
+            };
+        }
     }
 
     // 1. 优先尝试解析分隔符问答（:: 或 Q/A）

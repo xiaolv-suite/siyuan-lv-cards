@@ -1,6 +1,7 @@
 <script lang="ts">
     import LvIcon from "../kit/LvIcon.svelte";
-    import { isSuperBlockHtml, isAttrQaCard, renderSuperBlockAnswerFace, scopeCustomCardCss, renderAttrQaQuestionFace, renderAttrQaAnswerFace, formatMarkdownToSafeHtml } from "@/core/card-face";
+    import { isSuperBlockHtml, isAttrQaCard, resolveAttrQaSubtype, sanitizeBlockBodyHtmlForFace, sanitizeReviewCardDomHtml, renderSuperBlockAnswerFace, scopeCustomCardCss, renderAttrQaQuestionFace, renderAttrQaAnswerFace, formatMarkdownToSafeHtml } from "@/core/card-face";
+    import { isMeaningfulCardAnswerAttr } from "@/core/flashcard-quality";
     import { cleanChoiceHtml, type InteractiveQuizData } from "@/core/quiz-interactive";
     import { mathTokensPresent, renderMathIn } from "@/libs/math-render";
     import { isSequenceCard, parseSequenceCard, revealAllSequence, type SequenceCardModel } from "@/core/sequence-card";
@@ -37,6 +38,7 @@
         onFillCheck?: () => void;
         onTypingInput?: (val: string) => void;
         onSequenceFullyRevealed?: () => void;
+        onToggleReversed?: () => void;
     }
 
     let {
@@ -67,6 +69,7 @@
         onFillCheck = () => {},
         onTypingInput = () => {},
         onSequenceFullyRevealed = () => {},
+        onToggleReversed,
     }: Props = $props();
 
     /** 自定义卡面 CSS 限定在复习卡面内（docs/53 TODO-09）；在脚本里拼好整段样式标签再交给模板 */
@@ -93,55 +96,99 @@
         }
     });
 
-    /** 判断当前卡片是否为属性问答卡（具备题干问题且正文无挖空标记，严格执行问题在正、答案在反逻辑） */
-    const isQaCard = $derived(isAttrQaCard(cardHtml, customRiffTitle));
+    /** 判断当前卡片是否为属性问答卡（涵盖直接问答 / 背诵自测 / 双面对照 3 子型；遮挡卡须保留原图不走纯文本替换） */
+    const hasOcclusionAttr = $derived(Boolean(
+        cardAttrs?.["custom-lv-occlusion"] || cardAttrs?.["lv-occlusion"] || cardAttrs?.["custom-riff-occlusion"],
+    ));
+    const isQaCard = $derived(!hasOcclusionAttr && isAttrQaCard(cardHtml, customRiffTitle, customRiffAnswer));
+    const attrQaSubtype = $derived(
+        isQaCard ? (resolveAttrQaSubtype(cardAttrs, cardHtml, customRiffTitle, customRiffAnswer) ?? "recite") : null
+    );
+    const attrBidiEnabled = $derived(
+        attrQaSubtype === "dual" && String(cardAttrs?.["custom-lv-bidi"] ?? "").trim().toLowerCase() !== "false"
+    );
+    const attrHint = $derived(String(cardAttrs?.["custom-lv-hint"] || "").trim());
+    let hintExpanded = $state(false);
+    $effect(() => {
+        void currentCardID;
+        hintExpanded = false;
+    });
 
-    function stripHtmlTags(html: string): string {
-        if (!html) return "";
-        if (typeof document !== "undefined") {
-            const template = document.createElement("template");
-            template.innerHTML = html;
-            template.content.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach(el => el.remove());
-            const contentEl = template.content.querySelector('[contenteditable="true"]') || template.content;
-            return (contentEl.textContent ?? "").replace(/\u00a0/g, " ").trim();
-        }
-        return html.replace(/<div class="protyle-attr[\s\S]*?<\/div>/gi, "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
-    }
+    const effectiveCustomAnswer = $derived.by(() => {
+        const trimmed = (customRiffAnswer ?? "").trim();
+        return trimmed && isMeaningfulCardAnswerAttr(trimmed) ? trimmed : "";
+    });
 
-    /** 属性问答卡答案面：自定义答案（custom-riff-answer）优先作为主答案，笔记正文附后备查 */
+    /** 属性问答卡答案面：按 direct / recite / dual 3 子型精确呈现（无效属性绝不覆盖有效正文） */
     const attrQaAnswerHtml = $derived.by(() => {
-        const customA = (customRiffAnswer ?? "").trim();
+        const customA = effectiveCustomAnswer;
+        if (attrQaSubtype === "direct" || (!customRiffTitle && customA)) {
+            const safeBody = sanitizeBlockBodyHtmlForFace(cardHtml);
+            if (reversedRecall) {
+                return renderAttrQaAnswerFace(
+                    safeBody,
+                    customA,
+                    t?.reviewAttrAnswerOriginalPrompt ?? "原题干 (正文)",
+                    "",
+                    "",
+                    { subtype: "direct", reversed: true },
+                );
+            }
+            return renderAttrQaAnswerFace(
+                formatMarkdownToSafeHtml(customA),
+                safeBody,
+                t?.reviewAttrAnswerCustom ?? "参考答案",
+                "",
+                "",
+                { subtype: "direct", questionIsHtml: true },
+            );
+        }
         if (reversedRecall) {
-            // 翻转作答：题面为正文/自定义答案，背面为题干概念
-            const prompt = customA || stripHtmlTags(cardHtml);
+            // 翻转作答：题面为自定义答案或受控富文本正文（保留图片/公式等富内容，剥离属性与编辑器装饰），背面为题干概念
+            const hasCustom = Boolean(customA);
+            const prompt = hasCustom ? customA : sanitizeBlockBodyHtmlForFace(cardHtml);
             return renderAttrQaAnswerFace(
                 formatMarkdownToSafeHtml(customRiffTitle),
                 prompt,
                 t?.reviewAttrAnswerOriginalPrompt ?? "题干 / 概念名称",
                 "",
-                ""
+                "",
+                { subtype: attrQaSubtype, questionIsHtml: !hasCustom, reversed: true },
             );
         }
-        if (!customA) return renderAttrQaAnswerFace(cardHtml, customRiffTitle);
+        if (!customA) return renderAttrQaAnswerFace(cardHtml, customRiffTitle, undefined, "", "", { subtype: attrQaSubtype });
         return renderAttrQaAnswerFace(
             formatMarkdownToSafeHtml(customA),
             customRiffTitle,
             t?.reviewAttrAnswerCustom ?? "参考答案",
             cardHtml,
-            t?.reviewAttrAnswerNote ?? "笔记原文"
+            t?.reviewAttrAnswerNote ?? "笔记原文",
+            { subtype: attrQaSubtype },
         );
     });
 
-    /** 属性问答卡问题面：支持翻转回忆自测 */
+    /** 属性问答卡问题面：支持直接问答、背诵自测与双面对照 */
     const attrQaQuestionHtml = $derived.by(() => {
-        if (reversedRecall) {
-            const customA = (customRiffAnswer ?? "").trim();
-            return renderAttrQaQuestionFace(customA || stripHtmlTags(cardHtml));
+        const customA = effectiveCustomAnswer;
+        if (attrQaSubtype === "direct" || (!customRiffTitle && customA)) {
+            if (reversedRecall) {
+                return renderAttrQaQuestionFace(customA, { subtype: "direct", reversed: true });
+            }
+            return renderAttrQaQuestionFace(sanitizeBlockBodyHtmlForFace(cardHtml), { subtype: "direct", questionIsHtml: true });
         }
-        return renderAttrQaQuestionFace(customRiffTitle);
+        if (reversedRecall) {
+            const hasCustom = Boolean(customA);
+            return renderAttrQaQuestionFace(
+                hasCustom ? customA : sanitizeBlockBodyHtmlForFace(cardHtml),
+                { subtype: attrQaSubtype, questionIsHtml: !hasCustom, reversed: true },
+            );
+        }
+        return renderAttrQaQuestionFace(customRiffTitle, { subtype: attrQaSubtype });
     });
 
-    let displayHtml = $derived(
+    const canClickCloze = $derived(!interactiveQuiz || interactiveQuiz.kind === "free-recall");
+
+    let rawDisplayHtml = $derived(
         interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2
             ? cleanChoiceHtml(
                   showAnswer
@@ -169,6 +216,7 @@
             ? attrQaQuestionHtml
             : maskedCardHtml
     );
+    let displayHtml = $derived(sanitizeReviewCardDomHtml(rawDisplayHtml));
 
     let contentEl = $state<HTMLDivElement | null>(null);
 
@@ -238,7 +286,7 @@
         {:else}
             <!-- 闪卡自定义题面标题（custom-riff-title）：若为问答卡，已在卡面正文内作为主问答渲染；若非问答卡，展示顶部情境徽章 -->
             {#if customRiffTitle && !isQaCard}
-                <div class="lv-riff-title-badge" title="闪卡自定义题面 (custom-riff-title)">
+                <div class="lv-riff-title-badge" title="闪卡自定义题面">
                     <LvIcon name="target" size={12} />
                     <span>{customRiffTitle}</span>
                 </div>
@@ -251,6 +299,7 @@
                 bind:this={contentEl}
                 class:has-interactive-choice={interactiveQuiz?.kind === "choice" && interactiveQuiz.options.length >= 2}
                 class:lv-masked={!showAnswer}
+                class:lv-cloze-clickable={!showAnswer && canClickCloze}
                 onclick={onCardContentClick}
                 ondblclick={onCardContentDblClick}
                 style={`font-size: ${cardFontScale || 1}em`}
@@ -261,6 +310,40 @@
                 {/if}
                 {@html displayHtml}
             </div>
+
+            {#if isQaCard && ((attrQaSubtype === "recite" && attrHint && !showAnswer) || (attrBidiEnabled && onToggleReversed))}
+                <div class="lv-qa-attr-controls" data-prevent-swipe="true">
+                    {#if attrQaSubtype === "recite" && attrHint && !showAnswer}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            data-testid="attr-qa-hint-toggle"
+                            aria-expanded={hintExpanded}
+                            onclick={(e) => { e.stopPropagation(); hintExpanded = !hintExpanded; }}
+                        >
+                            <LvIcon name="lightbulb" size={12} />
+                            <span>{hintExpanded ? "收起提示" : "展开关键词提示"}</span>
+                        </button>
+                    {/if}
+                    {#if attrBidiEnabled && onToggleReversed}
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            data-testid="attr-qa-dual-toggle"
+                            onclick={(e) => { e.stopPropagation(); onToggleReversed?.(); }}
+                        >
+                            <LvIcon name="swap" size={12} />
+                            <span>{reversedRecall ? "切换为正向 (概念 → 释义)" : "切换为反向 (释义 → 概念)"}</span>
+                        </button>
+                    {/if}
+                </div>
+                {#if attrQaSubtype === "recite" && attrHint && !showAnswer && hintExpanded}
+                    <div class="lv-qa-hint-callout" data-testid="attr-qa-hint-body" role="note">
+                        <LvIcon name="lightbulb" size={13} />
+                        <span>{attrHint}</span>
+                    </div>
+                {/if}
+            {/if}
 
             <!-- 交互式题型作答组件（选择题/判断题/填空题） -->
             <ReviewInteractiveQuiz
@@ -330,25 +413,48 @@
                 align-items: center !important;
                 justify-content: center !important;
                 vertical-align: baseline;
-                cursor: pointer !important;
+                cursor: default;
                 user-select: none !important;
                 -webkit-user-select: none !important;
                 transition: all 0.15s ease-out;
+            }
 
-                &::after {
-                    content: "💭点击揭晓";
-                    font-size: 11px;
-                    opacity: 0.85;
-                    font-weight: 500;
-                    margin-left: 2px;
-                    pointer-events: none;
+            &.lv-cloze-clickable {
+                :global(mark:not(.lv-step-revealed)),
+                :global(span[data-type="mark"]:not(.lv-step-revealed)) {
+                    cursor: pointer !important;
+
+                    &::after {
+                        content: "💭点击揭晓";
+                        font-size: 11px;
+                        opacity: 0.85;
+                        font-weight: 500;
+                        margin-left: 2px;
+                        pointer-events: none;
+                    }
+
+                    &:hover {
+                        background: color-mix(in srgb, var(--lv-color-brand, #5E59CB) 22%, var(--lv-color-surface)) !important;
+                        border-color: var(--lv-color-brand, #5E59CB) !important;
+                        transform: translateY(-1px);
+                        box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand, #5E59CB) 25%, transparent) !important;
+                    }
                 }
+            }
 
-                &:hover {
-                    background: color-mix(in srgb, var(--lv-color-brand, #5E59CB) 22%, var(--lv-color-surface)) !important;
-                    border-color: var(--lv-color-brand, #5E59CB) !important;
-                    transform: translateY(-1px);
-                    box-shadow: 0 2px 6px color-mix(in srgb, var(--lv-color-brand, #5E59CB) 25%, transparent) !important;
+            &:not(.lv-cloze-clickable) {
+                :global(mark:not(.lv-step-revealed)),
+                :global(span[data-type="mark"]:not(.lv-step-revealed)) {
+                    cursor: default !important;
+
+                    &::after {
+                        content: "［ ？ ］";
+                        font-size: 11px;
+                        opacity: 0.72;
+                        font-weight: 500;
+                        margin-left: 2px;
+                        pointer-events: none;
+                    }
                 }
             }
         }
@@ -567,5 +673,24 @@
         color: var(--lv-color-brand);
         font-size: var(--lv-type-caption-size);
         font-weight: var(--lv-fw-medium);
+    }
+    .lv-qa-attr-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-2);
+        margin-top: var(--lv-sp-2);
+    }
+    .lv-qa-hint-callout {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: var(--lv-sp-2);
+        padding: 8px 12px;
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-brand) 8%, var(--lv-color-surface));
+        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 24%, transparent);
+        color: var(--lv-color-text);
+        font-size: var(--lv-type-control-size);
+        line-height: 1.5;
     }
 </style>

@@ -137,20 +137,20 @@ export function discoverLegacyDecks(
             for (const deckRef of ialDecks) {
                 const trimmedRef = deckRef.trim();
                 const isBuiltin = trimmedRef === SIYUAN_BUILTIN_DECK_ID;
-                const deckName = isBuiltin ? "思源默认内置卡包" : trimmedRef;
+                const deckName = isBuiltin ? "思源默认内置卡组" : trimmedRef;
 
-                // 如果已在活跃的原生卡包中（匹配 ID 或名称），已导入过的存量卡包不应再被识别
+                // 如果已在活跃的原生卡组中（匹配 ID 或名称），已导入过的存量卡组不应再被识别
                 if (isAlreadyActive(trimmedRef) || isAlreadyActive(deckName)) {
                     continue;
                 }
                 const ialStr = typeof b.ial === "string" ? b.ial : (b.ial ? JSON.stringify(b.ial) : "");
                 const source = isBuiltin
-                    ? "思源默认内置卡包"
+                    ? "思源默认内置卡组"
                     : ialStr.includes("custom-flashcard-deck")
                     ? "SiYuanMemo / 第三方闪卡插件"
                     : ialStr.includes("custom-riff-decks")
-                    ? "思源原生历史卡包"
-                    : "第三方插件卡包";
+                    ? "思源原生历史卡组"
+                    : "第三方插件卡组";
 
                 const existing = deckMap.get(deckName);
                 if (existing) {
@@ -182,11 +182,11 @@ export function discoverLegacyDecks(
                     category: "tag",
                     blockIDs: [b.id],
                     sample: b.markdown.slice(0, 60),
-                    source: "标签卡包 (#deck/...)",
+                    source: "标签卡组 (#deck/...)",
                 });
             }
         } else if (/(?<!=)==(?!=)/.test(b.markdown) && !(typeof b.ial === "string" ? b.ial : (b.ial ? JSON.stringify(b.ial) : "")).includes("custom-riff-decks")) {
-            // 未归组的孤儿闪卡（正文带挖空但无任何卡包关联）
+            // 未归组的孤儿闪卡（正文带挖空但无任何卡组关联）
             orphanBlockIDs.push(b.id);
         }
     }
@@ -211,7 +211,7 @@ export function discoverLegacyDecks(
             name: "未归组闪卡",
             category: "orphan",
             blockIDs: orphanBlockIDs,
-            sampleBlockContent: "包含正文 ==挖空== 但尚未加入任何卡包的存量闪卡",
+            sampleBlockContent: "包含正文 ==挖空== 但尚未加入任何卡组的存量闪卡",
             sourcePlugin: "正文挖空卡片",
         });
     }
@@ -282,31 +282,46 @@ export async function mergeRiffDecks(
     sourceDeckID: string,
     targetDeckID: string,
     helpers: DeckMergeHelpers,
-    options?: { deleteSourceDeck?: boolean },
-): Promise<{ mergedCount: number }> {
+    options?: { deleteSourceDeck?: boolean; maxPages?: number },
+): Promise<{ mergedCount: number; truncated?: boolean }> {
     if (!sourceDeckID || !targetDeckID || sourceDeckID === targetDeckID) {
         return { mergedCount: 0 };
     }
 
-    // 分页获取源卡包全部卡片（total 异常时按"页未满即最后一页"收敛，并设硬页上限防病态循环）
+    // 分页获取源卡包全部卡片（直到真实耗尽；若触及安全上限仍有剩余页，严禁删除源卡包）
     const allBlockIDs: string[] = [];
     const seenBlockIDs = new Set<string>();
     const PAGE_SIZE = 50;
-    const MAX_PAGES = 400;
+    const MAX_PAGES = Math.max(1, options?.maxPages ?? 10000);
     let page = 1;
+    let truncated = false;
     while (page <= MAX_PAGES) {
         const resp = await helpers.getRiffCards(sourceDeckID, page, PAGE_SIZE);
         if (!resp || !resp.blocks || resp.blocks.length === 0) break;
+        let addedThisPage = 0;
         for (const b of resp.blocks) {
             if (b.id && !seenBlockIDs.has(b.id)) {
                 seenBlockIDs.add(b.id);
                 allBlockIDs.push(b.id);
+                addedThisPage++;
             }
         }
         const total = Number(resp.total);
         if (Number.isFinite(total) && total > 0) {
             if (allBlockIDs.length >= total) break;
         } else if (resp.blocks.length < PAGE_SIZE) {
+            break;
+        }
+        if (addedThisPage === 0) {
+            break;
+        }
+        if (page === MAX_PAGES) {
+            const hasMore = (Number.isFinite(total) && total > 0)
+                ? allBlockIDs.length < total
+                : resp.blocks.length >= PAGE_SIZE;
+            if (hasMore) {
+                truncated = true;
+            }
             break;
         }
         page++;
@@ -317,11 +332,11 @@ export async function mergeRiffDecks(
         mergedCount = await addRiffCardsChunked(helpers.addRiffCards, targetDeckID, allBlockIDs);
     }
 
-    if (options?.deleteSourceDeck && helpers.removeRiffDeck) {
+    if (options?.deleteSourceDeck && helpers.removeRiffDeck && !truncated && mergedCount === allBlockIDs.length) {
         await helpers.removeRiffDeck(sourceDeckID);
     }
 
-    return { mergedCount };
+    return { mergedCount, ...(truncated ? { truncated: true } : {}) };
 }
 
 /**

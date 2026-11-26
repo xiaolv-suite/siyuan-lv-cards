@@ -258,22 +258,23 @@ export const probeAssetRefs = async (refs: string[], concurrency = 4): Promise<A
     const worker = async () => {
         while (cursor < unique.length) {
             const index = cursor++;
-            const path = unique[index];
+            const rawPath = unique[index];
+            const path = rawPath.replace(/^\/+(?=assets\/)/i, "");
             // statAsset only accepts workspace asset paths (or file URLs). The
             // parser deliberately keeps other relative references for display,
             // but they are not safe to label missing without document context.
             if (!/^assets\//i.test(path)) {
-                out.unknown.push(path);
+                out.unknown.push(rawPath);
                 continue;
             }
             try {
                 const response = await withTimeout(fetchSyncPost("/api/asset/statAsset", { path }), SIYUAN_API_TIMEOUT_MS, "/api/asset/statAsset");
                 const code = Number((response as { code?: unknown } | null)?.code);
-                if (code === 0) out.present.push(path);
-                else if (code === 1) out.missing.push(path);
-                else out.unknown.push(path);
+                if (code === 0) out.present.push(rawPath);
+                else if (code === 1) out.missing.push(rawPath);
+                else out.unknown.push(rawPath);
             } catch {
-                out.unknown.push(path);
+                out.unknown.push(rawPath);
             }
         }
     };

@@ -132,8 +132,12 @@ function positionMenu(menu: HTMLElement, anchor: HTMLElement, estWidth: number):
         left = Math.max(margin, vw - margin - estWidth);
     }
 
+    const clampedEstHeight = Math.min(estHeight, maxHeight);
+    const maxAllowedTop = Math.max(margin, vh - margin - clampedEstHeight);
+    const clampedTop = Math.min(Math.max(margin, top), maxAllowedTop);
+
     menu.style.left = `${Math.round(left)}px`;
-    menu.style.top = `${Math.round(Math.max(margin, top))}px`;
+    menu.style.top = `${Math.round(clampedTop)}px`;
     menu.style.maxHeight = `${Math.round(maxHeight)}px`;
 
     // 随后在 rAF 微任务微调实际坐标（若有像素偏差）
@@ -164,8 +168,12 @@ function positionMenu(menu: HTMLElement, anchor: HTMLElement, estWidth: number):
                 exactLeft = Math.max(margin, vw - margin - actualRect.width);
             }
 
+            const clampedActualHeight = Math.min(actualHeight, exactMax);
+            const maxExactTop = Math.max(margin, vh - margin - clampedActualHeight);
+            const clampedExactTop = Math.min(Math.max(margin, exactTop), maxExactTop);
+
             menu.style.left = `${Math.round(exactLeft)}px`;
-            menu.style.top = `${Math.round(Math.max(margin, exactTop))}px`;
+            menu.style.top = `${Math.round(clampedExactTop)}px`;
             menu.style.maxHeight = `${Math.round(exactMax)}px`;
         });
     }
@@ -215,7 +223,7 @@ function renderSection(
         if (action.featured) {
             item.classList.add(`${MENU_CLASS}__item--featured`);
         }
-        if (action.destructive) {
+        if (action.destructive || (action as any).danger) {
             item.classList.add(`${MENU_CLASS}__item--danger`);
         }
 
@@ -236,7 +244,7 @@ function renderSection(
             }
         } else if (action.id === "add-to-deck" && snapshot?.isCard) {
             actionLabel = "更换所属卡组";
-            actionSubtitle = "当前块已在复习卡包中，点击可变更卡组归属";
+            actionSubtitle = "当前块已在复习卡组中，点击可变更卡组归属";
         }
 
         // 左侧单字/语义字形图标徽章
@@ -299,9 +307,35 @@ function renderSection(
             item.appendChild(metaWrap);
         }
 
+        let itemTouchStartX = 0;
+        let itemTouchStartY = 0;
+        let itemTouchMoved = false;
+        let itemTouchPicked = false;
+        item.addEventListener("touchstart", (e) => {
+            const t = e.touches?.[0];
+            itemTouchStartX = t ? t.clientX : 0;
+            itemTouchStartY = t ? t.clientY : 0;
+            itemTouchMoved = false;
+        }, { passive: true });
+        item.addEventListener("touchmove", (e) => {
+            const t = e.touches?.[0];
+            if (!t) return;
+            if (Math.abs(t.clientX - itemTouchStartX) > 8 || Math.abs(t.clientY - itemTouchStartY) > 8) {
+                itemTouchMoved = true;
+            }
+        }, { passive: true });
+        item.addEventListener("touchend", (e) => {
+            if (itemTouchMoved) return;
+            e.preventDefault();
+            e.stopPropagation();
+            itemTouchPicked = true;
+            setTimeout(() => { itemTouchPicked = false; }, 450);
+            onPick(action);
+        }, { passive: false });
         item.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (itemTouchPicked) return;
             onPick(action);
         });
 
@@ -417,9 +451,11 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
 
     const pick = (action: BlockActionDescriptor) => {
         closeBlockActionMenu();
-        void Promise.resolve()
-            .then(() => onAction(action))
-            .catch(() => { /* 动作层已统一提示 */ });
+        try {
+            void Promise.resolve(onAction(action)).catch(() => { /* 动作层已统一提示 */ });
+        } catch {
+            /* 动作层已统一提示 */
+        }
     };
 
     // ─────────────────────────────────────────────────────────────
@@ -541,13 +577,12 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
 
     document.body.appendChild(menu);
     activeMenu = menu;
-    const targetBlock = anchor.closest?.("[data-node-id]") as HTMLElement | null;
-    if (targetBlock) {
-        targetBlock.setAttribute("data-lv-bam-active", "true");
+    const isSafeExternalAnchor = !anchor.closest?.(".protyle-wysiwyg") && !anchor.hasAttribute?.("data-node-id");
+    if (isSafeExternalAnchor) {
+        try {
+            (anchor as any).dataset.lvBamAnchor = "open";
+        } catch { /* ignore */ }
     }
-    try {
-        (anchor as any).dataset.lvBamAnchor = "open";
-    } catch { /* ignore */ }
 
     positionMenu(menu, anchor, currentEstWidth);
 
@@ -654,12 +689,11 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
             mobileMask.remove();
             mobileMask = null;
         }
-        if (targetBlock && targetBlock.isConnected) {
-            targetBlock.removeAttribute("data-lv-bam-active");
+        if (isSafeExternalAnchor) {
+            try {
+                delete (anchor as any).dataset.lvBamAnchor;
+            } catch { /* ignore */ }
         }
-        try {
-            delete (anchor as any).dataset.lvBamAnchor;
-        } catch { /* ignore */ }
     };
     activeCleanup = cleanup;
 

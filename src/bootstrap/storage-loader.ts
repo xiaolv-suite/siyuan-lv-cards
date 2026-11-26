@@ -11,7 +11,8 @@
 import { lvLog } from "@/libs/log";
 import { zipLoaded, loadStore } from "@/libs/store";
 import { localDate } from "@/core/revlog";
-import { normalizeSettings } from "@/core/settings";
+import { normalizeSettings, stripSecretsForStorage } from "@/core/settings";
+import { CARDS_SECRET_SLOTS, readCardsSecretSlot, bindCardsSecretSlots, type CardsSecretField, type CardsSecretSlot } from "@/core/secrets";
 import { normalizeRevlog } from "@/core/revlog";
 import { normalizeSuspendToday } from "@/core/suspend-today";
 import { normalizeKillSwitch } from "@/core/ai-kill-switch";
@@ -69,19 +70,49 @@ function createEmptyRepairJournal() {
 
 const todayDate = () => localDate(Date.now());
 
+export function isExplicitNotFoundError(err: unknown): boolean {
+    if (!err || typeof err !== "object") {
+        const msg = String(err ?? "").toLowerCase();
+        return msg.includes("404") || msg.includes("enoent") || msg.includes("not found") || msg.includes("no such file") || msg.includes("not exist");
+    }
+    const obj = err as { code?: unknown; status?: unknown; message?: unknown; msg?: unknown };
+    if (obj.code === 404 || obj.status === 404 || obj.code === "ENOENT") return true;
+    const msg = `${String(obj.message ?? "")} ${String(obj.msg ?? "")}`.toLowerCase();
+    return msg.includes("404") || msg.includes("enoent") || msg.includes("not found") || msg.includes("no such file") || msg.includes("not exist") || msg.includes("不存在");
+}
+
 /**
- * 并发读取所有持久化存储文件，单槽损坏不阻断其余槽位
+ * 并发读取所有持久化存储文件，单槽损坏不阻断其余槽位；
+ * 若显式传入 onSlotReadError，则在非 404 异常（I/O、权限、JSON 解析损坏）时上报失败槽位。
  */
 export async function readAllPluginStores(
     dataLoader: (key: string) => Promise<unknown>,
     keys: readonly string[] = ALL_STORE_KEYS,
+    onSlotReadError?: (key: string, err: unknown) => void,
 ): Promise<Record<string, unknown>> {
     const values = await Promise.all(
         keys.map(async (key) => {
             try {
-                return await dataLoader(key);
+                const raw = await dataLoader(key);
+                if (typeof raw === "string") {
+                    const trimmed = raw.trim();
+                    if (!trimmed) return null;
+                    if (key.endsWith(".json")) {
+                        try {
+                            return JSON.parse(trimmed);
+                        } catch (parseErr) {
+                            lvLog("error", `parse ${key} failed: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+                            onSlotReadError?.(key, parseErr);
+                            return undefined;
+                        }
+                    }
+                }
+                return raw;
             } catch (e) {
                 lvLog("error", `load ${key} failed: ${e instanceof Error ? e.message : String(e)}`);
+                if (!isExplicitNotFoundError(e)) {
+                    onSlotReadError?.(key, e);
+                }
                 return undefined;
             }
         }),
@@ -94,8 +125,9 @@ export async function readAllPluginStores(
  */
 export async function readTier1PluginStores(
     dataLoader: (key: string) => Promise<unknown>,
+    onSlotReadError?: (key: string, err: unknown) => void,
 ): Promise<Record<string, unknown>> {
-    return readAllPluginStores(dataLoader, TIER1_STORE_KEYS);
+    return readAllPluginStores(dataLoader, TIER1_STORE_KEYS, onSlotReadError);
 }
 
 /**
@@ -107,7 +139,13 @@ export async function readTier2PluginStores(
     dataLoader: (key: string) => Promise<unknown>,
 ): Promise<Record<string, unknown>> {
     const keys = TIER2_STORE_KEYS;
-    const values = await Promise.all(keys.map((key) => dataLoader(key)));
+    const values: unknown[] = [];
+    const batchSize = 4;
+    for (let i = 0; i < keys.length; i += batchSize) {
+        const batch = keys.slice(i, i + batchSize);
+        const batchValues = await Promise.all(batch.map((key) => dataLoader(key)));
+        values.push(...batchValues);
+    }
     return zipLoaded(keys, values);
 }
 
@@ -124,7 +162,65 @@ export async function applyTier1PluginStores(
     plugin: any,
     loaded: Record<string, unknown>,
 ): Promise<void> {
-    plugin.settings = normalizeSettings(loaded[SETTINGS_DATA]);
+    const settings = normalizeSettings(loaded[SETTINGS_DATA]);
+    const slotAiKey = readCardsSecretSlot(plugin, CARDS_SECRET_SLOTS.aiKey);
+    const slotFallbackKey = readCardsSecretSlot(plugin, CARDS_SECRET_SLOTS.aiFallbackKey);
+    const slotAnkiKey = readCardsSecretSlot(plugin, CARDS_SECRET_SLOTS.ankiClientKey);
+
+    const boundFields: Partial<Record<CardsSecretField, boolean>> = {};
+    const legacyFields: CardsSecretField[] = [];
+    const migrationUpdates: Partial<Record<CardsSecretSlot, string>> = {};
+
+    const syncSecretSlot = (
+        field: CardsSecretField,
+        configuredField: "aiKeyConfigured" | "aiFallbackKeyConfigured" | "ankiClientKeyConfigured",
+        slotVal: string,
+    ) => {
+        if (slotVal) {
+            settings[field] = slotVal;
+            settings[configuredField] = true;
+            boundFields[field] = true;
+            return;
+        }
+        const legacyVal = typeof settings[field] === "string" ? settings[field].trim() : "";
+        if (legacyVal) {
+            legacyFields.push(field);
+            migrationUpdates[CARDS_SECRET_SLOTS[field]] = legacyVal;
+        }
+    };
+
+    syncSecretSlot("aiKey", "aiKeyConfigured", slotAiKey);
+    syncSecretSlot("aiFallbackKey", "aiFallbackKeyConfigured", slotFallbackKey);
+    syncSecretSlot("ankiClientKey", "ankiClientKeyConfigured", slotAnkiKey);
+
+    if (legacyFields.length > 0) {
+        const bindRes = await bindCardsSecretSlots({
+            updates: migrationUpdates,
+            host: plugin?.secretHost ?? plugin?.host,
+            fetchFn: plugin?.secretFetchFn ?? plugin?.fetchFn,
+        });
+        for (const field of legacyFields) {
+            const configuredField = `${field}Configured` as "aiKeyConfigured" | "aiFallbackKeyConfigured" | "ankiClientKeyConfigured";
+            if (bindRes.ok) {
+                boundFields[field] = true;
+                settings[configuredField] = true;
+            } else {
+                boundFields[field] = false;
+                settings[configuredField] = false;
+            }
+        }
+        if (
+            bindRes.ok
+            && typeof plugin?.storageCoordinator?.save === "function"
+            && !plugin.storageCoordinator.isSlotReadOnly?.(SETTINGS_DATA)
+        ) {
+            const stripped = stripSecretsForStorage(settings, { boundFields });
+            void plugin.storageCoordinator.save(SETTINGS_DATA, stripped).catch(() => {});
+        }
+    }
+
+    plugin.secretSlotBound = boundFields;
+    plugin.settings = settings;
     plugin.revlog = normalizeRevlog(loaded[REVLOG_DATA]);
     plugin.revlogMutationVersion = (plugin.revlogMutationVersion ?? 0) + 1;
     plugin.suspendToday = normalizeSuspendToday(loaded[SUSPEND_TODAY_DATA]);

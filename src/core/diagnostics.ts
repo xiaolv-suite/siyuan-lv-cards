@@ -40,7 +40,7 @@ export function buildDiagnosticsText(input: DiagnosticsInput): string {
     });
 
     return [
-        "Lv Cards (Beta) diagnostics",
+        "Lv Cards diagnostics",
         `plugin version: ${input.pluginVersion || "unknown"}`,
         `siyuan/kernel: ${input.kernelVersion || "?"}`,
         `V2 state: ${input.v2State ?? "N/A (<3.9.0)"}`,

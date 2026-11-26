@@ -136,7 +136,7 @@
                 ? undefined
                 : (i18n.hubDueCount ?? "待复习 ${count} 张").replace("${count}", String(dueCount)),
         },
-        { id: "library", label: i18n.hubPrimaryLibrary ?? "卡库", icon: "cards" },
+        { id: "library", label: i18n.hubPrimaryLibrary ?? "卡组", icon: "cards" },
         { id: "marketplace", label: i18n.hubPrimaryMarketplace ?? "集市", icon: "store" },
         { id: "studio", label: i18n.hubPrimaryStudio ?? "制卡", icon: "plus" },
         { id: "learning", label: i18n.hubPrimaryLearning ?? "学习", icon: "learn" },
@@ -170,7 +170,8 @@
         // 旧入口「goals」仍保留兼容，但落到完整学习页的目标与计划分面。
         if (id === "goals") return "learning";
         if (knownIds.has(id) && (id === "overview" || id === "manage" || id === "marketplace" || id === "authoring" || id === "goals" || id === "inbox" || id === "exam" || id === "decks" || id === "maintenance" || id === "recovery")) return id;
-        if (id === "library") return "manage";
+        if (id === "today") return "overview";
+        if (id === "library") return "decks";
         if (id === "marketplace") return "marketplace";
         if (id === "studio") return "authoring";
         if (id === "learning") return "learning";
@@ -345,7 +346,7 @@
             learningTabRequest = "recap";
             learningViewKey += 1;
         }
-        const route = id === "today" ? "overview" : id === "library" ? "manage" : id === "marketplace" ? "marketplace" : id === "studio" ? "authoring" : id === "goals" ? "learning" : id;
+        const route = id === "today" ? "overview" : id === "library" ? "decks" : id === "marketplace" ? "marketplace" : id === "studio" ? "authoring" : id === "goals" ? "learning" : id;
         if (!knownIds.has(route) && route !== "settings") return;
         // 离开管理器即放弃未完成的维护页返回点，避免随后从普通卡库编辑时误跳回维护页。
         if (route !== "manage") managerReturnToMaintenance = "";
@@ -393,7 +394,11 @@
             const detail = (e as CustomEvent<string | { tab?: string; focusBlockID?: string }>).detail;
             const id = typeof detail === "string" ? detail : detail?.tab;
             if (typeof id === "string" && knownIds.has(id)) {
-                if (typeof detail !== "string" && detail.focusBlockID) managerInitialBlockID = detail.focusBlockID;
+                if (typeof detail !== "string" && detail.focusBlockID) {
+                    managerInitialBlockID = detail.focusBlockID;
+                } else if (id !== "manage") {
+                    managerInitialBlockID = "";
+                }
                 switchTab(id);
             }
         };
@@ -510,8 +515,8 @@
             {#if (primaryFor(active) === "library" && uiMode !== "simple") || (primaryFor(active) === "studio" && inbox) || primaryFor(active) === "learning" || active === "recovery"}
             <div class="lv-hub-bar">
                 {#if primaryFor(active) === "library" && uiMode !== "simple"}
-                    <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡库"}>
-                        <button class:lv-hub-subnav-active={active === "decks"} class="lv-hub-subnav-btn" aria-current={active === "decks" ? "page" : undefined} onclick={() => switchTab("decks")}>{i18n.hubTabDecks ?? "卡包管理"}</button>
+                    <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡组"}>
+                        <button class:lv-hub-subnav-active={active === "decks"} class="lv-hub-subnav-btn" aria-current={active === "decks" ? "page" : undefined} onclick={() => switchTab("decks")}>{i18n.hubTabDecks ?? "卡组管理"}</button>
                         <button class:lv-hub-subnav-active={active === "manage"} class="lv-hub-subnav-btn" aria-current={active === "manage" ? "page" : undefined} onclick={() => switchTab("manage")}>{i18n.hubTabManage ?? "闪卡明细"}</button>
                         <button class:lv-hub-subnav-active={active === "maintenance"} class="lv-hub-subnav-btn" aria-current={active === "maintenance" ? "page" : undefined} onclick={() => switchTab("maintenance")}>{i18n.hubTabMaintenance ?? "维护债务"}</button>
                     </nav>
@@ -570,6 +575,7 @@
                         openReviewScope={dctx.openReviewScope}
                         openManagerDeck={openManagerDeck}
                         getRevlog={dashboardBase.getRevlog}
+                        openQuickCard={dctx.openQuickCard}
                     />
                 {:else if active === "marketplace"}
                     <MarketplaceStudio
@@ -771,6 +777,7 @@
         display: flex;
         flex-direction: column;
         position: relative;
+        overflow-x: hidden;
         container: lv-hub / inline-size;
     }
 
@@ -1199,10 +1206,10 @@
         .lv-hub-subnav { margin: 0 0 var(--lv-sp-1); }
         .lv-hub-panel :global(.lv-pagehead-titles),
         .lv-hub-panel :global(.lv-studio-heading),
-        .lv-hub-panel :global(.lv-pagehead:not(:has(.lv-pagehead-actions))) {
+        .lv-hub-panel :global(.lv-pagehead:not(.lv-pagehead--with-actions)) {
             display: none !important;
         }
-        .lv-hub-panel :global(.lv-pagehead:has(.lv-pagehead-actions)) {
+        .lv-hub-panel :global(.lv-pagehead.lv-pagehead--with-actions) {
             margin-bottom: var(--lv-sp-2) !important;
             padding: 4px 0 !important;
             border-bottom: 0 !important;
@@ -1259,7 +1266,7 @@
             font-weight: var(--lv-fw-heading);
         }
         .lv-hub-mobile-icon { position: relative; display: grid; width: 24px; height: 24px; place-items: center; }
-        .lv-hub-mobile-count { position: absolute; top: -4px; right: -13px; display: grid; min-width: 16px; height: 16px; place-items: center; padding: 0 3px; border: 1px solid var(--lv-color-surface); border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: var(--lv-type-micro-size); font-variant-numeric: tabular-nums; line-height: var(--lv-lh-tight); }
+        .lv-hub-mobile-count { position: absolute; top: -4px; right: -8px; display: grid; min-width: 16px; height: 16px; place-items: center; padding: 0 3px; border: 1px solid var(--lv-color-surface); border-radius: var(--lv-r-pill); background: var(--lv-color-brand); color: var(--lv-color-on-brand); font-size: var(--lv-type-micro-size); font-variant-numeric: tabular-nums; line-height: var(--lv-lh-tight); }
         .lv-hub-mobile-label { line-height: var(--lv-lh-icon); }
     }
 

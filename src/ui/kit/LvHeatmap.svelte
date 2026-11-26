@@ -12,9 +12,15 @@
         return `color-mix(in srgb, var(--lv-color-data) ${alpha}%, transparent)`;
     }
 
+    function cellTotal(d: { stat: { new: number; review: number; forget: number } }): number {
+        return (d.stat?.new ?? 0) + (d.stat?.review ?? 0);
+    }
+
     function cellTitle(d: { date: string; stat: { new: number; review: number; forget: number } }): string {
-        const parts = [`${d.date}: ${d.stat.review}`];
-        if (d.stat.new > 0) parts.push(`+${d.stat.new}`);
+        const total = cellTotal(d);
+        const parts = [`${d.date}: ${total}`];
+        if (d.stat.new > 0) parts.push(`新 ${d.stat.new}`);
+        if (d.stat.review > 0) parts.push(`复习 ${d.stat.review}`);
         if (d.stat.forget > 0) parts.push(`-${d.stat.forget}`);
         return parts.join(" · ");
     }
@@ -28,7 +34,7 @@
                 <div
                     class="lv-cell"
                     class:lv-cell-today={i === days.length - 1}
-                    style={`background: ${heatColor(d.stat.review)}`}
+                    style={`background: ${heatColor(cellTotal(d))}`}
                     title={cellTitle(d)}
                     role="img"
                     aria-label={cellTitle(d)}

@@ -80,7 +80,7 @@
         <div class="lv-ready-header">
             <div class="lv-ready-title-group">
                 <span class="lv-ready-eyebrow">
-                    <LvIcon name="cards" size={13} /> REVIEW HUB · {headScopeLabel}
+                    <LvIcon name="cards" size={13} /> {t.review?.readyEyebrow ?? "复习准备"} · {headScopeLabel}
                 </span>
                 <h2 class="lv-ready-title">
                     {qualityExcludedCardIDs.length > 0
@@ -159,7 +159,7 @@
                         <span class="lv-ready-icon-bubble lv-bubble--brand"><LvIcon name="cards" size={17} /></span>
                         <div>
                             <div class="lv-ready-card-title">一键导入精选卡组 · 立即开刷</div>
-                            <div class="lv-ready-card-subtitle">内置丰富学科与通识记忆卡包，零制作成本</div>
+                            <div class="lv-ready-card-subtitle">内置丰富学科与通识记忆卡组，零制作成本</div>
                         </div>
                     </div>
                     <p class="lv-ready-card-desc">无需手动录入，直接从「卡组集市」安装现成卡组即可在手机上随时随地刷卡记忆。</p>
@@ -190,7 +190,7 @@
                 <p class="lv-ready-card-desc">{t.review?.readyCramDesc ?? "按遗忘次数智能排序，优先复习最易遗忘的薄弱知识点，让长效记忆更牢固。"}</p>
                 <div class="lv-ready-card-footer">
                     <button type="button" class="b3-button b3-button--small lv-btn-primary" disabled={creatingSamples} onclick={onStartCram}>
-                        <LvIcon name="flame" size={14} /> {t.review?.startCram ?? "开启 Cram 提前冲刺"}
+                        <LvIcon name="flame" size={14} /> {t.review?.startCram ?? "开启突击快刷"}
                     </button>
                     <button type="button" class="b3-button b3-button--small b3-button--outline" onclick={onScopeNew}>
                         <LvIcon name="star" size={14} /> {t.review?.scopeNew ?? "仅学新卡"}

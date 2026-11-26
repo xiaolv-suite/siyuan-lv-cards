@@ -93,7 +93,7 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
         throw new AICanceledError();
     }
 
-    // 1. 优先调用小驴生态 5 级自适应 AI 路由（思源智能体 -> 用户Key -> 本地Ollama -> 免密公用池 -> 本地规则）
+    // 1. 优先调用小驴生态智能路由（思源智能体 -> 用户Key -> 本地Ollama -> 免密公用池）；严禁 RuleFallback 冒充 AI 成功
     try {
         const router = getSharedAiRouter();
         const outcome = await router.chat({
@@ -106,7 +106,8 @@ export async function aiChat(cfg: AIConfig, system: string, user: string, opts: 
         if (opts.signal?.aborted) {
             throw new AICanceledError();
         }
-        if (outcome.ok && typeof outcome.content === "string" && outcome.content.trim()) {
+        const isRuleFallback = outcome?.provider === "rule_fallback" || (outcome as any)?.tier === 5;
+        if (outcome?.ok && !isRuleFallback && typeof outcome.content === "string" && outcome.content.trim()) {
             return outcome.content.trim();
         }
     } catch (routerErr) {
@@ -200,12 +201,12 @@ async function chatCompletions(cfg: AIConfig, system: string, user: string, opts
                         model: cfg.model || "gpt-4o-mini",
                     });
                 } else {
-                    const shared = lvAi.getConfig();
-                    if (shared?.apiKey) {
+                    const shared = lvAi.getConfig() as (ReturnType<typeof lvAi.getConfig> & { hasSecret?: boolean; apiKey?: string }) | null;
+                    if (shared && (shared.apiKey || shared.hasSecret)) {
                         cfg = {
                             ...cfg,
                             endpoint: cfg.endpoint || shared.endpoint,
-                            apiKey: shared.apiKey,
+                            apiKey: shared.apiKey || "",
                             model: cfg.model || shared.model,
                         };
                     }

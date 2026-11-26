@@ -33,9 +33,15 @@
     let activePointerId: number | null = null;
     let cachedOverlayBox: DOMRect | null = null;
 
+    function findEditorOcclusionTarget(root: HTMLElement): HTMLElement | SVGElement | null {
+        return root.querySelector<HTMLElement>("img")
+            ?? root.querySelector<HTMLElement>("canvas")
+            ?? root.querySelector<SVGElement>("svg:not(.lv-occed-overlay):not(.lv-icon)");
+    }
+
     function positionOverlay() {
         if (disposed || !preview || !overlay || !content) return;
-        const img = content.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occed-overlay), canvas");
+        const img = findEditorOcclusionTarget(content);
         if (!img) return;
         const previewRect = preview.getBoundingClientRect();
         const targetRect = img.getBoundingClientRect();
@@ -132,7 +138,7 @@
             hadLegacyOcclusion = Boolean((attrs as Record<string, string> | null)?.[LEGACY_ATTR_LV_OCCLUSION]);
             if (content) {
                 content.innerHTML = dom;
-                image = content.querySelector<HTMLElement | SVGElement>("img, svg:not(.lv-occed-overlay), canvas");
+                image = findEditorOcclusionTarget(content);
                 if (!image) {
                     errorMsg = t.occlusion?.noImage ?? t.occlusionNoImage ?? "块内没有图片";
                     loading = false;

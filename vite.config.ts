@@ -1,9 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
 import { resolve } from "path";
 import { defineConfig, type Plugin } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
-import zipPack from "vite-plugin-zip-pack";
 import fg from "fast-glob";
 
 import vitePluginYamlI18n from "./yaml-plugin.js";
@@ -31,6 +32,59 @@ console.log("isSrcmap=>", isSrcmap);
 console.log("outputDir=>", outputDir);
 console.log("buildTarget=>", buildTarget);
 
+function deterministicZipPack(options: { inDir: string; outDir: string; outFileName: string; shaFile?: string }): Plugin {
+    return {
+        name: "deterministic-zip-pack",
+        apply: "build",
+        enforce: "post",
+        closeBundle: {
+            sequential: true,
+            async handler() {
+                const req = createRequire(import.meta.url);
+                const jszipPath = req.resolve("jszip", {
+                    paths: [req.resolve("vite-plugin-zip-pack")],
+                });
+                const JSZip = req(jszipPath);
+                const zip = new JSZip();
+                const FIXED_DATE = new Date("2026-01-01T00:00:00.000Z");
+
+                function addDir(dir: string, zipFolder: any) {
+                    const entries = readdirSync(dir).sort();
+                    for (const entry of entries) {
+                        const fullPath = resolve(dir, entry);
+                        const stat = statSync(fullPath);
+                        if (stat.isDirectory()) {
+                            zipFolder.file(entry, null, { dir: true, date: FIXED_DATE });
+                            const nextFolder = zipFolder.folder(entry);
+                            addDir(fullPath, nextFolder);
+                        } else {
+                            const data = readFileSync(fullPath);
+                            zipFolder.file(entry, data, { date: FIXED_DATE });
+                        }
+                    }
+                }
+
+                addDir(resolve(options.inDir), zip);
+                const buffer = await zip.generateAsync({
+                    type: "nodebuffer",
+                    compression: "DEFLATE",
+                    compressionOptions: { level: 9 },
+                });
+
+                const targetZip = resolve(options.outDir, options.outFileName);
+                writeFileSync(targetZip, buffer);
+
+                const digest = createHash("sha256").update(buffer).digest("hex");
+                if (options.shaFile) {
+                    const targetSha = resolve(options.outDir, options.shaFile);
+                    writeFileSync(targetSha, `${digest} *${options.outFileName}\n`, "utf8");
+                }
+                console.log(`\x1b[32m  - Deterministic package.zip generated (${buffer.length} bytes, SHA-256: ${digest})\x1b[0m`);
+            },
+        },
+    };
+}
+
 export default defineConfig(buildTarget === "kernel" ? {
     build: {
         outDir: outputDir,
@@ -55,10 +109,11 @@ export default defineConfig(buildTarget === "kernel" ? {
                 syncZhCnAlias({
                     distDir: outputDir
                 }),
-                zipPack({
+                deterministicZipPack({
                     inDir: "./dist",
                     outDir: "./",
-                    outFileName: "package.zip"
+                    outFileName: "package.zip",
+                    shaFile: "package.zip.sha256"
                 })
             ],
 

@@ -17,19 +17,57 @@ export interface ChunkMount {
     mount(target: HTMLElement, props: Record<string, unknown>): { destroy(): void };
 }
 
-const pending: Partial<Record<ChunkName, Promise<ChunkMount>>> = {};
+export interface HubChunkModule extends ChunkMount {
+    services: any;
+}
+
+export interface ReviewChunkModule extends ChunkMount {}
+
+export interface BlockActionRuntime {
+    openBlockActionMenu: (opts: any) => void;
+    closeBlockActionMenu: () => void;
+    buildBlockSnapshot: (blockID: string, batchBlockIDs?: string[], anchor?: Element | null) => Promise<any>;
+    probeEcosystemPresence: () => any;
+    executeBlockAction: (action: any, blockID: string, host: any, batchBlockIDs?: string[], snapshot?: any, options?: { anchor?: Element | null }) => Promise<void>;
+}
+
+export interface DialogsChunkModule {
+    components: Record<string, any>;
+    mountDialogComponent(comp: any, target: HTMLElement, props: Record<string, any>): { destroy(): void };
+    createPaletteView: any;
+    blockActionRuntime?: BlockActionRuntime;
+}
+
+export interface ChunkModuleMap {
+    hub: HubChunkModule;
+    review: ReviewChunkModule;
+    dialogs: DialogsChunkModule;
+}
+
+declare global {
+    interface Window {
+        __lvChunks?: Partial<ChunkModuleMap>;
+        __lvSiyuan?: unknown;
+    }
+}
+
+const pending: Partial<Record<ChunkName, Promise<any>>> = {};
 
 /** Drop an incompatible cached module so the next user action can fetch a repaired deployment. */
 export function invalidateChunk(name: ChunkName): void {
     delete pending[name];
-    document.getElementById(`lv-chunk-js-${name}`)?.remove();
-    document.getElementById(`lv-chunk-css-${name}`)?.remove();
-    const registry = (window as any).__lvChunks;
-    if (registry) delete registry[name];
+    if (typeof document !== "undefined") {
+        document.getElementById(`lv-chunk-js-${name}`)?.remove();
+        document.getElementById(`lv-chunk-css-${name}`)?.remove();
+    }
+    if (typeof window !== "undefined" && window.__lvChunks) {
+        delete window.__lvChunks[name];
+    }
 }
 
 /** 注入 <link>（幂等）；CSS 加载失败不阻断 JS（组件仍可用，仅裸样式） */
 function injectCss(name: ChunkName, version: string): void {
+    if (typeof document === "undefined") return;
     const id = `lv-chunk-css-${name}`;
     const href = `${BASE}/chunks/${name}.css?v=${version}`;
     const existing = document.getElementById(id) as HTMLLinkElement | null;
@@ -50,6 +88,9 @@ function injectCss(name: ChunkName, version: string): void {
 
 function injectScript(name: ChunkName, version: string): Promise<void> {
     return new Promise((resolve, reject) => {
+        if (typeof document === "undefined") {
+            return resolve();
+        }
         const id = `lv-chunk-js-${name}`;
         const src = `${BASE}/chunks/${name}.js?v=${version}`;
         const existing = document.getElementById(id) as HTMLScriptElement | null;
@@ -60,9 +101,8 @@ function injectScript(name: ChunkName, version: string): Promise<void> {
                 return resolve();
             }
             existing.remove();
-            const reg = (window as any).__lvChunks as Record<string, unknown> | undefined;
-            if (reg) {
-                delete reg[name];
+            if (typeof window !== "undefined" && window.__lvChunks) {
+                delete window.__lvChunks[name];
             }
         }
         const s = document.createElement("script");
@@ -89,12 +129,12 @@ function injectScript(name: ChunkName, version: string): Promise<void> {
 }
 
 /** 加载 chunk 并返回其注册表模块（幂等：同 chunk 只注入一次；形态由调用方按 chunk 约定解构） */
-export function loadChunk(name: ChunkName): Promise<Record<string, any>> {
+export function loadChunk<T extends ChunkName>(name: T): Promise<ChunkModuleMap[T]> {
     return (pending[name] ??= (async () => {
-        const version = __LV_VERSION__;
+        const version = typeof __LV_VERSION__ !== "undefined" ? __LV_VERSION__ : "1.0.0";
         await injectScript(name, version);
         injectCss(name, version);
-        const reg = (window as any).__lvChunks as Record<string, any> | undefined;
+        const reg = typeof window !== "undefined" ? window.__lvChunks : undefined;
         const mod = reg?.[name];
         if (!mod || typeof mod !== "object") {
             // 脚本已执行但未注册模块时，移除占位节点，确保后续重试会真正
@@ -102,7 +142,7 @@ export function loadChunk(name: ChunkName): Promise<Record<string, any>> {
             invalidateChunk(name);
             throw new Error(`lv chunk missing export: ${name}`);
         }
-        return mod;
+        return mod as ChunkModuleMap[T];
     })().catch((e) => {
         delete pending[name]; // 失败可重试（下次调用重新注入）
         throw e;

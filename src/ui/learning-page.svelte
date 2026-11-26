@@ -72,10 +72,10 @@
     let unsubscribeStoresChanged: (() => void) | null = null;
 
     const recent = $derived(lastNDays(revlog, 7));
-    const recentReviews = $derived(recent.reduce((sum, d) => sum + d.stat.review, 0));
-    const recentNew = $derived(recent.reduce((sum, d) => sum + d.stat.new, 0));
-    const recentActiveDays = $derived(recent.filter(d => d.stat.review + d.stat.new > 0).length);
-    const recentSpark = $derived(recent.map(d => d.stat.review));
+    const recentReviews = $derived(recent.reduce((sum, d) => sum + (d.stat.new ?? 0) + (d.stat.review ?? 0), 0));
+    const recentNew = $derived(recent.reduce((sum, d) => sum + (d.stat.new ?? 0), 0));
+    const recentActiveDays = $derived(recent.filter(d => (d.stat.review ?? 0) + (d.stat.new ?? 0) > 0).length);
+    const recentSpark = $derived(recent.map(d => (d.stat.new ?? 0) + (d.stat.review ?? 0)));
     const recentEntries = $derived(
         revlog.entries.filter(entry => entry.rating > 0).slice().sort((a, b) => b.ts - a.ts).slice(0, 12),
     );
@@ -106,7 +106,7 @@
     function rebuildCalendar() {
         if (disposed) return;
         const now = new Date();
-        const reviews = new Map(Object.entries(revlog.days).map(([date, stat]) => [date, stat.review]));
+        const reviews = new Map(Object.entries(revlog.days).map(([date, stat]) => [date, (stat.new ?? 0) + (stat.review ?? 0)]));
         calCells = buildMonthGrid(now.getFullYear(), now.getMonth() + 1, now, reviews, dueMapFromForecast(calForecast?.days ?? []));
     }
     function invalidateCalendar() {
@@ -216,7 +216,7 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<LvPage eyebrow="LEARNING" title={copy.title ?? i18n.hubPrimaryLearning ?? "学习"} subtitle={copy.subtitle ?? "看见进展，安排下一步。"}>
+<LvPage eyebrow="学习追踪" title={copy.title ?? i18n.hubPrimaryLearning ?? "学习"} subtitle={copy.subtitle ?? "看见进展，安排下一步。"}>
     {#snippet actions()}
         <div class="lv-learning-tabs" aria-label={i18n.hubSecondaryLabel ?? "学习分面"}>
             <LvTabs tabs={[{ id: "recap", label: tabLabels.recap }, { id: "plans", label: tabLabels.plans }, { id: "calendar", label: tabLabels.calendar }]} active={selectedTab} onchange={(id) => selectTab(id as LearningTab)} panelId="lv-learning-panel" />
@@ -233,7 +233,7 @@
                         <LvStat label={copy.activeDays ?? "有学习记录的天数"} value={recentActiveDays} detail={copy.activeDaysDetail ?? "近 7 天"} tone="data" />
                         <LvStat label={copy.streak ?? "连续天数"} value={calcStreak(revlog)} detail={copy.streakDetail ?? "当前连续记录"} tone="data" />
                     </div>
-                    <ul class="lv-learning-trend-list">{#each recent as day (day.date)}<li><span>{dateLabel(day.date)}</span><strong>{day.stat.review}</strong><small>{copy.reviewUnit ?? "次正式评分"}</small></li>{/each}</ul>
+                    <ul class="lv-learning-trend-list">{#each recent as day (day.date)}<li><span>{dateLabel(day.date)}</span><strong>{(day.stat.new ?? 0) + (day.stat.review ?? 0)}</strong><small>{copy.reviewUnit ?? "次正式评分"}</small></li>{/each}</ul>
                 </section>
                 <section class="lv-card2 lv-learning-records" aria-label={copy.recentTitle ?? "最近正式评分记录"}>
                     <div class="lv-section-heading"><h2>{copy.recentTitle ?? "最近正式评分记录"}</h2><span>{copy.formalOnly ?? "正式复习记录"}</span></div>
@@ -261,14 +261,15 @@
                     weekDays={locale.startsWith("en") ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["一", "二", "三", "四", "五", "六", "日"]}
                     dateLabel={(date) => {
                         const stat = revlog.days[date];
+                        const total = stat ? ((stat.new ?? 0) + (stat.review ?? 0)) : 0;
                         const dayForecast = calForecast?.days.find(item => item.date === date);
-                        const score = stat ? `${copy.formalReviews ?? "正式评分"} ${stat.review}` : (copy.noRecords ?? "暂无记录");
+                        const score = total > 0 ? `${copy.formalReviews ?? "正式评分"} ${total}` : (copy.noRecords ?? "暂无记录");
                         const due = dayForecast ? `${copy.forecastDue ?? "预测到期"} ${dayForecast.reviews + dayForecast.news}` : (copy.forecastUnknown ?? "预测未知");
                         return `${date} · ${score} · ${due}`;
                     }}
                     forecastDayLabel={(day) => `${day.date} · ${copy.forecastDue ?? "预测到期"} ${day.reviews + day.news}`}
                     labels={{ few: t.calFew, many: t.calMany, note: t.calNote, forecastTitle: t.calForecastTitle, empty: t.calEmpty }}
-                    caption={calForecast ? `${dateLabel(selectedDate ?? localDate(Date.now()))} · ${copy.formalReviews ?? "正式评分"} ${selectedDay?.review ?? 0} · ${copy.forecastDue ?? "预测到期"} ${selectedForecast ? selectedForecast.reviews + selectedForecast.news : "—"}` : `${dateLabel(selectedDate ?? localDate(Date.now()))} · ${copy.forecastUnknown ?? "预测未知"} —`}
+                    caption={calForecast ? `${dateLabel(selectedDate ?? localDate(Date.now()))} · ${copy.formalReviews ?? "正式评分"} ${(selectedDay?.new ?? 0) + (selectedDay?.review ?? 0)} · ${copy.forecastDue ?? "预测到期"} ${selectedForecast ? selectedForecast.reviews + selectedForecast.news : "—"}` : `${dateLabel(selectedDate ?? localDate(Date.now()))} · ${copy.forecastUnknown ?? "预测未知"} —`}
                 />
                 {#if calPartial}<p class="lv-learning-warning" role="status">{calPartialReason}</p>{/if}
                 <div class="lv-learning-calendar-foot"><span>{copy.calendarSub ?? t.calSub ?? "过去为复习热力，未来为到期预测——只读，不改变内核调度"}</span>{#if calError || (!calLoading && !calForecast)}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => { invalidateCalendar(); void loadCalendar(); }}><LvIcon name="refresh" size={13} /> <span>{copy.retry ?? t.refresh ?? "刷新"}</span></button>{/if}</div>

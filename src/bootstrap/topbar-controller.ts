@@ -12,7 +12,7 @@ export interface TopbarHost {
         modules: { review?: boolean };
         dailyReviewTarget: number;
     };
-    revlog: { days: Record<string, { review?: number }> };
+    revlog: { days: Record<string, { new?: number; review?: number }> };
     examPlans: { plans: any[] };
     addIcons: (svg: string) => void;
     addTopBar: (options: {
@@ -33,6 +33,7 @@ export interface TopbarHost {
 
 export class TopbarController {
     public static readonly TOPBAR_ICON_ID = "topbar-lv-cards";
+    public static readonly ICON_SVG = '<symbol id="iconLvCards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="14" height="16" rx="2.5" fill="none"/><path d="M4 18V5a2.5 2.5 0 0 1 2.5-2.5H17" fill="none"/><path d="m10 14 2.2 2.2 4.3-4.4" fill="none"/></symbol><symbol id="icon-lv-cards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="14" height="16" rx="2.5" fill="none"/><path d="M4 18V5a2.5 2.5 0 0 1 2.5-2.5H17" fill="none"/><path d="m10 14 2.2 2.2 4.3-4.4" fill="none"/></symbol>';
 
     private host: TopbarHost;
     private topBarElement: HTMLElement | null = null;
@@ -115,11 +116,7 @@ export class TopbarController {
                 title: this.host.i18n.topbarTitle || "小驴闪卡",
                 position: "right",
                 callback: () => {
-                    if (this.host.settings.topbarDirectReview && this.host.settings.modules.review && this.lastDue > 0) {
-                        this.host.openTabOf("lv-cards-review");
-                    } else {
-                        this.host.openTabOf("lv-cards-dashboard");
-                    }
+                    this.host.openTabOf("lv-cards-dashboard");
                 },
                 // 官方 contextMenu 通道：右键菜单并入思源原生顶栏条目菜单，不再 preventDefault 拦截
                 contextMenu: (menu) => this.host.showTopbarMenu(menu),
@@ -149,7 +146,7 @@ export class TopbarController {
                 count,
                 activeExamPlan: activePlan,
                 dailyReviewTarget: this.host.settings.dailyReviewTarget,
-                doneToday: todayStat?.review ?? 0,
+                doneToday: (todayStat?.new ?? 0) + (todayStat?.review ?? 0),
                 i18n: this.host.i18n,
             });
             this.renderBadge(descriptor, activePlan, topBar);

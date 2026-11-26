@@ -8,7 +8,7 @@
  * 彻底根治“在问题态把背面所有答案块也当成问题提前曝光”的严重问题。
  */
 
-import { MARK_SELECTOR } from "./card-face";
+import { MARK_SELECTOR } from "./card-selectors";
 
 /**
  * 判定给定的 HTML 是否包含思源超级块结构
@@ -91,11 +91,13 @@ export function maskSuperBlockForQuestion(html: string): string {
     const split = splitSuperBlockElements(html);
     if (!split) return html;
 
-    // 如果第 1 个子块内部本身包含 ==挖空==（HTML 或字面），对其挖空打上遮罩
+    // 如果第 1 个子块内部本身包含 ==挖空==（HTML 或字面），对其挖空打上遮罩（不把答案明文放入 HTML）
     let processedQHtml = split.questionHtml;
     if (/(?<!=)==(?!=)/.test(processedQHtml)) {
+        let litIdx = 0;
         processedQHtml = processedQHtml.replace(/(?<!=)==(?!=)([\s\S]*?)(?<!=)==(?!=)/g, () => {
-            return `<mark class="lv-masked" data-type="mark" aria-hidden="true" title="答案遮蔽"><span class="lv-mask-slot">［ 回忆这里 ］</span></mark>`;
+            litIdx++;
+            return `<mark class="lv-masked" data-type="mark" aria-hidden="true" data-cloze-idx="${litIdx}" title="答案遮蔽"><span class="lv-mask-slot">［ 回忆这里 ］</span></mark>`;
         });
     }
 

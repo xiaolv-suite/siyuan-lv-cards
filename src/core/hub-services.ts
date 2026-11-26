@@ -6,6 +6,7 @@ import { createMaintenanceRepairController } from "./maintenance-repair-controll
 import { helpMarkdown } from "../help";
 import { renderExamReportMarkdown } from "./report-writer";
 import { buildDiagnosticsText } from "./diagnostics";
+import { createFullSampleWorkspace, createOnboardingSampleCards } from "./workspace-samples";
 
 export const hubServices = {
     findApproximateDuplicateCandidates,
@@ -21,6 +22,8 @@ export const hubServices = {
     helpMarkdown,
     renderExamReportMarkdown,
     buildDiagnosticsText,
+    createFullSampleWorkspace,
+    createOnboardingSampleCards,
 };
 
 export type HubServices = typeof hubServices;

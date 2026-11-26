@@ -13,6 +13,7 @@ import { hasMarkedAnswer, validateQaDraft } from "./flashcard-quality";
 export interface PreviewCard {
     guid: string;
     deckId: string;
+    deckName?: string;
     modelName: string;
     question: string;
     answer: string;
@@ -56,6 +57,7 @@ export function buildImportPreview(pkg: AnkiPackage): ImportPreview {
     const clozeGuids = new Set<string>();
 
     const modelsById = new Map(pkg.models.map((m) => [m.id, m]));
+    const deckNameById = new Map((pkg.decks ?? []).map((d) => [d.id, d.name]));
     const deckByGuid = new Map(pkg.cards.map((c) => [c.noteGuid, c.deckId]));
     const cardCountByGuid = new Map<string, number>();
     for (const card of pkg.cards) cardCountByGuid.set(card.noteGuid, (cardCountByGuid.get(card.noteGuid) ?? 0) + 1);
@@ -84,19 +86,24 @@ export function buildImportPreview(pkg: AnkiPackage): ImportPreview {
         const cleanQ = cleanAnkiField(note.fields[plan.questionField] ?? "");
         losses.push(...cleanQ.losses.map((reason) => ({ guid: note.guid, reason: `问面：${reason}` })));
 
-        const answerParts = [cleanAnkiField(note.fields[plan.answerField] ?? "")];
-        losses.push(...answerParts[0].losses.map((reason) => ({ guid: note.guid, reason: `答面：${reason}` })));
+        const sameField = Boolean(plan.singleField) || plan.answerField === plan.questionField || plan.answerField < 0;
+        const answerClean = sameField ? cleanQ : cleanAnkiField(note.fields[plan.answerField] ?? "");
+        if (!sameField) {
+            losses.push(...answerClean.losses.map((reason) => ({ guid: note.guid, reason: `答面：${reason}` })));
+        }
         let extraAnswer = "";
         for (const idx of plan.extraFields) {
             const extra = cleanAnkiField(note.fields[idx] ?? "");
             losses.push(...extra.losses.map((reason) => ({ guid: note.guid, reason: `附加字段「${model.fieldNames[idx]}」：${reason}` })));
             if (extra.text) extraAnswer += (extraAnswer ? "\n" : "") + `${model.fieldNames[idx]}：${extra.text}`;
         }
-        const answer = [answerParts[0].text, extraAnswer].filter(Boolean).join("\n\n");
-        const isCloze = cleanQ.cloze || answerParts[0].cloze;
+        const answer = sameField
+            ? extraAnswer
+            : [answerClean.text, extraAnswer].filter(Boolean).join("\n\n");
+        const isCloze = cleanQ.cloze || (!sameField && answerClean.cloze);
 
         // 媒体核对：引用了包里不存在的文件 → 损失（卡保留但标注）
-        const mediaRefs = [...new Set([...cleanQ.mediaRefs, ...answerParts[0].mediaRefs])];
+        const mediaRefs = [...new Set([...cleanQ.mediaRefs, ...(sameField ? [] : answerClean.mediaRefs)])];
         for (const ref of mediaRefs) {
             if (!mediaSet.has(ref)) {
                 mediaMissing += 1;
@@ -113,12 +120,12 @@ export function buildImportPreview(pkg: AnkiPackage): ImportPreview {
                 losses.push({ guid: note.guid, reason: "完形填空没有可遮挡的非空答案（无法成卡）" });
                 continue;
             }
-            const ordinals = [...new Set([...cleanQ.clozeOrdinals, ...answerParts[0].clozeOrdinals])];
+            const ordinals = [...new Set([...cleanQ.clozeOrdinals, ...(sameField ? [] : answerClean.clozeOrdinals)])];
             if (ordinals.length > 1) {
                 losses.push({ guid: note.guid, reason: `多个完形删除序号 ${ordinals.join(", ")} 无法忠实拆分，已跳过` });
                 continue;
             }
-            if (extraAnswer || (answer && !answerParts[0].cloze)) {
+            if (extraAnswer || (answer && (sameField || !answerClean.cloze))) {
                 losses.push({ guid: note.guid, reason: "完形卡的背面字段将与挖空答案一起隐藏" });
             }
             clozeGuids.add(note.guid);
@@ -130,9 +137,11 @@ export function buildImportPreview(pkg: AnkiPackage): ImportPreview {
             }
         }
 
+        const deckId = deckByGuid.get(note.guid) ?? "";
         cards.push({
             guid: note.guid,
-            deckId: deckByGuid.get(note.guid) ?? "",
+            deckId,
+            deckName: deckNameById.get(deckId) ?? "",
             modelName: model.name,
             question: cleanQ.text,
             answer,

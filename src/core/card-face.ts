@@ -8,6 +8,9 @@
  */
 
 import { parseDelimitedQa, maskDelimitedQaInHtml } from "./delimited-qa";
+import { extractCardQuestionAttr, type AttrQaSubtype } from "./block-attributes";
+import { extractValidCardAnswerAttr, isMeaningfulCardAnswerAttr } from "./flashcard-quality";
+import { MARK_SELECTOR } from "./card-selectors";
 import {
     isSuperBlockHtml,
     maskSuperBlockForQuestion,
@@ -95,9 +98,8 @@ export function isCardFaceReady(cardHtml: string | undefined | null, faceError: 
     return Boolean(cardHtml) && !faceError;
 }
 
-/** 挖空（高亮）段选择器：内核 getBlockDOM 把 ==text== 渲染为 span[data-type=mark]（3.8.x 实测），
- * HTML 导出/其他来源可能是 <mark>；两态都要覆盖，否则问题态遮罩失效、答案明文泄露 */
-export const MARK_SELECTOR = "mark, span[data-type='mark']";
+/** 挖空（高亮）段选择器（自叶子模块 card-selectors 重导出，避免运行时循环依赖） */
+export { MARK_SELECTOR } from "./card-selectors";
 
 /** 提取卡面挖空文本合集（去空白），供打字判分/干扰项采样/配对游戏 */
 export function extractMarkTexts(holder: HTMLElement): string[] {
@@ -106,44 +108,151 @@ export function extractMarkTexts(holder: HTMLElement): string[] {
         .filter(Boolean);
 }
 
+function extractAttrFromRawHtml(raw: string, attrName: string): string {
+    if (!raw) return "";
+    const re = new RegExp(`${attrName}=(?:"([^"]*)"|'([^']*)')`, "i");
+    const m = raw.match(re);
+    return (m ? (m[1] ?? m[2] ?? "") : "").trim();
+}
+
 /**
- * 判断卡片是否为基于块属性（custom-riff-title / custom-lv-question）设定的免侵入问答卡
- * （非超级块，属性作为题干，正文作为背面答案）
+ * 解析免侵入零标记属性问答的 3 子型：
+ * - direct：直接问答型（正面=块正文题干，背面=答案属性 custom-lv-answer / custom-card-answer）
+ * - recite：背诵自测型（正面=标题/关键词提示，背面=完整块正文或要点对照）
+ * - dual：双面对照型（正面=概念/术语/外语表达，背面=释义/例句/译文，支持正反双向复习）
+ */
+export function resolveAttrQaSubtype(
+    attrs?: Record<string, string> | null,
+    html?: string | null,
+    customQuestion?: string | null,
+    customAnswer?: string | null,
+): AttrQaSubtype | null {
+    const raw = String(html ?? "");
+    const explicit = String(attrs?.["custom-lv-attr-subtype"] || extractAttrFromRawHtml(raw, "custom-lv-attr-subtype") || "").trim();
+    if (explicit === "direct" || explicit === "recite" || explicit === "dual") {
+        return explicit;
+    }
+    const q = String(
+        customQuestion
+        ?? attrs?.["custom-riff-title"]
+        ?? attrs?.["custom-lv-question"]
+        ?? attrs?.["custom-card-title"]
+        ?? (extractAttrFromRawHtml(raw, "custom-riff-title") || extractAttrFromRawHtml(raw, "custom-lv-question") || extractAttrFromRawHtml(raw, "custom-card-title"))
+    ).trim();
+    const a = String(
+        customAnswer
+        ?? attrs?.["custom-lv-answer"]
+        ?? attrs?.["custom-card-answer"]
+        ?? attrs?.["custom-riff-answer"]
+        ?? (extractAttrFromRawHtml(raw, "custom-lv-answer") || extractAttrFromRawHtml(raw, "custom-card-answer") || extractAttrFromRawHtml(raw, "custom-riff-answer"))
+    ).trim();
+    const bidi = attrs?.["custom-lv-bidi"] === "true" || extractAttrFromRawHtml(raw, "custom-lv-bidi") === "true";
+    if (q) {
+        return bidi ? "dual" : "recite";
+    }
+    if (a) {
+        return "direct";
+    }
+    return null;
+}
+
+/**
+ * 判断卡片是否为基于块属性的免侵入零标记属性问答卡（涵盖 direct / recite / dual 3 子型）
  */
 export function isAttrQaCard(
     html: string | undefined | null,
-    customQuestion?: string | null
+    customQuestion?: string | null,
+    customAnswer?: string | null,
 ): boolean {
     let q = String(customQuestion ?? "").trim();
+    let a = String(customAnswer ?? "").trim();
+    if (a && !isMeaningfulCardAnswerAttr(a)) a = "";
     const raw = String(html ?? "");
     if (!q && raw) {
-        const m = raw.match(/custom-riff-title=(?:"([^"]*)"|'([^']*)')|custom-lv-question=(?:"([^"]*)"|'([^']*)')/i);
-        if (m) q = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? "").trim();
+        q = extractAttrFromRawHtml(raw, "custom-riff-title")
+            || extractAttrFromRawHtml(raw, "custom-lv-question")
+            || extractAttrFromRawHtml(raw, "custom-card-title");
     }
-    if (!q) return false;
+    if (!a && raw) {
+        const sub = String(extractAttrFromRawHtml(raw, "custom-lv-attr-subtype") || "").trim();
+        const candidateKeys = sub === "direct"
+            ? ["custom-lv-answer", "custom-card-answer", "custom-riff-answer", "custom-flashcard-answer"]
+            : ["custom-riff-answer", "custom-lv-answer", "custom-card-answer", "custom-flashcard-answer"];
+        for (const k of candidateKeys) {
+            const v = extractAttrFromRawHtml(raw, k);
+            if (v && isMeaningfulCardAnswerAttr(v)) {
+                a = v;
+                break;
+            }
+        }
+    }
+    if (!q && !a) return false;
     if (isSuperBlockHtml(raw)) return false;
+    // 图片遮挡卡需保留原图供遮罩图层定位，不转为文本型属性问答卡
+    if (/(?:custom-lv-occlusion|lv-occlusion|custom-riff-occlusion)=/i.test(raw)) {
+        return false;
+    }
     // 存在挖空标记（mark 或 span[data-type=mark] 或 ==）时为挖空卡
     if (/(?:data-type=["']mark["']|<mark\b|(?<!=)==(?!=))/i.test(raw)) {
         return false;
+    }
+    const explicitSub = String(extractAttrFromRawHtml(raw, "custom-lv-attr-subtype") || "").trim();
+    if (explicitSub === "direct") {
+        return Boolean(a);
+    }
+    return true;
+}
+
+/**
+ * 判断当前卡片是否允许翻转正反方向复习（R 键 / 顶栏翻转 / 卡面切换）。
+ * 当双面对照型显式关闭双向（custom-lv-bidi="false"）时，严格保持正向，禁止两处入口翻转。
+ */
+export function isReversedRecallAllowed(
+    attrs?: Record<string, string> | null,
+    html?: string | null,
+    customQuestion?: string | null,
+    customAnswer?: string | null,
+): boolean {
+    const subtype = resolveAttrQaSubtype(attrs, html, customQuestion, customAnswer);
+    if (subtype === "dual") {
+        const rawBidi = String(attrs?.["custom-lv-bidi"] ?? extractAttrFromRawHtml(String(html ?? ""), "custom-lv-bidi") ?? "").trim().toLowerCase();
+        if (rawBidi === "false") {
+            return false;
+        }
     }
     return true;
 }
 
 /**
  * 渲染属性问答卡的问题态 HTML：
- * 将属性中设定的问题作为高瞩目题面呈现，并严格遮蔽笔记正文（答案区），杜绝提前剧透。
+ * 支持直接问答型（正文即题面）、背诵自测型（属性标题+可选提示，正文遮蔽）与双面对照型（概念/释义互测）。
  */
-export function renderAttrQaQuestionFace(question: string): string {
+export function renderAttrQaQuestionFace(
+    question: string,
+    options?: {
+        subtype?: AttrQaSubtype | null;
+        questionIsHtml?: boolean;
+        reversed?: boolean;
+    },
+): string {
     const q = String(question ?? "").trim();
+    const subtype = options?.subtype ?? "recite";
+    const bodyHtml = options?.questionIsHtml ? q : formatMarkdownToSafeHtml(q);
+    const badgeText = subtype === "direct" ? "直接问答" : subtype === "dual" ? (options?.reversed ? "反向对照" : "双面对照") : "问";
+    const placeholderText = subtype === "direct"
+        ? "［ 参考答案（属性已就绪）· 敲空格或点击卡面揭晓 ］"
+        : subtype === "dual"
+        ? "［ 对照内容（已遮蔽）· 敲空格或点击卡面揭晓 ］"
+        : "［ 参考答案（正文已遮蔽）· 敲空格或点击卡面揭晓 ］";
     return [
-        `<div class="lv-qa-attr-stage lv-qa-attr-question-stage">`,
+        `<div class="lv-qa-attr-stage lv-qa-attr-question-stage" data-attr-subtype="${escapeHtml(subtype)}">`,
         `  <div class="lv-qa-attr-hero">`,
-        `    <span class="lv-qa-attr-badge" aria-label="问">问</span>`,
-        `    <div class="lv-qa-attr-title">${formatMarkdownToSafeHtml(q)}</div>`,
+        `    <span class="lv-qa-attr-badge" aria-label="问">${escapeHtml(badgeText)}</span>`,
+        `    <div class="lv-qa-attr-title">${bodyHtml}</div>`,
         `  </div>`,
         `  <div class="lv-card-answer-divider"></div>`,
         `  <div class="lv-qa-answer-placeholder" aria-hidden="true">`,
-        `    <span class="lv-mask-slot">［ 参考答案（正文已遮蔽）· 敲空格或点击卡面揭晓 ］</span>`,
+        `    <span class="lv-mask-slot">${escapeHtml(placeholderText)}</span>`,
         `  </div>`,
         `  <div class="lv-qa-keyboard-hint" aria-hidden="true">`,
         `    <kbd class="lv-qa-kbd">Space</kbd> 揭晓答案 · <kbd class="lv-qa-kbd">1-4</kbd> 对应遗忘至熟练`,
@@ -163,10 +272,18 @@ export function renderAttrQaAnswerFace(
     question: string,
     answerLabel = "参考答案 (正文)",
     noteHtml = "",
-    noteLabel = "笔记原文"
+    noteLabel = "笔记原文",
+    options?: {
+        subtype?: AttrQaSubtype | null;
+        questionIsHtml?: boolean;
+        reversed?: boolean;
+    },
 ): string {
     const q = String(question ?? "").trim();
     const note = String(noteHtml ?? "").trim();
+    const subtype = options?.subtype ?? "recite";
+    const questionRendered = options?.questionIsHtml ? q : formatMarkdownToSafeHtml(q);
+    const badgeText = subtype === "direct" ? "直接问答" : subtype === "dual" ? (options?.reversed ? "反向对照" : "双面对照") : "问";
     const noteSection = note
         ? [
               `  <div class="lv-card-answer-divider lv-card-answer-divider--slim"></div>`,
@@ -177,10 +294,10 @@ export function renderAttrQaAnswerFace(
           ].join("\n")
         : "";
     return [
-        `<div class="lv-qa-attr-stage lv-qa-attr-answer-stage">`,
+        `<div class="lv-qa-attr-stage lv-qa-attr-answer-stage" data-attr-subtype="${escapeHtml(subtype)}">`,
         `  <div class="lv-qa-attr-hero">`,
-        `    <span class="lv-qa-attr-badge" aria-label="问">问</span>`,
-        `    <div class="lv-qa-attr-title">${formatMarkdownToSafeHtml(q)}</div>`,
+        `    <span class="lv-qa-attr-badge" aria-label="问">${escapeHtml(badgeText)}</span>`,
+        `    <div class="lv-qa-attr-title">${questionRendered}</div>`,
         `  </div>`,
         `  <div class="lv-card-answer-divider"></div>`,
         `  <div class="lv-card-a-section">`,
@@ -192,14 +309,97 @@ export function renderAttrQaAnswerFace(
     ].join("\n");
 }
 
+export function stripAnswerAttrsFromHtml(html: string): string {
+    const raw = String(html ?? "");
+    if (!raw) return "";
+    return raw
+        .replace(/<div class="protyle-attr"[^>]*>[\s\S]*?<\/div>/gi, "")
+        .replace(/\s+(?:contenteditable|spellcheck|draggable)=(?:"[^"]*"|'[^']*')/gi, "")
+        .replace(
+            /\s+(?:custom-lv-answer|custom-card-answer|custom-riff-answer|custom-flashcard-answer|custom-exam-answer|custom-lv-hint)=(?:"[^"]*"|'[^']*')/gi,
+            "",
+        );
+}
+
+/**
+ * 清理块正文 HTML 供反向/题面富文本渲染（只读展示）：
+ * 保留图片、公式、代码等合法富文本内容，同时剥离编辑器装饰（.protyle-attr / .protyle-action /
+ * .protyle-gutters / .lv-card-badge-pill）、可编辑属性（contenteditable/spellcheck/draggable）
+ * 与所有可能泄题的 custom-* 闪卡属性，避免点击题面获焦后拦截 Space 揭晓快捷键。
+ */
+export function sanitizeBlockBodyHtmlForFace(html: string): string {
+    const raw = String(html ?? "");
+    if (!raw) return "";
+    const stripAttrs = (el: Element) => {
+        el.removeAttribute("contenteditable");
+        el.removeAttribute("spellcheck");
+        el.removeAttribute("draggable");
+        for (const attr of Array.from(el.attributes)) {
+            if (attr.name.startsWith("custom-")) {
+                el.removeAttribute(attr.name);
+            }
+        }
+    };
+    if (typeof document !== "undefined") {
+        const template = document.createElement("template");
+        template.innerHTML = raw;
+        template.content
+            .querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill")
+            .forEach((el) => el.remove());
+        template.content.querySelectorAll("div > table").forEach((tbl) => {
+            tbl.parentElement?.classList.add("lv-table-wrap");
+        });
+        template.content.querySelectorAll("*").forEach(stripAttrs);
+        return template.innerHTML.replace(/\u00a0/g, " ").trim();
+    }
+    return stripAnswerAttrsFromHtml(raw)
+        .replace(/\s+(?:custom-riff-title|custom-lv-question|custom-card-title|custom-lv-attr-subtype|custom-lv-bidi|custom-riff-decks)=(?:"[^"]*"|'[^']*')/gi, "")
+        .trim();
+}
+
+/**
+ * 清理复习卡面/预览 DOM 中携带的编辑器装饰与可编辑/制卡属性：
+ * 剥离 .protyle-attr / .protyle-action / .protyle-gutters / .lv-card-badge-pill、
+ * contenteditable / spellcheck / draggable 与 custom-* 属性，严防块助手侵入复习区。
+ */
+export function stripEditorDecorationsFromReviewFragment(root: ParentNode): void {
+    root.querySelectorAll(".protyle-attr, .protyle-action, .protyle-gutters, .lv-card-badge-pill").forEach((el) => el.remove());
+    root.querySelectorAll("div > table").forEach((tbl) => {
+        tbl.parentElement?.classList.add("lv-table-wrap");
+    });
+    root.querySelectorAll("*").forEach((el) => {
+        el.removeAttribute("contenteditable");
+        el.removeAttribute("spellcheck");
+        el.removeAttribute("draggable");
+        for (const attr of Array.from(el.attributes)) {
+            if (attr.name.startsWith("custom-")) {
+                el.removeAttribute(attr.name);
+            }
+        }
+    });
+}
+
+export function sanitizeReviewCardDomHtml(html: string): string {
+    const raw = String(html ?? "");
+    if (!raw) return "";
+    if (typeof document !== "undefined") {
+        const template = document.createElement("template");
+        template.innerHTML = raw;
+        stripEditorDecorationsFromReviewFragment(template.content);
+        return template.innerHTML;
+    }
+    return stripAnswerAttrsFromHtml(raw)
+        .replace(/\s+(?:custom-[a-z0-9_-]+)=(?:"[^"]*"|'[^']*')/gi, "");
+}
+
 /**
  * Create a display-only question-side copy: marked answers remain the same
  * approximate width, while their text/media are absent from selection and the
  * accessibility tree. Keep the original HTML for answer reveal and scoring.
  * 
- * 扩展支持：若传入 customQuestion 且正文无挖空，则自动转为属性问答卡的问题态，遮蔽正文。
+ * 扩展支持：若传入 customQuestion / customAnswer 且正文无挖空，则按属性问答子型呈现问题态。
  */
-export function maskMarkedAnswersForQuestion(html: string, customQuestion?: string): string {
+export function maskMarkedAnswersForQuestion(html: string, customQuestion?: string, customAnswer?: string): string {
     if (typeof document === "undefined") return String(html ?? "");
 
     // 0. 优先检测是否为思源超级块闪卡（SuperBlock）：首子块为问题，后续所有子块为答案！
@@ -209,33 +409,63 @@ export function maskMarkedAnswersForQuestion(html: string, customQuestion?: stri
         if (sbMasked !== html) return sbMasked;
     }
 
-    // 若未显式传入 customQuestion，尝试从 block 容器 HTML 中自适应提取
+    // 若未显式传入 customQuestion / customAnswer，尝试从 block 容器 HTML 中自适应提取
     let q = String(customQuestion ?? "").trim();
     if (!q && html) {
-        const m = html.match(/custom-riff-title=(?:"([^"]*)"|'([^']*)')|custom-lv-question=(?:"([^"]*)"|'([^']*)')/i);
-        if (m) q = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? "").trim();
+        q = extractAttrFromRawHtml(html, "custom-riff-title")
+            || extractAttrFromRawHtml(html, "custom-lv-question")
+            || extractAttrFromRawHtml(html, "custom-card-title");
+    }
+    let a = String(customAnswer ?? "").trim();
+    if (a && !isMeaningfulCardAnswerAttr(a)) a = "";
+    if (!a && html) {
+        const sub = String(extractAttrFromRawHtml(html, "custom-lv-attr-subtype") || "").trim();
+        const candidateKeys = sub === "direct"
+            ? ["custom-lv-answer", "custom-card-answer", "custom-riff-answer", "custom-flashcard-answer"]
+            : ["custom-riff-answer", "custom-lv-answer", "custom-card-answer", "custom-flashcard-answer"];
+        for (const k of candidateKeys) {
+            const v = extractAttrFromRawHtml(html, k);
+            if (v && isMeaningfulCardAnswerAttr(v)) {
+                a = v;
+                break;
+            }
+        }
     }
 
-    // 0.5 凡通过块属性（custom-riff-title / custom-lv-question）设定了题干问题的免侵入问答卡（无挖空标记）：
-    // 问题态必须严格以属性问题作为瞩目题面，彻底遮蔽正文答案，杜绝提前剧透！
-    // 若正文内部已包含 ==挖空==，则以挖空卡形态呈现，customQuestion 作为情境徽章保留。
-    if (isAttrQaCard(html, q)) {
-        return renderAttrQaQuestionFace(q);
+    // 0.5 凡通过块属性设定了题干或答案的免侵入零标记属性问答卡（无挖空标记）：
+    if (isAttrQaCard(html, q, a)) {
+        const subtype = resolveAttrQaSubtype(null, html, q, a) ?? (q ? "recite" : "direct");
+        if (subtype === "direct" || (!q && a)) {
+            return renderAttrQaQuestionFace(stripAnswerAttrsFromHtml(html), { subtype: "direct", questionIsHtml: true });
+        }
+        return renderAttrQaQuestionFace(q, { subtype });
     }
 
     const template = document.createElement("template");
     template.innerHTML = String(html ?? "");
+    stripEditorDecorationsFromReviewFragment(template.content);
     const marks = Array.from(template.content.querySelectorAll(MARK_SELECTOR));
     if (marks.length > 0) {
         let idx = 0;
         for (const mark of marks) {
             idx++;
-            const originalText = (mark.textContent ?? "").trim();
-            const length = Math.max(1, Array.from(mark.textContent ?? "").length);
+            const rawText = (mark.textContent ?? "").trim();
+            const richChild = mark.querySelector('img, svg, canvas, [data-type="inline-math"], .katex, .language-math');
+            const fallbackAnswer = rawText
+                || mark.querySelector('[data-content]')?.getAttribute('data-content')?.trim()
+                || mark.querySelector('img')?.getAttribute('alt')?.trim()
+                || (mark.querySelector('img') ? '[图片]' : mark.querySelector('[data-type="inline-math"], .katex, .language-math') ? '[公式]' : '');
+            if (richChild) {
+                const safeInner = mark.innerHTML
+                    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+                    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+                mark.setAttribute("data-real-html", safeInner);
+            }
+            const length = Math.max(1, Array.from(mark.textContent || fallbackAnswer).length);
             mark.textContent = "\u00a0".repeat(length);
             mark.setAttribute("aria-hidden", "true");
             mark.setAttribute("data-cloze-idx", String(idx));
-            mark.setAttribute("data-real-answer", originalText);
+            mark.setAttribute("data-real-answer", fallbackAnswer);
             mark.setAttribute("title", marks.length > 1 ? `第 ${idx} 空（点击揭晓）` : "答案遮蔽（点击揭晓）");
         }
         return template.innerHTML;
@@ -288,6 +518,12 @@ export function formatMarkdownToSafeHtml(markdown: string): string {
     // 严格排除思源列表点（iconDot）与系统小图标，防止列表圆点被放大为巨大黑球
     text = text.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, (svgRaw) => {
         if (/<use\b[^>]*(?:iconDot|#icon)/i.test(svgRaw) || /class=["'][^"']*protyle-action/i.test(svgRaw)) {
+            if (/iconDot/i.test(svgRaw) && !svgRaw.includes("lv-icon-dot")) {
+                if (!/class\s*=/i.test(svgRaw)) {
+                    return svgRaw.replace(/<svg\b/i, '<svg class="lv-icon-dot"');
+                }
+                return svgRaw.replace(/class=["']([^"']*)["']/i, (_m, cls) => `class="${cls} lv-icon-dot"`);
+            }
             return svgRaw;
         }
         let cleanSvg = svgRaw
@@ -351,8 +587,10 @@ export function renderUnifiedCardFace(input: {
     memo?: string;
     customRiffTitle?: string;
     customQuestion?: string;
-    /** 自定义答案（custom-riff-answer）：优先于正文作为复习背面主答案 */
+    /** 自定义答案（custom-riff-answer / custom-lv-answer）：优先于正文作为复习背面主答案 */
     customAnswer?: string;
+    /** 零标记属性问答子型 */
+    attrSubtype?: AttrQaSubtype | null;
     template?: "qa" | "cloze";
     /** 参考答案标题，用于国际化；缺省为 "参考答案" */
     answerLabel?: string;
@@ -364,6 +602,7 @@ export function renderUnifiedCardFace(input: {
     let a = (input.answer ?? "").trim();
     let md = (input.markdown ?? "").trim();
     const customQ = (input.customQuestion || input.customRiffTitle || "").trim();
+    const customA = (input.customAnswer ?? "").trim();
 
     // 如果未传 markdown 但传了 q 和 a
     if (!md && (q || a)) {
@@ -375,9 +614,21 @@ export function renderUnifiedCardFace(input: {
     }
 
     const extractedAnswers: string[] = [];
+    // 先掩码围栏代码块与行内代码，防止代码里的 `==`（如 `a == b`）被误判为挖空定界符
+    let codeTokenPrefix = "@@LV_CODE_TOKEN_";
+    while (md.includes(codeTokenPrefix)) codeTokenPrefix += "_";
+    const protectedCodes: string[] = [];
+    const mdForCloze = md.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+?`/g, (m) => {
+        return `${codeTokenPrefix}${protectedCodes.push(m) - 1}@@`;
+    });
+    const restoreProtectedCodes = (s: string) =>
+        protectedCodes.length > 0
+            ? s.replace(new RegExp(`${codeTokenPrefix}(\\d+)@@`, "g"), (_m, i) => protectedCodes[Number(i)] ?? "")
+            : s;
+
     // 单个等号属于答案内容（常见于公式/代码），只有连续两个等号才是挖空边界。
     const clozePattern = /(?<!=)==((?:[^=]|=(?!=))+)==(?!=)/g;
-    const answerMatches = [...md.matchAll(clozePattern)];
+    const answerMatches = [...mdForCloze.matchAll(clozePattern)];
     const hasCloze = answerMatches.length > 0;
 
     let questionHtml = "";
@@ -386,35 +637,35 @@ export function renderUnifiedCardFace(input: {
     if (hasCloze) {
         // 提取所有被 == 包裹的挖空答案
         for (const m of answerMatches) {
-            const val = m[1]?.trim();
+            const val = restoreProtectedCodes(m[1] ?? "").trim();
             if (val) extractedAnswers.push(val);
         }
 
         const isMulti = answerMatches.length > 1;
 
-        // 问题态：将 ==答案== 替换为语义化的遮蔽占位符（多空自动标号）
+        // 问题态：将 ==答案== 替换为语义化的遮蔽占位符（多空自动标号，不泄漏答案明文）
         let qIdx = 0;
-        const qMd = md.replace(clozePattern, (_m, _ans) => {
+        const qMd = restoreProtectedCodes(mdForCloze.replace(clozePattern, (_m, _ans) => {
             qIdx++;
             return isMulti ? `@@MASKED_SLOT_${qIdx}@@` : `@@MASKED_SLOT@@`;
-        });
+        }));
         const formattedQ = formatMarkdownToSafeHtml(qMd);
         questionHtml = isMulti
             ? formattedQ.replace(
                 /@@MASKED_SLOT_(\d+)@@/g,
-                (_m, n) => `<mark class="lv-masked" data-type="mark" aria-hidden="true" title="答案遮蔽第 ${n} 空"><span class="lv-mask-slot">［ ${n}: 回忆这里 ］</span></mark>`
+                (_m, n) => `<mark class="lv-masked" data-type="mark" aria-hidden="true" data-cloze-idx="${n}" title="答案遮蔽第 ${n} 空"><span class="lv-mask-slot">［ ${n}: 回忆这里 ］</span></mark>`
             )
             : formattedQ.replace(
                 /@@MASKED_SLOT@@/g,
-                `<mark class="lv-masked" data-type="mark" aria-hidden="true" title="答案遮蔽"><span class="lv-mask-slot">［ 回忆这里 ］</span></mark>`
+                `<mark class="lv-masked" data-type="mark" aria-hidden="true" data-cloze-idx="1" title="答案遮蔽"><span class="lv-mask-slot">［ 回忆这里 ］</span></mark>`
             );
 
         // 答案态：将 ==答案== 替换为高亮揭晓标记（多空带微徽标）
         let aIdx = 0;
-        const aMd = md.replace(clozePattern, (_m, ans) => {
+        const aMd = restoreProtectedCodes(mdForCloze.replace(clozePattern, (_m, ans) => {
             aIdx++;
             return isMulti ? `@@REVEALED_START_${aIdx}@@${ans}@@REVEALED_END@@` : `@@REVEALED_START@@${ans}@@REVEALED_END@@`;
-        });
+        }));
         const formattedA = formatMarkdownToSafeHtml(aMd);
         answerHtml = isMulti
             ? formattedA
@@ -423,22 +674,63 @@ export function renderUnifiedCardFace(input: {
             : formattedA
                 .replace(/@@REVEALED_START@@/g, `<mark class="lv-revealed" data-type="mark"><span class="lv-revealed-text">`)
                 .replace(/@@REVEALED_END@@/g, `</span></mark>`);
-    } else if (customQ && !a && !q && md) {
-        // 优先支持基于块属性（custom-riff-title）设定的免侵入问答卡：
-        // 题干来自属性，答案双轨——自定义答案（custom-riff-answer）优先，
-        // 笔记正文随后以「笔记原文」弱化区完整保留，严格遮蔽问题态
-        const displayQ = customQ;
-        const customA = (input.customAnswer ?? "").trim();
-        const label = customA ? (input.answerLabel ?? "参考答案") : (input.answerLabel ?? "参考答案 (正文)");
-        const displayA = customA || md;
-        if (displayA) extractedAnswers.push(displayA);
-        questionHtml = renderAttrQaQuestionFace(displayQ);
-        answerHtml = renderAttrQaAnswerFace(
-            formatMarkdownToSafeHtml(displayA),
-            displayQ,
-            label,
-            customA ? formatMarkdownToSafeHtml(md) : "",
-        );
+    } else if ((customQ || customA) && !a && !q && md) {
+        // 优先支持基于块属性设定的免侵入零标记属性问答 3 子型：
+        // 1) direct：正面=块正文题干(md)，背面=答案属性(customA)
+        // 2) recite：正面=属性题干(customQ)，背面=块正文(md) 或 customA + 笔记原文(md)
+        // 3) dual：概念/术语 ↔ 释义/译文，支持正反双向复习(input.reversed)
+        const subtype: AttrQaSubtype = input.attrSubtype ?? (customQ ? "recite" : "direct");
+        if (!customQ && customA) {
+            if (input.reversed) {
+                extractedAnswers.push(md);
+                questionHtml = renderAttrQaQuestionFace(customA, { subtype: "direct", reversed: true });
+                answerHtml = renderAttrQaAnswerFace(
+                    formatMarkdownToSafeHtml(md),
+                    customA,
+                    input.answerLabel ?? "原题干 (正文)",
+                    "",
+                    "",
+                    { subtype: "direct", reversed: true },
+                );
+            } else {
+                extractedAnswers.push(customA);
+                questionHtml = renderAttrQaQuestionFace(md, { subtype: "direct" });
+                answerHtml = renderAttrQaAnswerFace(
+                    formatMarkdownToSafeHtml(customA),
+                    md,
+                    input.answerLabel ?? "参考答案",
+                    "",
+                    "",
+                    { subtype: "direct" },
+                );
+            }
+        } else if (input.reversed) {
+            const promptSide = customA || md;
+            extractedAnswers.push(customQ);
+            questionHtml = renderAttrQaQuestionFace(promptSide, { subtype, reversed: true });
+            answerHtml = renderAttrQaAnswerFace(
+                formatMarkdownToSafeHtml(customQ),
+                promptSide,
+                input.answerLabel ?? "原概念 / 题干",
+                customA ? formatMarkdownToSafeHtml(md) : "",
+                "笔记原文",
+                { subtype, reversed: true },
+            );
+        } else {
+            const displayQ = customQ;
+            const label = customA ? (input.answerLabel ?? "参考答案") : (input.answerLabel ?? "参考答案 (正文)");
+            const displayA = customA || md;
+            if (displayA) extractedAnswers.push(displayA);
+            questionHtml = renderAttrQaQuestionFace(displayQ, { subtype });
+            answerHtml = renderAttrQaAnswerFace(
+                formatMarkdownToSafeHtml(displayA),
+                displayQ,
+                label,
+                customA ? formatMarkdownToSafeHtml(md) : "",
+                "笔记原文",
+                { subtype },
+            );
+        }
     } else {
         // 普通问答模式（支持存量格式 :: 与 Q/A 前缀智能拆分、块备注答案与双向卡模式）
         let displayQ = q || md;
@@ -563,16 +855,16 @@ export function parseCardAttrsMetadata<TOccl = any>(
     parseOcclusionFn: (attrs: Record<string, string>) => TOccl | null
 ): CardAttrsMetadata<TOccl> {
     const occlusion = parseOcclusionFn(attrs);
+    const examFallbackA = isMeaningfulCardAnswerAttr(String(attrs["custom-exam-answer"] || ""))
+        ? String(attrs["custom-exam-answer"] || "").trim()
+        : "";
     const customAnswer = String(
-        attrs["custom-riff-answer"] ||
-        attrs["custom-lv-answer"] ||
-        attrs["custom-card-answer"] ||
-        attrs["custom-flashcard-answer"] ||
-        attrs["custom-exam-answer"] ||
+        extractValidCardAnswerAttr(attrs) ||
+        examFallbackA ||
         ""
     ).trim();
     const memo = String(attrs.memo || attrs["custom-card-memo"] || attrs["custom-memo"] || attrs["custom-exam-analysis"] || "").trim();
-    const customRiffTitle = String(attrs["custom-riff-title"] || attrs["custom-lv-question"] || attrs["custom-card-title"] || "").trim();
+    const customRiffTitle = extractCardQuestionAttr(attrs);
     const isCustomPluginAnswer = Boolean(customAnswer);
     const cardMemo = customAnswer || memo;
     let expectedText = currentExpectedText;
