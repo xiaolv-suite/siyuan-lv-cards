@@ -1,0 +1,139 @@
+/**
+ * 卡型注册表（M4·FR1，docs/14 §2）。
+ * 3.8：复习面板内渲染/判分（本文件的运行时契约）；
+ * 3.9：同一名义卡型将桥接到官方 registerFlashcardV2PluginType（接口见 docs/14，待 3.9 API 明确后接）。
+ * 打字题（typing）是第一个内置卡型（M4·FR2）。
+ */
+
+export type Rating1to4 = 1 | 2 | 3 | 4;
+
+export interface TypingGrade {
+    /** 建议评分 */
+    suggested: Rating1to4;
+    /** 相似度 0-1（对期望答案长度） */
+    ratio: number;
+    /** 逐字符对齐结果（用户输入视角）：ok=该字符命中期望 */
+    chars: { ch: string; ok: boolean }[];
+    /** 拼写容错（Typo Tolerance，Quizlet/RemNote 规范）：仅 1 处微瑕笔误放行 */
+    isTypo?: boolean;
+}
+
+export interface CardTypeRegistration {
+    typeName: string;
+    displayNameKey: string;
+    gradable: boolean;
+    /** 判分：把用户作答映射为建议评分与展示数据 */
+    grade?: (answer: string, expected: string, opts: { strict: boolean }) => TypingGrade;
+}
+
+// ---- 打字题判分 ----
+
+/**
+ * 宽松模式保留的关键符号（E-09）：小数点/正负号/百分号/比号——
+ * 「-1 vs 1」「1.2 vs 12」这类数值失真不再被归一化抹平（数值单位/容差策略另见 BX-1）。
+ */
+const LENIENT_KEEP = new Set([".", "-", "+", "%", "/", ":"]);
+
+function normalize(s: string, strict: boolean): string {
+    if (strict) {
+        return s;
+    }
+    // NFKC 折叠全角→半角（全角输入不再被整段剥离）+ 排版减号折叠为 ASCII 减号
+    // （U+2212 无兼容分解、属 \p{S} 而不在 LENIENT_KEEP——不折叠则 "−1" 失去符号变 "1"，兜底巡检 v0.110.1），
+    // 再去掉空白与其余标点/符号
+    const folded = s.normalize("NFKC").replace(/\u2212/g, "-").toLowerCase();
+    // 欧式小数逗号 → 小数点（仅数字间），使 "3,14" 与 "3.14" 匹配
+    const decimal = folded.replace(/(\d),(\d)/g, "$1.$2");
+    let out = "";
+    for (const ch of decimal) {
+        if (/\s/.test(ch)) {
+            continue;
+        }
+        if (/[\p{P}\p{S}]/u.test(ch) && !LENIENT_KEEP.has(ch)) {
+            continue;
+        }
+        out += ch;
+    }
+    return out;
+}
+
+/** 计算两个字符数组的 Levenshtein 编辑距离 */
+export function calcLevenshteinDistance(a: string[], b: string[]): number {
+    const m = a.length, n = b.length;
+    const d: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) d[i][0] = i;
+    for (let j = 0; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            d[i][j] = Math.min(
+                d[i - 1][j] + 1,
+                d[i][j - 1] + 1,
+                d[i - 1][j - 1] + cost,
+            );
+        }
+    }
+    return d[m][n];
+}
+
+/** LCS 对齐：标出用户输入中命中期望的字符，并给出相似度。
+ * E-09：分母取 max(期望长度, 作答长度)——作答里塞额外错误命题会拉低相似度而不是被无视；
+ * 融入 Quizlet/RemNote 智能拼写容错（Typo Tolerance）：非严格模式下 1 字微瑕放行建议 3。
+ * 空期望答案 ratio=0（不产「完美匹配」误导），正式评分始终由用户决定。 */
+export function gradeTyping(expected: string, actual: string, strict: boolean): TypingGrade {
+    // 防御极端超长输入制造 O(M*N) 超大内存矩阵导致页面崩溃（如误粘上万字长文）
+    const MAX_COMPARE_LEN = 500;
+    const e = [...normalize(expected, strict)].slice(0, MAX_COMPARE_LEN);
+    const a = [...normalize(actual, strict)].slice(0, MAX_COMPARE_LEN);
+    const m = e.length, n = a.length;
+    const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = e[i - 1] === a[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+    }
+    const matched = new Array(n).fill(false);
+    let i = m, j = n;
+    while (i > 0 && j > 0) {
+        if (e[i - 1] === a[j - 1]) {
+            matched[j - 1] = true;
+            i--; j--;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+            i--;
+        } else {
+            j--;
+        }
+    }
+    const denom = Math.max(m, n);
+    const ratio = denom > 0 ? dp[m][n] / denom : 0;
+    const editDist = calcLevenshteinDistance(e, a);
+    const hasNumericKeep = e.some(ch => LENIENT_KEEP.has(ch)) || a.some(ch => LENIENT_KEEP.has(ch));
+    const isTypo = !strict && !hasNumericKeep && editDist === 1 && denom >= 3;
+    const suggested: Rating1to4 = (ratio >= 0.9 || isTypo) ? 3 : ratio >= 0.6 ? 2 : 1;
+    return { suggested, ratio, chars: a.map((ch, idx) => ({ ch, ok: matched[idx] })), isTypo };
+}
+
+// ---- 注册表 ----
+
+const registry = new Map<string, CardTypeRegistration>();
+
+export function registerCardType(reg: CardTypeRegistration): () => void {
+    registry.set(reg.typeName, reg);
+    return () => registry.delete(reg.typeName);
+}
+
+export function getCardType(typeName: string): CardTypeRegistration | undefined {
+    return registry.get(typeName);
+}
+
+export function listCardTypes(): CardTypeRegistration[] {
+    return [...registry.values()];
+}
+
+// 内置：打字题
+registerCardType({
+    typeName: "type",
+    displayNameKey: "cardTypeTyping",
+    gradable: true,
+    grade: (answer, expected, opts) => gradeTyping(expected, answer, opts.strict),
+});
