@@ -38,6 +38,7 @@ const checks = {
     dialogs: (reg) =>
         typeof reg?.dialogs?.mountDialogComponent === "function" &&
         typeof reg?.dialogs?.createPaletteView === "function" &&
+        typeof reg?.dialogs?.aiChat === "function" &&
         typeof reg?.dialogs?.components?.AIWizard === "function", // Svelte 5 组件=函数
 };
 for (const name of ["hub", "review", "dialogs"]) {

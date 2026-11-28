@@ -3,6 +3,7 @@
      *  数据与持久化由宿主注入；派生为异步（宿主查 riff 卡 ID），deriving=true 期间禁用按钮。 */
     import { CARD_CATALOG } from "@/core/card-catalog";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
     import LvSwitch from "./kit/LvSwitch.svelte";
 
     let { fact, instances, deriving = false, t, ontoggle, onremove, onderive, onrevise }: {
@@ -74,7 +75,7 @@
     async function removeInstance(cardID: string) {
         if (actionBusy) return;
         const message = t.review.ko.removeInstanceConfirm ?? "确定移除此卡片实例？只会移除知识对象关联，不会删除卡片。";
-        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(message)) return;
+        if (!await lvConfirm({ title: t.review.ko.removeInstanceTitle ?? "移除卡片实例", content: message })) return;
         await runAction(cardID, () => Promise.resolve(onremove(cardID)));
     }
 

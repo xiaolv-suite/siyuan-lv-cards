@@ -532,7 +532,10 @@ export function isBlockElementReadOnly(el: Element | null | undefined): boolean 
         if (!node) return false;
         const syVal = node.getAttribute("custom-sy-readonly");
         const siyuanVal = node.getAttribute("custom-siyuan-readonly");
-        return syVal === "true" || syVal === "1" || siyuanVal === "true" || siyuanVal === "1";
+        const dataVal = node.getAttribute("data-readonly");
+        return syVal === "true" || syVal === "1"
+            || siyuanVal === "true" || siyuanVal === "1"
+            || dataVal === "true" || dataVal === "1";
     };
     if (isAttrReadOnly(el)) return true;
     if (el.getAttribute("contenteditable") === "false") return true;
@@ -540,7 +543,7 @@ export function isBlockElementReadOnly(el: Element | null | undefined): boolean 
     if (wysiwyg) {
         if (wysiwyg.getAttribute("contenteditable") === "false" || isAttrReadOnly(wysiwyg)) return true;
     }
-    if (el.closest?.('[custom-sy-readonly="true"], [custom-sy-readonly="1"], [custom-siyuan-readonly="true"], [custom-siyuan-readonly="1"]')) return true;
+    if (el.closest?.('[custom-sy-readonly="true"], [custom-sy-readonly="1"], [custom-siyuan-readonly="true"], [custom-siyuan-readonly="1"], [data-readonly="true"], [data-readonly="1"]')) return true;
     const protyle = el.closest?.(".protyle") as (HTMLElement & { disabled?: boolean }) | null;
     if (protyle) {
         if (protyle.disabled === true || protyle.hasAttribute("disabled") || protyle.classList.contains("protyle--readonly")) {

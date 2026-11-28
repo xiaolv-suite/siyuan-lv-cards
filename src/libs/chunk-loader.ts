@@ -36,6 +36,7 @@ export interface DialogsChunkModule {
     mountDialogComponent(comp: any, target: HTMLElement, props: Record<string, any>): { destroy(): void };
     createPaletteView: any;
     blockActionRuntime?: BlockActionRuntime;
+    aiChat?: (...args: any[]) => Promise<string>;
 }
 
 export interface ChunkModuleMap {

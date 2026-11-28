@@ -319,6 +319,12 @@ const STR_FIELDS: (keyof LvCardsSettings)[] = [
     "aiFallbackModel", "aiSensitiveTerms", "aiPromptTemplate", "targetNotebookId", "ankiClientKey", "lastHubTab", "lastReviewScope", "lastManagerView", "lastQuickCardDeck",
 ];
 
+export function hasSiyuanAiApiKey(): boolean {
+    if (typeof window === "undefined") return false;
+    const apiKey = (window as any)?.siyuan?.config?.ai?.openAI?.apiKey;
+    return typeof apiKey === "string" && apiKey.trim().length > 0;
+}
+
 export function normalizeSettings(raw: unknown): LvCardsSettings {
     const def = defaultSettings();
     if (!raw || typeof raw !== "object") {

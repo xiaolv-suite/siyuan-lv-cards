@@ -117,6 +117,11 @@ export interface EditorQaServiceOptions {
     isEnabled?: () => boolean;
     /** 停用时同步收起已打开菜单的回调 */
     onDisableCleanup?: () => void;
+    /** 可选：宿主事件总线，用于监听 switch-protyle / destroy-protyle 及时卸载浮动胶囊 */
+    eventBus?: {
+        on?: (event: string, cb: (...args: any[]) => void) => void;
+        off?: (event: string, cb: (...args: any[]) => void) => void;
+    };
 }
 
 export interface EditorQaServiceInstance {
@@ -171,6 +176,15 @@ function isBlockVisibleForFloatingPill(blockEl: HTMLElement | null | undefined):
     if (!blockEl || !blockEl.isConnected) return false;
     if (blockEl.closest(".fn__none")) return false;
     if (blockEl.style?.display === "none" || blockEl.style?.visibility === "hidden") return false;
+    if (
+        typeof document !== "undefined"
+        && (document.documentElement?.offsetHeight ?? 0) > 0
+        && blockEl.offsetParent === null
+        && typeof getComputedStyle === "function"
+        && getComputedStyle(blockEl).position !== "fixed"
+    ) {
+        return false;
+    }
     if (typeof blockEl.getBoundingClientRect !== "function") return false;
     const rect = blockEl.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return false;
@@ -473,6 +487,7 @@ export function decorateEditorBlock(
         : `✦ ${kindMeta.actionLead} · 块助手：单击展开操作中心 (双击快捷转换块类型 · Alt+Q 问答工作台)`;
 
     const pill = ensureFloatingPillElement(onEditQuestion, onOpenBlockActions, onRunAction);
+    (pill as any).__lvGetPinnedActions = getPinnedActions;
     pill.className = `b3-tooltips b3-tooltips__w lv-card-badge-pill ${isCard ? "lv-card-badge-pill--card" : "lv-card-badge-pill--ordinary"}`;
     pill.setAttribute("aria-label", tooltipText);
     pill.setAttribute("data-block-id", blockID);
@@ -503,6 +518,24 @@ export function decorateEditorBlock(
         return false;
     }
     return true;
+}
+
+/** 仅刷新已挂载浮动胶囊的显示状态，绝不覆写完整回调闭包 */
+export function refreshFloatingPill(blockID?: string): boolean {
+    if (!floatingPillEl || !floatingPillEl.isConnected || !floatingPillBlockEl || !floatingPillBlockEl.isConnected) {
+        return false;
+    }
+    if (blockID && floatingPillBlockEl.getAttribute("data-node-id") !== blockID) {
+        return false;
+    }
+    const p = floatingPillEl as any;
+    return decorateEditorBlock(
+        floatingPillBlockEl,
+        p.__lvEditQuestion || (() => {}),
+        p.__lvOpenBlockActions,
+        p.__lvGetPinnedActions,
+        p.__lvRunAction,
+    );
 }
 
 function renderPillContent(
@@ -1029,7 +1062,7 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
             lastSelectionBlock = null;
             lastHoveredBlock = null;
             setActiveSelectedBlock(null);
-            unmountFloatingPill(false);
+            unmountFloatingPill(true);
         }
     };
 
@@ -1092,9 +1125,6 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
             }
             return;
         }
-
-        mountOrUpdateFloatingPill(target);
-        setActiveSelectedBlock(target);
     };
 
     const onGlobalTouchMove = (e: TouchEvent) => {
@@ -1136,15 +1166,22 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         setActiveSelectedBlock(target);
     };
 
-    const onWysiwygFocusIn = (e: FocusEvent) => {
+    const onDocumentFocusIn = (e: FocusEvent) => {
         if (disposed || !checkEnabled()) return;
+        const targetEl = e.target as HTMLElement | null;
+        if (targetEl?.closest?.(`${FLOATING_PILL_AND_MENU_SELECTOR}, .b3-dialog, .b3-menu`)) return;
         if (Date.now() < typingUntil || Date.now() < globalSelectionQuietUntil || isBlockActionMenuCurrentlyOpen()) return;
-        const rawBlock = (e.target as HTMLElement)?.closest?.(".protyle-wysiwyg [data-node-id]") as HTMLElement | null;
+        const rawBlock = targetEl?.closest?.(".protyle-wysiwyg [data-node-id]") as HTMLElement | null;
         const block = isValidEditorBlock(rawBlock) ? rawBlock : null;
         if (block) {
             lastSelectionBlock = block;
             mountOrUpdateFloatingPill(block);
             setActiveSelectedBlock(block);
+        } else {
+            lastSelectionBlock = null;
+            lastHoveredBlock = null;
+            setActiveSelectedBlock(null);
+            unmountFloatingPill(true);
         }
     };
 
@@ -1165,6 +1202,9 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         if (block) {
             mountOrUpdateFloatingPill(block);
             setActiveSelectedBlock(block);
+        } else {
+            setActiveSelectedBlock(null);
+            unmountFloatingPill(false);
         }
     };
 
@@ -1188,6 +1228,21 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
         }, delay);
     };
 
+    const onProtyleSwitchOrDestroy = () => {
+        if (disposed) return;
+        lastSelectionBlock = null;
+        lastHoveredBlock = null;
+        setActiveSelectedBlock(null);
+        options.onDisableCleanup?.();
+        unmountFloatingPill(true);
+    };
+
+    const onVisibilityChange = () => {
+        if (!disposed && typeof document !== "undefined" && document.hidden) {
+            unmountFloatingPill(true);
+        }
+    };
+
     if (typeof document !== "undefined") {
         cleanupDetachedBodyPortals(true);
         document.addEventListener("mouseover", onWysiwygMouseOver, { passive: true });
@@ -1204,9 +1259,12 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
             document.addEventListener("touchstart", onWysiwygTouchStart, { passive: true });
             document.addEventListener("touchend", onWysiwygTouchEnd, { passive: true });
         }
-        document.addEventListener("focusin", onWysiwygFocusIn, { passive: true });
+        document.addEventListener("focusin", onDocumentFocusIn, { passive: true });
         document.addEventListener("selectionchange", onSelectionChange, { passive: true });
+        document.addEventListener("visibilitychange", onVisibilityChange);
     }
+    options.eventBus?.on?.("switch-protyle", onProtyleSwitchOrDestroy);
+    options.eventBus?.on?.("destroy-protyle", onProtyleSwitchOrDestroy);
     if (typeof window !== "undefined") {
         window.addEventListener("scroll", onGlobalScroll, { passive: true, capture: true });
         window.addEventListener("resize", onWindowResize, { passive: true });
@@ -1229,6 +1287,8 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
                 observer.disconnect();
                 observer = null;
             }
+            options.eventBus?.off?.("switch-protyle", onProtyleSwitchOrDestroy);
+            options.eventBus?.off?.("destroy-protyle", onProtyleSwitchOrDestroy);
             if (typeof window !== "undefined") {
                 window.removeEventListener("lv-block-action-config-changed", onActionConfigChange);
                 window.removeEventListener("lv-block-action-store-updated", onActionConfigChange);
@@ -1253,8 +1313,9 @@ export function startEditorQaService(options: EditorQaServiceOptions): EditorQaS
                     document.removeEventListener("touchstart", onWysiwygTouchStart);
                     document.removeEventListener("touchend", onWysiwygTouchEnd);
                 }
-                document.removeEventListener("focusin", onWysiwygFocusIn);
+                document.removeEventListener("focusin", onDocumentFocusIn);
                 document.removeEventListener("selectionchange", onSelectionChange);
+                document.removeEventListener("visibilitychange", onVisibilityChange);
                 lastHoveredBlock = null;
                 touchTargetBlock = null;
                 unmountFloatingPill(true);

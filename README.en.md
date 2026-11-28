@@ -1,7 +1,7 @@
 # Lv Cards
 ### Full-Lifecycle Local-First Flashcard Memory Engine for SiYuan
 
-**Current Version: v0.233.7** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
+**Current Version: v0.233.8** ｜ [Changelog](./CHANGELOG.md) ｜ [中文](./README.md) ｜ [English](./README.en.md)
 
 **Turn your notes into long-term knowledge you can actually remember, apply, trace, revise, afford, and own.**
 
@@ -23,17 +23,17 @@ Lv Cards (`siyuan-lv-cards`) solves this by treating **SiYuan's native FSRS (Fre
 
 ---
 
-## 🆕 What's New In v0.233.7 (2026-11-26 Milestone Release)
+## 🆕 What's New In v0.233.8 (2026-11-27 Maintenance Release)
 
-- **Direct Overview Home Landing**: Clicking the Xiaolv Launchpad tile, topbar icon, or reopening lazy-restored tabs reliably reuses the existing tab and lands directly on the **Today · Overview** home view;
-- **Shared Ecosystem Hubs & Block-Assistant Isolation**: Integrated with Xiaolv Launchpad, unified AI Router, Block Assistant 1–8 native base + custom double-click, Omnisearch, and Backup/Restore; block actions are strictly isolated by block type and installed plugins, keeping the review workbench clean with zero capsule intrusion and direct click-to-reveal clozes;
-- **Designed AI Wait Experience & Real Cancellation**: AI Card Wizard (Step 1 generation & Step 2 single-card regeneration) and Settings connectivity test render the animated `.lv-ai-thinking` progress card with live elapsed timer and `AbortSignal` cancellation;
-- **60fps Zero `:has()` / Zero Heavy-Blur Polish**: Eliminated CSS `:has()` selectors and `blur(>=15px)` across the bundle, honored `custom-sy-readonly` / `custom-siyuan-readonly` readonly notes, refined light/dark theme contrast and `390×844` mobile responsiveness, and softened user-facing terminology;
-- **Zero-Pollution Attribute Q&A & Four-Level Diary Zone**: End-to-end `custom-riff-title` Q&A support without touching source note prose, plus conflict-free `#### 🐴 小驴记录` daily review summary sync;
-- **Tiered Startup & Official Settings Gear**: Reduced synchronous boot storage slots from 23 to 4 core slots and wired `openSetting()` for SiYuan's plugin manager gear icon.
+- **Zero-Touch Block Assistant & Instant Delete/Hide Hardening**: Enforced synchronous capsule hiding on delete-block/edit shortcuts with post-delete focus-bounce suppression, `0ms` mobile touchend execution, and `lv-kit` zero-Protyle-DOM-residue + Batch 1 A1–A4 alignment;
+- **Decluttered Starline Dashboard, Deck Manager & Quick Card**: Streamlined visual density across the dashboard, deck manager, and quick-card views, replaced native `prompt`/`confirm` dialogs, and added filtered empty states;
+- **Review Modal Stack & UI Polish**: Wired review modals into `lvSurfaceStack`, fixed dark market contrast, SiYuan AI key validation, quick-card wrapping, and QA/settings/hub/decks polish.
 
 <details>
-<summary>View Historical Release Highlights (v0.233.6 and earlier)</summary>
+<summary>View Historical Release Highlights (v0.233.7 and earlier)</summary>
+
+### v0.233.7
+* Direct Overview landing, shared Launchpad/AI Router/Block Assistant hubs, `.lv-ai-thinking` AI wait cards, zero `:has()` / zero heavy-blur 60fps polish, and tiered boot storage reduction.
 
 ### v0.233.6
 * Shared ecosystem hub integration, `.lv-ai-thinking` AI waiting cards, zero `:has()` polish, and tiered boot storage reduction.

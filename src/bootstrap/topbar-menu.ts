@@ -42,18 +42,11 @@ export interface TopbarMenuConfig {
 
 /**
  * 计算顶栏菜单应包含的菜单项列表（纯逻辑计算）
+ * 首层收敛为高频 5 项（闪卡中心 / 开始复习 / 快速制卡 / AI 制卡 / 设置），
+ * 技术状态、上手指南与演示私密模式归入中心或设置。
  */
 export function computeTopbarMenuItems(config: TopbarMenuConfig): TopbarMenuItemDescriptor[] {
     const items: TopbarMenuItemDescriptor[] = [];
-
-    if (config.v2State) {
-        items.push({
-            id: "v2-badge",
-            icon: "iconLvCards",
-            label: `Flashcard V2 · ${config.v2State}`,
-            type: "readonly",
-        });
-    }
 
     if (config.modules.stats) {
         items.push({
@@ -73,29 +66,15 @@ export function computeTopbarMenuItems(config: TopbarMenuConfig): TopbarMenuItem
         });
     }
 
-    if (config.modules.manager) {
-        items.push({
-            id: "manager",
-            icon: "iconLvCards",
-            label: config.i18n.menuManager,
-            click: config.actions.openManager,
-        });
+    if (items.length > 0) {
+        items.push({ id: "sep-1", type: "separator" });
     }
-
-    items.push({ id: "sep-1", type: "separator" });
 
     items.push({
         id: "quick-card",
         icon: "iconLvCards",
         label: config.i18n.menuQuickCard,
         click: config.actions.openQuickCard,
-    });
-
-    items.push({
-        id: "onboarding",
-        icon: "iconLvCards",
-        label: config.i18n.menuOnboarding,
-        click: config.actions.openOnboarding,
     });
 
     if (config.modules.create) {
@@ -113,18 +92,6 @@ export function computeTopbarMenuItems(config: TopbarMenuConfig): TopbarMenuItem
         label: config.i18n.menuSettings,
         click: config.actions.openSettingsDialog,
     });
-
-    if (config.actions.togglePresentationPrivacy) {
-        const isEnabled = config.presentationPrivacy?.enabled;
-        items.push({
-            id: "presentation-privacy",
-            icon: isEnabled ? "iconEyeoff" : "iconEye",
-            label: isEnabled
-                ? (config.i18n.menuPresentationPrivacyActive ?? "演示私密模式（已开启）")
-                : (config.i18n.menuPresentationPrivacy ?? "演示私密模式"),
-            click: config.actions.togglePresentationPrivacy,
-        });
-    }
 
     return items;
 }

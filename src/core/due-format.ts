@@ -7,7 +7,7 @@
  */
 export function formatRatingDueText(dueString?: string | null): string {
     if (!dueString) return "";
-    return dueString.replace(/^\d{4}-0?/, "").replace(/:\d{2}$/, "");
+    return dueString.replace(/^\d{4}-0?(\d+)-0?(\d+)/, "$1-$2").replace(/:\d{2}$/, "");
 }
 
 /**

@@ -1,9 +1,9 @@
 <script lang="ts">
     import { showMessage } from "@/libs/notice";
+    import { lvConfirm } from "./kit/lvConfirm";
     import { getBlockDOM, getBlockAttrs, setBlockAttrs, sqlQuery } from "@/api/siyuan";
     import { extractCardQuestionAttr, extractCardAnswerAttr, buildCardQuestionAttrs, buildCardAnswerAttrs } from "@/core/block-attributes";
-    import { decorateEditorBlock } from "@/core/editor-qa-service";
-    import { findFloatingPillAnchor } from "@/core/block-dom-utils";
+    import { refreshFloatingPill } from "@/core/editor-qa-service";
     import { safeDocTitleFromHPath, showDocTreeNativeMenu } from "@/libs/lv-notice-kit";
     import { diffLines, type DiffRow } from "@/core/line-diff";
     import { isSuperBlockHtml, renderSuperBlockAnswerFace } from "@/core/card-face";
@@ -169,11 +169,7 @@
             customAnswer = trimmed;
             isEditingAnswer = false;
             try {
-                const blockEls = document.querySelectorAll(`.protyle-wysiwyg [data-node-id="${block.id}"], [data-node-id="${block.id}"]`);
-                blockEls.forEach((blockEl) => {
-                    if (trimmed) blockEl.setAttribute("custom-riff-answer", trimmed);
-                    else blockEl.removeAttribute("custom-riff-answer");
-                });
+                refreshFloatingPill(block.id);
             } catch { /* ignore */ }
             showMessage(trimmed ? "自定义答案已保存至块属性" : "已恢复使用笔记正文作为答案", 2000, "info");
             onSaved?.(block.id);
@@ -193,14 +189,7 @@
             isEditingQuestion = false;
             try {
                 document.dispatchEvent(new CustomEvent("flashcard-title-saved", { detail: { blockId: block.id, question: trimmed } }));
-                const blockEls = document.querySelectorAll(`.protyle-wysiwyg [data-node-id="${block.id}"], [data-node-id="${block.id}"]`);
-                blockEls.forEach((blockEl) => {
-                    if (trimmed) blockEl.setAttribute("custom-riff-title", trimmed);
-                    else blockEl.removeAttribute("custom-riff-title");
-                    if (findFloatingPillAnchor(block.id)) {
-                        decorateEditorBlock(blockEl as HTMLElement, () => {});
-                    }
-                });
+                refreshFloatingPill(block.id);
             } catch { /* ignore */ }
             showMessage(t.cardQuestionSaved ?? "闪卡问题已保存至块属性", 2000, "info");
             onSaved?.(block.id);
@@ -393,9 +382,12 @@
         return ok;
     }
 
-    function safeClose() {
+    async function safeClose() {
         if (editing) {
-            const confirmed = window.confirm(t.editor?.discardConfirm ?? "当前卡片正在编辑中，确定放弃未保存的修改并关闭吗？");
+            const confirmed = await lvConfirm({
+                title: t.editor?.discardTitle ?? "放弃编辑",
+                content: t.editor?.discardConfirm ?? "当前卡片正在编辑中，确定放弃未保存的修改并关闭吗？",
+            });
             if (!confirmed) return;
         }
         onClose();

@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { lvSurfaceStack } from "@/libs/notice";
+
     let {
         open = false,
         rescheduleDays = $bindable(1),
@@ -23,6 +25,20 @@
         onClose: () => void;
     } = $props();
 
+    let rootEl = $state<HTMLElement | null>(null);
+    $effect(() => {
+        if (!open) return;
+        return lvSurfaceStack.push({
+            id: "lv-review-reschedule",
+            type: "dialog",
+            dismiss: () => {
+                if (!open || rootEl?.closest("[hidden], [inert]")) return false;
+                onClose();
+                return true;
+            },
+        });
+    });
+
     const invalidRescheduleDays = $derived(!Number.isSafeInteger(rescheduleDays) || rescheduleDays < 1 || rescheduleDays > 36500);
 
     const confirmLabel = $derived(
@@ -37,6 +53,7 @@
 {#if open}
     <div
         class="lv-reschedule lv-card2"
+        bind:this={rootEl}
         role="region"
         aria-label={t.review?.helpReschedule ?? "快速改期"}
         aria-busy={rescheduleBusy}

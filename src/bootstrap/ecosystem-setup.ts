@@ -25,7 +25,8 @@ import { type ExtractEnvelope } from "@/core/incremental-learning";
 import { validateCardEntry } from "@/core/card-entry-gate";
 import { executeQuickCardCreation } from "@/core/card-operations";
 import { readPluginJsonFile, writePluginJsonFile } from "@/api/plugin-json-file";
-import { getNotebooks, createDocWithMd, setBlockAttrs, sqlQuery } from "@/api/siyuan";
+import { openTab, fetchSyncPost } from "siyuan";
+import { getNotebooks, createDocWithMd, setBlockAttrs, sqlQuery, canOpenMobileFile, openMobileFile } from "@/api/siyuan";
 import { addInboxItem, normalizeInbox } from "@/core/inbox";
 import { storesChangedEvent, LV_EVENTS } from "@/libs/events";
 import { SUSPEND_TODAY_DATA, INBOX_DATA } from "@/bootstrap/storage-keys";
@@ -424,6 +425,12 @@ export function setupEcosystemIntegrations(plugin: any): void {
     }));
 
     registerCardsLaunchpad(plugin);
+    lvLaunchpad.registerHostApi({
+        openTab,
+        openMobileFileById: canOpenMobileFile() ? (app: any, id: string) => openMobileFile(app, id) : undefined,
+        fetchSyncPost,
+        app: plugin.app,
+    });
     plugin.disposerRegistry.register(lvLaunchpad.ensureUnifiedEntry(plugin));
 
     plugin.disposerRegistry.register(lvOmnisearch.registerProvider("siyuan-lv-cards", (keyword) => {

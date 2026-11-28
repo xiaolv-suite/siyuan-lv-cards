@@ -279,10 +279,11 @@ export interface ReviewModalFlags {
     showRetireModal: boolean;
     showDeleteModal?: boolean;
     showReschedule?: boolean;
+    showCramModal?: boolean;
 }
 
 /**
- * 判定当前是否存在任意复习操作模态弹窗处于打开状态（包含改期弹窗与删块弹窗）
+ * 判定当前是否存在任意复习操作模态弹窗处于打开状态（包含改期弹窗、删块弹窗与突击快刷弹窗）
  */
 export function isAnyReviewModalOpen(flags: ReviewModalFlags): boolean {
     return Boolean(
@@ -291,7 +292,8 @@ export function isAnyReviewModalOpen(flags: ReviewModalFlags): boolean {
         flags.showMemoEditor ||
         flags.showRetireModal ||
         flags.showDeleteModal ||
-        flags.showReschedule
+        flags.showReschedule ||
+        flags.showCramModal
     );
 }
 

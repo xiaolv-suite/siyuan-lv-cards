@@ -57,6 +57,7 @@ export async function bindCardsSecretSlots(options: {
     updates: Partial<Record<CardsSecretSlot, string>>;
     host?: any;
     fetchFn?: typeof fetch;
+    plugin?: SecretPluginHost;
 }): Promise<{ ok: boolean; readOnlyFallback: boolean; reason: string }> {
     const entries = Object.entries(options.updates).filter(
         (pair): pair is [CardsSecretSlot, string] => typeof pair[0] === "string" && typeof pair[1] === "string",
@@ -153,6 +154,19 @@ export async function bindCardsSecretSlots(options: {
             if (host?.siyuan?.config) {
                 if (!host.siyuan.config.secrets) host.siyuan.config.secrets = { items: [] };
                 host.siyuan.config.secrets.items = nextItems;
+            }
+        }
+        // 写后回读核验：确认 readCardsSecretSlot / 宿主密钥表已真实落库且与写入值一致，才允许返回 ok 并清理旧明文
+        for (const [slot, expected] of entries) {
+            let actual = readCardsSecretSlot(options.plugin, slot);
+            if (!actual && Array.isArray(host?.siyuan?.config?.secrets?.items)) {
+                const found = host.siyuan.config.secrets.items.find((it: any) => it && (it.name === slot || it.key === slot));
+                if (found && typeof found.value === "string") {
+                    actual = found.value;
+                }
+            }
+            if (actual !== expected) {
+                return { ok: false, readOnlyFallback: true, reason: "secret_readback_mismatch" };
             }
         }
         return { ok: true, readOnlyFallback: false, reason: "ok" };

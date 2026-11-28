@@ -198,6 +198,7 @@ export async function applyTier1PluginStores(
             updates: migrationUpdates,
             host: plugin?.secretHost ?? plugin?.host,
             fetchFn: plugin?.secretFetchFn ?? plugin?.fetchFn,
+            plugin,
         });
         for (const field of legacyFields) {
             const configuredField = `${field}Configured` as "aiKeyConfigured" | "aiFallbackKeyConfigured" | "ankiClientKeyConfigured";

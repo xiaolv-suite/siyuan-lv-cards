@@ -1,6 +1,6 @@
 {
   "name": "siyuan-lv-cards",
-  "version": "0.233.7",
+  "version": "0.233.8",
   "type": "module",
   "description": "Lv Cards / 小驴闪卡 - a local-first, full-lifecycle flashcard learning platform for SiYuan, built on the native FSRS scheduler",
   "repository": "https://github.com/xiaolv-suite/siyuan-lv-cards",

@@ -36,8 +36,8 @@
             aiCostBudgetEnabled?: boolean;
             aiCostMonthlyCap?: number;
         };
-        onSave: (payload: { question: string; answer: string; targetDeckID?: string; subtype?: AttrQaSubtype; hint?: string; bidi?: boolean }) => Promise<void>;
-        onClear: () => Promise<void>;
+        onSave: (payload: { question: string; answer: string; targetDeckID?: string; subtype?: AttrQaSubtype; hint?: string; bidi?: boolean }) => Promise<boolean | void>;
+        onClear: () => Promise<boolean | void>;
         onClose: () => void;
     }
 
@@ -145,7 +145,10 @@
         previewFace = previewFace === "front" ? "back" : "front";
     }
 
+    let aiSeq = 0;
+
     function cancelAiSuggest() {
+        aiSeq += 1;
         if (aiAbortCtrl) {
             aiAbortCtrl.abort();
             aiAbortCtrl = null;
@@ -155,6 +158,7 @@
     }
 
     onDestroy(() => {
+        aiSeq += 1;
         if (aiAbortCtrl) {
             aiAbortCtrl.abort();
             aiAbortCtrl = null;
@@ -227,12 +231,13 @@
             ? maskSensitive(rawText, parseSensitiveList()).masked
             : rawText;
 
+        const seq = ++aiSeq;
         isAiGenerating = true;
         aiElapsedSec = 0;
         const ctrl = new AbortController();
         aiAbortCtrl = ctrl;
         let timer: any = setInterval(() => {
-            if (isAiGenerating) aiElapsedSec += 1;
+            if (isAiGenerating && seq === aiSeq) aiElapsedSec += 1;
             else clearInterval(timer);
         }, 1000);
 
@@ -250,6 +255,7 @@
                 prompt,
                 { timeoutMs: 25000, signal: ctrl.signal }
             );
+            if (seq !== aiSeq || ctrl.signal.aborted) return;
 
             const extracted = extractSuggestedQuestionFromAiResponse(res);
             if (!extracted.ok) {
@@ -260,13 +266,15 @@
             textareaEl?.focus();
             showMessage(t?.cardQuestionAiSuccess ?? "AI 已生成推荐问题，右侧实时卡面已同步更新", 2000, "info");
         } catch (err: any) {
-            if (!ctrl.signal.aborted) {
+            if (seq === aiSeq && !ctrl.signal.aborted) {
                 showMessage(err?.message || "AI 拟题失败，请检查 AI 配置", 3000, "error");
             }
         } finally {
             clearInterval(timer);
-            isAiGenerating = false;
-            aiAbortCtrl = null;
+            if (seq === aiSeq) {
+                isAiGenerating = false;
+                if (aiAbortCtrl === ctrl) aiAbortCtrl = null;
+            }
         }
     }
 
@@ -274,7 +282,7 @@
         if (isSaving) return;
         isSaving = true;
         try {
-            await onSave({
+            const res = await onSave({
                 question: subtype === "direct" ? "" : question.trim(),
                 answer: answer.trim(),
                 targetDeckID: !isAlreadyCard ? (selectedDeckID || undefined) : undefined,
@@ -282,7 +290,9 @@
                 hint: subtype === "recite" ? hint.trim() : "",
                 bidi: subtype === "dual" ? bidiEnabled : false,
             });
-            onClose();
+            if (res !== false) {
+                onClose();
+            }
         } catch (err: any) {
             showMessage(err?.message || "保存失败", 3000, "error");
         } finally {
@@ -294,8 +304,10 @@
         if (isClearing) return;
         isClearing = true;
         try {
-            await onClear();
-            onClose();
+            const res = await onClear();
+            if (res !== false) {
+                onClose();
+            }
         } catch (err: any) {
             showMessage(err?.message || "清除失败", 3000, "error");
         } finally {
@@ -313,6 +325,7 @@
     }
 
     function handleKeydown(e: KeyboardEvent) {
+        if (e.isComposing || e.keyCode === 229) return;
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
             e.preventDefault();
             void handleSave();
@@ -323,6 +336,7 @@
     }
 
     function handleDialogKeydown(e: KeyboardEvent) {
+        if (e.isComposing || e.keyCode === 229) return;
         const isInputField = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
             e.preventDefault();
@@ -377,7 +391,7 @@
                     title="展开/收起免侵入问答使用指南与快捷键"
                 >
                     <LvIcon name="lightbulb" size={12} />
-                    <span>💡 使用指南</span>
+                    <span>使用指南</span>
                 </button>
                 <span class="lv-qa-zero-pollute-tag">🌿 零正文污染</span>
             </div>
@@ -923,7 +937,8 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        flex-wrap: wrap;
+        gap: 6px 10px;
         padding: 6px 12px;
         border-radius: var(--lv-r-m, 8px);
         background: color-mix(in srgb, var(--b3-theme-surface) 95%, transparent);
@@ -934,16 +949,19 @@
     .lv-qa-meta-left {
         display: flex;
         align-items: center;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 6px 8px;
         min-width: 0;
-        flex: 1;
+        flex: 1 1 220px;
     }
 
     .lv-qa-meta-right {
         display: flex;
         align-items: center;
-        gap: 8px;
-        flex-shrink: 0;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        flex: 0 1 auto;
+        max-width: 100%;
     }
 
     .lv-qa-status-pill {

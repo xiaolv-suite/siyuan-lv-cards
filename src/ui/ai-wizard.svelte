@@ -15,7 +15,7 @@
     import { getMotionDuration } from "./kit/motion";
     import LvIcon from "./kit/LvIcon.svelte";
     import { extractDroppedBlockText } from "@/core/drag-drop";
-    import { createLvAiProgressTracker, type LvAiProgressTracker } from "@/libs/lv-notice-kit";
+    import { createLvAiProgressTracker, mountLvAiThinkingCard, type LvAiProgressTracker } from "@/libs/lv-notice-kit";
 
     /** BU-36 分层预算报告（宿主 assembleGeneratePrompt 纯函数产出） */
     interface BudgetPreview {
@@ -48,7 +48,7 @@
         }
     }
 
-    let aiProgressTimer: any = null;
+    let thinkingMountEl = $state<HTMLDivElement | null>(null);
 
     function appendCommonSnippet(snip: CommonSnippet) {
         const title = snip.title || "常用语素材";
@@ -56,8 +56,10 @@
         showMessage(`已引入素材「${title}」`, 2000, "info");
     }
 
-    let { i18n, initialSource = "", initialSources = [], loadCurrentDoc, loadNotebookMaterial, loadNotebooks, generate, onCreate, onClose, closeLabel, embedded = false, onImportComplete, getUnfinishedJob, openDocById, isSourceDenied, onDenySource, sensitiveTerms = "", modelTrustKnown, previewBudget, recoveryJob = null }: {
+    let { i18n, initialSource = "", initialSources = [], loadCurrentDoc, loadNotebookMaterial, loadNotebooks, generate, onCreate, onClose, closeLabel, embedded = false, aiConfigured, openSettings, onImportComplete, getUnfinishedJob, openDocById, isSourceDenied, onDenySource, sensitiveTerms = "", modelTrustKnown, previewBudget, recoveryJob = null }: {
         i18n: any;
+        aiConfigured?: boolean;
+        openSettings?: () => void;
         /** 预填材料（leech 改写联动） */
         initialSource?: string;
         /** 带有来源身份的预填材料（收件箱联动）；正文仍由用户在本次发送前核对 */
@@ -378,15 +380,18 @@ TCP 建立连接需要进行三次握手：
     let currentJobId = $state("");
     let restoredCandidates = $state(false);
     let busy = $state(false);
-    let aiElapsedSec = $state(0);
     let creating = $state(false);
     let errorMsg = $state("");
 
-    const aiStageText = $derived.by(() => {
-        if (aiElapsedSec < 3) return "📖 正在快速阅读与解析笔记材料上下文…";
-        if (aiElapsedSec < 8) return "🎯 正在提炼核心知识点与记忆图谱锚点…";
-        if (aiElapsedSec < 16) return `✍️ 正在批量构思并设计高质量的 ${cardType === "cloze" ? "挖空" : "问答"} 卡片…`;
-        return "✨ 正在进行格式合规性审查与答案校验，马上就来…";
+    $effect(() => {
+        if (!busy || !thinkingMountEl) return;
+        const handle = mountLvAiThinkingCard(thinkingMountEl, {
+            scenario: "question-gen",
+            defaultIcon: "✨",
+            cancelLabel: "取消生成",
+            onCancel: cancelGeneration,
+        });
+        return () => handle.destroy();
     });
 
     /** 将网络/服务端错误转换为稳定、可操作的提示；不把响应正文或 URL 原样展示。 */
@@ -677,10 +682,6 @@ TCP 建立连接需要进行三次握手：
         genSeq += 1; // 使在途响应失效
         genCtrl?.abort();
         genCtrl = null;
-        if (aiProgressTimer) {
-            clearInterval(aiProgressTimer);
-            aiProgressTimer = null;
-        }
         regenTracker?.dispose();
         regenTracker = null;
         busy = false;
@@ -691,10 +692,6 @@ TCP 建立连接需要进行三次握手：
         disposed = true;
         // 外部销毁（宿主关闭对话框/插件卸载）也必须取消在途 AI 请求与定时器。
         genSeq += 1;
-        if (aiProgressTimer) {
-            clearInterval(aiProgressTimer);
-            aiProgressTimer = null;
-        }
         regenTracker?.dispose();
         regenTracker = null;
         genCtrl?.abort();
@@ -716,20 +713,6 @@ TCP 建立连接需要进行三次握手：
         genCtrl = new AbortController();
         const myCtrl = genCtrl;
         busy = true;
-        aiElapsedSec = 0;
-        if (aiProgressTimer) {
-            clearInterval(aiProgressTimer);
-            aiProgressTimer = null;
-        }
-        aiProgressTimer = setInterval(() => {
-            if (busy) aiElapsedSec += 1;
-            else {
-                if (aiProgressTimer) {
-                    clearInterval(aiProgressTimer);
-                    aiProgressTimer = null;
-                }
-            }
-        }, 1000);
         errorMsg = "";
         try {
             const focusInstruction = FOCUS_OPTIONS.find(f => f.id === promptFocus)?.instruction;
@@ -762,10 +745,6 @@ TCP 建立连接需要进行三次握手：
             }
             errorMsg = aiErrorText(e);
         } finally {
-            if (aiProgressTimer) {
-                clearInterval(aiProgressTimer);
-                aiProgressTimer = null;
-            }
             if (seq === genSeq) {
                 busy = false;
                 genCtrl = null;
@@ -918,6 +897,7 @@ TCP 建立连接需要进行三次握手：
     }
 
     function onKeydown(e: KeyboardEvent) {
+        if (e.isComposing || e.keyCode === 229) return;
         if (creating) return;
         if (e.key === "Escape") {
             if (previewOpen) {
@@ -986,6 +966,23 @@ TCP 建立连接需要进行三次握手：
 
     {#if step === 1}
         <div class="lv-aiwiz-step" transition:fade={{ duration: getMotionDuration("normal") }}>
+            {#if aiConfigured === false && !embedded}
+                <div class="lv-aiwiz-config-notice" role="status">
+                    <div class="lv-aiwiz-config-notice-copy">
+                        <LvIcon name="warning" size={15} />
+                        <div>
+                            <strong>{t.aiNotConfiguredTitle ?? "尚未配置 AI 模型或 API 密钥"}</strong>
+                            <p>{t.aiNotConfiguredDesc ?? "请先在设置中选择思源内置 AI 或填写自定义服务商密钥后再生成；也可随时切换回「手工制卡」离线制卡。"}</p>
+                        </div>
+                    </div>
+                    {#if openSettings}
+                        <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => openSettings?.()}>
+                            <LvIcon name="settings" size={13} />
+                            <span>{t.aiNotConfiguredAction ?? "前往设置配置"}</span>
+                        </button>
+                    {/if}
+                </div>
+            {/if}
             <!-- T02 完整工作面（docs/13 §4）：左=来源清单与载入，右=材料编辑与参数 -->
             <div class="lv-wb">
                 <div class="lv-wb-side">
@@ -1294,17 +1291,7 @@ TCP 建立连接需要进行三次握手：
                 </div>
             {/if}
             {#if busy}
-                <div class="lv-ai-thinking" role="status" aria-live="polite" style="margin: var(--lv-sp-3) 0; padding: 18px 12px; background: color-mix(in srgb, var(--b3-theme-surface) 95%, transparent); border: 1px solid var(--lv-border); border-radius: var(--lv-r-card, 12px);">
-                    <div class="lv-ai-thinking__glow">
-                        <span class="lv-ai-thinking__icon">✨</span>
-                    </div>
-                    <div class="lv-ai-thinking__stage">{aiStageText}</div>
-                    <div class="lv-ai-thinking__timer">已思考 <b>{aiElapsedSec}</b> 秒</div>
-                    <div class="lv-ai-thinking__progress"><div class="lv-ai-thinking__bar"></div></div>
-                    <button type="button" class="b3-button b3-button--cancel lv-ai-thinking__cancel" onclick={cancelGeneration}>
-                        取消生成
-                    </button>
-                </div>
+                <div bind:this={thinkingMountEl} style="margin: var(--lv-sp-3) 0;"></div>
             {/if}
             <div class="fn__flex lv-aiwiz-actions" style="justify-content: flex-end; gap: var(--lv-sp-2)">
                 <button
@@ -1667,6 +1654,29 @@ TCP 建立连接需要进行三次握手：
         max-width: 48em;
         text-wrap: pretty;
         line-height: var(--lv-lh-reading, 1.65);
+    }
+    .lv-aiwiz-config-notice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-3);
+        margin-bottom: var(--lv-sp-3);
+        padding: 10px 14px;
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 35%, transparent);
+        border-left: 3px solid var(--lv-color-warning);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));
+    }
+    .lv-aiwiz-config-notice-copy {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        flex: 1 1 260px;
+        min-width: 0;
+        color: var(--lv-color-warning);
+        strong { display: block; font-size: var(--lv-type-control-size); color: var(--lv-color-text); }
+        p { margin: 2px 0 0; font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); line-height: 1.5; }
     }
     .lv-aiwiz-list {
         display: flex;

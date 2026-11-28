@@ -9,6 +9,7 @@
     import MarketplaceStudio from "./marketplace-studio.svelte";
     import StudioWorkbench from "./studio-workbench.svelte";
     import RecoveryPage from "./recovery-page.svelte";
+    import StatsPage from "./stats-page.svelte";
     import type { DashboardCtx } from "./dashboard.svelte";
     import type { ManagerCtx } from "./manager.svelte";
     import type { ExamPlan, ExamPlansData, ExamScopeKind } from "@/core/exam";
@@ -28,7 +29,7 @@
 
     let {
         i18n, dashboardBase, managerCtx, exam, inbox, goals, maintenance, recovery, uiMode = "advanced", initialTab = "overview", initialBlockID = "", onTabChange, onCloseMobile,
-        openWizard, openDrill, openChallenge, openPairing, openQuickCard, loadWizardView, loadQuickCardView, openSettings, openPalette, getSettingsHealth,
+        openWizard, openDrill, openChallenge, openPairing, openQuickCard, loadWizardView, loadQuickCardView, openSettings, openPalette, getSettingsHealth, presentationPrivacy,
     }: {
         i18n: any;
         /** 总览页上下文（不含 openManager，由 Hub 内部切换页签实现） */
@@ -54,6 +55,8 @@
         openPalette?: () => void;
         /** 只提供非敏感的配置状态，不向 UI 暴露密钥或端点。 */
         getSettingsHealth?: () => { aiConfigured: boolean };
+        /** 演示私密模式切换（收口自顶栏右键菜单，归入中心设置页） */
+        presentationPrivacy?: { isEnabled: () => boolean; toggle: () => void };
         /** 考试子页数据通道；null = 模块关闭 */
         exam: {
             plans: ExamPlansData;
@@ -140,12 +143,14 @@
         { id: "marketplace", label: i18n.hubPrimaryMarketplace ?? "集市", icon: "store" },
         { id: "studio", label: i18n.hubPrimaryStudio ?? "制卡", icon: "plus" },
         { id: "learning", label: i18n.hubPrimaryLearning ?? "学习", icon: "learn" },
+        { id: "stats", label: i18n.hubPrimaryStats ?? "统计", icon: "chart" },
         { id: "settings", label: i18n.hubPrimarySettings ?? "设置", icon: "settings" },
     ] satisfies { id: string; label: string; icon: LvIconName; badge?: string | number; badgeLabel?: string }[]));
-    // Mobile Spec v1：手机端底部主导航收敛 ≤5 项——按手机用户心智排序：今日刷卡 → 卡库 → 学习复盘 → 集市 → 制卡（制卡靠右降级）
+    // Mobile Spec：手机端底部主导航含「今日 / 卡组 / 统计 / 学习 / 集市 / 制卡」6 个核心区（390px 均分 6 列零溢出）
     const mobileTabs = $derived([
         primaryTabs.find(t => t.id === "today"),
         primaryTabs.find(t => t.id === "library"),
+        primaryTabs.find(t => t.id === "stats"),
         primaryTabs.find(t => t.id === "learning"),
         primaryTabs.find(t => t.id === "marketplace"),
         primaryTabs.find(t => t.id === "studio"),
@@ -164,9 +169,10 @@
         { id: "recovery", label: i18n.hubTabRecovery ?? "待处理与恢复" },
     ];
     // 简洁模式隐藏高级导航，但今日建议与恢复中心仍可直达维护闭环。
-    const knownIds = new Set(["today", "library", "marketplace", "studio", "learning", "settings", "decks", "maintenance", ...legacyTabs.map(t => t.id)]);
+    const knownIds = new Set(["today", "library", "marketplace", "studio", "learning", "stats", "settings", "decks", "maintenance", ...legacyTabs.map(t => t.id)]);
     function initialRoute(id: string): string {
         if (id === "settings") return "settings";
+        if (id === "stats") return "stats";
         // 旧入口「goals」仍保留兼容，但落到完整学习页的目标与计划分面。
         if (id === "goals") return "learning";
         if (knownIds.has(id) && (id === "overview" || id === "manage" || id === "marketplace" || id === "authoring" || id === "goals" || id === "inbox" || id === "exam" || id === "decks" || id === "maintenance" || id === "recovery")) return id;
@@ -191,6 +197,7 @@
         if (route === "manage" || route === "decks" || route === "maintenance") return "library";
         if (route === "authoring" || route === "inbox") return "studio";
         if (route === "learning" || route === "goals" || route === "exam") return "learning";
+        if (route === "stats") return "stats";
         return route === "settings" ? "settings" : "today";
     }
 
@@ -199,6 +206,12 @@
     let unsubscribeExamPlans: (() => void) | null = null;
     // svelte-ignore state_referenced_locally -- host health callback is stable for this Hub mount.
     let settingsHealth = $state(getSettingsHealth?.() ?? { aiConfigured: false });
+    // svelte-ignore state_referenced_locally -- synced on toggle click.
+    let privacyEnabled = $state(presentationPrivacy?.isEnabled?.() ?? false);
+    function togglePrivacyFromHub() {
+        presentationPrivacy?.toggle();
+        privacyEnabled = presentationPrivacy?.isEnabled?.() ?? !privacyEnabled;
+    }
     // svelte-ignore state_referenced_locally -- inbox source is fixed for this Hub lifetime.
     let inboxOpenCount = $state(inbox?.get().items.filter(item => item.status !== "dismissed").length ?? 0);
     let unsubscribeInbox: (() => void) | null = null;
@@ -512,7 +525,7 @@
             {#if !loadQuickCardView}<span id="lv-r54-new-card-hint" class="lv-sr-only">{i18n.hubManualUnavailable ?? "当前宿主未提供手工制卡入口"}</span>{/if}
         </aside>
         <section class="lv-r54-content">
-            {#if (primaryFor(active) === "library" && uiMode !== "simple") || (primaryFor(active) === "studio" && inbox) || primaryFor(active) === "learning" || active === "recovery"}
+            {#if (primaryFor(active) === "library" && uiMode !== "simple") || (primaryFor(active) === "studio" && inbox) || (primaryFor(active) === "learning" && exam && uiMode !== "simple") || active === "recovery"}
             <div class="lv-hub-bar">
                 {#if primaryFor(active) === "library" && uiMode !== "simple"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryLibrary ?? "卡组"}>
@@ -525,12 +538,10 @@
                         <button class:lv-hub-subnav-active={active === "authoring"} class="lv-hub-subnav-btn" aria-current={active === "authoring" ? "page" : undefined} onclick={() => switchTab("authoring")}>{i18n.hubTabAuthoring ?? "制卡工坊"}</button>
                         <button class:lv-hub-subnav-active={active === "inbox"} class="lv-hub-subnav-btn" aria-current={active === "inbox" ? "page" : undefined} onclick={() => switchTab("inbox")}>{i18n.hubTabInbox}{#if inboxOpenCount > 0} ({inboxOpenCount}){/if}</button>
                     </nav>
-                {:else if primaryFor(active) === "learning"}
+                {:else if primaryFor(active) === "learning" && exam && uiMode !== "simple"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubSecondaryLabel ?? "学习工具"}>
                         <button class:lv-hub-subnav-active={active === "learning"} class="lv-hub-subnav-btn" aria-current={active === "learning" ? "page" : undefined} onclick={() => switchTab("learning")}>{i18n.hubPrimaryLearning ?? "学习"}</button>
-                        {#if exam && uiMode !== "simple"}
-                            <button class:lv-hub-subnav-active={active === "exam"} class="lv-hub-subnav-btn" aria-current={active === "exam" ? "page" : undefined} onclick={() => switchTab("exam")}>{i18n.hubTabExam}</button>
-                        {/if}
+                        <button class:lv-hub-subnav-active={active === "exam"} class="lv-hub-subnav-btn" aria-current={active === "exam" ? "page" : undefined} onclick={() => switchTab("exam")}>{i18n.hubTabExam}</button>
                     </nav>
                 {:else if active === "recovery"}
                     <nav class="lv-hub-subnav" aria-label={i18n.hubPrimaryToday ?? "今日"}>
@@ -607,9 +618,19 @@
                         </div>
                         <section class="lv-card2 lv-r54-settings-action">
                             <div><h3>{i18n.hubSettingsOpenTitle ?? "需要修改配置？"}</h3><p>{i18n.hubSettingsOpenDesc ?? "打开完整设置，保存后会回到当前工作台。"}</p></div>
-                            <button class="b3-button lv-btn-primary" disabled={!openSettings} onclick={openFullSettings}>{i18n.hubSettingsOpen ?? "打开完整设置"}</button>
+                            <div style="display:flex;flex-wrap:wrap;gap:var(--lv-sp-2);align-items:center;">
+                                <button type="button" class="b3-button b3-button--outline" onclick={() => dashboardBase.openOnboarding()}>{i18n.menuOnboarding ?? "上手指南"}</button>
+                                {#if presentationPrivacy}
+                                    <button type="button" class="b3-button b3-button--outline" aria-pressed={privacyEnabled} onclick={togglePrivacyFromHub}>
+                                        {privacyEnabled ? (i18n.menuPresentationPrivacyActive ?? "演示私密模式（已开启）") : (i18n.menuPresentationPrivacy ?? "演示私密模式")}
+                                    </button>
+                                {/if}
+                                <button class="b3-button lv-btn-primary" disabled={!openSettings} onclick={openFullSettings}>{i18n.hubSettingsOpen ?? "打开完整设置"}</button>
+                            </div>
                         </section>
                     </div>
+                {:else if active === "stats"}
+                    <StatsPage ctx={dctx} />
                 {:else if active === "learning"}
                     {#if LearningComp}
                         {#key learningViewKey}
@@ -734,6 +755,7 @@
                     {i18n}
                     isActive={active === "authoring"}
                     aiConfigured={settingsHealth.aiConfigured}
+                    openSettings={openFullSettings}
                     loadWizard={loadWizardView}
                     loadQuickCard={loadQuickCardView}
                     {openDrill}
@@ -779,6 +801,7 @@
         position: relative;
         overflow-x: hidden;
         container: lv-hub / inline-size;
+        font-family: var(--lv-font-sans, Inter, "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif);
     }
 
     /* Mobile Spec v2：紧凑单行顶栏整合标题、设置齿轮与关闭钮，桌面端隐藏，杜绝悬浮按钮遮挡子页内容 */
@@ -983,10 +1006,12 @@
         flex: 1;
         min-height: 0;
         position: relative;
+        display: flex;
+        flex-direction: column;
     }
     .lv-hub-panel {
         box-sizing: border-box;
-        height: 100%;
+        flex: 1;
         min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
@@ -1206,7 +1231,9 @@
         .lv-hub-subnav { margin: 0 0 var(--lv-sp-1); }
         .lv-hub-panel :global(.lv-pagehead-titles),
         .lv-hub-panel :global(.lv-studio-heading),
-        .lv-hub-panel :global(.lv-pagehead:not(.lv-pagehead--with-actions)) {
+        .lv-hub-panel :global(.lv-pagehead:not(.lv-pagehead--with-actions)),
+        .lv-hub-panel :global(.lv-dm-header),
+        .lv-hub-panel :global(.lv-market-head) {
             display: none !important;
         }
         .lv-hub-panel :global(.lv-pagehead.lv-pagehead--with-actions) {
@@ -1219,10 +1246,10 @@
         }
         .lv-hub-mobile-nav {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: calc(var(--lv-space-unit) * 1);
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 2px;
             flex: none;
-            padding: calc(var(--lv-space-unit) * 2) var(--lv-sp-2) max(calc(var(--lv-space-unit) * 2), env(safe-area-inset-bottom));
+            padding: calc(var(--lv-space-unit) * 2) var(--lv-sp-1) max(calc(var(--lv-space-unit) * 2), env(safe-area-inset-bottom));
             border-top: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
             background: color-mix(in srgb, var(--lv-color-surface) 94%, transparent);
             backdrop-filter: blur(14px) saturate(1.15);

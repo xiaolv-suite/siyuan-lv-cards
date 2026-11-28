@@ -6,16 +6,19 @@ import { confirmDialog } from "@/libs/dialog";
 
 export interface LvConfirmArgs {
     title: string;
-    /** 纯文本或 HTML 片段（调用方负责转义用户输入） */
+    /** Plain text; rendered with textContent so user-provided labels cannot inject HTML. */
     content: string;
     width?: string;
 }
 
 export function lvConfirm(args: LvConfirmArgs): Promise<boolean> {
+    const content = document.createElement("div");
+    content.textContent = args.content;
+    content.style.whiteSpace = "pre-wrap";
     return new Promise((resolve) => {
         confirmDialog({
             title: args.title,
-            content: args.content,
+            content,
             width: args.width,
             confirm: () => resolve(true),
             cancel: () => resolve(false),

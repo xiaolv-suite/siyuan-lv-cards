@@ -272,6 +272,9 @@
     const hasActiveFilters = $derived(
         Boolean(filterText.trim() || statusFilter !== "all" || cardTypeFilter !== "all" || leechOnly || starredOnly || sortMode !== "default" || pickedSaved)
     );
+    const hasResultFilters = $derived(
+        Boolean(filterText.trim() || statusFilter !== "all" || cardTypeFilter !== "all" || leechOnly || starredOnly)
+    );
 
     let mobileFiltersOpen = $state(false);
     const activeSecondaryFilterCount = $derived(
@@ -1268,7 +1271,7 @@
     {#if showDeckModal}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="lv-modal-backdrop" onclick={(e) => { if (e.target === e.currentTarget) showDeckModal = false; }} role="presentation">
-            <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus={{ onEscape: () => { showDeckModal = false; } }}>
+            <div class="lv-deck-modal lv-card2 b3-typography" role="dialog" aria-modal="true" aria-labelledby="lv-deck-modal-title" use:trapFocus={{ onEscape: () => { if (deckActionBusy) return "keep"; showDeckModal = false; }, surfaceId: "lv-manager-deck-modal" }}>
                 <div class="lv-deck-modal-head">
                 <span id="lv-deck-modal-title" style="font-weight: var(--lv-fw-bold); font-size: var(--lv-type-label-size)">
                     {modalMode === "move" ? (t.manager.batchMoveDeck ?? "移动卡片至目标卡组") : (t.manager.batchAddDeck ?? "添加卡片至目标卡组")}
@@ -1323,7 +1326,7 @@
     {:else if dueError}
         <LvError message={dueError} onretry={() => { void onStatusChange(); }} retryLabel={t.dashboard.refresh} />
     {:else if filteredBlocks.length === 0}
-        {#if filterText || statusFilter !== "all" || leechOnly}
+        {#if hasResultFilters}
             <LvEmpty
                 text={t.manager.filterEmptyCurrentPage ?? "当前页无匹配项，筛选仅作用于已加载页。 / No matches on this page; filters apply only to the loaded page."}
                 actionLabel={t.manager.filterClear}

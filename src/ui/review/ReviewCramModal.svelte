@@ -58,7 +58,7 @@
             aria-modal="true"
             aria-label="考前突击快刷"
             tabindex="-1"
-            use:trapFocus={{ onEscape: onClose }}
+            use:trapFocus={{ onEscape: onClose, surfaceId: "lv-review-cram" }}
             onclick={(e) => e.stopPropagation()}
             data-testid="cram-setup-modal"
         >

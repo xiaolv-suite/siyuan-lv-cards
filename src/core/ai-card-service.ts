@@ -7,9 +7,8 @@
 import { lvLog } from "@/libs/log";
 import { fnv1a } from "./ai-provenance";
 import { localDate } from "./revlog";
-import { aiChat, estimateTokens, parseCards, isAICanceled } from "@/api/ai";
-import { assembleGeneratePrompt } from "./ai-pipeline";
-import { checkEligibility } from "./ai-eligibility";
+import { estimateTokens, parseCards } from "@/api/ai-parse";
+import { AICanceledError, isAICanceled } from "@/api/ai-errors";
 import {
     killSwitchBlock,
     normalizeKillSwitch,
@@ -32,7 +31,6 @@ import {
     MODEL_PRICE_SNAPSHOT,
     estimateCallCostUsd,
 } from "./ai-model-registry";
-import { evaluateRefusal } from "./ai-refusal";
 import {
     createJob,
     transitionJob,
@@ -42,12 +40,8 @@ import {
     type AIJob,
 } from "./ai-jobs";
 import { normalizeAIBatches, type AIBatchesData } from "./ai-batches";
-import { findAiCardGateIssues } from "./ai-card-gate";
 import { serializeQaCard } from "./flashcard-quality";
-import {
-    buildAiCardMarker,
-    buildAiCardBlockMarkdown,
-} from "./ai-wizard-service";
+import { loadHubServices, loadAiChat } from "@/bootstrap/chunk-loaders";
 import {
     findUnfinishedAIJob,
     prepareReviewableJob,
@@ -65,7 +59,7 @@ import {
     AI_DENY_LIST_DATA,
     AI_KILL_SWITCH_DATA,
 } from "@/bootstrap/storage-keys";
-import type { LvCardsSettings } from "./settings";
+import { hasSiyuanAiApiKey, type LvCardsSettings } from "./settings";
 import { CARDS_SECRET_SLOTS, readCardsSecretSlot } from "./secrets";
 
 function cloneStore<T>(value: T): T {
@@ -282,6 +276,7 @@ export class AICardService {
         cfg: { count: number; language: string; type: "qa" | "cloze" },
         opts?: { signal?: AbortSignal; provenance?: { notebookIds?: string[]; docIds?: string[] } },
     ) {
+        const { checkEligibility, assembleGeneratePrompt, evaluateRefusal } = await loadHubServices();
         const settings = this.options.getSettings();
         const i18n = this.options.getI18n();
         const costLedger = this.options.getCostLedger();
@@ -307,7 +302,9 @@ export class AICardService {
         // 3. 前置可用性检查
         const elig = checkEligibility({
             hasMaterial: source.trim().length > 0,
-            aiConfigured: settings.aiMode === "siyuan" || Boolean(settings.aiEndpoint && (resolvedAiKey || settings.aiKeyConfigured)),
+            aiConfigured: settings.aiMode === "siyuan"
+                ? hasSiyuanAiApiKey()
+                : Boolean(settings.aiEndpoint && (resolvedAiKey || settings.aiKeyConfigured)),
             online: typeof navigator !== "undefined" ? navigator.onLine : undefined,
             sensitive: denyHit,
             costExceeded: budget.exceeded,
@@ -357,6 +354,10 @@ export class AICardService {
 
         let fallbackNotified = false;
         try {
+            const aiChat = await loadAiChat();
+            if (opts?.signal?.aborted) {
+                throw new AICanceledError();
+            }
             const raw = await aiChat(
                 {
                     mode: settings.aiMode,
@@ -535,6 +536,7 @@ export class AICardService {
         sourceMeta?: { docId?: string; label?: string },
     ) {
         const i18n = this.options.getI18n();
+        const { findAiCardGateIssues, buildAiCardMarker, buildAiCardBlockMarkdown } = await loadHubServices();
         const qualityIssues = findAiCardGateIssues(cards);
         if (qualityIssues.some(issues => issues.length > 0)) {
             throw new Error((i18n as any).aiWizard?.qualityBlocked ?? "质量门禁拦截");

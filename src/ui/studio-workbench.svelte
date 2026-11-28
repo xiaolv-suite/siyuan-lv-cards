@@ -9,6 +9,7 @@
     let {
         i18n,
         aiConfigured = false,
+        openSettings,
         loadWizard,
         loadQuickCard,
         openDrill,
@@ -21,6 +22,7 @@
     }: {
         i18n: any;
         aiConfigured?: boolean;
+        openSettings?: () => void;
         loadWizard?: (sources?: StudioSource[], onImportComplete?: (ids: string[]) => void, recoveryJobId?: string) => Promise<LoadedView>;
         loadQuickCard?: () => Promise<LoadedView>;
         openDrill?: () => void;
@@ -335,6 +337,24 @@
         </div>
     </div>
 
+    {#if mode === "ai" && !aiConfigured}
+        <div class="lv-studio-ai-notice" role="status">
+            <div class="lv-studio-ai-notice-copy">
+                <LvIcon name="warning" size={15} />
+                <div>
+                    <strong>{i18n.aiNotConfiguredTitle ?? "尚未配置 AI 模型或 API 密钥"}</strong>
+                    <p>{i18n.aiNotConfiguredDesc ?? "请先在设置中选择思源内置 AI 或填写自定义服务商密钥后再生成；也可随时切换回「手工制卡」离线制卡。"}</p>
+                </div>
+            </div>
+            {#if openSettings}
+                <button type="button" class="b3-button b3-button--small lv-btn-primary" onclick={() => openSettings?.()}>
+                    <LvIcon name="settings" size={13} />
+                    <span>{i18n.aiNotConfiguredAction ?? "前往设置配置"}</span>
+                </button>
+            {/if}
+        </div>
+    {/if}
+
     {#if error}<div class="lv-studio-error" role="alert" aria-live="assertive">{i18n.hubStudioLoadError ?? "工作台打开失败"}：{error}</div>{/if}
 
     {#if pendingRecoveryJobId}
@@ -417,7 +437,7 @@
     .lv-studio-tool[hidden] { display: none !important; }
     .lv-studio-tool { min-width: 0; }
     .lv-studio-heading { margin: 0 0 var(--lv-sp-4); }
-    .lv-studio-heading h2 { margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); font-size: var(--lv-type-page-size); line-height: var(--lv-lh-reading-tight); text-wrap: balance; }
+    .lv-studio-heading h2 { margin: calc(var(--lv-space-unit) * 2) 0 calc(var(--lv-space-unit) * 2 + var(--lv-space-hairline)); font-size: var(--lv-type-display-size); font-weight: var(--lv-fw-heading); letter-spacing: -0.025em; line-height: var(--lv-lh-body); text-wrap: balance; }
     .lv-studio-heading p { margin: 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-body-size); line-height: 1.65; max-width: 48em; text-wrap: pretty; }
     .lv-studio-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-3); margin-bottom: var(--lv-sp-3); }
     .lv-studio-modes {
@@ -501,6 +521,29 @@
     .lv-studio-replace-copy { flex: 1 1 220px; min-width: 0; }
     .lv-studio-replace-copy strong { display: block; max-width: 48em; text-wrap: pretty; }
     .lv-studio-replace p { margin: calc(var(--lv-space-unit) * 2) 0 0; color: var(--lv-color-text-muted); font-size: var(--lv-type-control-size); line-height: 1.5; max-width: 48em; text-wrap: pretty; }
+    .lv-studio-ai-notice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--lv-sp-3);
+        margin: 0 0 var(--lv-sp-3);
+        padding: 10px 14px;
+        border: 1px solid color-mix(in srgb, var(--lv-color-warning) 35%, transparent);
+        border-left: 3px solid var(--lv-color-warning);
+        border-radius: var(--lv-r-m);
+        background: color-mix(in srgb, var(--lv-color-warning) 8%, var(--lv-color-surface));
+    }
+    .lv-studio-ai-notice-copy {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        flex: 1 1 260px;
+        min-width: 0;
+        color: var(--lv-color-warning);
+        strong { display: block; font-size: var(--lv-type-control-size); color: var(--lv-color-text); }
+        p { margin: 2px 0 0; font-size: var(--lv-type-meta-size); color: var(--lv-color-text-muted); line-height: 1.5; }
+    }
     .lv-studio-error {
         margin: calc(var(--lv-space-unit) * 6) 0;
         padding: var(--lv-sp-2) var(--lv-sp-3);

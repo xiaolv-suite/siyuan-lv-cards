@@ -97,6 +97,8 @@ export interface TabRegistrarHost extends TabOpenerHost {
     learningGoals: LearningGoalsData;
     repairJournal: MaintenanceRepairJournal;
     entryContexts: EntryContextData;
+    presentationPrivacyController?: { getState: () => { enabled: boolean; profile?: string } };
+    togglePresentationPrivacy?: () => void;
 
     addTab(options: {
         type: string;

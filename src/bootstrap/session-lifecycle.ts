@@ -11,7 +11,7 @@ import { invalidateDueCache } from "@/api/due-shared";
 import { dispatchCardReviewedEvent } from "@/api/external-bridge";
 import { normalizeNativeCardAction, NativeEventDeduper } from "@/core/native-events";
 import { LV_EVENTS, reviewedEvent, streakChangedEvent, storesChangedEvent } from "@/libs/events";
-import { previewRestore } from "@/core/backup";
+import { loadHubServices } from "@/bootstrap/chunk-loaders";
 import { confirmDialogBool } from "@/libs/dialog";
 import { applyRestoreTransaction } from "@/core/data-transfer";
 import { REVLOG_DATA } from "@/bootstrap/storage-keys";
@@ -325,6 +325,7 @@ export class SessionLifecycleService {
             throw new Error((this.plugin.i18n as any).backup?.badJson ?? "invalid JSON");
         }
         const current = await this.plugin.readAllStores();
+        const { previewRestore } = await loadHubServices();
         const preview = previewRestore(parsed, current, [...this.plugin.constructor.STORE_KEYS]);
         const dict = (this.plugin.i18n as any).backup ?? {};
         if (!preview.ok) {

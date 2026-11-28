@@ -28,7 +28,7 @@ import { type AIBatchesData } from "@/core/ai-batches"; import { type ContentVer
 import { type MaintenanceRepairJournal } from "@/core/maintenance-repair"; import { type MigrationStatus, detectFlashcardV2 } from "@/api/flashcardV2";
 import { type SessionState } from "@/core/session-state"; import { type CostLedgerData, emptyCostLedger } from "@/core/ai-cost-ledger";
 import { type DenyListData, emptyDenyList } from "@/core/ai-source-deny"; import { type LedgerEntry, type ObLedgerEntry } from "@/core/import-ledgers";
-import { exportAiCostLedger } from "@/features/data-export-manager"; import { createDisposerRegistry, type DisposerRegistry } from "@/core/disposer-registry";
+import { createDisposerRegistry, type DisposerRegistry } from "@/core/disposer-registry";
 import { type PersistQueue } from "@/libs/persist"; import { type StorageCoordinator } from "@/core/storage-coordinator";
 import { setupStorageInfrastructure, AiJobsPersistenceCoordinator } from "@/bootstrap/storage-setup";
 import { createHostBridge, type HostBridge } from "@/api/host-bridge";
@@ -324,7 +324,9 @@ export default class LvCardsPlugin extends Plugin implements TabHostPlugin {
     async acceptContentVersion(blockID: string, at: number): Promise<void> { await this.ensureTier2Loaded(); return this.maintenanceService.acceptContentVersion(blockID, at); }
     private async clearCostLedger(): Promise<void> { await this.ensureTier2Loaded(); return this.aiCardService.clearCostLedger(); }
     private async exportCostLedger(): Promise<void> {
-        await this.ensureTier2Loaded(); exportAiCostLedger(this.costLedger, localDate(Date.now()));
+        await this.ensureTier2Loaded();
+        const { exportAiCostLedger } = await loadHubServices();
+        exportAiCostLedger(this.costLedger, localDate(Date.now()));
     }
     private async restoreBackupFromFile(text: string) { await this.ensureTier2Loaded(); return this.sessionService.restoreBackupFromFile(text); }
     private async persistAIJobs(previous: AIJobsData): Promise<void> {
@@ -447,6 +449,7 @@ export default class LvCardsPlugin extends Plugin implements TabHostPlugin {
                 updates: pendingUpdates,
                 host: (this as any).secretHost ?? (this as any).host,
                 fetchFn: (this as any).secretFetchFn ?? (this as any).fetchFn,
+                plugin: this,
             });
             for (const field of pendingFields) {
                 const configuredField = `${field}Configured` as "aiKeyConfigured" | "aiFallbackKeyConfigured" | "ankiClientKeyConfigured";

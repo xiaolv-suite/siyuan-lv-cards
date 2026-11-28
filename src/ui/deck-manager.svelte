@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { showMessage } from "@/libs/notice";
+    import { showMessage, lvSurfaceStack } from "@/libs/notice";
     import {
         getRiffDecks,
         createRiffDeck,
@@ -11,6 +11,7 @@
         type RiffDeck,
     } from "@/api/riff";
     import { sqlQuery } from "@/api/siyuan";
+    import { dueCache } from "@/api/due-shared";
     import { confirmDialog } from "@/libs/dialog";
     import {
         discoverLegacyDecks,
@@ -26,6 +27,10 @@
         type RawScannedBlock,
     } from "@/core/deck-management";
     import { buildDeckDashboard, type DeckDashboardRow, type DeckDashDue } from "@/core/deck-dashboard";
+    import { exportLvCardsDeckPackage, LvCardsExportError } from "@/core/lvcards-export";
+    import { downloadFile } from "@/core/data-transfer";
+    import { localDate } from "@/core/revlog";
+    import { friendlyError } from "@/api/errors";
     import { getBridgeSafely, openExamModuleSafely } from "@/libs/ecosystem-bridge-kit";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -80,6 +85,72 @@
     let targetMergeDeckId = $state("");
     let deleteSourceAfterMerge = $state(true);
 
+    // 卡片「更多 ▾」菜单与分享包导出状态
+    let moreMenuDeckId = $state<string | null>(null);
+    let exportBusy = $state(false);
+
+    $effect(() => {
+        if (!moreMenuDeckId) return;
+        const pop = lvSurfaceStack?.push?.({
+            id: "lv-dm-more-menu",
+            type: "menu",
+            dismiss: () => {
+                if (!moreMenuDeckId) return false;
+                moreMenuDeckId = null;
+                return true;
+            },
+        });
+        return () => pop?.();
+    });
+
+    function toggleMoreMenu(deckId: string, e: MouseEvent) {
+        e.stopPropagation();
+        moreMenuDeckId = moreMenuDeckId === deckId ? null : deckId;
+    }
+
+    function onWindowClick(e: MouseEvent) {
+        if (!moreMenuDeckId) return;
+        const target = e.target as HTMLElement | null;
+        if (target?.closest?.(`[data-dm-more-root="${moreMenuDeckId}"]`)) return;
+        moreMenuDeckId = null;
+    }
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.key === "Escape" && moreMenuDeckId && !e.defaultPrevented && !e.isComposing && e.keyCode !== 229) {
+            e.preventDefault();
+            e.stopPropagation();
+            moreMenuDeckId = null;
+        }
+    }
+
+    async function exportDeckShare(deckID: string, deckName: string) {
+        if (exportBusy) return;
+        exportBusy = true;
+        moreMenuDeckId = null;
+        try {
+            const { pkgJson, cards } = await exportLvCardsDeckPackage(
+                { id: deckID, name: deckName },
+                (id, page, pageSize) => getRiffCards(id, page, pageSize),
+                sqlQuery,
+            );
+            downloadFile(`${deckName}-${localDate(Date.now())}.lvcards`, pkgJson, "application/json");
+            const qaCount = cards.filter(l => l.kind === "qa" || l.kind === "code" || l.kind === "list").length;
+            const clozeCount = cards.filter(l => l.kind === "cloze").length;
+            const doneMsg = (t.dashboard?.ddShareDone ?? "分享包已导出：问答 ${qa} · 挖空 ${c}")
+                .replace("${qa}", String(qaCount))
+                .replace("${c}", String(clozeCount));
+            showMessage(doneMsg, 2500, "info");
+        } catch (e) {
+            if (e instanceof LvCardsExportError && e.code === "empty-deck") {
+                showMessage(t.dashboard?.ddShareEmpty ?? "该卡组暂无卡片", 2000, "info");
+            } else {
+                showMessage(friendlyError(e, t), 3500, "error");
+            }
+        } finally {
+            exportBusy = false;
+        }
+    }
+
     let loadDecksSeq = 0;
     let realCardsTotal = $state(0);
     async function loadDecks() {
@@ -87,11 +158,12 @@
         loading = true;
         errorMsg = "";
         try {
-            const [rawDecks, cardsIndex] = await Promise.all([
+            const [rawDecks, cardsIndex, dueData] = await Promise.all([
                 getRiffDecks(),
                 // 2026-11-21 走查修复（候选⑫定案）：头部「{n} 张闪卡」改用内核卡片索引 total，
                 // 与桌面卡库/中心总览同口径（原 Σ卡包 size 重复计入组关系且恒含测试卡包）。
                 getRiffCards("", 1, 1),
+                getRevlog ? (dueCache?.get?.("")?.catch(() => null) ?? Promise.resolve(null)) : Promise.resolve(null),
             ]);
             if (seq !== loadDecksSeq) return;
             decks = rawDecks ?? [];
@@ -106,6 +178,13 @@
                 const dueMap = new Map<string, DeckDashDue>();
                 for (const d of decks) {
                     dueMap.set(d.id, { due: 0, newCards: 0 });
+                }
+                for (const card of dueData?.cards ?? []) {
+                    if (!card?.deckID) continue;
+                    const dueEntry = dueMap.get(card.deckID) ?? { due: 0, newCards: 0 };
+                    dueEntry.due += 1;
+                    if (card.state === 0) dueEntry.newCards += 1;
+                    dueMap.set(card.deckID, dueEntry);
                 }
                 const rows = buildDeckDashboard(entries, decks.map(d => d.id), dueMap);
                 const map = new Map<string, DeckDashboardRow>();
@@ -266,23 +345,24 @@
     }
 
     /**
-     * 删除卡组（安全确认：仅解散卡组，不删卡片块正文）
+     * 解散卡组（安全确认：仅解除卡组关联，原笔记中的卡片块完整保留）
      */
     async function handleDeleteDeck(deck: RiffDeck) {
         if (busy) return;
+        moreMenuDeckId = null;
         const confirmed = await askConfirm(
-            (t.deckManagerDelete ?? "删除卡组") + `：${deck.name}`,
-            (t.deckManagerDeletePrompt ?? "确定要删除卡组「${name}」吗？").replace("${name}", deck.name)
-                + "\n\n" + (t.deckManagerDeleteSafeNote ?? "注意：仅解除卡组关联，原笔记中的卡片块完整保留在正文中。"),
+            (t.deckManagerDelete ?? "解散卡组（原笔记完整保留）") + `：${deck.name}`,
+            (t.deckManagerDeletePrompt ?? "确定要解散卡组「${name}」吗？").replace("${name}", deck.name)
+                + "\n\n" + (t.deckManagerDeleteSafeNote ?? "注意：仅解除卡组关联，原笔记中的卡片块完整保留在正文中，不会删除任何笔记内容。"),
         );
         if (!confirmed) return;
         busy = true;
         try {
             await removeRiffDeck(deck.id);
-            showMessage(`卡组「${deck.name}」已删除`, 2000, "info");
+            showMessage(`卡组「${deck.name}」已解散（原笔记完整保留）`, 2000, "info");
             await loadDecks();
         } catch (e: any) {
-            errorMsg = `删除卡组失败：${e?.message ?? String(e)}`;
+            errorMsg = `解散卡组失败：${e?.message ?? String(e)}`;
         } finally {
             busy = false;
         }
@@ -365,6 +445,8 @@
     });
 </script>
 
+<svelte:window onclick={onWindowClick} onkeydown={onWindowKeydown} />
+
 <div class="lv-deck-manager b3-typography" role="region" aria-label={t.deckManagerTitle ?? "卡组管理"}>
     <!-- 头部指标与操作区 -->
     <header class="lv-dm-header">
@@ -433,7 +515,7 @@
                     class="b3-button b3-button--small b3-button--text"
                     disabled={busy}
                     onclick={handleCleanEmptyDecks}
-                    title="批量删除 0 张卡片的空卡组"
+                    title="批量解散 0 张卡片的空卡组（不影响任何笔记正文）"
                 >
                     <LvIcon name="trash" size={13} /> <span>{t.deckManagerCleanEmpty ?? "清理空卡组"} ({emptyDecksCount})</span>
                 </button>
@@ -590,7 +672,7 @@
 	                {#each filteredDecks as deck (deck.id)}
 	                    {@const stats = dashboardRows.get(deck.id)}
 	                    {@const ecoBadge = getDeckEcosystemBadge(deck.name)}
-	                    <div class="lv-dm-deck-card">
+	                    <div class="lv-dm-deck-card" class:lv-dm-deck-card--menu-open={moreMenuDeckId === deck.id}>
 	                        <!-- 卡组头部与名称 -->
 	                        <div class="lv-dm-card-head">
 	                            <div class="lv-dm-deck-meta">
@@ -666,7 +748,7 @@
                                 </select>
                                 <label class="lv-dm-merge-opt">
                                     <input type="checkbox" bind:checked={deleteSourceAfterMerge} class="lv-check" />
-                                    <span>{t.deckManagerDeleteSourceAfterMerge ?? "合并后删除源卡组"}</span>
+                                    <span>{t.deckManagerDeleteSourceAfterMerge ?? "合并后解散源卡组"}</span>
                                 </label>
                                 <button
                                     type="button"
@@ -682,7 +764,7 @@
                             </div>
                         {/if}
 
-                        <!-- 卡组动作栏 -->
+                        <!-- 卡组动作栏：高频 3 主按钮 + 「更多 ▾」菜单收敛次要与管理动作 -->
                         <div class="lv-dm-card-actions">
                             <button
                                 type="button"
@@ -710,53 +792,81 @@
                             >
                                 <LvIcon name="cards" size={13} /> <span>查看闪卡</span>
                             </button>
-                            {#if ecoBadge?.origin === "exam" && hasExamBridge}
+                            <div class="lv-dm-more-wrap" data-dm-more-root={deck.id}>
                                 <button
                                     type="button"
                                     class="b3-button b3-button--small b3-button--outline lv-btn-tool"
-                                    onclick={() => openExamModuleSafely("practice")}
-                                    title="直达小驴考试练习台刷题"
+                                    aria-haspopup="menu"
+                                    aria-expanded={moreMenuDeckId === deck.id}
+                                    aria-label={`更多操作 ${deck.name}`}
+                                    onclick={(e) => toggleMoreMenu(deck.id, e)}
                                 >
-                                    <LvIcon name="graduation" size={13} /> <span>考试台</span>
+                                    <span>{t.deckManagerMore ?? "更多"}</span>
+                                    <LvIcon name="chevron-down" size={12} />
                                 </button>
-                            {/if}
-                            <button
-                                type="button"
-                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
-                                class:lv-btn-pinned={pinnedDeckIds.includes(deck.id)}
-                                onclick={() => handleTogglePin(deck.id)}
-                                title={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡组"}
-                                aria-label={pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡组"}
-                            >
-                                <LvIcon name="star" size={13} />
-                            </button>
-                            <button
-                                type="button"
-                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
-                                onclick={() => { editingDeckId = deck.id; editingDeckName = deck.name; }}
-                                title="重命名卡组"
-                                aria-label="重命名卡组"
-                            >
-                                <LvIcon name="edit" size={13} />
-                            </button>
-                            <button
-                                type="button"
-                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool"
-                                onclick={() => { mergingDeckId = deck.id; targetMergeDeckId = ""; }}
-                                title="合并卡片到其他卡组"
-                                aria-label="合并卡片到其他卡组"
-                            >
-                                <LvIcon name="swap" size={13} />
-                            </button>
-                            <button
-                                type="button"
-                                class="b3-button b3-button--small lv-btn-ghost lv-btn-tool lv-btn-danger"
-                                onclick={() => handleDeleteDeck(deck)}
-                                title="删除卡组（原卡片块完整保留在笔记正文中）"
-                                aria-label="删除卡组（原卡片块完整保留在笔记正文中）"
-                            >
-                                <LvIcon name="trash" size={13} />
-                            </button>
+                                {#if moreMenuDeckId === deck.id}
+                                    <div class="lv-dm-more-menu" role="menu" aria-label={`${deck.name} 更多操作`}>
+                                        {#if ecoBadge?.origin === "exam" && hasExamBridge}
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                class="lv-dm-more-item"
+                                                onclick={() => { moreMenuDeckId = null; openExamModuleSafely("practice"); }}
+                                            >
+                                                <LvIcon name="graduation" size={13} /> <span>考试台</span>
+                                            </button>
+                                        {/if}
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="lv-dm-more-item"
+                                            class:lv-btn-pinned={pinnedDeckIds.includes(deck.id)}
+                                            onclick={() => { handleTogglePin(deck.id); moreMenuDeckId = null; }}
+                                        >
+                                            <LvIcon name="star" size={13} />
+                                            <span>{pinnedDeckIds.includes(deck.id) ? "取消置顶" : "置顶卡组"}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="lv-dm-more-item"
+                                            onclick={() => { editingDeckId = deck.id; editingDeckName = deck.name; moreMenuDeckId = null; }}
+                                        >
+                                            <LvIcon name="edit" size={13} />
+                                            <span>{t.deckManagerRename ?? "重命名"}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="lv-dm-more-item"
+                                            onclick={() => { mergingDeckId = deck.id; targetMergeDeckId = ""; moreMenuDeckId = null; }}
+                                        >
+                                            <LvIcon name="swap" size={13} />
+                                            <span>合并到其他卡组</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="lv-dm-more-item"
+                                            disabled={exportBusy || (deck.size ?? 0) === 0}
+                                            onclick={() => void exportDeckShare(deck.id, deck.name)}
+                                        >
+                                            <LvIcon name="download" size={13} />
+                                            <span>{t.dashboard?.ddShareBtn ?? "导出分享包"}</span>
+                                        </button>
+                                        <div class="lv-dm-more-divider" role="separator"></div>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="lv-dm-more-item lv-dm-more-item--danger"
+                                            onclick={() => void handleDeleteDeck(deck)}
+                                        >
+                                            <LvIcon name="trash" size={13} />
+                                            <span>{t.deckManagerDelete ?? "解散卡组（原笔记完整保留）"}</span>
+                                        </button>
+                                    </div>
+                                {/if}
+                            </div>
                         </div>
                     </div>
                 {/each}
@@ -786,8 +896,10 @@
         align-items: center;
         gap: 8px;
         margin: 0 0 2px;
-        font-size: 16px;
-        font-weight: 600;
+        font-size: var(--lv-type-display-size, 24px);
+        font-weight: var(--lv-fw-heading, 600);
+        line-height: var(--lv-lh-title, 1.35);
+        letter-spacing: -0.025em;
         color: var(--lv-color-text);
     }
     .lv-dm-subtitle {
@@ -944,10 +1056,11 @@
     }
     .lv-dm-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(308px, 100%), 1fr));
         gap: var(--lv-sp-3);
     }
     .lv-dm-deck-card {
+        position: relative;
         padding: 14px 16px;
         background: var(--lv-color-surface);
         border: 1px solid var(--lv-border);
@@ -960,6 +1073,9 @@
         &:hover {
             border-color: var(--lv-primary-border);
         }
+    }
+    .lv-dm-deck-card--menu-open {
+        z-index: 25;
     }
     .lv-dm-deck-meta {
         display: flex;
@@ -979,7 +1095,7 @@
         cursor: pointer;
         text-align: left;
         min-width: 0;
-        flex: 1 1 auto;
+        flex: 1 1 0;
     }
     .lv-dm-deck-name {
         margin: 0;
@@ -1003,6 +1119,7 @@
         display: inline-flex;
         align-items: center;
         gap: 3px;
+        white-space: nowrap;
         flex-shrink: 0;
     }
     .lv-btn-pinned {
@@ -1017,6 +1134,10 @@
         max-width: 105px;
     }
     .lv-dm-origin-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
         font-size: 10px;
         padding: 1px 6px;
         border-radius: 4px;
@@ -1067,9 +1188,9 @@
     }
     .lv-dm-card-actions {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
         margin-top: auto;
         padding-top: 6px;
         border-top: 1px solid var(--lv-border);
@@ -1077,7 +1198,63 @@
         .b3-button {
             flex: 0 0 auto;
             white-space: nowrap;
+            padding: 3px 8px;
+            gap: 4px;
         }
+    }
+    .lv-dm-more-wrap {
+        position: relative;
+        margin-left: auto;
+    }
+    .lv-dm-more-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        z-index: 30;
+        min-width: 224px;
+        max-width: min(260px, calc(100vw - 32px));
+        padding: 6px;
+        border-radius: var(--lv-r-m);
+        background: var(--lv-color-surface);
+        border: 1px solid var(--lv-border);
+        box-shadow: var(--lv-shadow-2);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .lv-dm-more-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 7px 10px;
+        border: none;
+        border-radius: var(--lv-r-s);
+        background: transparent;
+        color: var(--lv-color-text);
+        font-size: 12.5px;
+        text-align: left;
+        cursor: pointer;
+        &:hover:not(:disabled) {
+            background: var(--lv-primary-soft);
+            color: var(--lv-color-brand);
+        }
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+    }
+    .lv-dm-more-item--danger {
+        color: var(--lv-color-danger);
+    }
+    .lv-dm-more-item--danger:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--lv-color-danger) 10%, transparent);
+        color: var(--lv-color-danger);
+    }
+    .lv-dm-more-divider {
+        height: 1px;
+        margin: 4px 6px;
+        background: var(--lv-border);
     }
     .lv-dm-error-banner {
         display: flex;

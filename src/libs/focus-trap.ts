@@ -6,6 +6,8 @@
  * AR-2 关闭一次性与焦点归还；svelteDialog 接线时 restoreOnRelease=false 防双重归还）。
  */
 
+import { lvSurfaceStack, type LvSurfaceHandle } from "./lv-notice-kit";
+
 const FOCUSABLE_SELECTOR = "a[href],button,input,select,textarea,[tabindex]";
 
 /** 文档序中的键盘焦点目标；不依赖布局尺寸，保留 display:contents 内的可见控件。 */
@@ -37,14 +39,17 @@ export function getFocusable(container: HTMLElement): HTMLElement[] {
 }
 
 export interface TrapOptions {
-    /** Esc 触发（本模块只回调，不执行关闭） */
-    onEscape?: () => void;
+    /** Esc 触发（本模块只回调，不执行关闭；返回 false/"keep" 可阻止栈顶移除） */
+    onEscape?: () => boolean | void | "keep";
     /** 释放时归还焦点到打开前宿主（默认 true；libs/dialog 自带归还时传 false 防双重） */
     restoreOnRelease?: boolean;
     /** 自定义初始聚焦目标（元素、CSS 选择器或提取函数） */
     initialFocus?: HTMLElement | string | (() => HTMLElement | null);
     /** 是否在创建 trap 时自动执行初始聚焦（默认 true） */
     autoFocus?: boolean;
+    /** 可选：接入全局 lvSurfaceStack，确保前景弹窗优先于底层通知胶囊响应 Esc */
+    surfaceId?: string;
+    surfaceType?: LvSurfaceHandle["type"];
 }
 
 export interface FocusTrap {
@@ -132,11 +137,23 @@ export function trapFocus(container: HTMLElement, opts: TrapOptions = {}): Focus
 
     container.addEventListener("keydown", onKeydown, true);
     let released = false;
+    const popSurface = opts.surfaceId
+        ? lvSurfaceStack.push({
+            id: opts.surfaceId,
+            type: opts.surfaceType ?? "dialog",
+            dismiss: () => {
+                if (released || container.closest("[hidden], [inert]")) return false;
+                const res = opts.onEscape?.();
+                return res === false || res === "keep" ? res : true;
+            },
+        })
+        : undefined;
     const release = () => {
         if (released) {
             return;
         }
         released = true;
+        popSurface?.();
         container.removeEventListener("keydown", onKeydown, true);
         if (restoreOnRelease && prevFocus && document.contains(prevFocus)) {
             try {

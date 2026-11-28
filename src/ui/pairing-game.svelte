@@ -8,6 +8,7 @@
     import LvEmpty from "./kit/LvEmpty.svelte";
     import LvError from "./kit/LvError.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
 
     /** 配对挑战（M4·FR4）：到期挖空卡限时配对——左列题面（挖空）× 右列答案（mark 文本），
      * 只入激励不计调度。无挖空的卡自动跳过。 */
@@ -207,13 +208,16 @@
         }
     }
 
-    function exit() {
-        if (phase === "running" && !window.confirm(t.pairing.exitConfirm ?? "当前配对进度不会保存，确定退出吗？")) return;
+    async function exit() {
+        if (phase === "running" && !await lvConfirm({
+            title: t.pairing.exitTitle ?? "退出配对",
+            content: t.pairing.exitConfirm ?? "当前配对进度不会保存，确定退出吗？",
+        })) return;
         onExit();
     }
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === "Escape") { e.preventDefault(); exit(); } }} />
+<svelte:window onkeydown={(e) => { if (e.key === "Escape") { e.preventDefault(); void exit(); } }} />
 
 <div class="lv-pair b3-typography">
     {#if phase === "loading"}

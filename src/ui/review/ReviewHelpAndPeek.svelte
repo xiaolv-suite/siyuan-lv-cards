@@ -61,7 +61,7 @@
         class="lv-help lv-glass"
         tabindex="-1"
         bind:this={helpEl}
-        use:trapFocus={{ onEscape: onCloseHelp }}
+        use:trapFocus={{ onEscape: onCloseHelp, surfaceId: "lv-review-help" }}
         transition:fade={{ duration: getMotionDuration("normal") }}
         onclick={(e: Event) => e.stopPropagation()}
         onkeydown={(e) => { if (e.key === "Escape" || e.key === "?") { e.stopPropagation(); onCloseHelp(); } }}
@@ -98,7 +98,7 @@
     <div
         class="lv-peek lv-glass"
         tabindex="-1"
-        use:trapFocus={{ onEscape: onClosePeek }}
+        use:trapFocus={{ onEscape: onClosePeek, surfaceId: "lv-review-peek" }}
         transition:fade={{ duration: getMotionDuration("normal") }}
         onclick={(e: Event) => e.stopPropagation()}
         onkeydown={(e) => { if (e.key === "Escape" || e.key === "[") { e.stopPropagation(); onClosePeek(); } }}

@@ -7,6 +7,7 @@
     import LvSkeleton from "./kit/LvSkeleton.svelte";
     import LvEmpty from "./kit/LvEmpty.svelte";
     import LvError from "./kit/LvError.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
     import LvIcon from "./kit/LvIcon.svelte";
     import { groupDebts, detectDebts, DEBT_KINDS, type DebtItem, type DebtKind } from "@/core/maintenance-queue";
     import { diffLines } from "@/core/line-diff";
@@ -226,7 +227,7 @@
     async function rollbackRepair() {
         if (rollbackBusy || repairBusy || scanning || sourceHealthPendingId || !lastRepair || !maintenance.rollbackLastRepair) return;
         const confirmText = repairText("rollbackConfirm", "确定撤销上次批量修复？卡片将恢复为修复前快照；若某张卡片已发生后续编辑，将自动阻断以保护最新内容。");
-        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(confirmText)) return;
+        if (!await lvConfirm({ title: repairText("confirmTitle", "请确认操作"), content: confirmText })) return;
         rollbackBusy = true;
         rollbackError = "";
         rollbackSuccess = "";
@@ -248,7 +249,7 @@
         if (repairBusy || rollbackBusy || scanning || sourceHealthPendingId || !repairPreview?.ok) return;
         const confirmText = repairText("repairConfirm", "将写入 ${n} 张卡片并保留修复前快照，确定继续吗？")
             .replace("${n}", String(repairPreview.summary.update));
-        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(confirmText)) return;
+        if (!await lvConfirm({ title: repairText("confirmTitle", "请确认操作"), content: confirmText })) return;
         repairBusy = true;
         repairError = "";
         try {
@@ -406,7 +407,7 @@
         const acknowledge = maintenance.acknowledgeSourceHealth;
         if (!acknowledge || sourceHealthPendingId || repairBusy || rollbackBusy || scanning) return;
         const confirmText = repairText("sourceHealthConfirm", "确认当前来源内容，并将它设为新的健康基线吗？");
-        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(confirmText)) return;
+        if (!await lvConfirm({ title: repairText("confirmTitle", "请确认操作"), content: confirmText })) return;
         sourceHealthPendingId = blockID;
         sourceHealthError = "";
         sourceHealthErrorId = "";
@@ -437,7 +438,7 @@
             "",
             "若点击【确定】，插件将仅为您生成可审计的修改预览，在您后续二次核对并明确点击“确认写入”前，绝不会修改您的任何笔记。确定要生成预览吗？",
         ].join("\n");
-        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(warnText)) return;
+        if (!await lvConfirm({ title: repairText("legacyUpgradeTitle", "旧版卡片格式说明"), content: warnText })) return;
 
         legacyUpgradeStatus = "";
         const candidates: Array<{ blockID: string; md: string; memo?: string }> = [];

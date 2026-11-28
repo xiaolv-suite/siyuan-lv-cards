@@ -6,7 +6,7 @@
     import { parsePastedQuestionText } from "@/core/question-splitter";
     import { extractDroppedBlockText } from "@/core/drag-drop";
     import { compressImageFile } from "@/core/image-compress";
-    import { showMessage, lvLaunchpad } from "@/libs/notice";
+    import { showMessage, lvLaunchpad, lvSurfaceStack } from "@/libs/notice";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
 
@@ -108,6 +108,35 @@
     }
     let smartPasteModalOpen = $state(false);
     let smartPasteInputText = $state("");
+    let symbolDockOpen = $state(false);
+
+    $effect(() => {
+        if (!smartPasteModalOpen) return;
+        const pop = lvSurfaceStack?.push?.({
+            id: "lv-qc-smart-paste",
+            type: "dialog",
+            dismiss: () => {
+                if (!smartPasteModalOpen || editorRoot?.closest("[hidden], [inert]")) return false;
+                smartPasteModalOpen = false;
+                return true;
+            },
+        });
+        return () => pop?.();
+    });
+
+    $effect(() => {
+        if (!symbolDockOpen) return;
+        const pop = lvSurfaceStack?.push?.({
+            id: "lv-qc-symbol-dock",
+            type: "menu",
+            dismiss: () => {
+                if (!symbolDockOpen || editorRoot?.closest("[hidden], [inert]")) return false;
+                symbolDockOpen = false;
+                return true;
+            },
+        });
+        return () => pop?.();
+    });
     let symbolTab = $state<"math" | "pinyin" | "format">(loadSavedSymbolTab());
     function setSymbolTab(tab: "math" | "pinyin" | "format") {
         symbolTab = tab;
@@ -844,19 +873,31 @@
     }
 
     function onKeydown(e: KeyboardEvent) {
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat && !e.defaultPrevented
-            && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
+        if (e.isComposing || e.keyCode === 229) return;
+        const inEditor = editorRoot && !editorRoot.closest("[hidden], [inert]")
+            && e.target instanceof Node && editorRoot.contains(e.target);
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat && !e.defaultPrevented && inEditor) {
             e.preventDefault();
             confirm();
-        } else if ((e.ctrlKey || e.metaKey) && (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4" || e.key === "5") && !e.repeat
-            && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4" || e.key === "5") && !e.repeat && inEditor) {
             // R58/R59/R60 模板快捷键：Ctrl+1/2/3/4/5 切换表达模板
             e.preventDefault();
             setTemplate(e.key === "1" ? "qa" : e.key === "2" ? "cloze" : e.key === "3" ? "superblock" : e.key === "4" ? "choice" : "formula");
-        } else if (e.key === "Escape" && !busy && !embedded
-            && e.target instanceof Node && editorRoot?.contains(e.target) && !editorRoot.closest("[hidden], [inert]")) {
-            e.preventDefault();
-            onClose();
+        } else if (e.key === "Escape" && !e.defaultPrevented && editorRoot && !editorRoot.closest("[hidden], [inert]")
+            && e.target instanceof Node && (editorRoot.contains(e.target) || e.target === document.body || e.target === document.documentElement)) {
+            if (smartPasteModalOpen) {
+                e.preventDefault();
+                e.stopPropagation();
+                smartPasteModalOpen = false;
+            } else if (symbolDockOpen) {
+                e.preventDefault();
+                e.stopPropagation();
+                symbolDockOpen = false;
+            } else if (!busy && !embedded) {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+            }
         }
     }
 </script>
@@ -864,25 +905,6 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="lv-quickcard b3-typography" bind:this={editorRoot}>
-    <!-- 三步引导条（R57）：让首次制卡的用户一眼看懂操作路径 -->
-    <div class="lv-qc-steps" role="list" aria-label={t.quickCardStepsLabel ?? "制卡步骤"}>
-        <span class="lv-qc-step" role="listitem"><b>1</b>{t.quickCardStep1 ?? "选表达方式与卡组"}</span>
-        <LvIcon name="chevron-right" size={12} />
-        <span class="lv-qc-step" role="listitem"><b>2</b>{t.quickCardStep2 ?? "写问题与答案"}</span>
-        <LvIcon name="chevron-right" size={12} />
-        <span class="lv-qc-step" role="listitem"><b>3</b>{lvLaunchpad.isMobileFrontend() ? (t.quickCardStep3Mobile ?? "点「制卡」入库") : (t.quickCardStep3 ?? "Ctrl+Enter 一键制卡")}</span>
-        {#if onClose && embedded}
-            <button
-                type="button"
-                class="b3-button b3-button--small b3-button--text lv-qc-close-icon"
-                aria-label="关闭"
-                title="关闭"
-                onclick={onClose}
-            >
-                <LvIcon name="close" size={14} />
-            </button>
-        {/if}
-    </div>
     <div class="lv-qc-toolbar">
         <div class="lv-qc-template" role="group" aria-label={t.quickCardTemplateLabel} data-prevent-swipe="true">
             <button type="button" class="lv-qc-tpl-btn" class:lv-qc-template-active={template === "qa"} aria-pressed={template === "qa"} disabled={busy} onclick={() => setTemplate("qa")} aria-keyshortcuts="Control+1 Meta+1" title={`${t.quickCardTemplateQA} (Ctrl+1)`}>
@@ -910,16 +932,6 @@
         <div class="lv-qc-deck">
             <div class="lv-qc-label-bar">
                 <span class="lv-qc-label">{t.deckPickerTitle}{#if decks.length > 0}（{decks.length}）{/if}</span>
-                <button
-                    type="button"
-                    class="b3-button b3-button--small b3-button--outline lv-btn-tool"
-                    disabled={deckLoadBusy || busy}
-                    title={t.quickCardDeckRefresh ?? "刷新卡组列表"}
-                    aria-label={t.quickCardDeckRefresh ?? "刷新卡组列表"}
-                    onclick={() => void loadDecks()}
-                >
-                    <LvIcon name="refresh" size={12} />
-                </button>
             </div>
             {#if decks.length > 0}
                 <div class="lv-qc-deck-inputs lv-qc-deck-inputs--pick">
@@ -929,6 +941,16 @@
                         {/each}
                     </select>
                     <input class="b3-text-field lv-qc-new" aria-label={t.deckNewName} placeholder={t.deckNewName} bind:value={newName} bind:this={newNameInputEl} disabled={busy} />
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-qc-deck-refresh"
+                        disabled={deckLoadBusy || busy}
+                        title={t.quickCardDeckRefresh ?? "刷新卡组列表"}
+                        aria-label={t.quickCardDeckRefresh ?? "刷新卡组列表"}
+                        onclick={() => void loadDecks()}
+                    >
+                        <LvIcon name="refresh" size={12} />
+                    </button>
                 </div>
                 <!-- Mobile Spec v1：牌组 chips 选择（手机端替代下拉直选，桌面端隐藏） -->
                 <div class="lv-qc-deck-chips" role="listbox" aria-label={t.deckPickerTitle} data-prevent-swipe="true">
@@ -960,6 +982,16 @@
                         bind:this={newNameInputEl}
                         disabled={busy}
                     />
+                    <button
+                        type="button"
+                        class="b3-button b3-button--small b3-button--outline lv-btn-tool lv-qc-deck-refresh"
+                        disabled={deckLoadBusy || busy}
+                        title={t.quickCardDeckRefresh ?? "刷新卡组列表"}
+                        aria-label={t.quickCardDeckRefresh ?? "刷新卡组列表"}
+                        onclick={() => void loadDecks()}
+                    >
+                        <LvIcon name="refresh" size={12} />
+                    </button>
                 </div>
             {/if}
             {#if deckLoadError}
@@ -971,49 +1003,6 @@
                 <div class="ft__smaller ft__on-surface lv-qc-deck-hint">{t.quickCardDeckEmptyHint ?? "当前还没有卡组：在上方输入名称，制卡时会自动创建并选中。"}</div>
             {/if}
         </div>
-    </div>
-
-    <!-- 制卡必备要素状态条（明确要素，未满足不可完成制卡） -->
-    <div class="lv-qc-mand-bar" role="group" aria-label={t.quickCardMandatoryCheck ?? "制卡必备要素"}>
-        <span class="lv-qc-mand-title">{t.quickCardMandatoryCheck ?? "制卡必备要素"}：</span>
-        <button
-            type="button"
-            class="lv-qc-mand-pill"
-            class:lv-qc-mand-ok={deckReady}
-            class:lv-qc-mand-err={!deckReady}
-            onclick={() => (newNameInputEl ? newNameInputEl.focus() : null)}
-            title={deckReady ? "卡组已指定" : "点击输入卡组名称"}
-        >
-            {#if deckReady}<LvIcon name="check" size={11} /> <span>{t.quickCardMandatoryDeckOk ?? "卡组已指定"}</span>{:else}<span>⚠️ {t.quickCardMandatoryDeckMissing ?? "必须选择或新建卡组"}</span>{/if}
-        </button>
-        <button
-            type="button"
-            class="lv-qc-mand-pill"
-            class:lv-qc-mand-ok={stemReady}
-            class:lv-qc-mand-err={!stemReady}
-            onclick={() => qTextareaEl?.focus()}
-            title={stemReady ? "题干已就绪" : "点击填写题干"}
-        >
-            {#if stemReady}<LvIcon name="check" size={11} /> <span>{t.quickCardMandatoryStemOk ?? "题干已填写"}</span>{:else}<span>⚠️ {t.quickCardMandatoryStemMissing ?? "必须填写题干内容"}</span>{/if}
-        </button>
-        <button
-            type="button"
-            class="lv-qc-mand-pill"
-            class:lv-qc-mand-ok={answerCheck.ready}
-            class:lv-qc-mand-err={!answerCheck.ready}
-            onclick={() => {
-                if (answerCheck.focusField === "a") aTextareaEl?.focus();
-                else if (answerCheck.focusField === "q") qTextareaEl?.focus();
-            }}
-            title={answerCheck.ready ? "答案要素就绪" : "点击完善答案要素"}
-        >
-            {#if answerCheck.ready}<LvIcon name="check" size={11} /> <span>{answerCheck.readyLabel}</span>{:else}<span>⚠️ {answerCheck.label}</span>{/if}
-        </button>
-        {#if !isAllMandatorySatisfied}
-            <span class="lv-qc-mand-status">{t.quickCardMandatoryPending ?? "需满足上述要素方可制卡"}</span>
-        {:else}
-            <span class="lv-qc-mand-status lv-qc-mand-status--ready"><LvIcon name="check" size={12} /> {t.quickCardMandatoryReady ?? "要素齐全，可立即制卡"}</span>
-        {/if}
     </div>
 
     <!-- 智能试题文本拆单卡片 -->
@@ -1122,9 +1111,9 @@
                 </div>
             {/if}
             <div class="lv-qc-field">
-                <div class="lv-qc-label-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span class="lv-qc-label">{template === "attr-qa" ? (attrSubType === "direct" ? "题干（正文问题）" : attrSubType === "dual" ? "概念 / 术语 / 外语表达" : "背诵标题 / 提示词") : t.quickCardQ} <span class="lv-qc-count" class:lv-qc-count-warn={q.length > 60}>{q.length} 字</span></span>
-                    <span style="display: inline-flex; gap: 6px; align-items: center;">
+                <div class="lv-qc-label-bar lv-qc-label-bar--wrap" style="margin-bottom: 6px;">
+                    <span class="lv-qc-label lv-qc-label--nowrap">{template === "attr-qa" ? (attrSubType === "direct" ? "题干（正文问题）" : attrSubType === "dual" ? "概念 / 术语 / 外语表达" : "背诵标题 / 提示词") : t.quickCardQ} <span class="lv-qc-count" class:lv-qc-count-warn={q.length > 60}>{q.length} 字</span></span>
+                    <span class="lv-qc-field-tools">
                         <input
                             type="file"
                             accept="image/*"
@@ -1154,6 +1143,19 @@
                             <LvIcon name="zap" size={12} />
                             <span>{t.quickCardSmartSplit ?? "智能拆单"}</span>
                         </button>
+                        <button
+                            type="button"
+                            class="b3-button b3-button--small b3-button--outline lv-btn-tool"
+                            aria-expanded={symbolDockOpen}
+                            aria-controls="lv-qc-symbol-dock"
+                            aria-label={t.quickCardSymbolsToggle ?? "插入符号"}
+                            title={t.quickCardSymbolsTip ?? "展开数理公式、拼音与格式快捷输入栏"}
+                            onclick={(e) => { e.stopPropagation(); symbolDockOpen = !symbolDockOpen; }}
+                        >
+                            <LvIcon name="code" size={12} />
+                            <span>{t.quickCardSymbolsToggle ?? "插入符号"}</span>
+                            <LvIcon name={symbolDockOpen ? "chevron-up" : "chevron-down"} size={11} />
+                        </button>
                         {#if template === "cloze"}
                             <button
                                 type="button"
@@ -1181,8 +1183,9 @@
                         {/if}
                     </span>
                 </div>
-                <!-- 快捷数理、拼音与格式工具栏 -->
-                <div class="lv-qc-symbol-dock" role="toolbar" aria-label="快捷符号工具条">
+                <!-- 快捷数理、拼音与格式工具栏（按需展开，减少首屏挤压） -->
+                {#if symbolDockOpen}
+                <div id="lv-qc-symbol-dock" class="lv-qc-symbol-dock" role="toolbar" aria-label="快捷符号工具条">
                     <div class="lv-qc-symbol-tabs" role="tablist">
                         <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "math"} onclick={() => setSymbolTab("math")}>{t.quickCardSymbolMath ?? "数理"}</button>
                         <button type="button" class="lv-qc-symbol-tab-btn" class:lv-qc-symbol-tab-active={symbolTab === "pinyin"} onclick={() => setSymbolTab("pinyin")}>{t.quickCardSymbolPinyin ?? "拼音"}</button>
@@ -1216,6 +1219,7 @@
                         {/if}
                     </div>
                 </div>
+                {/if}
                 <textarea
                     bind:this={qTextareaEl}
                     class="b3-text-field fn__block"
@@ -1524,6 +1528,21 @@
         <div class="ft__smaller lv-qc-error" role="alert" aria-live="assertive">{errorMsg}</div>
     {/if}
     <div class="b3-dialog__action lv-qc-actions">
+        <span
+            class="lv-qc-ready-hint"
+            class:lv-qc-ready-hint--ok={isAllMandatorySatisfied}
+            data-testid="quick-card-ready-hint"
+        >
+            {#if !deckReady}
+                ⚠️ {t.quickCardMandatoryDeckMissing ?? "必须选择或新建卡组"}
+            {:else if !stemReady}
+                ⚠️ {t.quickCardMandatoryStemMissing ?? "必须填写题干内容"}
+            {:else if !answerCheck.ready}
+                ⚠️ {answerCheck.label}
+            {:else}
+                <LvIcon name="check" size={12} /> <span>{t.quickCardMandatoryReady ?? "要素齐全，可立即制卡"}</span>
+            {/if}
+        </span>
         {#if !embedded || lvLaunchpad.isMobileFrontend()}
             <button
                 class="b3-button b3-button--cancel"
@@ -1567,31 +1586,6 @@
         overflow-y: auto;
         overflow-x: hidden;
         padding: var(--lv-sp-3) var(--lv-sp-3) 0;
-    }
-    .lv-qc-steps {
-        display: flex;
-        align-items: center;
-        gap: var(--lv-sp-2);
-        margin-bottom: var(--lv-sp-3);
-        flex-wrap: wrap;
-    }
-    .lv-qc-close-icon {
-        margin-left: auto;
-        color: var(--lv-color-text-muted);
-        cursor: pointer;
-        padding: var(--lv-sp-1);
-        min-height: 44px;
-        min-width: 44px;
-        width: 44px;
-        height: 44px;
-        border-radius: var(--lv-r-circle);
-        display: grid;
-        place-items: center;
-        touch-action: manipulation;
-    }
-    .lv-qc-close-icon:hover {
-        background: color-mix(in srgb, var(--lv-color-text) 8%, transparent);
-        color: var(--lv-color-text);
     }
     .lv-qc-doc-banner {
         display: flex;
@@ -1664,53 +1658,32 @@
         gap: 4px;
         font-size: var(--lv-type-meta-size);
     }
-    .lv-qc-steps {
-        display: flex;
-        align-items: center;
-        gap: var(--lv-sp-2);
-        flex-wrap: wrap;
-        padding: 8px 12px;
-        border-radius: var(--lv-r-m);
-        background: color-mix(in srgb, var(--lv-color-brand) 5%, var(--lv-color-surface));
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 14%, var(--lv-border));
-        color: var(--lv-color-text-muted);
-        font-size: var(--lv-type-meta-size);
-        margin-bottom: var(--lv-sp-3);
-    }
-    .lv-qc-step {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .lv-qc-step b {
-        display: inline-grid;
-        width: 16px;
-        height: 16px;
-        place-items: center;
-        border-radius: var(--lv-r-circle);
-        background: var(--lv-primary-soft);
-        color: var(--lv-color-brand);
-        font-size: 10px;
-        font-weight: var(--lv-fw-bold);
-    }
     .lv-qc-toolbar {
         display: flex;
+        flex-wrap: wrap;
         align-items: flex-end;
         justify-content: space-between;
-        gap: calc(var(--lv-space-unit) * 10);
+        gap: var(--lv-sp-3);
         margin-bottom: var(--lv-sp-4);
         padding-bottom: var(--lv-sp-3);
         border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
     }
     .lv-qc-template {
         display: inline-flex;
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
         padding: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
         border-radius: var(--lv-r-pill);
         background: color-mix(in srgb, var(--lv-color-text) 6%, transparent);
         border: 1px solid var(--lv-border);
         gap: calc(var(--lv-space-unit) * 1 + var(--lv-space-hairline));
+        box-sizing: border-box;
+        &::-webkit-scrollbar { display: none; }
     }
     .lv-qc-template button {
+        flex: none;
+        white-space: nowrap;
         display: inline-flex;
         align-items: center;
         gap: calc(var(--lv-space-unit) * 3);
@@ -1788,15 +1761,23 @@
     }
     .lv-qc-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--lv-sp-4); align-items: start; }
     .lv-qc-editor { min-width: 0; }
-    .lv-qc-deck { flex: 1 1 320px; max-width: 520px; margin: 0; }
+    .lv-qc-deck { flex: 1 1 360px; max-width: 520px; min-width: min(320px, 100%); margin: 0; }
     .lv-qc-deck-inputs {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--lv-sp-2);
-        select { flex: 1 1 180px; }
-        .lv-qc-new { flex: 1 1 200px; margin: 0; }
+        select { flex: 1 1 150px; min-width: 0; }
+        .lv-qc-new { flex: 1 1 160px; min-width: 0; margin: 0; }
+        .lv-qc-deck-refresh { flex: 0 0 auto; margin-left: auto; }
     }
-    .lv-qc-label-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); }
+    .lv-qc-label-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--lv-sp-2); min-height: 28px; }
+    .lv-qc-label-bar > .lv-qc-label { margin-bottom: 0; }
+    .lv-qc-editor > .lv-qc-field > .lv-qc-label-bar { min-height: 32px; }
+    .lv-qc-editor > .lv-qc-field > .lv-qc-label-bar > .lv-qc-label { font-size: var(--lv-type-body-size); }
+    .lv-qc-label-bar--wrap { flex-wrap: wrap; }
+    .lv-qc-label--nowrap { white-space: nowrap; flex-shrink: 0; }
+    .lv-qc-field-tools { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: 100%; }
     .lv-qc-count {
         margin-left: 6px;
         font-size: var(--lv-type-caption-size);
@@ -1907,8 +1888,8 @@
         max-width: 48em;
         text-wrap: pretty;
     }
-    .lv-qc-preview { display: flex; min-width: 0; flex-direction: column; gap: var(--lv-sp-2); margin: 0; }
-    .lv-qc-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--lv-space-unit) * 4); font-size: var(--lv-type-body-size); font-weight: var(--lv-fw-semibold); }
+    .lv-qc-preview { display: flex; min-width: 0; flex-direction: column; gap: 6px; margin: 0; }
+    .lv-qc-preview-heading { display: flex; justify-content: space-between; align-items: center; min-height: 32px; gap: calc(var(--lv-space-unit) * 4); font-size: var(--lv-type-body-size); font-weight: var(--lv-fw-semibold); }
     .lv-qc-preview-tags { display: inline-flex; align-items: center; gap: var(--lv-sp-2); }
     .lv-qc-preview-sub { margin-bottom: calc(var(--lv-space-unit) * 1); color: var(--lv-color-text-muted); font-size: var(--lv-type-meta-size); }
     .lv-qc-reveal {
@@ -2022,7 +2003,6 @@
         .lv-quickcard {
             padding: 8px 10px;
         }
-        .lv-qc-steps { display: none !important; }
         .lv-qc-toolbar {
             flex-direction: column;
             align-items: stretch;
@@ -2037,8 +2017,10 @@
             scrollbar-width: none;
             flex-wrap: nowrap;
             -webkit-overflow-scrolling: touch;
-            padding: 2px;
+            padding: 2px 20px 2px 2px;
             gap: 3px;
+            -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
             &::-webkit-scrollbar { display: none; }
             button {
                 flex: none;
@@ -2048,7 +2030,7 @@
                 font-size: 12.5px;
             }
         }
-        .lv-qc-deck { width: 100%; max-width: none; margin: 0; }
+        .lv-qc-deck { flex: 0 0 auto; width: 100%; max-width: none; margin: 0; }
         .lv-qc-label-bar {
             margin-bottom: 2px;
             .lv-qc-label { font-size: 12px; margin-bottom: 0; }
@@ -2092,15 +2074,6 @@
             color: var(--lv-color-brand);
             font-weight: var(--lv-fw-semibold);
         }
-        .lv-qc-mand-bar {
-            padding: 4px 8px;
-            margin-bottom: 6px;
-            gap: 4px;
-            font-size: 11px;
-            .lv-qc-mand-title { display: none; }
-            .lv-qc-mand-pill { padding: 1px 6px; font-size: 10.5px; }
-            .lv-qc-mand-status { font-size: 10.5px; }
-        }
         .lv-qc-doc-banner {
             padding: 6px 10px;
             margin-bottom: 6px;
@@ -2131,10 +2104,15 @@
             bottom: 0;
             z-index: var(--lv-z-card-control);
             margin-top: auto;
+            flex-wrap: wrap;
             justify-content: stretch;
             background: var(--lv-color-surface);
             border-top: 1px solid var(--lv-border);
             padding: var(--lv-sp-2) 0 max(var(--lv-sp-2), env(safe-area-inset-bottom));
+        }
+        .lv-qc-ready-hint {
+            width: 100%;
+            font-size: 11.5px;
         }
         .lv-qc-actions .b3-button--cancel {
             min-height: 40px;
@@ -2151,7 +2129,6 @@
         .lv-quickcard {
             padding: 8px 10px;
         }
-        .lv-qc-steps { display: none !important; }
         .lv-qc-toolbar {
             flex-direction: column;
             align-items: stretch;
@@ -2166,8 +2143,10 @@
             scrollbar-width: none;
             flex-wrap: nowrap;
             -webkit-overflow-scrolling: touch;
-            padding: 2px;
+            padding: 2px 20px 2px 2px;
             gap: 3px;
+            -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
             &::-webkit-scrollbar { display: none; }
             button {
                 flex: none;
@@ -2177,7 +2156,7 @@
                 font-size: 12.5px;
             }
         }
-        .lv-qc-deck { width: 100%; max-width: none; margin: 0; }
+        .lv-qc-deck { flex: 0 0 auto; width: 100%; max-width: none; margin: 0; }
         .lv-qc-label-bar {
             margin-bottom: 2px;
             .lv-qc-label { font-size: 12px; margin-bottom: 0; }
@@ -2226,15 +2205,6 @@
             color: var(--lv-color-brand);
             font-weight: var(--lv-fw-semibold);
         }
-        .lv-qc-mand-bar {
-            padding: 4px 8px;
-            margin-bottom: 6px;
-            gap: 4px;
-            font-size: 11px;
-            .lv-qc-mand-title { display: none; }
-            .lv-qc-mand-pill { padding: 1px 6px; font-size: 10.5px; }
-            .lv-qc-mand-status { font-size: 10.5px; }
-        }
         .lv-qc-doc-banner {
             padding: 6px 10px;
             margin-bottom: 6px;
@@ -2265,10 +2235,15 @@
             bottom: 0;
             z-index: var(--lv-z-card-control);
             margin-top: auto;
+            flex-wrap: wrap;
             justify-content: stretch;
             background: var(--lv-color-surface);
             border-top: 1px solid var(--lv-border);
             padding: var(--lv-sp-2) 0 max(var(--lv-sp-2), env(safe-area-inset-bottom));
+        }
+        .lv-qc-ready-hint {
+            width: 100%;
+            font-size: 11.5px;
         }
         .lv-qc-actions .b3-button--cancel {
             min-height: 40px;
@@ -2302,8 +2277,23 @@
         }
     }
     .lv-quickcard .lv-qc-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
         justify-content: flex-end;
         gap: var(--lv-sp-2);
+    }
+    .lv-qc-ready-hint {
+        margin-right: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: var(--lv-type-meta-size);
+        color: var(--lv-color-text-muted);
+    }
+    .lv-qc-ready-hint--ok {
+        color: var(--lv-color-success);
+        font-weight: var(--lv-fw-medium);
     }
     .lv-quickcard .lv-qc-actions :global(.lv-kbd2) {
         margin-left: calc(var(--lv-space-unit) * 3);
@@ -2314,57 +2304,6 @@
         opacity: 0.9;
     }
     .lv-quickcard .b3-dialog__action { justify-content: flex-end; }
-    .lv-qc-mand-bar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
-        margin-bottom: var(--lv-sp-3);
-        padding: 6px 12px;
-        background: var(--lv-color-surface);
-        border: 1px solid var(--lv-border);
-        border-radius: var(--lv-r-m);
-        font-size: var(--lv-type-caption-size);
-    }
-    .lv-qc-mand-title {
-        font-weight: var(--lv-fw-semibold);
-        color: var(--lv-color-text-muted);
-    }
-    .lv-qc-mand-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
-        border-radius: var(--lv-r-tag);
-        font-size: 11px;
-        border: 1px solid var(--lv-border);
-        background: transparent;
-        cursor: pointer;
-        transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease;
-    }
-    .lv-qc-mand-ok {
-        border-color: color-mix(in srgb, var(--lv-color-success) 40%, transparent);
-        background: color-mix(in srgb, var(--lv-color-success) 10%, transparent);
-        color: var(--lv-color-success);
-        font-weight: var(--lv-fw-medium);
-    }
-    .lv-qc-mand-err {
-        border-color: color-mix(in srgb, var(--lv-color-danger) 40%, transparent);
-        background: color-mix(in srgb, var(--lv-color-danger) 10%, transparent);
-        color: var(--lv-color-danger);
-    }
-    .lv-qc-mand-status {
-        margin-left: auto;
-        color: var(--lv-color-text-muted);
-        font-size: 11px;
-    }
-    .lv-qc-mand-status--ready {
-        color: var(--lv-color-success);
-        font-weight: var(--lv-fw-medium);
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-    }
     .lv-qc-smart-paste-card {
         margin-bottom: var(--lv-sp-3);
         padding: 12px 14px;

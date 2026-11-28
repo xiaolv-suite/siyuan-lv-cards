@@ -30,7 +30,7 @@ export const loadHubMount: () => Promise<ChunkMount["mount"]> = process.env.DEV_
     ? mountComp(() => import("@/ui/hub.svelte"))
     : () => loadChunk("hub").then(m => m.mount);
 
-export const loadHubServices: () => Promise<HubServices> = process.env.DEV_MODE
+export const loadHubServices: () => Promise<HubServices> = (process.env.DEV_MODE || process.env.NODE_ENV === "test")
     ? () => import("@/core/hub-services").then(m => m.hubServices)
     : async () => {
         const { services } = await loadChunk("hub");
@@ -135,6 +135,21 @@ export const loadBlockActionRuntime: () => Promise<BlockActionRuntime> = (proces
             throw new Error("lv dialogs chunk missing blockActionRuntime");
         }
         return module.blockActionRuntime as BlockActionRuntime;
+    };
+
+export const loadAiChat: () => Promise<typeof import("@/api/ai").aiChat> = (process.env.DEV_MODE || process.env.NODE_ENV === "test")
+    ? () => import("@/api/ai").then(m => m.aiChat)
+    : async () => {
+        let module = await loadDialogsModule();
+        if (typeof module.aiChat !== "function") {
+            dialogsChunkReady = null;
+            invalidateChunk("dialogs");
+            module = await loadDialogsModule();
+        }
+        if (typeof module.aiChat !== "function") {
+            throw new Error("lv dialogs chunk missing aiChat");
+        }
+        return module.aiChat;
     };
 
 export const loadAIWizardEmbedded = loadDialogsEmbeddedView("AIWizard");

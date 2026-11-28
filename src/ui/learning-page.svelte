@@ -246,7 +246,7 @@
                 {#if onOpenChallenge}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenChallenge?.()}><LvIcon name="timer" size={12} /> <span>{i18n.challenge?.title ?? "限时挑战"}</span></button>{/if}
             </div>
         {:else if selectedTab === "plans"}
-            <div class="lv-learning-columns"><section class="lv-learning-plan"><GoalsPage {i18n} {goals} embedded={true} /></section><aside class="lv-card2 lv-learning-tool"><h2>{copy.examTitle ?? "考试与低频工具"}</h2><p>{copy.examBody ?? "确定范围与截止日期，再核对每天投入。"}</p><div style="display:flex;flex-wrap:wrap;gap:var(--lv-sp-2);"><button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={!onOpenExam} onclick={() => onOpenExam?.()}><LvIcon name="graduation" size={12} /> <span>{copy.openExam ?? "查看考试计划"}</span></button>{#if onOpenPairing}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenPairing?.()}><LvIcon name="dice" size={12} /> <span>{i18n.pairing?.title ?? "配对消除"}</span></button>{/if}{#if onOpenChallenge}<button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" onclick={() => onOpenChallenge?.()}><LvIcon name="timer" size={12} /> <span>{i18n.challenge?.title ?? "限时挑战"}</span></button>{/if}</div></aside></div>
+            <div class="lv-learning-columns"><section class="lv-learning-plan"><GoalsPage {i18n} {goals} embedded={true} /></section><aside class="lv-card2 lv-learning-tool"><h2>{copy.examTitle ?? "考试与备考计划"}</h2><p>{copy.examBody ?? "确定范围与截止日期，再核对每天投入。"}</p><div style="display:flex;flex-wrap:wrap;gap:var(--lv-sp-2);"><button type="button" class="b3-button b3-button--small b3-button--outline lv-btn-tool" disabled={!onOpenExam} onclick={() => onOpenExam?.()}><LvIcon name="graduation" size={12} /> <span>{copy.openExam ?? "查看考试计划"}</span></button></div></aside></div>
         {:else}
             <div class="lv-learning-columns"><section class="lv-card2 lv-learning-calendar" aria-label={tabLabels.calendar}>
                 {#if calLoading}<div class="lv-learning-status" role="status" aria-live="polite">{copy.calendarLoading ?? "正在读取学习日历…"}</div>{/if}
@@ -349,7 +349,7 @@
     .lv-learning-empty, .lv-learning-empty-copy { color: var(--lv-color-text-muted); }
     .lv-learning-empty { display: grid; gap: var(--lv-sp-3); justify-items: start; padding: var(--lv-sp-5) 0; }
     .lv-learning-empty p, .lv-learning-empty-copy { max-width: 48em; text-wrap: pretty; }
-    .lv-learning-actions { display: flex; justify-content: flex-end; margin-top: var(--lv-sp-4); }
+    .lv-learning-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--lv-sp-2); margin-top: var(--lv-sp-4); }
     .lv-learning-plan :global(.lv-page) { padding: 0; }
     .lv-learning-plan :global(.lv-pagehead) { display: none; }
     .lv-learning-tool h2 { margin: 0 0 var(--lv-sp-2); font-size: var(--lv-type-title-md-size); text-wrap: balance; }

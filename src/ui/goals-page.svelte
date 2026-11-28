@@ -6,6 +6,7 @@
     import LvEmpty from "./kit/LvEmpty.svelte";
     import LvChip from "./kit/LvChip.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
     import { GOAL_PRIORITIES, LEVELS, currentCriteria, daysUntilDeadline, isGoalActive, setCriteria, sortGoalsByPriority, suggestedMinutes, type GoalPriority, type LearningGoal, type LearningGoalsData, type LearnerLevel } from "@/core/learning-goal";
     import { SESSION_PURPOSES } from "@/core/session-purpose";
     import { narrateGoalProgress, stageLabelKey } from "@/core/goal-narrative";
@@ -64,9 +65,12 @@
         editing = true;
     }
 
-    function cancelEdit() {
+    async function cancelEdit() {
         const current = JSON.stringify({ ...form, criteria: criteriaDraft });
-        if (current !== editBaseline && !window.confirm(t.discardConfirm ?? "当前填写内容尚未保存，确定退出吗？")) return;
+        if (current !== editBaseline && !await lvConfirm({
+            title: t.discardTitle ?? "放弃未保存的修改",
+            content: t.discardConfirm ?? "当前填写内容尚未保存，确定退出吗？",
+        })) return;
         editing = false;
         formError = "";
     }
@@ -204,7 +208,7 @@
                 void save();
             } else if (e.key === "Escape" && !saving && !actionBusy) {
                 e.preventDefault();
-                cancelEdit();
+                void cancelEdit();
             }
             return;
         }

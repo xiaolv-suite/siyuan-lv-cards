@@ -37,6 +37,29 @@ $lv-cards-ui-scope: ":is(.lv-cards-root, .lv-cards-dialog)";
     --lv-color-on-data-soft: rgb(3, 105, 161);
     --lv-data-border: rgba(2, 132, 199, 0.25);
 
+    // 雾靛（Mist Indigo）分析与热力图语义令牌（与小驴打卡一致：扁平轻盈 5 阶单色阶梯）
+    --lv-font-sans: Inter, "PingFang SC", "Microsoft YaHei", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --lv-heat-0: #F5F6FA;
+    --lv-heat-0-border: rgba(100, 116, 139, 0.12);
+    --lv-heat-1: #E4E8FD;
+    --lv-heat-2: #C2CCFA;
+    --lv-heat-3: #96A6F5;
+    --lv-heat-4: #697CEB;
+    --lv-heat-text-1: #434B8C;
+    --lv-heat-text-2: #31397A;
+    --lv-heat-text-3: #1E245C;
+    --lv-heat-text-4: #FFFFFF;
+    --lv-indigo-accent: #697CEB;
+    --lv-indigo-accent-strong: #4F62D6;
+    --lv-indigo-soft: #EEF0FE;
+    --lv-indigo-border: rgba(105, 124, 235, 0.30);
+    --lv-indigo-track: #F2F4FA;
+    --lv-indigo-future-1: #F4F5FD;
+    --lv-indigo-future-2: #E8ECFC;
+    --lv-indigo-future-3: #D6DEFB;
+    --lv-chart-grid: rgba(100, 116, 139, 0.14);
+    --lv-chart-theory: #8B93A7;
+
     --lv-color-danger: rgb(192, 57, 75);
     --lv-color-warning: rgb(148, 90, 23);
     --lv-color-success: rgb(46, 125, 91);
@@ -259,6 +282,28 @@ $lv-cards-ui-scope: ":is(.lv-cards-root, .lv-cards-dialog)";
     --lv-data-soft: rgb(12, 43, 66);
     --lv-color-on-data-soft: rgb(125, 211, 252);
     --lv-data-border: rgba(56, 189, 248, 0.3);
+
+    // 雾靛（Mist Indigo）深色柔雾 5 阶单色阶梯
+    --lv-heat-0: #212531;
+    --lv-heat-0-border: rgba(255, 255, 255, 0.08);
+    --lv-heat-1: #262B47;
+    --lv-heat-2: #343B68;
+    --lv-heat-3: #4C5696;
+    --lv-heat-4: #7C8CEB;
+    --lv-heat-text-1: #C7CEFA;
+    --lv-heat-text-2: #DCE1FD;
+    --lv-heat-text-3: #F2F4FF;
+    --lv-heat-text-4: #101324;
+    --lv-indigo-accent: #8C9BF0;
+    --lv-indigo-accent-strong: #A3B0F5;
+    --lv-indigo-soft: rgba(124, 140, 235, 0.16);
+    --lv-indigo-border: rgba(140, 155, 240, 0.36);
+    --lv-indigo-track: rgba(255, 255, 255, 0.06);
+    --lv-indigo-future-1: rgba(124, 140, 235, 0.09);
+    --lv-indigo-future-2: rgba(124, 140, 235, 0.16);
+    --lv-indigo-future-3: rgba(124, 140, 235, 0.25);
+    --lv-chart-grid: rgba(255, 255, 255, 0.10);
+    --lv-chart-theory: #949CB3;
 
     --lv-color-danger: rgb(248, 113, 113);
     --lv-color-warning: rgb(251, 191, 36);
@@ -700,6 +745,7 @@ $lv-cards-ui-scope: ":is(.lv-cards-root, .lv-cards-dialog)";
     --b3-theme-on-surface: var(--lv-color-text-muted);
     --b3-theme-on-surface-light: var(--lv-color-text-muted);
     --b3-theme-primary: var(--lv-color-brand);
+    --b3-theme-on-primary: var(--lv-color-on-brand);
     --b3-theme-primary-light: var(--lv-primary-soft);
     --b3-theme-success: var(--lv-color-success);
     --b3-theme-warning: var(--lv-color-warning);
@@ -3630,7 +3676,7 @@ pre,
         }
 
         .lv-card-badge-pill__quick-slot {
-            gap: 4px;
+            gap: 8px;
             margin-left: 3px;
         }
 
@@ -3643,7 +3689,7 @@ pre,
             &::before {
                 content: "";
                 position: absolute;
-                inset: -8px -4px;
+                inset: -8px -3px;
                 border-radius: 6px;
             }
         }
@@ -3806,6 +3852,16 @@ body.dark .lv-card-badge-pill {
             margin-top: 3px;
             border-top: 1px solid color-mix(in srgb, var(--b3-theme-on-surface, #1f1f1f) 7%, transparent);
         }
+
+        &--danger {
+            margin-top: 2px;
+        }
+    }
+
+    &__divider--danger {
+        height: 1px;
+        margin: 4px 10px 2px;
+        background: color-mix(in srgb, var(--b3-theme-error, #ef4444) 24%, transparent);
     }
 
     &__section-head {
@@ -3818,6 +3874,11 @@ body.dark .lv-card-badge-pill {
         letter-spacing: 0.02em;
         opacity: 0.58;
         user-select: none;
+
+        &--danger {
+            color: var(--b3-theme-error, #ef4444);
+            opacity: 0.85;
+        }
 
         .lv-bam__section-glyph {
             font-size: 11px;
@@ -4134,8 +4195,14 @@ body.dark .lv-card-badge-pill {
         border-radius: 14px;
 
         &__item {
-            min-height: 42px;
+            min-height: 44px;
             padding: 6px 10px;
+        }
+
+        &__store-btn,
+        &__quick-btn {
+            min-height: 44px;
+            min-width: 44px;
         }
 
         &__glyph-wrap {

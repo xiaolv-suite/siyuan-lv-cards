@@ -3,6 +3,7 @@
      *  数据与持久化全部由宿主注入（onadd/onremove 回调），本组件零 siyuan 依赖。 */
     import LvError from "./kit/LvError.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
 
     let { entityId, relations, t, onadd, onremove }: {
         /** 当前实体 id（块 ID） */
@@ -77,10 +78,10 @@
         });
     }
 
-    function remove(relation: { from: string; to: string; type: string }) {
+    async function remove(relation: { from: string; to: string; type: string }) {
         if (busy) return;
         const message = t.relations.removeConfirm ?? "确定删除这条关系？此操作不可撤销。";
-        if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(message)) return;
+        if (!await lvConfirm({ title: t.relations.removeTitle ?? "删除关系", content: message })) return;
         void runAction(() => Promise.resolve(onremove(relation.from, relation.to, relation.type)));
     }
 </script>

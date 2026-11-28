@@ -6,6 +6,7 @@
     import { maskMarkedAnswersForQuestion } from "@/core/card-face";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
 
     let { i18n, onExit }: { i18n: any; onExit: () => void } = $props();
     const t = $derived(i18n);
@@ -151,16 +152,19 @@
         phase = "done";
     }
 
-    function requestFinish() {
-        if (phase === "running" && !window.confirm(t.challenge.stopConfirm ?? "当前挑战进度不会保存，确定结束吗？")) return;
+    async function requestFinish() {
+        if (phase === "running" && !await lvConfirm({
+            title: t.challenge.stopTitle ?? "结束挑战",
+            content: t.challenge.stopConfirm ?? "当前挑战进度不会保存，确定结束吗？",
+        })) return;
         finish();
     }
 
     function onKeydown(e: KeyboardEvent) {
         if (e.key === "Escape") {
             e.preventDefault();
-            if (phase === "running") requestFinish();
-            else exit();
+            if (phase === "running") void requestFinish();
+            else void exit();
             return;
         }
         if (phase === "running") {

@@ -8,9 +8,9 @@
 
 让思源笔记成为记得住、用得上、找得到、改得动、负担得起、带得走的长期知识资产
 
-**当前版本：v0.233.7** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
+**当前版本：v0.233.8** ｜ [English Documentation](README.en.md) ｜ [更新日志](CHANGELOG.md)
 
-[![Release](https://img.shields.io/badge/release-v0.233.7-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
+[![Release](https://img.shields.io/badge/release-v0.233.8-blue.svg)](https://github.com/xiaolv-suite/siyuan-lv-cards/releases)
 [![思源笔记](https://img.shields.io/badge/思源笔记-%3E%3D%203.8.4-brightgreen.svg)](https://b3log.org/siyuan)
 [![算法引擎](https://img.shields.io/badge/算法-内核原生%20FSRS-blueviolet.svg)](https://github.com/open-spaced-repetition/fsrs4anki)
 [![License: MIT](https://img.shields.io/github/license/xiaolv-suite/siyuan-lv-cards)](./LICENSE)
@@ -25,18 +25,16 @@
 
 ---
 
-## 🚀 本次更新要点（v0.233.7 · 2026-11-26 里程碑正式版）
+## 🚀 本次更新要点（v0.233.8 · 2026-11-27 稳定优化版）
 
-- **闪卡中心「今日」总览直达**：无论从顶栏、小驴罗盘主磁贴还是移动端入口打开，或经 `Ctrl+R` 懒恢复重开，均复用单页签并直达「今日」总览主页，不再停留在旧子页或重复建页；
-- **三大共享中枢与块助手隔离**：全面接入小驴罗盘、全生态 AI 路由、块助手 1–8 原生底座与自定义双击触发及联合灾备；块助手按块类型与已安装插件严格隔离呈现，复习工作台零块助手胶囊侵入，普通挖空支持单次点击「点击揭晓」；
-- **设计态 AI 等待与真实取消**：AI 制卡向导（Step 1 批量生成与 Step 2 单卡重生成）及设置中心模型连通性测试全面升级为统一 `.lv-ai-thinking` 动态等待卡（实时阶段提示 + 秒计时 + 一键中止请求）；
-- **零 `:has()` / 零高模糊 60fps 极速性能**：全量样式消除 CSS `:has()` 与高耗能大半径模糊（`<=14px`），兼容思源只读属性，桌面浅色/深色主题与 `390×844` 移动端界面零溢出、面向用户的界面术语柔和自然化；
-- **零正文污染属性问答与日记防冲突**：强化块属性（`custom-riff-title`）问答模式端到端联动，复习战报自动复用思源原生默认日记并写入 `#### 🐴 小驴记录` 四级折叠区；
-- **启动分级加载与官方齿轮直达**：启动同步存储槽位从 23 项收敛至 4 项核心槽，支持思源插件列表齿轮图标直接打开设置。
+- **块助手零 DOM 侵入与删块瞬时隐身**：强化删块/退格/合并及编辑快捷键瞬时隐身与焦点防反弹，移动端轻触 `0ms` 执行即隐，并合入全生态 `lv-kit` 零 Protyle DOM 残留治理与 Batch 1 A1–A4 规范；
+- **星线首页、牌组与快速制卡降噪重塑**：优化仪表盘、牌组管理与快速制卡信息密度（保留星线视觉风格），替换原生 `prompt`/`confirm` 弹窗并补齐筛选空态；
+- **复习弹窗栈与多端走查清零**：复习弹窗全面接入 `lvSurfaceStack` 分级 Esc 退场，修复暗色集市对比度、思源 AI 密钥校验、快速制卡换行及深浅/移动端（`390×844`）细节，严守零 `:has(` 与主包体积红线。
 
 <details>
-<summary>展开查看历史版本更新记录（v0.233.6 及更早版本 · 完整记录见 CHANGELOG.md）</summary>
+<summary>展开查看历史版本更新记录（v0.233.7 及更早版本 · 完整记录见 CHANGELOG.md）</summary>
 
+- **v0.233.7**：全生态大重构里程碑正式版，直达「今日」总览主页、三大共享中枢、`.lv-ai-thinking` 等待卡、Zero-Touch 块助手、零 `:has()` 60fps 优化与启动槽位分级。
 - **v0.233.6**：三大共享中枢与块助手隔离、`.lv-ai-thinking` 等待卡与启动存储槽位分级减负。
 
 - **v0.233.3**：罗盘启动防抖与顶栏对齐、LifeLog 照片流与原子多块撤销、全生态联合灾备恢复、移动端全面去电脑化。

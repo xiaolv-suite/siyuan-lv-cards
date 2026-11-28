@@ -78,6 +78,90 @@ interface CheckinBridgeLike {
 }
 
 const BRIDGE_TIMEOUT_MS = 4000;
+const FOCUS_HIGHLIGHT_OVERLAY_ID = "lv-block-focus-highlight-overlay";
+const ZERO_TOUCH_EDITOR_SELECTOR = '.protyle-wysiwyg, [data-node-id], .protyle-attr, [contenteditable="true"]';
+let activeFocusHighlightCleanup: (() => void) | null = null;
+
+function isDetachedBodyOverlay(el: Element | null | undefined): el is HTMLElement {
+    if (!el || typeof document === "undefined" || !document.body) return false;
+    const htmlEl = el as HTMLElement;
+    if (htmlEl.parentElement !== document.body) return false;
+    return !htmlEl.closest?.(ZERO_TOUCH_EDITOR_SELECTOR);
+}
+
+function clearFocusHighlightOverlay(): void {
+    if (activeFocusHighlightCleanup) {
+        const fn = activeFocusHighlightCleanup;
+        activeFocusHighlightCleanup = null;
+        try { fn(); } catch { /* ignore */ }
+    }
+    if (typeof document !== "undefined") {
+        const stale = document.getElementById(FOCUS_HIGHLIGHT_OVERLAY_ID);
+        if (isDetachedBodyOverlay(stale)) stale.remove();
+    }
+}
+
+function showDetachedFocusHighlight(el: HTMLElement): void {
+    clearFocusHighlightOverlay();
+    if (typeof document === "undefined" || !document.body || typeof el.getBoundingClientRect !== "function") return;
+    const rect = el.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = FOCUS_HIGHLIGHT_OVERLAY_ID;
+    overlay.setAttribute("data-lv-block-focus-overlay", "true");
+    overlay.setAttribute("aria-hidden", "true");
+    const top = Math.max(0, Math.round(rect.top - 2));
+    const left = Math.max(0, Math.round(rect.left - 4));
+    const width = Math.max(0, Math.round(rect.width + 8));
+    const height = Math.max(0, Math.round(rect.height + 4));
+    overlay.style.cssText = [
+        "position: fixed",
+        `top: ${top}px`,
+        `left: ${left}px`,
+        `width: ${width}px`,
+        `height: ${height}px`,
+        "pointer-events: none",
+        "z-index: 99996",
+        "border: 2px solid var(--b3-theme-primary, #3b82f6)",
+        "background: color-mix(in srgb, var(--b3-theme-primary, #3b82f6) 10%, transparent)",
+        "border-radius: 6px",
+        "box-shadow: 0 0 0 3px color-mix(in srgb, var(--b3-theme-primary, #3b82f6) 16%, transparent)",
+        "box-sizing: border-box",
+        "transition: opacity 0.18s ease-out",
+    ].join("; ") + ";";
+    document.body.appendChild(overlay);
+
+    let cleaned = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (activeFocusHighlightCleanup === cleanup) {
+            activeFocusHighlightCleanup = null;
+        }
+        if (timer !== null) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        try {
+            document.removeEventListener("scroll", cleanup, true);
+            window?.removeEventListener?.("scroll", cleanup);
+            window?.removeEventListener?.("resize", cleanup);
+        } catch { /* ignore */ }
+        if (isDetachedBodyOverlay(overlay)) {
+            overlay.remove();
+        }
+    };
+
+    activeFocusHighlightCleanup = cleanup;
+    timer = setTimeout(cleanup, 1200);
+    try {
+        document.addEventListener("scroll", cleanup, { capture: true, passive: true });
+        window?.addEventListener?.("scroll", cleanup, { passive: true });
+        window?.addEventListener?.("resize", cleanup, { passive: true });
+    } catch { /* ignore */ }
+}
 
 function label(host: BlockActionHost, key: string, fallback: string): string {
     const value = host.i18n?.[key];
@@ -225,7 +309,7 @@ export async function executeBlockAction(
         || isBlockElementReadOnly(activeEl)
         || isBlockElementReadOnly(options?.anchor),
     );
-    if (readOnly && (WRITE_BLOCK_ACTION_IDS.has(action.id) || (action as any).mutatesBlock === true || (action as any).readonlySafe === false)) {
+    if (readOnly && (WRITE_BLOCK_ACTION_IDS.has(action.id) || (action as any).mutatesBlock === true || (action as any).readOnlySafe === false || (action as any).readonlySafe === false)) {
         showMessage(execMsg(host, "executor.readonlyBlocked", "当前文档处于只读锁定状态，已拦截写入操作"), 2400, "info");
         return;
     }
@@ -278,9 +362,10 @@ export async function executeBlockAction(
                     }
                     const el = findActiveProtyleBlockElement(blockID, options?.anchor);
                     if (el) {
-                        el.scrollIntoView({ behavior: "smooth", block: "center" });
-                        el.classList.add("protyle-wysiwyg--select");
-                        setTimeout(() => el.classList.remove("protyle-wysiwyg--select"), 1200);
+                        if (typeof el.scrollIntoView === "function") {
+                            el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }
+                        showDetachedFocusHighlight(el);
                     }
                     showMessage(execMsg(host, "executor.focusEntered", "已进入当前块聚焦沉浸模式"), 2000, "info");
                 } catch (err: any) {
@@ -305,15 +390,11 @@ export async function executeBlockAction(
             case "toggle-fold-block": {
                 try {
                     const el = findActiveProtyleBlockElement(blockID, options?.anchor);
-                    const currentFold = el?.getAttribute("data-fold") === "1" || el?.getAttribute("fold") === "1";
+                    const currentFold = el?.getAttribute("data-fold") === "1"
+                        || el?.getAttribute("fold") === "1"
+                        || Boolean(el?.classList?.contains("protyle-wysiwyg--fold"));
                     const nextFold = currentFold ? "0" : "1";
                     await setBlockAttrs(blockID, { fold: nextFold });
-                    if (el) {
-                        el.setAttribute("data-fold", nextFold);
-                        el.setAttribute("fold", nextFold);
-                        if (nextFold === "1") el.classList.add("protyle-wysiwyg--fold");
-                        else el.classList.remove("protyle-wysiwyg--fold");
-                    }
                     showMessage(nextFold === "1" ? execMsg(host, "executor.foldCollapsed", "已收起当前分支") : execMsg(host, "executor.foldExpanded", "已展开当前分支"), 1800, "info");
                 } catch (err: any) {
                     showMessage(execMsg(host, "executor.foldFail", "折叠切换失败：{reason}", {reason: err?.message || "未知原因"}), 2200, "error");

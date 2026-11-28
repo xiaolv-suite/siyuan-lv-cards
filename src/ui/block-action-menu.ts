@@ -34,6 +34,7 @@ import {
     type EcosystemPresence,
     buildBlockActionMenu,
 } from "../core/block-actions";
+import { lvSurfaceStack } from "@/libs/notice";
 
 export interface BlockActionMenuOptions {
     /** 当前块快照（决定哪些动作可用） */
@@ -179,20 +180,63 @@ function positionMenu(menu: HTMLElement, anchor: HTMLElement, estWidth: number):
     }
 }
 
+function isDangerAction(action: BlockActionDescriptor): boolean {
+    return Boolean(action.destructive || (action as any).danger || action.id === "delete-block" || action.id === "cut-block");
+}
+
+function bindSafeTap(el: HTMLElement, onTap: () => void): void {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+    let touchPicked = false;
+    el.addEventListener("touchstart", (e) => {
+        const t = e.touches?.[0];
+        touchStartX = t ? t.clientX : 0;
+        touchStartY = t ? t.clientY : 0;
+        touchMoved = false;
+    }, { passive: true });
+    el.addEventListener("touchmove", (e) => {
+        const t = e.touches?.[0];
+        if (!t) return;
+        if (Math.abs(t.clientX - touchStartX) > 8 || Math.abs(t.clientY - touchStartY) > 8) {
+            touchMoved = true;
+        }
+    }, { passive: true });
+    el.addEventListener("touchend", (e) => {
+        if (touchMoved) {
+            setTimeout(() => { touchMoved = false; }, 450);
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        touchPicked = true;
+        setTimeout(() => { touchPicked = false; }, 450);
+        onTap();
+    }, { passive: false });
+    el.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (touchPicked || touchMoved) return;
+        onTap();
+    });
+}
+
 function renderSection(
     section: BlockActionGroupSection,
     i18n: Record<string, any> | undefined,
     onPick: (action: BlockActionDescriptor) => void,
     dense: boolean,
     snapshot?: BlockSnapshot,
+    isDangerSection = false,
 ): HTMLElement {
     const wrap = document.createElement("div");
-    wrap.className = `${MENU_CLASS}__section`;
+    wrap.className = isDangerSection ? `${MENU_CLASS}__section ${MENU_CLASS}__section--danger` : `${MENU_CLASS}__section`;
 
-    const groupMeta = BLOCK_ACTION_GROUP_LABELS[section.group as BlockActionGroup];
+    const groupMeta = isDangerSection ? undefined : BLOCK_ACTION_GROUP_LABELS[section.group as BlockActionGroup];
     const head = document.createElement("div");
-    head.className = `${MENU_CLASS}__section-head`;
-    const headGlyph = groupMeta?.glyph ? `<span class="${MENU_CLASS}__section-glyph">${groupMeta.glyph}</span>` : "";
+    head.className = isDangerSection ? `${MENU_CLASS}__section-head ${MENU_CLASS}__section-head--danger` : `${MENU_CLASS}__section-head`;
+    const glyphChar = isDangerSection ? "⚠️" : groupMeta?.glyph;
+    const headGlyph = glyphChar ? `<span class="${MENU_CLASS}__section-glyph">${glyphChar}</span>` : "";
     head.innerHTML = `${headGlyph}<span>${pickLabel(i18n, section.labelKey, section.fallbackLabel)}</span>`;
 
     // 组头计数徽章：一眼扫读该分组的功能数量与生态构成（仅 Command 中枢模式，Focus 保持零噪音）
@@ -223,8 +267,9 @@ function renderSection(
         if (action.featured) {
             item.classList.add(`${MENU_CLASS}__item--featured`);
         }
-        if (action.destructive || (action as any).danger) {
+        if (isDangerAction(action)) {
             item.classList.add(`${MENU_CLASS}__item--danger`);
+            item.setAttribute("data-danger", "true");
         }
 
         // 动态自适应动作文案（如折叠状态）
@@ -232,7 +277,7 @@ function renderSection(
         let actionSubtitle = action.subtitle;
         let actionGlyph = action.glyph;
 
-        if (action.id === "toggle-fold-block" && snapshot) {
+        if ((action.id === "toggle-fold-block" || action.id === "toggle-block-fold") && snapshot) {
             if (snapshot.isFolded) {
                 actionLabel = "展开子分支";
                 actionSubtitle = "展开该块下属的大纲与全部子节点";
@@ -307,37 +352,7 @@ function renderSection(
             item.appendChild(metaWrap);
         }
 
-        let itemTouchStartX = 0;
-        let itemTouchStartY = 0;
-        let itemTouchMoved = false;
-        let itemTouchPicked = false;
-        item.addEventListener("touchstart", (e) => {
-            const t = e.touches?.[0];
-            itemTouchStartX = t ? t.clientX : 0;
-            itemTouchStartY = t ? t.clientY : 0;
-            itemTouchMoved = false;
-        }, { passive: true });
-        item.addEventListener("touchmove", (e) => {
-            const t = e.touches?.[0];
-            if (!t) return;
-            if (Math.abs(t.clientX - itemTouchStartX) > 8 || Math.abs(t.clientY - itemTouchStartY) > 8) {
-                itemTouchMoved = true;
-            }
-        }, { passive: true });
-        item.addEventListener("touchend", (e) => {
-            if (itemTouchMoved) return;
-            e.preventDefault();
-            e.stopPropagation();
-            itemTouchPicked = true;
-            setTimeout(() => { itemTouchPicked = false; }, 450);
-            onPick(action);
-        }, { passive: false });
-        item.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (itemTouchPicked) return;
-            onPick(action);
-        });
+        bindSafeTap(item, () => onPick(action));
 
         grid.appendChild(item);
     }
@@ -363,7 +378,20 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         return () => { /* 已收起 */ };
     }
 
-    const sections = buildBlockActionMenu(snapshot, presence, preferences, externalActions);
+    const rawSections = buildBlockActionMenu(snapshot, presence, preferences, externalActions);
+    const renderedIds = new Set(rawSections.flatMap(s => s.actions.map(a => a.id)));
+    const hasNewFold = renderedIds.has("toggle-block-fold");
+    const hasNewDup = renderedIds.has("duplicate-block");
+    const sections = rawSections
+        .map(s => ({
+            ...s,
+            actions: s.actions.filter(a => {
+                if (hasNewFold && a.id === "toggle-fold-block") return false;
+                if (hasNewDup && a.id === "native-clone-block") return false;
+                return true;
+            }),
+        }))
+        .filter(s => s.actions.length > 0);
     if (sections.length === 0) {
         return () => { /* 无可执行动作 */ };
     }
@@ -432,12 +460,12 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
     const storeBtn = document.createElement("button");
     storeBtn.type = "button";
     storeBtn.className = `${MENU_CLASS}__store-btn`;
-    storeBtn.style.cssText = "border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 28%, transparent); background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 10%, var(--b3-theme-surface, transparent)); cursor: pointer; color: var(--b3-theme-primary, #6366f1); font-size: 11px; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-weight: 600; line-height: 1.2; transition: all 0.15s ease;";
+    storeBtn.style.cssText = isMobileViewport
+        ? "border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 28%, transparent); background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 10%, var(--b3-theme-surface, transparent)); cursor: pointer; color: var(--b3-theme-primary, #6366f1); font-size: 12px; min-height: 44px; min-width: 44px; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 600; line-height: 1.2; transition: all 0.15s ease; box-sizing: border-box;"
+        : "border: 1px solid color-mix(in srgb, var(--b3-theme-primary, #6366f1) 28%, transparent); background: color-mix(in srgb, var(--b3-theme-primary, #6366f1) 10%, var(--b3-theme-surface, transparent)); cursor: pointer; color: var(--b3-theme-primary, #6366f1); font-size: 11px; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-weight: 600; line-height: 1.2; transition: all 0.15s ease;";
     storeBtn.title = "打开块助手资产库，分类装配动作与快捷栏";
     storeBtn.innerHTML = `<span>📦</span><span>资产库</span>`;
-    storeBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    bindSafeTap(storeBtn, () => {
         closeBlockActionMenu();
         const hub = (window as any).LvBlockAssistant || (window as any).__LV_BLOCK_ASSISTANT_HUB__;
         if (hub && typeof hub.openStoreDialog === "function") {
@@ -468,7 +496,9 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         const availableActionMap = new Map<string, BlockActionDescriptor>();
         for (const sec of sections) {
             for (const act of sec.actions) {
-                availableActionMap.set(act.id, act);
+                if (!isDangerAction(act)) {
+                    availableActionMap.set(act.id, act);
+                }
             }
         }
 
@@ -499,17 +529,18 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
                 btn.style.cssText = `
                     display: inline-flex;
                     align-items: center;
+                    justify-content: center;
                     gap: 5px;
-                    padding: 3px 8px;
+                    ${isMobileViewport ? "min-height: 44px; min-width: 44px; padding: 6px 12px; font-size: 12.5px;" : "padding: 3px 8px; font-size: 11.5px;"}
                     border-radius: 6px;
                     border: 1px solid rgba(245, 158, 11, 0.35);
                     background: color-mix(in srgb, #f59e0b 10%, var(--b3-theme-surface));
                     color: var(--b3-theme-on-surface);
                     cursor: pointer;
-                    font-size: 11.5px;
                     font-weight: 500;
                     white-space: nowrap;
                     transition: all 0.15s ease;
+                    box-sizing: border-box;
                 `;
                 const actLabel = pickLabel(i18n, act.labelKey, act.fallbackLabel);
                 btn.title = `${actLabel} (快捷键 ${idx + 1})`;
@@ -525,11 +556,7 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
                 labelSpan.style.cssText = "max-width: 90px; overflow: hidden; text-overflow: ellipsis;";
                 labelSpan.textContent = actLabel;
                 btn.append(numBadge, glyphSpan, labelSpan);
-                btn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    pick(act);
-                });
+                bindSafeTap(btn, () => pick(act));
                 quickBar.appendChild(btn);
             });
 
@@ -537,9 +564,36 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         }
     }
 
-    // 渲染各功能分段
+    // 渲染各功能分段：安全操作按分组展示，所有 destructive / danger 项统一沉底并加危险分隔线
+    const safeSections: BlockActionGroupSection[] = [];
+    const dangerActions: BlockActionDescriptor[] = [];
     for (const section of sections) {
+        const safeActions: BlockActionDescriptor[] = [];
+        for (const act of section.actions) {
+            if (isDangerAction(act)) {
+                dangerActions.push(act);
+            } else {
+                safeActions.push(act);
+            }
+        }
+        if (safeActions.length > 0) {
+            safeSections.push({ ...section, actions: safeActions });
+        }
+    }
+    for (const section of safeSections) {
         menu.appendChild(renderSection(section, i18n, pick, dense, snapshot));
+    }
+    if (dangerActions.length > 0) {
+        const dangerDivider = document.createElement("div");
+        dangerDivider.className = `${MENU_CLASS}__divider ${MENU_CLASS}__divider--danger`;
+        dangerDivider.setAttribute("role", "separator");
+        menu.appendChild(dangerDivider);
+        menu.appendChild(renderSection({
+            group: "native",
+            labelKey: "blockActGroupDanger",
+            fallbackLabel: "危险操作",
+            actions: dangerActions,
+        }, i18n, pick, dense, snapshot, true));
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -567,11 +621,14 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
             backdrop-filter: blur(2px);
             -webkit-backdrop-filter: blur(2px);
         `;
-        mobileMask.addEventListener("pointerdown", (e) => {
+        const swallowMask = (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
             closeBlockActionMenu();
-        });
+        };
+        mobileMask.addEventListener("pointerdown", swallowMask);
+        mobileMask.addEventListener("touchend", swallowMask, { passive: false });
+        mobileMask.addEventListener("click", swallowMask);
         document.body.appendChild(mobileMask);
     }
 
@@ -596,6 +653,7 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
     const onKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape") {
             e.preventDefault();
+            e.stopPropagation();
             closeBlockActionMenu();
             anchor.focus?.();
             return;
@@ -671,12 +729,25 @@ export function openBlockActionMenu(options: BlockActionMenuOptions): () => void
         });
     };
 
+    const surfaceId = `lv-bam_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const popSurface = lvSurfaceStack?.push?.({
+        id: surfaceId,
+        type: "menu",
+        dismiss: () => {
+            if (!menu.isConnected) return false;
+            closeBlockActionMenu();
+            anchor.focus?.();
+            return true;
+        },
+    });
+
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("scroll", onScrollOrResize, { passive: true, capture: true });
     window.addEventListener("resize", onScrollOrResize, { passive: true });
 
     const cleanup = () => {
+        popSurface?.();
         document.removeEventListener("pointerdown", onPointerDown, true);
         document.removeEventListener("keydown", onKeyDown, true);
         window.removeEventListener("scroll", onScrollOrResize, true);

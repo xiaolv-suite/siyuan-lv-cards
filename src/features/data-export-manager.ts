@@ -4,7 +4,7 @@ import {
     buildCostLedgerExportPayload,
 } from "@/core/data-transfer";
 import type { RevlogData } from "@/core/revlog";
-import type { LvCardsSettings } from "@/core/settings";
+import { stripSecretsForStorage, type LvCardsSettings } from "@/core/settings";
 import type { CostLedgerData } from "@/core/ai-cost-ledger";
 import { buildBackupBundle } from "@/core/backup";
 
@@ -16,10 +16,10 @@ export function exportRevlogJson(revlog: RevlogData, today: string) {
 }
 
 /**
- * 导出设置为 JSON 文件
+ * 导出设置为 JSON 文件（强制密钥脱敏）
  */
 export function exportSettingsJson(settings: LvCardsSettings, today: string) {
-    downloadFile(`lv-cards-settings-${today}.json`, JSON.stringify(settings), "application/json");
+    downloadFile(`lv-cards-settings-${today}.json`, JSON.stringify(stripSecretsForStorage(settings)), "application/json");
 }
 
 /**
@@ -38,8 +38,12 @@ export function exportAiCostLedger(costLedger: CostLedgerData, today: string) {
 }
 
 /**
- * 备份中心：导出全部私有存储为单文件 bundle
+ * 备份中心：导出全部私有存储为单文件 bundle（settings.json 强制执行密钥脱敏）
  */
 export function exportAllBackupBundle(files: Record<string, unknown>, today: string) {
-    downloadFile(`lv-cards-backup-${today}.json`, JSON.stringify(buildBackupBundle(files)), "application/json");
+    const sanitized = { ...files };
+    if (sanitized["settings.json"] && typeof sanitized["settings.json"] === "object") {
+        sanitized["settings.json"] = stripSecretsForStorage(sanitized["settings.json"] as LvCardsSettings);
+    }
+    downloadFile(`lv-cards-backup-${today}.json`, JSON.stringify(buildBackupBundle(sanitized)), "application/json");
 }

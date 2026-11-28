@@ -18,6 +18,7 @@ import QuestionAttrDialog from "@/ui/question-attr-dialog.svelte";
 import { createPaletteView } from "@/ui/palette-view";
 import { openBlockActionMenu, closeBlockActionMenu } from "@/ui/block-action-menu";
 import { buildBlockSnapshot, probeEcosystemPresence, executeBlockAction } from "@/core/block-action-executor";
+import { aiChat } from "@/api/ai";
 import type { DialogsChunkModule } from "@/libs/chunk-loader";
 
 type Props = Record<string, any>;
@@ -52,6 +53,7 @@ const dialogsModule: DialogsChunkModule = {
         probeEcosystemPresence,
         executeBlockAction,
     },
+    aiChat,
 };
 
 const w = window as unknown as { __lvChunks?: Record<string, unknown> };

@@ -26,7 +26,7 @@ import { extractMediaRefs } from "@/core/media-refs";
 import { sourceHealthHistories } from "@/core/source-health-store";
 import { isSuspended } from "@/core/suspend-today";
 import { isContextFresh, removeContext, type EntryKind } from "@/core/entry-context";
-import { normalizeSettings } from "@/core/settings";
+import { normalizeSettings, hasSiyuanAiApiKey } from "@/core/settings";
 import { CARDS_SECRET_SLOTS, readCardsSecretSlot } from "@/core/secrets";
 import { normalizeSessionState, type SessionState } from "@/core/session-state";
 import { isGoalActive, daysUntilDeadline, type LearningGoal } from "@/core/learning-goal";
@@ -129,8 +129,13 @@ export function buildHubMountProps(
         openSettings: (onSaved?: () => void) => plugin.openSettingsDialog(onSaved),
         getSettingsHealth: () => ({
             aiConfigured: plugin.settings.aiMode === "siyuan"
-                || Boolean(plugin.settings.aiEndpoint && (plugin.settings.aiKey || plugin.settings.aiKeyConfigured || readCardsSecretSlot(plugin as any, CARDS_SECRET_SLOTS.aiKey))),
+                ? hasSiyuanAiApiKey()
+                : Boolean(plugin.settings.aiEndpoint && (plugin.settings.aiKey || plugin.settings.aiKeyConfigured || readCardsSecretSlot(plugin as any, CARDS_SECRET_SLOTS.aiKey))),
         }),
+        presentationPrivacy: plugin.togglePresentationPrivacy ? {
+            isEnabled: () => Boolean(plugin.presentationPrivacyController?.getState().enabled),
+            toggle: () => plugin.togglePresentationPrivacy?.(),
+        } : undefined,
         openPalette: () => plugin.openPalette(),
         onTabChange: (id: string) => {
             plugin.settings.lastHubTab = id;
@@ -769,7 +774,7 @@ export function buildReviewMountProps(
                 const root = await sqlQuery(`SELECT root_id FROM blocks WHERE id='${safe}' LIMIT 1`);
                 if (!root.length) { return []; }
                 const rootId = String(root[0].root_id ?? "").replace(/'/g, "''");
-                const sibs = await sqlQuery(`SELECT id FROM blocks WHERE root_id='${rootId}' AND type IN ('p','t','h','c','ta','tb') ORDER BY sort, id`);
+                const sibs = await sqlQuery(`SELECT id FROM blocks WHERE root_id='${rootId}' AND type IN ('p','t','h','c','ta','tb') ORDER BY sort, id LIMIT 2000`);
                 const idx = sibs.findIndex((b) => String(b.id) === blockID);
                 if (idx < 0) { return []; }
                 const window = sibs.slice(Math.max(0, idx - 2), idx + 3).filter((b) => String(b.id) !== blockID);

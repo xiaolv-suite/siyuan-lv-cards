@@ -5,6 +5,7 @@
     import { emptyOcclusion, parseOcclusion, serializeOcclusion, LEGACY_ATTR_LV_OCCLUSION, type OcclusionRect } from "@/core/occlusion";
     import LvKbd from "./kit/LvKbd.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
 
     let { blockID, i18n, onSave, onClose }: {
         blockID: string;
@@ -231,13 +232,13 @@
         }
     }
 
-    function clearRects() {
+    async function clearRects() {
         if (rects.length === 0) return;
-        if (window.confirm(t.occlusion.clearConfirm ?? "确定清空已绘制的遮挡区域吗？")) rects = [];
+        if (await lvConfirm({ title: t.occlusion.clearTitle ?? "清空遮挡区域", content: t.occlusion.clearConfirm ?? "确定清空已绘制的遮挡区域吗？" })) rects = [];
     }
 
-    function removeRect(index: number) {
-        if (!window.confirm(t.occlusion.removeConfirm ?? "确定删除这个遮挡区域吗？")) return;
+    async function removeRect(index: number) {
+        if (!await lvConfirm({ title: t.occlusion.removeTitle ?? "删除遮挡区域", content: t.occlusion.removeConfirm ?? "确定删除这个遮挡区域吗？" })) return;
         rects = rects.filter((_, j) => j !== index);
     }
 
@@ -255,10 +256,13 @@
         rects = [...rects, { x, y, w: 0.32, h: 0.2 }];
     }
 
-    function close() {
+    async function close() {
         if (busy) return;
         const changed = JSON.stringify(rects) !== savedRectsJson;
-        if (changed && rects.length > 0 && !window.confirm(t.occlusion.discardConfirm ?? "已绘制的遮挡区域尚未保存，确定退出吗？")) return;
+        if (changed && rects.length > 0 && !await lvConfirm({
+            title: t.occlusion.discardTitle ?? "放弃未保存的遮挡区域",
+            content: t.occlusion.discardConfirm ?? "已绘制的遮挡区域尚未保存，确定退出吗？",
+        })) return;
         onClose();
     }
 
@@ -278,7 +282,7 @@
             }
         } else if (e.key === "Escape") {
             e.preventDefault();
-            close();
+            void close();
         }
     }
 </script>
@@ -349,7 +353,7 @@
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <rect x={r.x * 100} y={r.y * 100} width={r.w * 100} height={r.h * 100}
                         fill="var(--lv-color-brand)" opacity="0.45"
-                        ondblclick={() => removeRect(i)} />
+                        ondblclick={() => void removeRect(i)} />
                     <text
                         x={(r.x + 0.01) * 100}
                         y={Math.min(98, (r.y + 0.04) * 100)}

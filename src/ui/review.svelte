@@ -16,6 +16,7 @@
     import { parseOcclusion, calculateOcclusionBox, findOcclusionTarget, type OcclusionData } from "@/core/occlusion";
     import { filterReviewQueueByQuality } from "@/core/review-queue-quality";
     import { todayKey } from "@/core/exam";
+    import { lvConfirm } from "./kit/lvConfirm";
     import { mergeSessionPrefs, pruneSessionPrefs, getInitialSessionVariant, resolveSessionVariantOverrides, shouldRestartTimeoutOnOverrides, type SessionVariantOption } from "@/core/session-prefs";
     import { markSessionCompleted, createSessionSnapshot, restoreSessionProgress, recordSessionEndReason, createResetSessionProgress, type EndReason } from "@/core/session-state";
     import { isLongReturn, formatReturnCheckItems, resolveI18nPath, type ReturnCheckFacts } from "@/core/return-check";
@@ -688,7 +689,7 @@
     let sessionModalWasOpen = false;
     let sessionModalTimeoutSeconds: number | undefined;
     $effect(() => {
-        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showDeleteModal, showReschedule });
+        const open = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showDeleteModal, showReschedule, showCramModal });
         if (open && !sessionModalWasOpen) {
             sessionModalWasOpen = true;
             sessionModalTimeoutSeconds = countdownCtrl?.getRemaining();
@@ -1257,7 +1258,7 @@
 
     // Mobile Spec v1 深化：复习会话进度保护（Android 返回手势/返回键拦截与落盘退出确认）
     let reviewHistoryArmed = false;
-    let reviewPopHandler: (() => void) | undefined;
+    let reviewPopHandler: (() => void | Promise<void>) | undefined;
 
     function armReviewHistory() {
         if (reviewHistoryArmed || typeof window === "undefined" || sessionDone || !current) return;
@@ -1266,13 +1267,16 @@
             if (!hist || typeof hist.pushState !== "function") return;
             hist.pushState({ lvCards: true }, "");
             reviewHistoryArmed = true;
-            reviewPopHandler = () => {
+            reviewPopHandler = async () => {
                 reviewHistoryArmed = false;
                 reviewPopHandler = undefined;
                 if (sessionDone || !current) return;
                 const rawMsg = t.review?.backConfirm;
                 const confirmMsg = typeof rawMsg === "function" ? rawMsg() : (rawMsg ?? "复习进行中，退出将计入本次已复习卡片");
-                const confirmed = window.confirm(confirmMsg);
+                const confirmed = await lvConfirm({
+                    title: t.review?.backConfirmTitle ?? "退出复习",
+                    content: confirmMsg,
+                });
                 if (confirmed) {
                     persistSession();
                     if (ctx.onClose) {
@@ -2201,14 +2205,6 @@
         if (activeEl && activeEl !== document.body && activeEl !== document.documentElement && !isEventInsideContainer(rootEl, activeEl)) {
             return;
         }
-        // CF-10: 长按 H 或 Alt+Space / Alt+H 临时透视答案
-        if (!showAnswer && current && faceReady) {
-            if (((e.key === "h" || e.key === "H") && (e.repeat || e.altKey)) || (e.code === "Space" && e.altKey)) {
-                isPeekingAnswer = true;
-                e.preventDefault();
-                return;
-            }
-        }
         if (isEventInsideContainer(rootEl, e.target)) {
             return;
         }
@@ -2226,14 +2222,6 @@
 
     function onKeydown(e: KeyboardEvent) {
         if (sessionPaused) return;
-        // CF-10: 容器内长按 H 或 Alt+Space / Alt+H 临时透视答案
-        if (!showAnswer && current && faceReady && !isInputOrEditable(e.target)) {
-            if (((e.key === "h" || e.key === "H") && (e.repeat || e.altKey)) || (e.code === "Space" && e.altKey)) {
-                isPeekingAnswer = true;
-                e.preventDefault();
-                return;
-            }
-        }
         if (zoomedImage) {
             if (e.key === "Escape") {
                 closeZoomedImage();
@@ -2241,7 +2229,7 @@
             }
             return;
         }
-        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showDeleteModal, showReschedule });
+        const anyActionModal = isAnyReviewModalOpen({ showPauseModal, showSessionOptionsModal, showMemoEditor, showRetireModal, showDeleteModal, showReschedule, showCramModal });
         const modalAct = resolveModalKeydownAction(e, anyActionModal, Boolean(memoSaving || retireBusy || rescheduleBusy || deleteBusy));
         if (modalAct) {
             if (e.key === "Escape") e.preventDefault();
@@ -2252,6 +2240,7 @@
                 showRetireModal = false;
                 showDeleteModal = false;
                 showReschedule = false;
+                showCramModal = false;
                 returnFocus();
             }
             return;
@@ -2259,6 +2248,14 @@
         if (showMoreToolbar) {
             if (e.key === "Escape") { showMoreToolbar = false; e.preventDefault(); returnFocus(); }
             return;
+        }
+        // CF-10: 长按 H 或 Alt+Space / Alt+H 临时透视答案（严禁在任意模态弹窗或更多菜单打开时穿透触发）
+        if (!e.defaultPrevented && !e.isComposing && !showAnswer && current && faceReady && !isInputOrEditable(e.target)) {
+            if (((e.key === "h" || e.key === "H") && (e.repeat || e.altKey)) || (e.code === "Space" && e.altKey)) {
+                isPeekingAnswer = true;
+                e.preventDefault();
+                return;
+            }
         }
         if (shouldIgnoreReviewKeydown(e)) return;
 
@@ -3582,6 +3579,8 @@
             0 calc(12px + env(safe-area-inset-left, 0));
         gap: 0;
         position: relative;
+        isolation: isolate;
+        z-index: 1;
         max-width: 800px;
         margin: 0 auto;
         width: 100%;
@@ -3753,7 +3752,7 @@
                 margin: 8px auto 0 auto;
                 position: sticky;
                 bottom: 0;
-                z-index: 25;
+                z-index: 2;
                 background: linear-gradient(
                     to top,
                     var(--lv-bg-page, var(--b3-theme-background)) 92%,

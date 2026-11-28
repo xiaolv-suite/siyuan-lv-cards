@@ -15,6 +15,7 @@
     import LvError from "./kit/LvError.svelte";
     import LvRow from "./kit/LvRow.svelte";
     import LvIcon from "./kit/LvIcon.svelte";
+    import { lvConfirm } from "./kit/lvConfirm";
 
     let { i18n, plans, onSavePlan, onDeletePlan, onReviewScope, onReport, onWriteReport, onError, getRevlog, getDailyCap }: {
         i18n: any;
@@ -232,10 +233,13 @@
         if (retryAction) void runPlanAction(retryAction);
     }
 
-    function deletePlan(plan: ExamPlan) {
+    async function deletePlan(plan: ExamPlan) {
         const title = plan.name || t.exam.untitled;
         const consequence = isChinese ? "删除后无法恢复。" : "This cannot be undone.";
-        if (!window.confirm(`${t.exam.delete} “${title}”？${consequence}`)) return;
+        if (!await lvConfirm({
+            title: t.exam.delete,
+            content: `${t.exam.delete} “${title}”？${consequence}`,
+        })) return;
         void runPlanAction(() => onDeletePlan(plan.id));
     }
 

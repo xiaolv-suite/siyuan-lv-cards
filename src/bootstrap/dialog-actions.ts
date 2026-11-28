@@ -22,26 +22,10 @@ import { getAllEditor } from "siyuan";
 import { addRiffCards, formatRiffCardEntryError } from "@/api/due-shared";
 import { notifyBatchCardCreation, lvBlockAssistant } from "@/libs/notice";
 import { validateCardEntry } from "@/core/card-entry-gate";
-import {
-    checkDuplicateCards,
-    extractMarkerCardItems,
-    executeQuickCardCreation,
-} from "@/core/card-operations";
+import { executeQuickCardCreation } from "@/core/card-operations";
 import { serializeQaCard } from "@/core/flashcard-quality";
-import { PERSONA_PRESETS } from "@/core/personas";
-import { DYNAMIC_BOARD_DOC_PATH } from "@/core/dynamic-notebook";
-import {
-    exportAllBackupBundle,
-    exportRevlogJson,
-    exportSettingsJson,
-    exportRevlogToCsv,
-    exportAiCostLedger,
-} from "@/features/data-export-manager";
-import { parseRevlogCsv } from "@/core/revlog-csv";
-import { buildBudgetPreview } from "@/core/ai-wizard-service";
 import { isSelectableModel } from "@/core/ai-model-registry";
-import { computeStorageStats, probeAnkiConnection } from "@/core/storage-diagnostics";
-import { normalizeSettings, stripSecretsForStorage, type LvCardsSettings } from "@/core/settings";
+import { normalizeSettings, stripSecretsForStorage, hasSiyuanAiApiKey, type LvCardsSettings } from "@/core/settings";
 import { CARDS_SECRET_SLOTS, readCardsSecretSlot, bindCardsSecretSlots, type CardsSecretField } from "@/core/secrets";
 import { normalizeRevlog, mergeRevlog, localDate } from "@/core/revlog";
 import { budgetState } from "@/core/ai-cost-ledger";
@@ -49,8 +33,6 @@ import { normalizeObLedger, normalizeLedger } from "@/core/import-ledgers";
 import { disableTarget, enableTarget, revokeConsent, grantConsent } from "@/core/ai-kill-switch";
 import { detectFlashcardV2 } from "@/api/flashcardV2";
 import { LV_EVENTS, gatewayChangedEvent } from "@/libs/events";
-import { queryNotebookMaterialText } from "@/core/ai-wizard-service";
-import { queryNotebookBlockIDs } from "@/core/report-writer";
 import { BLOCK_ACTIONS } from "@/core/block-actions";
 import {
     buildRepairDrillDialogArgs,
@@ -199,6 +181,7 @@ export async function openPluginDeckPicker(plugin: any, blockIDs: string[], opts
                     plugin.showNotice(reason, 3000, "error");
                     throw new Error(reason);
                 }
+                const { checkDuplicateCards } = await loadHubServices();
                 const dupes = await checkDuplicateCards(blockIDs);
                 if (dupes > 0) {
                     return confirmDialogBool({
@@ -357,6 +340,7 @@ export async function openPluginOnboarding(plugin: any): Promise<void> {
             props: {
                 i18n: plugin.i18n,
                 applyPersona: async (id: "exam" | "notes" | "language") => {
+                    const { PERSONA_PRESETS } = await loadHubServices();
                     const preset = PERSONA_PRESETS.find(p => p.id === id);
                     if (!preset) return;
                     plugin.settings = {
@@ -421,7 +405,6 @@ function mergePrefsFromStoreCfg(
     curStoreCfg: { enabledActionIds?: string[]; pinnedActionIds?: string[] } | null | undefined,
     fallbackPrefs?: { disabledActionIds?: string[]; pinnedActionIds?: string[] },
 ): { disabledActionIds: string[]; pinnedActionIds: string[] } {
-    const localIds = new Set(BLOCK_ACTIONS.map(a => a.id));
     if (!curStoreCfg || !Array.isArray(curStoreCfg.enabledActionIds)) {
         return {
             disabledActionIds: [...(fallbackPrefs?.disabledActionIds ?? [])],
@@ -429,9 +412,11 @@ function mergePrefsFromStoreCfg(
         };
     }
     const enabledSet = new Set(curStoreCfg.enabledActionIds);
+    if (enabledSet.has("toggle-block-fold")) enabledSet.add("toggle-fold-block");
+    if (enabledSet.has("toggle-fold-block")) enabledSet.add("toggle-block-fold");
     const disabledActionIds = BLOCK_ACTIONS.map(a => a.id).filter(id => !enabledSet.has(id));
     const pinnedActionIds = Array.isArray(curStoreCfg.pinnedActionIds)
-        ? curStoreCfg.pinnedActionIds.filter((id: string) => localIds.has(id))
+        ? [...curStoreCfg.pinnedActionIds]
         : [...(fallbackPrefs?.pinnedActionIds ?? [])];
     return { disabledActionIds, pinnedActionIds };
 }
@@ -439,8 +424,9 @@ function mergePrefsFromStoreCfg(
 export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void, initialSection?: "imports"): Promise<void> {
     try {
         const mobile = plugin.isMobileHost();
-        const [SettingsPanel] = await Promise.all([
+        const [SettingsPanel, hubSvc] = await Promise.all([
             loadSettingsPanel(),
+            loadHubServices(),
             typeof plugin.ensureTier2Loaded === "function" ? plugin.ensureTier2Loaded().catch(() => {}) : Promise.resolve(),
         ]);
         const latestStoreOnOpen = readLatestBlockActionStore();
@@ -450,11 +436,13 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
         const openedPrefsJson = JSON.stringify(plugin.settings?.blockActionPreferences ?? { disabledActionIds: [], pinnedActionIds: [] });
 
         let unbindVv: (() => void) | null = null;
+        let beforeClose: (() => boolean | "keep") | null = null;
         const { close, dialog } = svelteDialog({
             title: plugin.i18n.settingsTitle,
             component: SettingsPanel,
             width: mobile ? "100vw" : "min(620px, 94vw)",
             height: mobile ? "100dvh" : "min(860px, calc(100vh - 48px))",
+            onBeforeDismiss: () => beforeClose?.(),
             callback: () => {
                 unbindVv?.();
                 unbindVv = null;
@@ -465,6 +453,9 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
                     i18n: plugin.i18n,
                     settings: plugin.settings,
                     close: () => close(),
+                    registerBeforeClose: (fn: (() => boolean | "keep") | null) => {
+                        beforeClose = fn;
+                    },
                     save: async (s: LvCardsSettings & { __clearSecrets?: Partial<Record<CardsSecretField, boolean>> }) => {
                         const previous = plugin.settings;
                         const clearFlags = s.__clearSecrets || {};
@@ -492,7 +483,7 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
 
                         let bindOk = false;
                         if (Object.keys(secretUpdates).length > 0) {
-                            const bindRes = await bindCardsSecretSlots({ updates: secretUpdates });
+                            const bindRes = await bindCardsSecretSlots({ updates: secretUpdates, plugin });
                             if (!bindRes.ok && !bindRes.readOnlyFallback) {
                                 throw new Error(`保存安全密钥失败：${bindRes.reason}`);
                             }
@@ -530,14 +521,13 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
                                 const latestBeforeWrite = readLatestBlockActionStore();
                                 const localIds = new Set(BLOCK_ACTIONS.map(a => a.id));
                                 const preservedExternalEnabled = (latestBeforeWrite.enabledActionIds || []).filter((id: string) => !localIds.has(id));
-                                const preservedExternalPinned = (latestBeforeWrite.pinnedActionIds || []).filter((id: string) => !localIds.has(id));
                                 const localEnabled = BLOCK_ACTIONS
                                     .map(a => a.id)
                                     .filter(id => !s.blockActionPreferences?.disabledActionIds?.includes(id));
                                 lvBlockAssistant.saveStoreConfig({
                                     ...latestBeforeWrite,
                                     enabledActionIds: Array.from(new Set([...localEnabled, ...preservedExternalEnabled])),
-                                    pinnedActionIds: Array.from(new Set([...(s.blockActionPreferences?.pinnedActionIds || []), ...preservedExternalPinned])),
+                                    pinnedActionIds: Array.from(new Set(s.blockActionPreferences?.pinnedActionIds || [])),
                                 });
                             }
                         } catch (e) {
@@ -552,19 +542,20 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
                         const slot = CARDS_SECRET_SLOTS[field];
                         return readCardsSecretSlot(plugin, slot) || String(plugin.settings?.[field] || "");
                     },
-                    exportRevlog: () => exportRevlogJson(plugin.revlog, todayDate()),
+                    exportRevlog: () => { void loadHubServices().then(h => h.exportRevlogJson(plugin.revlog, todayDate())); },
                     clearRevlog: () => plugin.sessionService.clearRevlog(),
                     costLedger: {
-                        export: () => exportAiCostLedger(plugin.costLedger, todayDate()),
+                        export: () => { void loadHubServices().then(h => h.exportAiCostLedger(plugin.costLedger, todayDate())); },
                         clear: () => plugin.aiCardService.clearCostLedger(),
                         monthUsed: () => budgetState(plugin.costLedger, { enabled: false, monthlyTokenCap: 0 }).monthUsed,
                     },
                     backup: {
                         export: () => {
-                            void plugin.ensureTier2Loaded().then(() => {
-                                return plugin.readAllStores();
-                            }).then((stores: any) => {
-                                exportAllBackupBundle(stores, todayDate());
+                            void Promise.all([
+                                plugin.ensureTier2Loaded().then(() => plugin.readAllStores()),
+                                loadHubServices(),
+                            ]).then(([stores, h]) => {
+                                h.exportAllBackupBundle(stores, todayDate());
                             }).catch((e: any) => {
                                 lvLog("error", `exportBackup failed: ${e instanceof Error ? e.message : String(e)}`);
                                 plugin.showNotice(plugin.i18n.backupExportFail ?? "备份导出失败", 3000, "error");
@@ -652,11 +643,12 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
                             plugin.toastStorageFail();
                         }
                     },
-                    testAnkiClient: (url?: string, key?: string) => {
+                    testAnkiClient: async (url?: string, key?: string) => {
                         const effectiveKey = key || readCardsSecretSlot(plugin, CARDS_SECRET_SLOTS.ankiClientKey) || plugin.settings.ankiClientKey;
+                        const { probeAnkiConnection } = await loadHubServices();
                         return probeAnkiConnection(url ?? plugin.settings.ankiClientUrl, effectiveKey, plugin.i18n);
                     },
-                    storageStats: () => computeStorageStats({
+                    storageStats: () => hubSvc.computeStorageStats({
                         settingsVersion: plugin.settings.version,
                         revlogCount: plugin.revlog.entries.length,
                         suspendTodayCount: plugin.suspendToday.cardIDs.length,
@@ -675,7 +667,7 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
                         storageLastWrite: plugin.storageLastWrite,
                     }),
                     generateExamReport: (plan: ExamPlan) => writeExamReportDoc(plugin, plan),
-                    exportSettings: () => exportSettingsJson(stripSecretsForStorage(plugin.settings), todayDate()),
+                    exportSettings: () => { void loadHubServices().then(h => h.exportSettingsJson(stripSecretsForStorage(plugin.settings), todayDate())); },
                     getNotebooks: async () => {
                         try {
                             return await getNotebooks();
@@ -701,9 +693,15 @@ export async function openPluginSettingsDialog(plugin: any, onSaved?: () => void
                             throw e;
                         }
                     },
-                    exportRevlogCsv: () => exportRevlogToCsv(plugin.revlog, todayDate()),
+                    exportRevlogCsv: () => { void loadHubServices().then(h => h.exportRevlogToCsv(plugin.revlog, todayDate())); },
                     openDynamicBoardDoc: () => openOrCreateDynamicBoardDoc(plugin),
+                    openOnboarding: () => { close(); void plugin.openOnboarding(); },
+                    presentationPrivacy: plugin.presentationPrivacyController ? {
+                        isEnabled: () => plugin.presentationPrivacyController.getState().enabled,
+                        toggle: () => plugin.togglePresentationPrivacy(),
+                    } : undefined,
                     importRevlogCsv: async (fileText: string) => {
+                        const { parseRevlogCsv } = await loadHubServices();
                         const imported = parseRevlogCsv(fileText);
                         const previous = plugin.revlog;
                         const next = normalizeRevlog(cloneStore(previous));
@@ -789,6 +787,7 @@ export async function loadCurrentDoc(): Promise<{ name: string; content: string;
 }
 
 export async function loadNotebookMaterial(nbId: string): Promise<string> {
+    const { queryNotebookMaterialText } = await loadHubServices();
     return queryNotebookMaterialText(nbId, (sql) => sqlQuery(sql));
 }
 
@@ -801,19 +800,27 @@ export async function createAIWizardView(
     recoveryJobId?: string,
     embedded = false,
 ) {
-    const view: { Component: any; mount?: (comp: any, target: HTMLElement, props: Record<string, any>) => { destroy(): void } } = embedded
-        ? await loadAIWizardEmbedded()
-        : { Component: await loadAIWizard() };
+    const [view, hubSvc] = await Promise.all([
+        (embedded
+            ? loadAIWizardEmbedded()
+            : loadAIWizard().then(Component => ({ Component }))),
+        loadHubServices(),
+    ]) as [{ Component: any; mount?: (comp: any, target: HTMLElement, props: Record<string, any>) => { destroy(): void } }, Awaited<ReturnType<typeof loadHubServices>>];
     const Component = view.Component;
     const recoveryJob = recoveryJobId ? await plugin.aiCardService.getReviewableAIJob(recoveryJobId) : null;
     if (recoveryJobId && !recoveryJob) {
         throw new Error((plugin.i18n as any).recoveryCenter?.aiReviewUnavailable ?? "This AI review can no longer be restored safely.");
     }
+    const aiConfigured = plugin.settings?.aiMode === "siyuan"
+        ? hasSiyuanAiApiKey()
+        : Boolean(plugin.settings?.aiEndpoint && (plugin.settings?.aiKey || plugin.settings?.aiKeyConfigured || readCardsSecretSlot(plugin, CARDS_SECRET_SLOTS.aiKey)));
     return {
         Component,
         ...(view.mount ? { mount: view.mount } : {}),
         props: {
             i18n: plugin.i18n,
+            aiConfigured,
+            openSettings: () => { void plugin.openSettingsDialog(); },
             initialSource,
             initialSources,
             onImportComplete: onImportComplete ?? onCreated,
@@ -835,7 +842,7 @@ export async function createAIWizardView(
             onDenySource: (kind: any, id: string) => { plugin.aiCardService.onDenySource(kind, id); },
             sensitiveTerms: plugin.settings.aiSensitiveTerms,
             modelTrustKnown: () => plugin.settings.aiMode === "siyuan" || isSelectableModel(plugin.settings.aiModel),
-            previewBudget: (source: string, cfg: any) => buildBudgetPreview({
+            previewBudget: (source: string, cfg: any) => hubSvc.buildBudgetPreview({
                 source,
                 cfg,
                 promptTemplate: plugin.settings.aiPromptTemplate,
@@ -858,6 +865,10 @@ export async function openPluginAIWizard(plugin: any, initialSource = "", onCrea
         view.props.openDocById = (docId: string) => {
             closeWizardDialog();
             baseOpenDocById?.(docId);
+        };
+        view.props.openSettings = () => {
+            closeWizardDialog();
+            void plugin.openSettingsDialog();
         };
         const { dialog } = svelteDialog({
             title: plugin.i18n.aiWizardTitle,
@@ -898,7 +909,10 @@ export async function openPluginMarkerCards(plugin: any): Promise<void> {
         title: plugin.i18n.markerPickDeck ?? "选择制卡卡组",
         onPicked: async (deckID: string) => {
             const safe = rootID.replace(/'/g, "''");
-            const rows = await sqlQuery(`SELECT id, markdown FROM blocks WHERE root_id='${safe}' AND type IN ('p','h') ORDER BY sort, id`);
+            const [rows, { extractMarkerCardItems }] = await Promise.all([
+                sqlQuery(`SELECT id, markdown FROM blocks WHERE root_id='${safe}' AND type IN ('p','h') ORDER BY sort, id LIMIT 2000`),
+                loadHubServices(),
+            ]);
             const { items } = extractMarkerCardItems(rows);
             if (items.length === 0) {
                 plugin.showNotice(plugin.i18n.markerNone, 2500, "info");
@@ -1020,11 +1034,11 @@ export async function openOrCreateDynamicBoardDoc(plugin: any): Promise<string> 
         plugin.showNotice(plugin.i18n.onboardingNoNotebook, 2500, "error");
         throw new Error(plugin.i18n.onboardingNoNotebook);
     }
+    const { DYNAMIC_BOARD_DOC_PATH, buildDynamicBoardMarkdown } = await loadHubServices();
     const docPath = DYNAMIC_BOARD_DOC_PATH;
     const { findDocIDByHPath } = await import("@/api/siyuan");
     let docID = await findDocIDByHPath(nb.id, docPath);
     if (!docID) {
-        const { buildDynamicBoardMarkdown } = await import("@/core/dynamic-notebook");
         const md = buildDynamicBoardMarkdown();
         docID = await createDocWithMd(nb.id, docPath, md);
     }
@@ -1038,7 +1052,7 @@ export async function openOrCreateDynamicBoardDoc(plugin: any): Promise<string> 
 }
 
 export async function buildExamReportMarkdown(plugin: any, plan: ExamPlan): Promise<string> {
-    const { renderExamReportMarkdown } = await loadHubServices();
+    const { renderExamReportMarkdown, queryNotebookBlockIDs } = await loadHubServices();
     let inScope: ((e: { deckID?: string; blockID?: string }) => boolean) | undefined;
     if (plan.scopeKind === "deck") {
         inScope = e => e.deckID === plan.scopeId;
@@ -1102,7 +1116,10 @@ export async function copyDiagnostics(plugin: any): Promise<void> {
 }
 
 export async function getDiagnostics(plugin: any): Promise<Record<string, unknown>> {
-    const { kernelVersion } = await import("@/api/siyuan");
+    const [{ kernelVersion }, { computeStorageStats, probeAnkiConnection }] = await Promise.all([
+        import("@/api/siyuan"),
+        loadHubServices(),
+    ]);
     const stats = computeStorageStats({
         settingsVersion: plugin.settings.version,
         revlogCount: plugin.revlog.entries.length,
@@ -1123,7 +1140,7 @@ export async function getDiagnostics(plugin: any): Promise<Record<string, unknow
     });
     const ankiOnline = await probeAnkiConnection(plugin.settings.ankiClientUrl, plugin.settings.ankiClientKey, plugin.i18n);
     return {
-        version: plugin.version || "0.233.7",
+        version: plugin.version || "0.233.8",
         kernel: await kernelVersion().catch(() => "unknown"),
         ankiOnline,
         storage: stats,

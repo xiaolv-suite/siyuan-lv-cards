@@ -1,5 +1,6 @@
 <script lang="ts">
     import LvIcon from "@/ui/kit/LvIcon.svelte";
+    import { lvSurfaceStack } from "@/libs/notice";
     import type { RiffDeck } from "@/api/riff";
     import type { SessionPurpose } from "@/core/session-purpose";
 
@@ -88,6 +89,20 @@
 
     let showMoreToolbar = $state(false);
     let moreMenuEl = $state<HTMLDivElement | null>(null);
+
+    $effect(() => {
+        if (!showMoreToolbar) return;
+        const pop = lvSurfaceStack.push({
+            id: "lv-review-toolbar-more",
+            type: "menu",
+            dismiss: () => {
+                if (!showMoreToolbar) return false;
+                showMoreToolbar = false;
+                return true;
+            },
+        });
+        return () => pop();
+    });
 
     const scopeSummaryLabel = $derived.by(() => {
         if (scopeKey === "new") return t.review?.scopeNew ?? "仅新卡";

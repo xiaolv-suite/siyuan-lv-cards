@@ -96,8 +96,13 @@ export const confirmDialog = (args: IConfirmDialogArgs) => {
         target.appendChild(content);
     }
 
-    // AS-1：确认框捕获焦点（Tab 循环 + Esc 关闭 + 关闭后归还宿主焦点）
-    trap = trapFocus(dialog.element, { onEscape: () => dialog.destroy() });
+    // AS-1：确认框捕获焦点（Tab 循环 + Esc 关闭 + 关闭后归还宿主焦点），并接入 lvSurfaceStack 防被底层弹窗抢 Esc
+    const surfaceId = `confirm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    trap = trapFocus(dialog.element, {
+        onEscape: () => dialog.destroy(),
+        surfaceId,
+        surfaceType: "dialog",
+    });
 
     const btnsElement = dialog.element.querySelectorAll(".b3-button");
     btnsElement[0].addEventListener("click", () => {
@@ -170,15 +175,25 @@ export const simpleDialog = (args: {
     title: string, ele: HTMLElement | DocumentFragment,
     width?: string, height?: string,
     callback?: () => void;
+    onBeforeDismiss?: () => boolean | "keep" | void;
 }) => {
     let closed = false;
     const surfaceId = `dialog_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const dismissOnce = () => {
+    const forceClose = () => {
         if (closed) return false;
         closed = true;
         popSurface();
         dialog.destroy();
         return true;
+    };
+    const dismissOnce = (): boolean | "keep" => {
+        if (closed) return false;
+        const gate = args.onBeforeDismiss?.();
+        if (gate === "keep" || gate === false) {
+            return "keep";
+        }
+        if (closed) return true;
+        return forceClose();
     };
     const popSurface = lvSurfaceStack.push({
         id: surfaceId,
@@ -251,7 +266,7 @@ export const simpleDialog = (args: {
     return {
         dialog,
         close: () => {
-            dismissOnce();
+            forceClose();
         }
     };
 }
@@ -266,6 +281,7 @@ export const svelteDialog = (args: {
     callback?: () => void;
     /** R53 §3.10：无镶板形态——隐藏宿主标题栏与内容内边距，容器即面板（命令面板用） */
     panel?: boolean,
+    onBeforeDismiss?: () => boolean | "keep" | void;
 }) => {
     // AR-2：打开前记焦点宿主，关闭（任意路径）后归还——键盘流不因弹窗丢焦
     let prevFocus: HTMLElement | null = null;
@@ -353,6 +369,7 @@ export const svelteDialog = (args: {
             ele: container,
             width: args.width,
             height: args.height,
+            onBeforeDismiss: args.onBeforeDismiss,
             callback: () => {
                 destroyed = true;
                 focusTrap?.release();
@@ -375,8 +392,17 @@ export const svelteDialog = (args: {
         dialog.element.classList.add("lv-dialog--panel");
         dialog.element.querySelector(".b3-dialog")?.classList.add("lv-dialog--panel");
     }
-    // AS-1：焦点捕获（Esc→closeOnce 一次性；归还走既有 restoreFocus）
-    focusTrap = trapFocus(dialog.element, { onEscape: closeOnce, restoreOnRelease: false });
+    // AS-1：焦点捕获（Esc→经 onBeforeDismiss 检查后 closeOnce 一次性；归还走既有 restoreFocus）
+    focusTrap = trapFocus(dialog.element, {
+        onEscape: () => {
+            const gate = args.onBeforeDismiss?.();
+            if (gate === "keep" || gate === false) {
+                return "keep";
+            }
+            closeOnce();
+        },
+        restoreOnRelease: false,
+    });
 
     return {
         component: componentInstance,

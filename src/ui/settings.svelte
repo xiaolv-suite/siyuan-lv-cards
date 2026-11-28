@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { showMessage, lvEcosystem } from "@/libs/notice";
+    import { showMessage, lvEcosystem, lvBlockAssistant } from "@/libs/notice";
     import { MODULE_DEFS } from "@/core/modules";
     import { BLOCK_ACTIONS, BLOCK_ACTION_GROUP_ORDER, BLOCK_ACTION_GROUP_LABELS, resetActionUsage } from "@/core/block-actions";
     import { scopeCustomCardCss } from "@/core/card-face";
@@ -45,6 +45,7 @@
         settings: LvCardsSettings;
         save: (s: LvCardsSettings) => void | Promise<void>;
         close: () => void;
+        registerBeforeClose?: (fn: (() => boolean | "keep") | null) => void;
         exportRevlog: () => void;
         clearRevlog: () => void;
         /** 备份与恢复中心（可选——旧宿主不传则不显示） */
@@ -91,6 +92,8 @@
         getNotebooks: () => Promise<{ id: string; name: string }[]>;
         exportRevlogCsv: () => void;
         openDynamicBoardDoc?: () => void | Promise<void>;
+        openOnboarding?: () => void;
+        presentationPrivacy?: { isEnabled: () => boolean; toggle: () => void };
         importRevlogCsv: (fileText: string) => Promise<{ added: number; skipped: number }>;
         importRevlogMerge: (fileText: string, onFork?: "skip" | "preferImport") => Promise<{ added: number; skipped: number; forks: number }>;
     }
@@ -125,11 +128,16 @@
     let ankiFile = $state<HTMLInputElement>();
     let lvcardsFile = $state<HTMLInputElement>();
     let obFile = $state<HTMLInputElement>();
+    let mergeFile = $state<HTMLInputElement>();
+    let csvFile = $state<HTMLInputElement>();
+    let backupFile = $state<HTMLInputElement>();
 
     // BU-31：紧急停用/撤销同意（设置页本地镜像，操作后回读快照）
     // svelte-ignore state_referenced_locally -- 初值快照刻意的：操作经 applyKill 回读替换
     let ks = $state<any>(ctx.killswitch?.snapshot?.() ?? null);
     let ksBusy = $state(false);
+    // svelte-ignore state_referenced_locally -- 初值读取一次，点击同步切换
+    let privacyEnabled = $state(ctx.presentationPrivacy?.isEnabled?.() ?? false);
     async function applyKill(action: "stopCurrent" | "resumeAll" | "revoke" | "grant") {
         if (!ctx.killswitch || ksBusy) return;
         ksBusy = true;
@@ -230,12 +238,12 @@
             const docID = await createDocWithMd(nbId, `Obsidian SR/${base} ${localDate(Date.now())}`, composeObsidianImportMarkdown(fresh));
             if (!docID) { throw new Error("createDocWithMd 返回空"); }
             // 一卡一段落对位：真实内核下 createDocWithMd 后 SQLite 索引存在异步延迟，若首查未齐则短退避重试
-            const obStmt = `SELECT id, markdown FROM blocks WHERE root_id='${docID}' AND type IN ('p','h','u','o') ORDER BY sort`;
-            let blockRows = await sqlQuery(obStmt);
+            const obStmt = `SELECT id, markdown FROM blocks WHERE root_id=${sqlString(docID)} AND type IN ('p','h','u','o') ORDER BY sort LIMIT ${Math.max(200, fresh.length * 2)}`;
+            let blockRows = (await sqlQuery(obStmt)) ?? [];
             if (blockRows.length < fresh.length && Boolean((globalThis as any).window?.siyuan?.ws)) {
                 for (let retry = 0; retry < 5 && blockRows.length < fresh.length; retry++) {
                     await new Promise(r => setTimeout(r, 250));
-                    blockRows = await sqlQuery(obStmt);
+                    blockRows = (await sqlQuery(obStmt)) ?? [];
                 }
             }
             if (blockRows.length !== fresh.length) {
@@ -526,12 +534,12 @@
             const base = file.name.replace(/\.(apkg|colpkg)$/i, "");
             const docID = await createDocWithMd(nbId, `Anki/${base} ${localDate(Date.now())}`, composeImportMarkdown(fresh));
             if (!docID) throw new Error("createDocWithMd 返回空");
-            const ankiStmt = `SELECT id, content, markdown FROM blocks WHERE root_id='${docID}' AND type='p' ORDER BY sort`;
-            let blockRows = await sqlQuery(ankiStmt);
+            const ankiStmt = `SELECT id, content, markdown FROM blocks WHERE root_id=${sqlString(docID)} AND type='p' ORDER BY sort LIMIT ${Math.max(200, fresh.length * 2)}`;
+            let blockRows = (await sqlQuery(ankiStmt)) ?? [];
             if (blockRows.length < fresh.length && Boolean((globalThis as any).window?.siyuan?.ws)) {
                 for (let retry = 0; retry < 5 && blockRows.length < fresh.length; retry++) {
                     await new Promise(r => setTimeout(r, 250));
-                    blockRows = await sqlQuery(ankiStmt);
+                    blockRows = (await sqlQuery(ankiStmt)) ?? [];
                 }
             }
             const { byGuid } = pairImportedBlocks(
@@ -759,6 +767,7 @@
 
     let voiceSynthesis: SpeechSynthesis | null = null;
     let onVoicesChanged: (() => void) | null = null;
+    let onBlockStoreUpdated: ((ev: Event) => void) | null = null;
 
     onMount(() => {
         if (typeof queueMicrotask === "function") {
@@ -786,6 +795,16 @@
                 checkinInstalled = true;
             }
         } catch { /* 旁路 */ }
+        onBlockStoreUpdated = (ev: Event) => {
+            const detail = (ev as CustomEvent)?.detail;
+            if (detail && Array.isArray(detail.pinnedActionIds)) {
+                draft.blockActionPreferences = {
+                    ...(draft.blockActionPreferences || { disabledActionIds: [], pinnedActionIds: [] }),
+                    pinnedActionIds: [...detail.pinnedActionIds],
+                };
+            }
+        };
+        window.addEventListener("lv-block-action-store-updated", onBlockStoreUpdated);
         void loadNotebooks();
     });
 
@@ -795,6 +814,10 @@
         }
         voiceSynthesis = null;
         onVoicesChanged = null;
+        if (onBlockStoreUpdated) {
+            window.removeEventListener("lv-block-action-store-updated", onBlockStoreUpdated);
+            onBlockStoreUpdated = null;
+        }
         aiTestSeq += 1;
         aiTestCtrl?.abort();
         aiTestCtrl = null;
@@ -971,6 +994,37 @@
             ...prefs,
             pinnedActionIds: list,
         };
+    }
+    function resolvePinnedAction(pinnedId: string): { id: string; glyph: string; label: string } | null {
+        const local = BLOCK_ACTIONS.find(a => a.id === pinnedId);
+        if (local) {
+            return {
+                id: local.id,
+                glyph: local.glyph,
+                label: t[local.labelKey] || local.fallbackLabel,
+            };
+        }
+        try {
+            const win = typeof window !== "undefined" ? (window as any) : null;
+            const providers = [
+                win?.__LV_BLOCK_ASSISTANT__,
+                win?.LvBlockAssistant,
+                win?.__LV_BLOCK_ASSISTANT_HUB__,
+                lvBlockAssistant,
+            ];
+            for (const provider of providers) {
+                if (typeof provider?.getActions !== "function") continue;
+                const hit = provider.getActions().find((a: any) => a && a.id === pinnedId);
+                if (hit) {
+                    return {
+                        id: hit.id,
+                        glyph: hit.glyph || "⚡",
+                        label: hit.label || hit.fallbackLabel || hit.id,
+                    };
+                }
+            }
+        } catch { /* ignore */ }
+        return null;
     }
     function applyActionPreset(mode: "all" | "exam" | "writing" | "minimal"): void {
         const allIds = BLOCK_ACTIONS.map(a => a.id);
@@ -1224,18 +1278,38 @@
         || Boolean(clearSecrets.aiKey || clearSecrets.aiFallbackKey || clearSecrets.ankiClientKey)
     );
 
-    function requestClose() {
-        if (saveBusy) return;
+    let unsavedConfirmOpen = false;
+
+    function requestClose(): boolean | "keep" {
+        if (saveBusy) return "keep";
+        if (searchInput && typeof document !== "undefined" && document.activeElement === searchInput && searchQuery) {
+            searchQuery = "";
+            return "keep";
+        }
         if (!isDirty) {
             ctx.close();
-            return;
+            return true;
         }
+        if (unsavedConfirmOpen) return "keep";
+        unsavedConfirmOpen = true;
         confirmDialog({
             title: t.settings.unsavedTitle,
             content: `<div class="b3-typography">${t.settings.unsavedDesc}</div>`,
-            confirm: () => ctx.close(),
+            confirm: () => {
+                unsavedConfirmOpen = false;
+                ctx.close();
+            },
+            cancel: () => {
+                unsavedConfirmOpen = false;
+            },
         });
+        return "keep";
     }
+
+    $effect(() => {
+        ctx.registerBeforeClose?.(requestClose);
+        return () => ctx.registerBeforeClose?.(null);
+    });
 
     async function save() {
         if (saveBusy) return;
@@ -2080,6 +2154,34 @@
         <LvRow label="文档闪卡序号角标" hint="在思源文档内的闪卡块左上角显示文档级连续序号（#1, #2...），轻量自愈不写脏数据">
             <LvSwitch bind:checked={draft.docCardBadgeEnabled} />
         </LvRow>
+        {#if ctx.presentationPrivacy}
+            <LvRow label={t.menuPresentationPrivacy ?? "演示私密模式"} hint="录屏或投屏时对敏感路径、卡组名称和块标识自动脱敏">
+                {#snippet children()}
+                    <button
+                        type="button"
+                        class="b3-button b3-button--outline lv-btn-tool"
+                        aria-pressed={privacyEnabled}
+                        onclick={() => {
+                            ctx.presentationPrivacy?.toggle();
+                            privacyEnabled = ctx.presentationPrivacy?.isEnabled?.() ?? !privacyEnabled;
+                        }}
+                    >
+                        <LvIcon name="eye" size={12} />
+                        <span>{privacyEnabled ? (t.menuPresentationPrivacyActive ?? "演示私密模式（已开启）") : (t.menuPresentationPrivacy ?? "演示私密模式")}</span>
+                    </button>
+                {/snippet}
+            </LvRow>
+        {/if}
+        {#if ctx.openOnboarding}
+            <LvRow label={t.menuOnboarding ?? "上手指南"} hint={t.dashboard?.onboardingHint ?? "五分钟上手：三步创建你的第一组复习卡"}>
+                {#snippet children()}
+                    <button type="button" class="b3-button b3-button--outline lv-btn-tool" onclick={() => ctx.openOnboarding?.()}>
+                        <LvIcon name="lightbulb" size={12} />
+                        <span>{t.menuOnboarding ?? "上手指南"}</span>
+                    </button>
+                {/snippet}
+            </LvRow>
+        {/if}
         <LvRow label="块操作中心动作管理" hint="自定义编辑器块胶囊展开菜单中显示的动作，支持场景预设、单项开关与星标置顶">
             {#snippet children()}
                 <div class="lv-settings-action-panel" style="width: 100%; margin-top: 6px;">
@@ -2125,12 +2227,12 @@
 
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                             {#each (draft.blockActionPreferences?.pinnedActionIds || []) as pinnedId, pIndex}
-                                {@const act = BLOCK_ACTIONS.find(a => a.id === pinnedId)}
+                                {@const act = resolvePinnedAction(pinnedId)}
                                 {#if act}
                                     <div class="lv-priority-pill" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: color-mix(in srgb, #f59e0b 14%, var(--b3-theme-surface)); border: 1px solid rgba(245, 158, 11, 0.4); font-size: 12px;">
                                         <span style="font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245, 158, 11, 0.18); border-radius: 4px; padding: 1px 5px;">#{pIndex + 1}</span>
                                         <span>{act.glyph}</span>
-                                        <span style="font-weight: 600;">{t[act.labelKey] || act.fallbackLabel}</span>
+                                        <span style="font-weight: 600;">{act.label}</span>
                                         <div style="display: flex; align-items: center; gap: 2px; margin-left: 4px;">
                                             <button type="button" style="border: none; background: transparent; color: var(--lv-color-text-muted); cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === 0 ? '0.25' : '0.85'};" disabled={pIndex === 0} onclick={() => moveActionPinned(pinnedId, -1)} title="前移一位">←</button>
                                             <button type="button" style="border: none; background: transparent; color: var(--lv-color-text-muted); cursor: pointer; padding: 0 2px; font-size: 11px; opacity: {pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1 ? '0.25' : '0.85'};" disabled={pIndex === (draft.blockActionPreferences?.pinnedActionIds?.length || 0) - 1} onclick={() => moveActionPinned(pinnedId, 1)} title="后移一位">→</button>
@@ -2291,8 +2393,14 @@
         </LvRow>
         <LvRow label={t.settings.importMerge} hint={t.settings.importMergeHint}>
             {#snippet children()}
-                <input class="b3-button b3-button--outline lv-btn-tool" type="file" accept=".json,application/json" aria-label={t.settings.importMerge} disabled={revlogImportBusy} onchange={importMerge} />
-                <input class="b3-button b3-button--outline lv-btn-tool" type="file" accept=".csv,text/csv" aria-label={t.settings.importCsv} disabled={revlogImportBusy} onchange={importCsv} />
+                <button type="button" class="b3-button b3-button--outline lv-btn-tool" disabled={revlogImportBusy} onclick={() => mergeFile?.click()}>
+                    <LvIcon name="inbox" size={12} /><span>{t.settings.importMerge}</span>
+                </button>
+                <input bind:this={mergeFile} type="file" accept=".json,application/json" aria-label={t.settings.importMerge} hidden disabled={revlogImportBusy} onchange={importMerge} />
+                <button type="button" class="b3-button b3-button--outline lv-btn-tool" disabled={revlogImportBusy} onclick={() => csvFile?.click()}>
+                    <LvIcon name="inbox" size={12} /><span>{t.settings.importCsv}</span>
+                </button>
+                <input bind:this={csvFile} type="file" accept=".csv,text/csv" aria-label={t.settings.importCsv} hidden disabled={revlogImportBusy} onchange={importCsv} />
                 {#if revlogImportStatus}<span class="ft__smaller ft__on-surface" role={revlogImportBusy ? "status" : "alert"} aria-live={revlogImportBusy ? "polite" : "assertive"} aria-busy={revlogImportBusy}>{revlogImportStatus}</span>{/if}
             {/snippet}
         </LvRow>
@@ -2304,7 +2412,10 @@
                         <LvIcon name="inbox" size={12} />
                         <span>JSON</span>
                     </button>
-                    <input class="b3-button b3-button--outline lv-btn-tool" type="file" accept=".json,application/json" aria-label={t.settings.backupRestore} disabled={backupBusy} onchange={restoreBackup} />
+                    <button type="button" class="b3-button b3-button--outline lv-btn-tool" disabled={backupBusy} onclick={() => backupFile?.click()}>
+                        <LvIcon name="refresh" size={12} /><span>{t.settings.backupRestore}</span>
+                    </button>
+                    <input bind:this={backupFile} type="file" accept=".json,application/json" aria-label={t.settings.backupRestore} hidden disabled={backupBusy} onchange={restoreBackup} />
                     <span class="ft__smaller ft__on-surface">{backupBusy ? "…" : ""}</span>
                 {/snippet}
             </LvRow>
@@ -2420,6 +2531,9 @@
             display: flex;
             flex-direction: column;
             gap: var(--lv-sp-2);
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
             padding: var(--lv-sp-3) var(--lv-sp-4) var(--lv-sp-2);
             background: var(--lv-color-surface);
             border-bottom: 1px solid color-mix(in srgb, var(--lv-color-text) 8%, transparent);
@@ -2482,8 +2596,11 @@
             position: static;
             background: transparent;
             display: flex;
-            gap: var(--lv-sp-2);
-            flex-wrap: nowrap;
+            gap: 6px;
+            flex-wrap: wrap;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
             overflow-x: auto;
             overflow-y: hidden;
             scrollbar-width: none;
@@ -2660,10 +2777,11 @@
                 padding: var(--lv-sp-3);
             }
             .lv-settings-nav-rail {
-                flex-wrap: nowrap;
+                flex-wrap: wrap;
+                gap: 6px;
+                min-width: 0;
+                max-width: 100%;
                 overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                touch-action: pan-x;
                 scrollbar-width: none;
                 margin: 0;
                 padding: 2px 0;
@@ -2674,7 +2792,9 @@
             .lv-settings-nav-chip {
                 flex: 0 0 auto;
                 white-space: nowrap;
-                height: 32px;
+                height: 28px;
+                padding: 0 10px;
+                font-size: var(--lv-type-meta-size);
 
                 &:active {
                     transform: scale(0.96);

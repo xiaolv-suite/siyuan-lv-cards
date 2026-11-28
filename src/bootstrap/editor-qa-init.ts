@@ -3,7 +3,7 @@
  * 统管实时编辑器块装饰、免侵入属性问答设置、挖空制卡、块操作中心与遮挡卡挂载。
  */
 
-import { startEditorQaService, decorateEditorBlock, suppressCapsuleAfterBlockDelete } from "@/core/editor-qa-service";
+import { startEditorQaService, refreshFloatingPill, suppressCapsuleAfterBlockDelete } from "@/core/editor-qa-service";
 import { loadQuestionAttrDialog, loadOcclusionEditor, loadBlockActionRuntime } from "@/bootstrap/chunk-loaders";
 import { lvBlockAssistant } from "@/libs/notice";
 import { BLOCK_ACTIONS, isBlockElementReadOnly, WRITE_BLOCK_ACTION_IDS } from "@/core/block-actions";
@@ -181,6 +181,7 @@ export function setupEditorQaIntegration(plugin: any) {
 
     const qaService = startEditorQaService({
         targetContainer: centerContainer as HTMLElement | undefined,
+        eventBus: plugin?.eventBus,
         isEnabled: () => lvBlockAssistant.isEnabled(),
         onDisableCleanup: () => {
             closeLoadedBlockActionMenu();
@@ -203,9 +204,17 @@ export function setupEditorQaIntegration(plugin: any) {
             const all = lvBlockAssistant.getActions();
             const map = new Map(all.map(a => [a.id, a]));
             const result: Array<{ id: string; glyph: string; label: string; badgeText?: string }> = [];
+            const seen = new Set<string>();
             for (const id of pinnedIds) {
-                const a = map.get(id);
-                if (a) result.push({ id: a.id, glyph: a.glyph, label: a.label, badgeText: a.badgeText });
+                const a = map.get(id)
+                    || (id === "toggle-fold-block" ? map.get("toggle-block-fold") : undefined)
+                    || (id === "toggle-block-fold" ? map.get("toggle-fold-block") : undefined)
+                    || (id === "native-clone-block" ? map.get("duplicate-block") : undefined)
+                    || (id === "duplicate-block" ? map.get("native-clone-block") : undefined);
+                if (a && !seen.has(a.id)) {
+                    seen.add(a.id);
+                    result.push({ id: a.id, glyph: a.glyph, label: a.label, badgeText: a.badgeText });
+                }
             }
             return result;
         },
@@ -304,10 +313,22 @@ export async function openPluginBlockActionCenter(plugin: any, blockID: string, 
 
         const localActionIds = new Set(BLOCK_ACTIONS.map(a => a.id));
         let externalActions: any[] = [];
+        let hasNewDupInRaw = false;
         try {
             const rawActions = (typeof lvBlockAssistant?.getActions === "function" ? lvBlockAssistant.getActions() : []) || [];
-            externalActions = rawActions
-                .filter(a => a && a.id && !localActionIds.has(a.id) && (a as any).installed !== false)
+            const installedRaw = rawActions.filter((a: any) => a && a.id && (a as any).installed !== false);
+            const rawIds = new Set(installedRaw.map((a: any) => a.id));
+            hasNewDupInRaw = rawIds.has("duplicate-block");
+            const hasNewFold = rawIds.has("toggle-block-fold") || localActionIds.has("toggle-block-fold");
+            const hasNewDup = hasNewDupInRaw || localActionIds.has("duplicate-block");
+            externalActions = installedRaw
+                .filter((a: any) => {
+                    if (localActionIds.has(a.id)) return false;
+                    if (hasNewFold && a.id === "toggle-fold-block") return false;
+                    if (hasNewDup && a.id === "native-clone-block") return false;
+                    if (localActionIds.has("native-clone-block") && a.id === "duplicate-block") return false;
+                    return true;
+                })
                 .map(a => ({
                     id: a.id,
                     group: (a.group === "study" || a.group === "flashcard" ? "flashcard"
@@ -320,7 +341,7 @@ export async function openPluginBlockActionCenter(plugin: any, blockID: string, 
                     fallbackLabel: a.label || a.id,
                     subtitle: a.subtitle,
                     glyph: a.glyph || "⚡",
-                    destructive: Boolean((a as any).destructive || (a as any).danger || a.id === "delete-block"),
+                    destructive: Boolean((a as any).destructive || (a as any).danger || a.id === "delete-block" || a.id === "cut-block"),
                     mutatesBlock: (a as any).mutatesBlock,
                     readonlySafe: (a as any).readonlySafe ?? (a as any).readOnlySafe,
                     supportsBatch: Boolean(a.supportsBatch),
@@ -335,17 +356,38 @@ export async function openPluginBlockActionCenter(plugin: any, blockID: string, 
             lvLog("warn", `[block-action] failed to resolve external actions: ${extErr?.message || String(extErr)}`);
         }
 
+        const hasExtNewFold = externalActions.some(a => a.id === "toggle-block-fold");
         const allAvailableIds = [...BLOCK_ACTIONS, ...externalActions].map(a => a.id);
         let effectiveDisabled: string[] = [];
         if (Array.isArray(storeConfig?.enabledActionIds) && storeConfig.enabledActionIds.length > 0) {
-            effectiveDisabled = allAvailableIds.filter(id => !storeConfig.enabledActionIds.includes(id));
+            const enabledSet = new Set<string>(storeConfig.enabledActionIds);
+            if (enabledSet.has("toggle-fold-block")) enabledSet.add("toggle-block-fold");
+            if (enabledSet.has("toggle-block-fold")) enabledSet.add("toggle-fold-block");
+            if (enabledSet.has("native-clone-block")) enabledSet.add("duplicate-block");
+            if (enabledSet.has("duplicate-block")) enabledSet.add("native-clone-block");
+            effectiveDisabled = allAvailableIds.filter(id => !enabledSet.has(id));
         } else {
-            effectiveDisabled = plugin.settings?.blockActionPreferences?.disabledActionIds ?? [];
+            effectiveDisabled = [...(plugin.settings?.blockActionPreferences?.disabledActionIds ?? [])];
+            if (effectiveDisabled.includes("toggle-fold-block") && !effectiveDisabled.includes("toggle-block-fold")) {
+                effectiveDisabled.push("toggle-block-fold");
+            }
+            if (effectiveDisabled.includes("toggle-block-fold") && !effectiveDisabled.includes("toggle-fold-block")) {
+                effectiveDisabled.push("toggle-fold-block");
+            }
+        }
+        if (hasExtNewFold && !effectiveDisabled.includes("toggle-fold-block")) {
+            effectiveDisabled.push("toggle-fold-block");
         }
 
-        const combinedPinned = (Array.isArray(storeConfig?.pinnedActionIds) && storeConfig.pinnedActionIds.length > 0)
+        const rawPinned = (Array.isArray(storeConfig?.pinnedActionIds) && storeConfig.pinnedActionIds.length > 0)
             ? storeConfig.pinnedActionIds
             : (plugin.settings?.blockActionPreferences?.pinnedActionIds ?? []);
+        const combinedPinned = Array.from(new Set<string>(rawPinned.map((id: string) => {
+            if (hasExtNewFold && id === "toggle-fold-block") return "toggle-block-fold";
+            if (!hasExtNewFold && id === "toggle-block-fold") return "toggle-fold-block";
+            if (hasNewDupInRaw && id === "native-clone-block") return "duplicate-block";
+            return id;
+        })));
 
         if (!canProceedBlockAction(plugin, anchor)) {
             return;
@@ -518,6 +560,7 @@ export async function openPluginCardQuestionDialog(plugin: any, blockID?: string
         dialogHandle = svelteDialog({
             title: plugin.i18n.cardQuestionTitle ?? "设置属性问答卡 (问题 · 自定义答案)",
             component: QuestionAttrComp,
+            width: "min(860px, 94vw)",
             props: {
                 blockID: targetId,
                 initialQuestion: currentQ,
@@ -548,11 +591,11 @@ export async function openPluginCardQuestionDialog(plugin: any, blockID?: string
                     const newHint = (payload.hint ?? "").trim();
                     if (subtype === "direct" && !newA) {
                         plugin.showNotice("直接问答型必须填写背面答案", 2000, "info");
-                        return;
+                        return false;
                     }
                     if (subtype !== "direct" && !newQ) {
                         plugin.showNotice("提问内容不能为空", 2000, "info");
-                        return;
+                        return false;
                     }
                     const patch = buildAttrQaSubtypeAttrs({
                         subtype,
@@ -566,7 +609,7 @@ export async function openPluginCardQuestionDialog(plugin: any, blockID?: string
                         await setBlockAttrs(targetId, patch as any);
                     } catch {
                         await new Promise(r => setTimeout(r, 80));
-                        await setBlockAttrs(targetId, patch as any).catch(() => {});
+                        await setBlockAttrs(targetId, patch as any);
                     }
 
                     let targetDeckID = payload.targetDeckID || "";
@@ -578,36 +621,32 @@ export async function openPluginCardQuestionDialog(plugin: any, blockID?: string
                             lvLog("warn", `[attr-qa] addRiffCards fallback: ${deckErr?.message || String(deckErr)}`);
                             if (explicitPick) {
                                 plugin.showNotice(formatRiffCardEntryError(deckErr, plugin.i18n, deckErr?.message || "入组失败"), 3500, "error");
+                                return false;
                             }
                         }
                     } else if (!isAlreadyCard) {
                         try {
-                            const allDecks = await getRiffDecks().then(d => Array.isArray(d) ? d : []).catch(() => []);
+                            const allDecks = await getRiffDecks().then(d => Array.isArray(d) ? d : []);
                             const defaultDeck = allDecks.find((d: any) => d.name === "小驴闪卡") || allDecks[0];
                             if (defaultDeck) {
                                 targetDeckID = defaultDeck.id;
                             } else {
-                                const newDeck = await createRiffDeck("小驴闪卡").catch(() => null);
+                                const newDeck = await createRiffDeck("小驴闪卡");
                                 if (newDeck) targetDeckID = newDeck.id;
                             }
-                            if (targetDeckID) {
-                                await addRiffCards(targetDeckID, [targetId]).catch(() => {});
+                            if (!targetDeckID) {
+                                plugin.showNotice(plugin.i18n.deckJoinFail ?? "默认卡组不可用，入组失败", 3500, "error");
+                                return false;
                             }
+                            await addRiffCards(targetDeckID, [targetId]);
                         } catch (deckErr: any) {
                             lvLog("warn", `[attr-qa] addRiffCards fallback: ${deckErr?.message || String(deckErr)}`);
+                            plugin.showNotice(formatRiffCardEntryError(deckErr, plugin.i18n, deckErr?.message || "入组失败"), 3500, "error");
+                            return false;
                         }
                     }
 
-                    const blockEls = document.querySelectorAll(`.protyle-wysiwyg [data-node-id="${targetId}"], [data-node-id="${targetId}"]`);
-                    blockEls.forEach((blockEl) => {
-                        for (const [k, v] of Object.entries(patch)) {
-                            if (v === null || v === "") blockEl.removeAttribute(k);
-                            else blockEl.setAttribute(k, v);
-                        }
-                        if (findFloatingPillAnchor(targetId)) {
-                            decorateEditorBlock(blockEl as HTMLElement, (id) => void openPluginCardQuestionDialog(plugin, id), (id, anchor) => void openPluginBlockActionCenter(plugin, id, anchor));
-                        }
-                    });
+                    refreshFloatingPill(targetId);
                     try {
                         document.dispatchEvent(new CustomEvent("flashcard-title-saved", { detail: { blockId: targetId, question: newQ, answer: newA, subtype } }));
                     } catch {}
@@ -620,22 +659,7 @@ export async function openPluginCardQuestionDialog(plugin: any, blockID?: string
                     try {
                         await removePluginCardsFromDeck(plugin, [targetId]);
                     } catch {}
-                    const blockEls = document.querySelectorAll(`.protyle-wysiwyg [data-node-id="${targetId}"], [data-node-id="${targetId}"]`);
-                    blockEls.forEach((blockEl) => {
-                        blockEl.removeAttribute("custom-riff-title");
-                        blockEl.removeAttribute("custom-riff-answer");
-                        blockEl.removeAttribute("custom-lv-question");
-                        blockEl.removeAttribute("custom-lv-answer");
-                        blockEl.removeAttribute("custom-card-title");
-                        blockEl.removeAttribute("custom-card-answer");
-                        blockEl.removeAttribute("custom-lv-card-type");
-                        blockEl.removeAttribute("custom-lv-attr-subtype");
-                        blockEl.removeAttribute("custom-lv-hint");
-                        blockEl.removeAttribute("custom-lv-bidi");
-                        if (findFloatingPillAnchor(targetId)) {
-                            decorateEditorBlock(blockEl as HTMLElement, (id) => void openPluginCardQuestionDialog(plugin, id), (id, anchor) => void openPluginBlockActionCenter(plugin, id, anchor));
-                        }
-                    });
+                    refreshFloatingPill(targetId);
                     try {
                         document.dispatchEvent(new CustomEvent("flashcard-title-saved", { detail: { blockId: targetId, question: "", answer: "" } }));
                     } catch {}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import LvIcon from "./kit/LvIcon.svelte";
     import {
         type MarketplaceCatalog,
@@ -26,13 +27,9 @@
         cartItemsToLvCardsPackage,
         calculateItemQualityMetrics,
     } from "@/core/marketplace-cart";
-    import {
-        calculateCardsDelta,
-        type CardDeltaReport,
-    } from "@/core/marketplace-sync";
     import { serializeLvCardsPackage } from "@/core/lvcards-package";
     import { localDate } from "@/core/revlog";
-    import { showMessage } from "@/libs/notice";
+    import { showMessage, lvSurfaceStack } from "@/libs/notice";
 
     interface Props {
         i18n: any;
@@ -62,8 +59,28 @@
     let cart = $state<MarketplaceCartItem[]>([]);
     let cartDrawerOpen = $state(false);
 
-    // 增量差量更新对比状态
-    let deltaReport = $state<{ item: MarketplaceItem; report: CardDeltaReport } | null>(null);
+    $effect(() => {
+        if (!cartDrawerOpen) return;
+        const pop = lvSurfaceStack?.push?.({
+            id: "lv-market-cart-drawer",
+            type: "drawer",
+            dismiss: () => {
+                if (!cartDrawerOpen) return false;
+                cartDrawerOpen = false;
+                return true;
+            },
+        });
+        return () => pop?.();
+    });
+
+    function onWindowKeydown(e: KeyboardEvent) {
+        if (e.isComposing || e.keyCode === 229) return;
+        if (e.key === "Escape" && cartDrawerOpen && !e.defaultPrevented) {
+            e.preventDefault();
+            e.stopPropagation();
+            cartDrawerOpen = false;
+        }
+    }
 
     // 自定义订阅源管理
     let customSources = $state<CustomMarketplaceSource[]>([]);
@@ -74,7 +91,7 @@
     let loadingCatalog = $state(false);
     let catalogError = $state<string | null>(null);
 
-    $effect(() => {
+    onMount(() => {
         customSources = loadMarketplaceSources();
         void refreshCatalog(currentSourceUrl);
     });
@@ -214,22 +231,6 @@
         showMessage(text("studio.addedToCart", "已将《{title}》的 {n} 张卡片加入闪卡篮 ✓", {title: item.title, n: items.length}), 2000, "info");
     }
 
-    function handleCheckDelta(item: MarketplaceItem) {
-        const pkg = marketplaceItemToLvCardsPackage(item);
-        // 模拟本地已入库卡片（带旧版本与部分待更新）进行差量检测
-        const localMock = pkg.cards.slice(0, Math.max(1, pkg.cards.length - 1));
-        const rep = calculateCardsDelta(localMock, pkg.cards);
-        deltaReport = { item, report: rep };
-    }
-
-    function handleApplyDeltaSync() {
-        if (!deltaReport) return;
-        // 2026-11-21 走查修复：本功能当前为演示预览（本地卡片为模拟数据、合并结果不落内核），
-        // 原先弹「无损合并完成 ✓」属假成功回执，误导用户以为已更新。改为如实告知。
-        showMessage(text("studio.deltaPreviewDone", "增量合并预览完成（演示模式）：本次未写入任何数据，真实增量合并将在后续版本接入"), 4000, "info");
-        deltaReport = null;
-    }
-
     function handleAddCustomSource() {
         const name = newSourceName.trim();
         const url = newSourceUrl.trim();
@@ -279,6 +280,8 @@
     }
 </script>
 
+<svelte:window onkeydown={onWindowKeydown} />
+
 <div class="lv-marketplace-studio">
     <!-- 顶栏与生态大标题 -->
     <div class="lv-market-head">
@@ -307,10 +310,10 @@
                 type="button"
                 class="lv-btn sm lv-btn--ghost"
                 onclick={() => (addSourcePanelOpen = !addSourcePanelOpen)}
-                title={text("studio.addSourceTitle", "添加自定义第三方网络订阅源")}
+                title={text("studio.addSourceTitle", "添加自定义网络订阅源（需联网拉取）")}
             >
                 <LvIcon name="plus" size={13} />
-                <span>{addSourcePanelOpen ? text("studio.sourceCollapse", "收起订阅设置") : text("studio.sourceAdd", "✚ 自定义订阅源")}</span>
+                <span>{addSourcePanelOpen ? text("studio.sourceCollapse", "收起订阅设置") : text("studio.sourceAdd", "🌐 自定义网络订阅（需联网）")}</span>
             </button>
         </div>
     </div>
@@ -318,7 +321,7 @@
     <!-- 添加外部订阅源折叠面板 -->
     {#if addSourcePanelOpen}
         <div class="lv-market-source-panel">
-            <div class="lv-market-source-title">{text("studio.sourcePanelTitle", "🔗 添加第三方网络订阅源 (URL)")}</div>
+            <div class="lv-market-source-title">{text("studio.sourcePanelTitle", "🌐 添加自定义网络订阅源 (URL · 需联网)")}</div>
             <p class="lv-market-source-desc">
                 {text("studio.sourcePanelDesc", "支持输入托管在 GitHub Gist、自建服务器或开放网盘的 catalog.json 订阅直链（模式同开源阅读书源），思源客户端直连拉取，官方零存储、零中转。")}
             </p>
@@ -385,7 +388,11 @@
             </div>
         </div>
         <div class="lv-market-stats-meta">
-            <span class="lv-chip sm lv-chip--acc">{text("studio.chipInterop", "双向生态互通")}</span>
+            {#if currentSourceUrl !== "official"}
+                <span class="lv-chip sm lv-chip--acc">
+                    {text("studio.sourceModeNetwork", "🌐 自定义网络订阅 · 需联网")}
+                </span>
+            {/if}
             <span>{text("studio.interopDesc", "支持开箱一键入库，并可导出 .lvcards 标准包")}</span>
         </div>
     </div>
@@ -417,7 +424,7 @@
                     class:active={currentSourceUrl === "official"}
                     onclick={() => { currentSourceUrl = "official"; void refreshCatalog("official"); }}
                 >
-                    {text("studio.sourceOfficial", "🌐 官方精选公版源")}
+                    {text("studio.sourceOfficial", "📦 内置精选（离线立即可用）")}
                 </button>
                 {#if customSources.length > 0}
                     <select
@@ -425,9 +432,9 @@
                         bind:value={currentSourceUrl}
                         onchange={(e) => void refreshCatalog((e.target as HTMLSelectElement).value)}
                     >
-                        <option value="official">{text("studio.sourceOfficial", "🌐 官方精选公版源")}</option>
+                        <option value="official">{text("studio.sourceOfficial", "📦 内置精选（离线立即可用）")}</option>
                         {#each customSources as cs (cs.id)}
-                            <option value={cs.url}>{cs.name}</option>
+                            <option value={cs.url}>🌐 {cs.name}（需联网）</option>
                         {/each}
                     </select>
                 {/if}
@@ -621,7 +628,7 @@
                                                     role="button"
                                                     tabindex="0"
                                                     onclick={() => { previewFlipped[flipKey] = !isFlipped; }}
-                                                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { previewFlipped[flipKey] = !isFlipped; } }}
+                                                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); previewFlipped[flipKey] = !isFlipped; } }}
                                                 >
                                                     {#if !isFlipped}
                                                         <div class="lv-preview-face front">
@@ -684,25 +691,14 @@
                             </button>
 
                             {#if installed}
-                                <div class="lv-row" style="margin: 0; gap: 4px;">
-                                    <button
-                                        type="button"
-                                        class="lv-btn sm lv-btn--ghost"
-                                        onclick={() => handleCheckDelta(item)}
-                                        title={text("studio.deltaPreviewTitle", "演示：基于模拟本地数据的差量预览（暂未写入本地）")}
-                                    >
-                                        <LvIcon name="refresh" size={13} />
-                                        <span>{text("studio.deltaPreview", "增量预览")}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="lv-btn sm lv-btn--secondary"
-                                        onclick={() => onOpenDeck?.(installed.deckId, installed.deckName)}
-                                    >
-                                        <LvIcon name="check" size={13} />
-                                        <span>{text("studio.installed", "已入库")}</span>
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    class="lv-btn sm lv-btn--secondary"
+                                    onclick={() => onOpenDeck?.(installed.deckId, installed.deckName)}
+                                >
+                                    <LvIcon name="check" size={13} />
+                                    <span>{text("studio.installed", "已入库")}</span>
+                                </button>
                             {:else}
                                 <button
                                     type="button"
@@ -804,43 +800,6 @@
             {/if}
         </div>
     {/if}
-
-    <!-- 增量差量更新确认模态框 -->
-    {#if deltaReport}
-        <div class="lv-cart-drawer-mask" role="presentation" onclick={() => (deltaReport = null)}></div>
-        <div class="lv-delta-modal">
-            <h3 style="margin: 0 0 8px; font-size: 15px; font-weight: 700;">
-                {text("studio.deltaTitle", "🔄 增量差量更新与无损合并：《{title}》", {title: deltaReport.item.title})}
-            </h3>
-            <p class="lv-muted" style="font-size: 12px; margin: 0 0 12px; line-height: 1.5;">
-                {text("studio.deltaDemoNote", "🧪 演示预览：当前基于模拟本地数据演示差量算法，确认执行不会写入任何更改。正式版将自动比对本地已安装卡片与集市远端新版，绝对保留本地历史复习排期、错题状态与记忆曲线进度，仅增量补全新卡与正文修订。")}
-            </p>
-
-            <div class="lv-delta-stat-boxes">
-                <div class="lv-delta-stat-box green">
-                    <div class="lv-stat-num">{deltaReport.report.addedCount}</div>
-                    <div class="lv-stat-txt">{text("studio.deltaAdded", "待追加新卡")}</div>
-                </div>
-                <div class="lv-delta-stat-box blue">
-                    <div class="lv-stat-num">{deltaReport.report.updatedCount}</div>
-                    <div class="lv-stat-txt">{text("studio.deltaUpdated", "待修订卡片")}</div>
-                </div>
-                <div class="lv-delta-stat-box gray">
-                    <div class="lv-stat-num">{deltaReport.report.unchangedCount}</div>
-                    <div class="lv-stat-txt">{text("studio.deltaUnchanged", "完全一致卡片")}</div>
-                </div>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
-                <button type="button" class="lv-btn sm lv-btn--ghost" onclick={() => (deltaReport = null)}>
-                    {text("studio.cancel", "取消")}
-                </button>
-                <button type="button" class="lv-btn sm lv-btn--primary" onclick={handleApplyDeltaSync}>
-                    {text("studio.finishPreview", "完成预览（不写入）")}
-                </button>
-            </div>
-        </div>
-    {/if}
 </div>
 
 <style>
@@ -876,8 +835,10 @@
     }
 
     .lv-market-title {
-        font-size: 18px;
-        font-weight: 700;
+        font-size: var(--lv-type-display-size, 24px);
+        font-weight: var(--lv-fw-heading, 600);
+        line-height: var(--lv-lh-title, 1.35);
+        letter-spacing: -0.025em;
         margin: 0;
         display: inline-flex;
         align-items: center;
@@ -895,6 +856,7 @@
     }
 
     .lv-market-subtitle {
+        flex-basis: 100%;
         font-size: 12px;
         color: var(--b3-theme-on-surface);
         opacity: 0.75;
@@ -1043,6 +1005,20 @@
         gap: 6px;
         flex-wrap: wrap;
         min-width: 0;
+        max-width: 100%;
+    }
+
+    .lv-market-source-selector .lv-select,
+    .lv-select {
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        background-color: var(--b3-theme-surface);
+        color: var(--b3-theme-on-background);
+        border: 1px solid var(--b3-border-color, var(--lv-border));
+        border-radius: var(--lv-r-control, 6px);
+        padding: 4px 8px;
+        font-size: 12px;
     }
 
     .lv-market-categories {
@@ -1448,7 +1424,7 @@
         &.lv-btn--primary {
             background: var(--b3-theme-primary);
             border-color: var(--b3-theme-primary);
-            color: var(--b3-theme-on-primary, #ffffff);
+            color: var(--lv-color-on-brand, #ffffff);
             font-weight: 500;
             &:hover {
                 filter: brightness(1.08);
@@ -1537,58 +1513,5 @@
         justify-content: space-between;
         align-items: center;
         background: var(--b3-theme-background);
-    }
-
-    .lv-delta-modal {
-        position: fixed;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: min(520px, 92vw);
-        background: var(--b3-theme-surface);
-        border-radius: 10px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
-        padding: 20px 24px;
-    }
-
-    .lv-delta-stat-boxes {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin: 12px 0;
-    }
-
-    .lv-delta-stat-box {
-        padding: 10px;
-        border-radius: 6px;
-        text-align: center;
-        background: var(--b3-theme-background);
-    }
-
-    .lv-delta-stat-box.green {
-        color: var(--lv-color-success);
-        border: 1px solid color-mix(in srgb, var(--lv-color-success) 25%, transparent);
-    }
-
-    .lv-delta-stat-box.blue {
-        color: var(--lv-color-brand);
-        border: 1px solid color-mix(in srgb, var(--lv-color-brand) 25%, transparent);
-    }
-
-    .lv-delta-stat-box.gray {
-        color: var(--b3-theme-on-surface);
-        opacity: 0.8;
-        border: 1px solid var(--b3-border-color, var(--lv-border));
-    }
-
-    .lv-stat-num {
-        font-size: 18px;
-        font-weight: 700;
-    }
-
-    .lv-stat-txt {
-        font-size: 11px;
-        margin-top: 2px;
     }
 </style>

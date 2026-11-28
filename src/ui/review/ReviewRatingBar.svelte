@@ -345,7 +345,7 @@
             padding: 6px 12px;
             min-height: 48px;
             background: color-mix(in srgb, var(--lv-color-surface) 95%, transparent);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            box-shadow: 0 1px 3px color-mix(in srgb, black 4%, transparent), var(--lv-inset-shine);
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
